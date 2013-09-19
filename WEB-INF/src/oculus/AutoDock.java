@@ -59,17 +59,13 @@ public class AutoDock { // implements Observer {
 					app.message("auto-dock in progress", null, null);
 					return;
 				}
-				
-				if( state.get(State.values.lightport) != null ){
 
-					if (state.getInteger(State.values.spotlightbrightness) > 0 || 
-							state.getBoolean(State.values.floodlighton)) {
-						comport.setSpotLightBrightness(0);
-						comport.floodLight("med");
-					}
-					
-				}				
-
+				if (state.getInteger(State.values.spotlightbrightness) > 0 || 
+						state.getBoolean(State.values.floodlighton)) {
+					comport.setSpotLightBrightness(0);
+					comport.floodLight("med");
+				}
+			
 				dockGrab("start", 0, 0);
 				state.set(State.values.autodocking, true);
 				autodockingcamctr = false;

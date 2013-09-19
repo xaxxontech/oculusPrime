@@ -11,6 +11,8 @@ import java.io.OutputStream;
 import java.util.TooManyListenersException;
 
 import oculus.Application;
+import oculus.ManualSettings;
+import oculus.Settings;
 import oculus.State;
 import oculus.Util;
 
@@ -50,6 +52,7 @@ public class LightsComm implements SerialPortEventListener {
 	private InputStream in = null;
 	private OutputStream out= null;
 	
+	private Settings settings = Settings.getReference();
 	private State state = State.getReference();
 	
 	// will be discovered from the device 
@@ -74,24 +77,27 @@ public class LightsComm implements SerialPortEventListener {
 	 */
 	public LightsComm(Application app) {
 		application = app; 
-		if( state.get(State.values.lightport) != null ){
-			new Thread(new Runnable() { 
-				public void run() {
-					connect();				
-					Util.delay(SETUP);
-				}	
-			}).start();
-			
-			new WatchDog().start();
-		}	
+		
+		new Thread(new Runnable() { 
+			public void run() {
+				connect();				
+				Util.delay(SETUP);
+				//new WatchDog().start();
+			}	
+		}).start();
+		
+		
 	}
 	
 	/** open port, enable read and write, enable events */
 	public void connect() {
+		
+		Util.log("attempt connect to the the lights on: " + settings.readSetting(ManualSettings.lightport), this);
+		
 		try {
 
 			serialPort = (SerialPort)CommPortIdentifier.getPortIdentifier(
-					state.get(State.values.lightport)).open(LightsComm.class.getName(), SETUP);
+					settings.readSetting(ManualSettings.lightport)).open(LightsComm.class.getName(), SETUP);
 			serialPort.setSerialPortParams(BAUD_RATE, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
 			// open streams
@@ -99,8 +105,11 @@ public class LightsComm implements SerialPortEventListener {
 			in = serialPort.getInputStream();
 			
 		} catch (Exception e) {
-			Util.log("could NOT connect to the the lights on:" + state.get(State.values.lightport), this);
-			application.message("could NOT connect to the the lights on:" + state.get(State.values.lightport), null, null);
+			Util.log("WARN, could NOT connect to the the lights on: " + settings.readSetting(ManualSettings.lightport), this);
+			application.message("could NOT connect to the the lights", null, null);
+			settings.writeSettings(ManualSettings.lightport.name(), Discovery.params.discovery.name());
+		//	settings.incrementSettings(ManualSettings.attempts);
+		//	application.restart();
 			return;
 		}
 		
@@ -111,11 +120,12 @@ public class LightsComm implements SerialPortEventListener {
 		} catch (TooManyListenersException e) {
 			Util.log(e.getMessage(), this);
 		}
-		serialPort.notifyOnDataAvailable(true);
+			
 		isconnected = true;	
+		serialPort.notifyOnDataAvailable(true);
 		state.set(State.values.floodlighton, false);
 		state.set(State.values.spotlightbrightness, 0);
-		Util.log("connected to the the lights on:" + state.get(State.values.lightport), this);
+		Util.log("connected to the the lights on:" + settings.readSetting(ManualSettings.lightport), this);
 	}
 
 	/** @return True if the serial port is open */
@@ -141,7 +151,7 @@ public class LightsComm implements SerialPortEventListener {
 	}	
 	
 	
-	/** inner class to check if getting responses in timely manor */
+	/** inner class to check if getting responses in timely manor
 	public class WatchDog extends Thread {
 		public WatchDog() {
 			this.setDaemon(true);
@@ -194,13 +204,13 @@ public class LightsComm implements SerialPortEventListener {
 			}		
 		}
 	}
-
-	/***/ 
+ */
+	/**
 	public void error(){
 		disconnect();
 		application.message("lights failure, time out!", null, null);
 		Util.debug("lights failure, time out!", this);
-	} 
+	} */ 
 	
 	/** @return the time since last write() operation */
 	public long getWriteDelta() {
@@ -277,10 +287,10 @@ public class LightsComm implements SerialPortEventListener {
 
 	public /* synchronized*/ void setSpotLightBrightness(int target){
 		
-		if( !isConnected()){
-			Util.log("lights NOT found", this);
-			return;
-		}
+	//	if( !isConnected()){
+	//		Util.log("lights NOT found", this);
+	//		return;
+	//	}
 		
 		Util.debug("set spot: " + target, this);
 		
@@ -301,11 +311,11 @@ public class LightsComm implements SerialPortEventListener {
 	}
 	
 	public /* synchronized */ void floodLight(String mode){
-		if( !isConnected()){
-			Util.log("lights NOT found", this);
-			application.message("lights not found", null, null);
-			return;
-		}
+		//if( !isConnected()){
+		//	Util.log("lights NOT found", this);
+		//	application.message("lights not found", null, null);
+		//	return;
+		//}
 		if (mode.equals("on")) { 
 			sendCommand(FLOOD_ON_HIGH);
 			state.set(State.values.floodlighton, true);

@@ -517,4 +517,17 @@ public class Settings {
 		return getDouble(setting.name());
 	}
 
+	public synchronized void incrementSettings(ManualSettings attempts) {
+		Util.log("_____ increment: " + readSetting(attempts), this);
+		Integer value = 0;
+		if(readSetting(attempts) != null){
+			value = Integer.valueOf(readSetting(attempts));
+			writeSettings(attempts.name(), String.valueOf(value+1));
+		}
+	}
+
+	public long getLong(ManualSettings setting) {
+		return Long.valueOf(readSetting(setting));
+	}
+
 }

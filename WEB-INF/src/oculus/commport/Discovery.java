@@ -9,7 +9,6 @@ import java.util.Vector;
 import oculus.Application;
 import oculus.ManualSettings;
 import oculus.Settings;
-import oculus.State;
 import oculus.Util;
 
 import gnu.io.*;
@@ -20,9 +19,8 @@ public class Discovery {
 	public static enum params {discovery, disabled};
 	
 	private static Settings settings = Settings.getReference();
-	private static final String motors = settings.readSetting(ManualSettings.arduinoprime);
-	private static final String lights = settings.readSetting(ManualSettings.oculed);
-	private static State state = State.getReference();
+	private static final String motors = settings.readSetting(ManualSettings.serialport);
+	private static final String lights = settings.readSetting(ManualSettings.lightport);
 	
 	public static final long RESPONSE_DELAY = 1000;
 	public static final int TIMEOUT = 2000;	
@@ -35,8 +33,7 @@ public class Discovery {
 
 	/* add known devices here, strings returned from the firmware */
 	public static final String ARDUINO_MOTOR_SHIELD = "arduinoShield";
-	public static final String OCULUS_PRIME = "oculusPrime";
-	// public static final String OCULUS_TILT = "oculusTilt";
+	public static final String ARDUINO_PRIME = "oculusPrime";
 	public static final String LIGHTS = "L";
 	
 	/* reference to the underlying serial port */
@@ -46,34 +43,42 @@ public class Discovery {
 
 	/* list of all free ports */
 	private static Vector<String> ports = new Vector<String>();
+	private boolean lightsFound = false;
+	private boolean motorsFound = false;
 
 	/* constructor makes a list of available ports */
 	public Discovery() {
 		
 		getAvailableSerialPorts();
 		
-		if(ports.size()==0){
+		if(ports.size() == 0){
 			Util.log("no serial ports found on host", this);
 			return;
 		}
 		
-		if(motors.equals(params.discovery.toString())){		
+		if(motors.equals(params.discovery.name())){		
+			
 			searchMotors(); 	
-		} /* else if( ! motors.equals(params.disabled.toString())){			
+		
+		} else { 		
+		
 			Util.debug("skipping discovery, motors on: " + motors, this);
-			state.set(State.values.serialport, motors);
 		
-			// TODO: is always true? 
-			state.set(State.values.firmware, OCULUS_PRIME);
-		}*/
+		} 
 		
-		if(lights.equals(params.discovery.toString())){	
+		if(lights.equals(params.discovery.name())){	
+		
 			searchLights();	
-		} /*else if( ! lights.equals(params.disabled.toString())){
+		
+		} else if(lights.equals(params.disabled)){ 
+			
+			Util.debug("lights are currently: " + lights, this);
+		
+		} else { 
+			
 			Util.debug("skipping discovery, lights on: " + lights, this);
-			state.set(State.values.lightport, lights);
-		} */
-	
+		
+		} 
 	}
 	
 	/** */
@@ -165,14 +170,12 @@ public class Discovery {
 	
 		// try to limit searching
 		if(ports.contains(motors)) ports.remove(motors);
-		if(state.get(State.values.serialport) != null) 
-			ports.remove(state.get(State.values.serialport));
+		if(motors != null) ports.remove(motors);
 			
 		Util.debug("discovery for lights starting on ports: " + ports.size(), this);
 		
 		for (int i = ports.size() - 1; i >= 0; i--) {
-			if (state.get(State.values.lightport)!=null) { break; } // stop if find it
-			//if (connect(ports.get(i), BAUD_RATES[0])) {	
+			if (lightsFound) { break; } // stop if find it
 			if (connect(ports.get(i), 57600)) {
 				Util.delay(TIMEOUT*2);
 				if (serialPort != null) { close(); }
@@ -185,7 +188,7 @@ public class Discovery {
 		Util.debug("discovery for motors starting on " + ports.size()+" ports", this); 
 	
 		for (int i=0; i<ports.size(); i++) {
-			if (state.get(State.values.serialport)!=null) { break; } // stop if find it
+			if (motorsFound) { break; } // stop if find it
 			if (connect(ports.get(i), 115200)) {
 				Util.delay(TIMEOUT*2);
 				if (serialPort != null) { close(); }
@@ -200,15 +203,16 @@ public class Discovery {
 		if (id.length() == 0) return;
 		id = id.trim();
 		
-		// Util.debug("...is a product ID? [" + id + "] length: " + id.length(), this);
-		
 		if (id.length() == 1 ){
 			if(id.equals(LIGHTS)){		
-				state.set(State.values.lightport, getPortName());
-				Util.debug("found lights on comm port: " +  getPortName(), this);	
 				
-				// TODO: JUST ADDED 
-//				settings.writeSettings(ManualSettings.oculed.name(), getPortName());
+				Util.debug("___found lights on comm port: " +  getPortName(), this);	
+				settings.writeSettings(ManualSettings.lightport.name(), getPortName());
+				lightsFound = true;
+				
+				settings.writeFile("C:\\found.txt");
+				return;
+				
 			}
 		} 
 		
@@ -219,25 +223,18 @@ public class Discovery {
 			Util.debug("found product id[" + id + "] on comm port: " +  getPortName(), this);
 
 			if (id.equalsIgnoreCase(ARDUINO_MOTOR_SHIELD)) {
+				
+				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
+				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_MOTOR_SHIELD);
+				motorsFound = true;
+				
+			} else if (id.equalsIgnoreCase(ARDUINO_PRIME)) {
 
-				state.set(State.values.serialport, getPortName());
-				state.set(State.values.firmware, ARDUINO_MOTOR_SHIELD);
+				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
+				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_PRIME);
+				motorsFound = true;
 				
-			} else if (id.equalsIgnoreCase(OCULUS_PRIME)) {
-
-				// TODO: JUST ADDED 
-//				settings.writeSettings(ManualSettings.arduinoprime.name(), getPortName());
-				
-				state.set(State.values.serialport, getPortName());
-				state.set(State.values.firmware, OCULUS_PRIME);
-				
-			} else { // case where not found
-				
-				state.set(State.values.serialport, params.disabled.name());
-				state.set(State.values.firmware, params.disabled.name());
-				
-			}
-			
+			} 
 		}
 	}
 	
@@ -293,10 +290,13 @@ public class Discovery {
 	/** match types of firmware names and versions */
 	public AbstractArduinoComm getMotors(Application application) {
 
-		if(state.equals(State.values.firmware, OCULUS_PRIME))
+		// if(state.equals(State.values.firmware, OCULUS_PRIME))
+		
+		//if(settings.readSetting(ManualSettings.firmware).equals(ARDUINO_PRIME))
 			return new ArduinoPrime(application);
 		
 		// default 
-		return new ArduinoMotorSheild(application);
+		//return new ArduinoMotorSheild(application);
 	}
 }
+

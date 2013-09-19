@@ -8,6 +8,7 @@ import java.util.TimerTask;
 
 import oculus.Application;
 import oculus.GUISettings;
+import oculus.ManualSettings;
 import oculus.Settings;
 import oculus.State;
 import oculus.Util;
@@ -16,7 +17,7 @@ import gnu.io.SerialPort;
 
 public abstract class AbstractArduinoComm implements ArduinoPort {
 	
-	// Toggle to see bytes sent 
+	// toggle to see bytes sent in log 
 	public static final boolean DEBUGGING = false;
 	
 	// Tweak these constants here 
@@ -27,16 +28,19 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 	public static final long CAM_NUDGE_DELAY = 100; 
 	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
 	
+	protected static Settings settings = Settings.getReference();
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
-	protected Settings settings = Settings.getReference();
 	protected State state = State.getReference();
 	protected Application application = null;
 	protected SerialPort serialPort = null;	
 	protected String version = null;
 	protected OutputStream out = null;
 	protected InputStream in = null;
-
+	
+	protected final String portName = settings.readSetting(ManualSettings.serialport);
+	protected final String firmware = settings.readSetting(ManualSettings.firmware);
+	
 	// data buffer 
 	protected byte[] buffer = new byte[32];
 	protected int buffSize = 0;
@@ -44,6 +48,9 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 	// thread safety 
 	protected volatile boolean isconnected = false;
 	public volatile boolean sliding = false;
+	
+	// tracking motor moves 
+	private static Timer cameraTimer = null;
 	
 	// take from settings 
 	public double clicknudgemomentummult = settings.getDouble(GUISettings.clicknudgemomentummult);	
@@ -53,43 +60,37 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 	public int nudgedelay = settings.getInteger(GUISettings.nudgedelay);
 	public int maxclickcam = settings.getInteger(GUISettings.maxclickcam);
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
+	
+	private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
 	public int turnspeed = 255;
-	private static final int TURNBOOST = 25; 
+	
 
-	// 
-	private static Timer cameraTimer = null;
+	public abstract void execute(); 
 	
-	/** */
-	public AbstractArduinoComm(Application app) {
-		
-		application = app;	
-		
-		// state.set(State.values.batterycharging, false); 
-	
-		state.put(State.values.motorspeed, speedmed);
-		state.put(State.values.movingforward, false);
-		state.put(State.values.moving, false);
-		state.put(State.values.motionenabled, true);
-		
-		if (state.get(State.values.serialport) != null) {
-			new Thread(new Runnable() {
-				public void run() {
-					connect();
-					Util.delay(SETUP);
-					if(isConnected()){
-						Util.log("Connected to port: " + state.get(State.values.serialport), this);
-						sendCommand(FIND_HOME_TILT);
-//						Util.delay(SETUP*3); //TODO: wait for home (wait not needed, HOME_TILT is blocking) 
-						sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
-						state.set(State.values.cameratilt, CAM_HORIZ);
-						sendCommand((byte) DOCK_STATUS);
-					}
-				}
-			}).start();
+	public static boolean lightsAvailable(){
+		final String lights = settings.readSetting(ManualSettings.lightport); 
+		if(lights == null) { 
+			return false;
+		} else {
+			if(lights.equals(Discovery.params.discovery.name()) || lights.equals(Discovery.params.disabled.name()))
+				return false;
 		}
+		
+		return true;
 	}
-
+	
+	/**/
+	public static boolean motorsAvailable(){
+		final String lights = settings.readSetting(ManualSettings.serialport); 
+		if(lights != null) {
+			if(lights.equals(Discovery.params.discovery.name()) || lights.equals(Discovery.params.disabled.name()))
+				return false;
+		}
+		
+		return true;
+	}
+	
 	@Override
 	public abstract void connect();
 	
@@ -102,8 +103,6 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 	public void close(){
 		if(serialPort!=null) serialPort.close();
 	}
-	
-	public abstract void execute(); 
 	
 	/** */
 	public void manageInput(){
@@ -329,12 +328,7 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 				return;
 			}
 		
-			
-//			if (state.getInteger(State.values.cameratilt) > CAM_MAX) state.set(State.values.cameratilt, CAM_MAX);
-
-//			application.messageplayer(null, State.values.cameratilt.name(), state.get(State.values.cameratilt));
 			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
-		
 		}
 	}
 	
@@ -352,7 +346,6 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 			}
 	
 			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
-			
 		}
 	}
 	
@@ -444,10 +437,6 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 		case med: state.put(State.values.motorspeed, speedmed); break;
 		case fast: state.put(State.values.motorspeed, speedfast); break;
 		}
-	
-		// NOT NEEDED 
-		// if (state.getBoolean(State.values.movingforward)) goForward();
-		
 	}
 
 	@Override
@@ -617,7 +606,6 @@ public abstract class AbstractArduinoComm implements ArduinoPort {
 
 	private void clickCam(final Integer y) {
 		
-//		maxclickcam =settings.getInteger(GUISettings.maxclickcam);
 		Util.debug("___clickCam(): " + "y: " + y, this);
 		
 		Integer n = maxclickcam * y / 240;  

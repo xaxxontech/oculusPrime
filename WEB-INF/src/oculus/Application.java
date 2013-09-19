@@ -25,7 +25,7 @@ import developer.UpdateFTP;
 public class Application extends MultiThreadedApplicationAdapter implements Observer {
 
 	private static final int STREAM_CONNECT_DELAY = 2000;
-	private static final int LOW_BATTERY_THRESHOLD = 1; //TODO: set this value 
+	private static final double LOW_BATTERY_THRESHOLD = 120.06; //TODO: set this value 
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private String salt = null;
@@ -58,6 +58,14 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		AuthGrab.setApp(this);
 		initialize();
 		state.addObserver(this);
+		
+		
+		// TODO: take action 
+		long last = settings.getLong(ManualSettings.lastboot);
+		Util.log("last booted: " + ((System.currentTimeMillis() - last)/1000), this);
+		
+		//TODO: now alive, write it to file 
+		settings.writeSettings(ManualSettings.lastboot.name(), String.valueOf(System.currentTimeMillis()));
 	}
 
 	@Override
@@ -984,10 +992,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			String str = "";
 			if (comport != null) {
 				String spd = "FAST";
-				if (state.getInteger(State.values.motorspeed) == comport.speedmed)
-					spd = "MED";
-				if (state.getInteger(State.values.motorspeed) == comport.speedslow)
-					spd = "SLOW";
+				if (state.getInteger(State.values.motorspeed) == comport.speedmed) spd = "MED";
+				if (state.getInteger(State.values.motorspeed) == comport.speedslow) spd = "SLOW";
 
 				String mov = "STOPPED";
 				if (!state.getBoolean(State.values.motionenabled)) mov = "DISABLED";
@@ -1005,9 +1011,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			if (state.get(State.values.dockstatus) != null) str += " dock "+ state.get(State.values.dockstatus);
 			
 			// TODO: maybe no longer uses two port classes
-			if( state.get(State.values.lightport) != null ){
-				str += " light " + state.get(State.values.spotlightbrightness); 
+			if(AbstractArduinoComm.lightsAvailable()){
+				str += " light " + state.get(State.values.spotlightbrightness);
 				str += " floodlight " + state.get(State.values.floodlighton);
+				// Util.debug("SPOTLIGHT *** " + state.get(State.values.spotlightbrightness), this);
 			}
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
@@ -1022,10 +1029,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		} else {
 			if (s.equals("battcheck")) { 
 				String str = "battery "+state.get(State.values.batterylife);
-				// str += " dock "+ state.get(State.values.dockstatus);
 				messageplayer("status check received", "multiple", str);
+			} else { 
+				messageplayer("status check received",null, null); 
 			}
-			else { messageplayer("status check received",null, null); }
 		}
 	}
 
@@ -1679,24 +1686,24 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 		// username
 		String str = settings.readSetting("user0");
-		if (str != null) result += "username " + str + " ";
+		if(str != null) result += "username " + str + " ";
 
-		// comport
-		if (state.get(State.values.serialport) == null) result += "comport nil ";
-		else result += "comport " + state.get(State.values.serialport) + " ";
-
-		//TODO:........ remove lights
+		// commport
+		if(AbstractArduinoComm.motorsAvailable()) result += "comport " + settings.readSetting(ManualSettings.serialport) + " ";
+		else result += "comport nil ";
+		
+		// TODO: 
 		// lights
-		if (state.get(State.values.lightport) == null) result += "lightport nil ";
-		else result += "lightport " + state.get(State.values.lightport) + " ";
+		if(AbstractArduinoComm.lightsAvailable()) result += "lightport " + settings.readSetting(ManualSettings.lightport) + " ";
+		else result += "lightport nil ";
 
 		// law and wan
 		String lan = state.get(State.values.localaddress);
-		if (lan == null) result += "lanaddress error ";
+		if(lan == null) result += "lanaddress error ";
 		else result += "lanaddress " + lan + " ";
 
 		String wan = state.get(State.values.externaladdress);
-		if (wan == null) result += "wanaddress error ";
+		if(wan == null) result += "wanaddress error ";
 		else result += "wanaddress " + wan + " ";
 
 		// http port
@@ -1706,6 +1713,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		result += "rtmpport " + settings.readRed5Setting("rtmp.port") + " ";
 
 		messageGrabber(result, null);
+		
+		Util.log("___populate settings: " + result, this);
+		
 	}
 
 	public void softwareUpdate(String str) {
@@ -1826,8 +1836,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 	}
 
-// if (state.getBoolean(State.values.controlsinverted)) {
-	
 	@Override
 	public void updated(String key) {
 		
@@ -1851,10 +1859,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 		}
 		
-		if(key.equals(State.values.batterylife)){
-			
-			// Util.debug(".........updated(): " + key, this);
-			if(state.getInteger(key) < LOW_BATTERY_THRESHOLD){
+		if(key.equals(State.values.batterylife.name())){
+			if(state.getDouble(key) > LOW_BATTERY_THRESHOLD){
 				messageplayer("danger low battery, find the dock.. ", null, null);
 			}
 		}
@@ -1871,8 +1877,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				message("docking initiated", "multiple", "speed fast motion moving dock docking");
 			}
 		}
- 
-		
 	}
 }
 

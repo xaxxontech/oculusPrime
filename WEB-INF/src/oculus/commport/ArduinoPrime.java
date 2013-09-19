@@ -19,24 +19,68 @@ import gnu.io.SerialPortEventListener;
  */
 public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEventListener, ArduinoPort {
 	
+	private int MAX_ATTEMPTS = 5; // how many tries before giving up looking
+	
 	// TODO: hold over if two serial ports
 	private LightsComm light;
 	
-	public ArduinoPrime(Application app) {	
-		super(app);
-		
-		if( state.get(State.values.lightport) != null ){
-			light = new LightsComm(application);
-		}
+	// check if board has replied with correct firmware. 
+	private boolean verified = false;
 	
-//		floodLightOff();
-		floodLight("off");
-		setSpotLightBrightness(0);
+	public ArduinoPrime(Application app) {	
 		
-		Util.debug("ArduinoPrime(): " + "... starting up... ", this);
+		Util.log("............ starting up: " + settings.readSetting(ManualSettings.attempts), this);
+	
+		application = app;	
+		state.put(State.values.motorspeed, speedmed);
+		state.put(State.values.movingforward, false);
+		state.put(State.values.moving, false);
+		state.put(State.values.motionenabled, true);
 		
-		// not needed if done on ardunio
-		 new PowerThread(this);
+		if(motorsAvailable()){
+			
+			new Thread(new Runnable() {
+				public void run() {
+					connect();
+					Util.delay(SETUP);
+					if(isConnected()){
+						
+						Util.log("Connected to port: " + serialPort, this);
+						
+						sendCommand(FIND_HOME_TILT);
+						sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
+						state.set(State.values.cameratilt, CAM_HORIZ);
+						sendCommand((byte) DOCK_STATUS);
+					}
+				}
+			}).start();
+			
+			/* be sure */
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(SETUP*3);
+					Util.log(".....checking firmware is valid", this);
+					if( ! verified){
+						Util.log("WARN: firmware is not responding, restarting", this);
+						settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+						settings.incrementSettings(ManualSettings.attempts);
+						application.restart();
+					}
+				}
+			}).start(); 	
+			
+			// keep polling port for battery 
+			new PowerThread(this);
+		}
+		
+		if(lightsAvailable()){
+			Util.log("..............lights on: " + settings.readSetting(ManualSettings.lightport), this);
+			light = new LightsComm(app);
+			floodLight("off");
+			setSpotLightBrightness(0);
+		} else {
+			Util.log("....... using lights on the motor board?? no controls being given in gui", this);
+		}
 	}
 	
 	@Override 
@@ -45,6 +89,7 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 		Util.debug("........ setSpotLightBrightness: " + target, this);
 		
 		if(light != null) { //TODO: hold over if two serial ports
+			Util.debug("____using onboard lights______ setSpotLightBrightness: " + target, this);
 			light.setSpotLightBrightness(target);
 			return;
 		} 
@@ -98,23 +143,45 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		if(AbstractArduinoComm.DEBUGGING) Util.debug("serial in: " + response ,this);
+		if(AbstractArduinoComm.DEBUGGING) Util.debug("serial in: " + response, this);
 		
-		if (response.equals("reset")) {
+		if(response.equals("reset")) {
 			isconnected = true;
 			version = null;
-			sendCommand(GET_VERSION);
+			sendCommand(GET_PRODUCT);
+			Util.delay(300);
+			sendCommand(GET_VERSION); // check is correct board! 
 		} 
 		
-		if (response.startsWith("version:")) {
-			version = response.substring(response.indexOf("version:") + 8, response.length());
-			application.message(this.getClass().getName() + " v: " + version, null, null);		
-		} 
-		
-	//	if(response.startsWith("tilt")){
-	//		Util.debug("stepper moved to: " + response ,this);
-	//	}
+		if(response.startsWith("id:")){ 
 			
+			String product = response.substring(response.lastIndexOf(":")+1).trim();
+			if(product.equals( firmware )){
+				
+				Util.debug("verified: " + response, this);
+				settings.writeSettings(ManualSettings.attempts.name(), "0");
+				verified = true;
+				
+			} else {
+				
+				Util.log("WARN: wrong firmware type in settings, restart needed", this);
+				
+				if(settings.getInteger(ManualSettings.attempts) > MAX_ATTEMPTS) {
+					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.disabled.name());
+				} else {
+					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+				}
+				
+				settings.incrementSettings(ManualSettings.attempts);
+				application.restart();
+			}
+		}
+		
+		if(response.startsWith("version:")) {
+			version = response.substring(response.indexOf("version:") + 8, response.length());
+			application.message(this.getClass().getName() + " version: " + version, null, null);		
+		} 
+	
 		if(response.equals(AutoDock.DOCKED)){
 			
 			Util.debug("docked: " + response ,this);
@@ -139,12 +206,13 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 		if(response.startsWith("power")){
 			
 			String level = response.split(" ")[1];
-			state.put(State.values.batterylife, level+"V");
+			state.put(State.values.batterylife, level); // TODO: don't store the volts in state, just the value? +"V");
 			
 //			application.message(null, "multiple", "battery " + level + "V"); //not here, only if client asks
 		}
 		
-		if(response.startsWith("timeout")){
+/*		
+ 		if(response.startsWith("timeout")){
 			
 			// motors stopped by firmware, but tell state 
 			
@@ -160,6 +228,7 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 			
 			if(timeout) application.message(null, "motion", "STOPPED");
 		}
+*/
 		
 		if(response.startsWith("tiltpos")) {
 			String position = response.split(" ")[1];
@@ -172,7 +241,7 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 	public void connect() {
 		try {
 
-			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(state.get(State.values.serialport)).open(ArduinoPrime.class.getName(), SETUP);
+			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portName).open(ArduinoPrime.class.getName(), SETUP);
 			serialPort.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
 			// open streams
@@ -184,9 +253,13 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 			serialPort.notifyOnDataAvailable(true);
 
 		} catch (Exception e) {
-//			settings.writeSettings(ManualSettings.arduinoprime.name(), Discovery.params.discovery.name());
-//			return;
-		}	
+			
+			Util.log("can't connect to port: " + e.getMessage(), this);
+			settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+			settings.incrementSettings(ManualSettings.attempts);
+			application.restart();
+			
+		}
 	}
 	
 	@Override

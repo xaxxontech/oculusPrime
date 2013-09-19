@@ -9,9 +9,9 @@ import java.util.Vector;
 public class State {
 	
 	public enum values{ 
-		firmware, serialport, motionenabled, moving, movingforward, // motors
+		motionenabled, moving, movingforward, // motors
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
-		floodlighton, lightport, spotlightbrightness, // lights
+		floodlighton, spotlightbrightness, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
 		boottime, localaddress, externaladdress, httpPort, // system
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
@@ -20,7 +20,7 @@ public class State {
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, // NEW! 
 		
-		centerpoint; // experimental
+		centerpoint; // experimental, xiton distance reading
 	};
 	
 	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
@@ -162,16 +162,24 @@ public class State {
 		if(key==null) return;
 		if(value==null) return;
 		
+		// avoid unnecessary state updates
+		/*if(get(key).equals(value)){
+			Util.log("WARN: adding a state value that is NOT in the enum!", this);
+			return;
+		}*/
+		
+		// TODO: enforce these checks with fatal error ?
 		try {
 			values.valueOf(key);
-		} catch (Exception e1) {
+		} catch (Exception e) {
 			Util.log("DANGEROUS: adding a state value that is NOT in the enum!", this);
+			return;
 		}
 			
-		// TODO: enforce these checks with fatal error  
+		// TODO: enforce these checks with fatal error ?
 		if(isBoolean(key)){
 			if( ! (value.equals("true") || value.equals("false"))){
-				Util.log("___DANGEROUS: can't add because is a boolean type: " + key + " = " + value, this);
+				Util.log("DANGEROUS: can't add because is a boolean type: " + key + " = " + value, this);
 				return;
 			}
 		}
@@ -358,6 +366,18 @@ public class State {
 
 	public void put(values value, long b) {
 		put(value, String.valueOf(b));
+	}
+
+	public double getDouble(String key) {
+		double value = ERROR;
+		
+		try {
+			value = Double.valueOf(get(key));
+		} catch (NumberFormatException e) {
+			Util.log("getDouble(): " + e.getMessage(), this);
+		}
+		
+		return value;
 	}
 
 	
