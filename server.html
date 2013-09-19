@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<title>Oculus Prime</title>
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Cache-Control" Content="no-cache">
+<meta http-equiv="Expires" content="-1">
+
+<style type="text/css">
+html, body {height: 100%;}
+body, div { background-color: #ffffff; padding: 0px; margin: 0px; border: 0px}
+body, p, ol, ul, td, tr {
+font-family: verdana, arial, helvetica, sans-serif;
+font-size:   13px;
+line-height: 18px; 
+color: #222222;}
+TABLE {   border: 0px; border-collapse: collapse; padding: 0px }
+TR { border: 0px; }
+TD  { border: 0px; }
+.status { color: green; text-transform: uppercase}
+.status_title {  }
+.status_unknown { color: #888888; }
+.message { color: green; }
+a { color: #2522c5; text-decoration: none; border-bottom: none; } 
+a:link { color: #2522c5; text-decoration: none; border-bottom: none; }
+a:visited { color: #2522c5; text-decoration: none; border-bottom: none; }
+a:hover { color: #2522c5; background-color: #bbbbbb; text-decoration: none;  border-bottom: none;} 
+
+</style>
+
+<script src="javascript/server.js" type="text/javascript"></script>
+<script src="flash/AC_OETags.js" language="javascript"></script>
+<script language="JavaScript" type="text/javascript">
+<!--
+// -----------------------------------------------------------------------------
+// Globals
+// Major version of Flash required
+var requiredMajorVersion = 10;
+// Minor version of Flash required
+var requiredMinorVersion = 0;
+// Minor version of Flash required
+var requiredRevision = 0;
+// -----------------------------------------------------------------------------
+// -->
+</script>
+</head>
+<body onload="server_loaded();">
+<table id="maintable" align="center" style="height: 100%;"> <!--  main 3 column ctr table -->
+<tr valign="top"><td id="topbar" colspan="3" style="height: 30px"></td></tr>
+<tr valign="top"> 
+<td id="leftsidebar" style="padding-right: 5px; width: 180px; overflow: hidden">
+<img src="images/oculus_logo.gif"><br>
+&nbsp;<span style="color: #888888;">SERVER</span>
+<br><br>
+
+<table>
+<tr>
+<td class="status_title" id="connection_title">status:</td>
+<td class="status" id="connection_status" >
+<span class="status_unknown">loading...</span>
+</td>
+</tr><tr>
+<td class="status_title" style="padding-top: 5px" id="stream_title">stream:</td>
+<td class="status" style="padding-top: 5px" id="stream_status" >
+<span class="status_unknown">stop</span>
+</td></tr>
+</table>
+
+<br>
+broadcast text: <br>
+<input id="chatbox_input" type="text" 
+onKeyPress="if (keypress(event)==13) { chat(); }" style="width: 150px; ">
+<a href="javascript: chat();">send</a><br>
+<br>
+<div id="enlargevidlink" style="display: none;">
+<a href="javascript: screensize('full');">max video layout</a>
+</div>
+<a href="initialize.html">change settings</a><br>
+<a href="index.html" target="_blank">launch controls</a><br>
+<a href="javascript: restart();">restart</a><br>
+<a href="javascript: quit();">quit<a/><br>
+
+</td>
+
+<td style="">
+<div id="videocontainer" style="width: 400px; height: 300px; overflow: hidden ">
+<script language="JavaScript" type="text/javascript">
+<!--
+// Version check for the Flash Player that has the ability to start Player Product Install (6.0r65)
+var hasProductInstall = DetectFlashVer(6, 0, 65);
+
+// Version check based upon the values defined in globals
+var hasRequestedVersion = DetectFlashVer(requiredMajorVersion, requiredMinorVersion, requiredRevision);
+
+if ( hasProductInstall && !hasRequestedVersion ) {
+	// DO NOT MODIFY THE FOLLOWING FOUR LINES
+	// Location visited after installation is complete if installation is required
+	var MMPlayerType = (isIE == true) ? "ActiveX" : "PlugIn";
+	var MMredirectURL = window.location;
+    document.title = document.title.slice(0, 47) + " - Flash Player Installation";
+    var MMdoctitle = document.title;
+
+	AC_FL_RunContent(
+		"src", "playerProductInstall",
+		"FlashVars", "MMredirectURL="+MMredirectURL+'&MMplayerType='+MMPlayerType+'&MMdoctitle='+MMdoctitle+"",
+		"width", "100%",
+		"height", "100%",
+		"align", "left",
+		"id", "oculusPrime_grabber",
+		"quality", "high",
+		"wmode","transparent",
+		"bgcolor", "#869ca7",
+		"name", "oculusPrime_grabber",
+		"allowScriptAccess","sameDomain",
+		"allowFullScreen","true",
+		"type", "application/x-shockwave-flash",
+		"pluginspage", "http://www.adobe.com/go/getflashplayer"
+	);
+} else if (hasRequestedVersion) {
+	// if we've detected an acceptable version
+	// embed the Flash Content SWF when all tests are passed
+	AC_FL_RunContent(
+			"src", "flash/oculusPrime_grabber?="+ new Date().getTime(),
+			"width", "100%",
+			"height", "100%",
+			"id", "oculusPrime_grabber",
+			"quality", "high",
+			"wmode","transparent",
+			"bgcolor", "#869ca7",
+			"name", "oculusPrime_grabber",
+			"allowScriptAccess","sameDomain",
+			"allowFullScreen","true",
+			"type", "application/x-shockwave-flash",
+			"pluginspage", "http://www.adobe.com/go/getflashplayer"
+	);
+  } else {  // flash is too old or we can't detect the plugin
+    var alternateContent = 'Alternate HTML content should be placed here. '
+  	+ 'This content requires the Adobe Flash Player. '
+   	+ '<a href=http://www.adobe.com/go/getflash/>Get Flash</a>';
+    document.write(alternateContent);  // insert non-flash content
+  }
+// -->
+</script>
+<noscript>
+  	<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"
+			id="oculusPrime_grabber" width="100%" height="100%"
+			codebase="http://fpdownload.macromedia.com/get/flashplayer/current/swflash.cab">
+			<param name="allowFullScreen" value="true" />
+			<param name="movie" value="flash/oculusPrime_grabber.swf" />
+			<param name="quality" value="high" />
+			<param name="bgcolor" value="#869ca7" />
+			<param name="allowScriptAccess" value="always" />
+			<embed src="flash/oculusPrime_grabber.swf" quality="high" bgcolor="#869ca7"
+				width="100%" height="100%" name="oculusPrime_grabber" align="middle"
+				play="true"
+				loop="false"
+				quality="high"
+				wmode="transparent"
+				allowScriptAccess="sameDomain"
+				type="application/x-shockwave-flash"
+				pluginspage="http://www.adobe.com/go/getflashplayer">
+			</embed>
+	</object>
+</noscript>
+</div>
+
+</td>
+
+<td id="rightsidebar" style="width: 180px; padding-left: 8px"> 
+<span style="color: #888888;">COMM LOG:</span>
+<div id="messagebox"> </div>
+</td>
+
+</tr></table>
+
+<div id="reducevidlink" style="display: none; position: absolute; left: 5px; top: 5px">
+<a href="javascript: screensize('reduced');">default<br>layout</a>
+</div>
+
+<div style="position: fixed; bottom: 5px; right: 40px">
+<a href="http://www.xaxxon.com" style="color: #999999; font-size: 11px" target="_blank">
+&copy; Xaxxon</a>
+</div>
+
+<!--  debugbox -->
+<div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px"></div>
+ 
+</body>
+</html>
