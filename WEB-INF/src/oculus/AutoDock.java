@@ -9,8 +9,7 @@ import java.io.ByteArrayInputStream;
 
 import javax.imageio.ImageIO;
 
-import oculus.commport.AbstractArduinoComm;
-import oculus.commport.ArduinoPort;
+import oculus.commport.ArduinoPrime;
 
 import org.red5.server.api.IConnection;
 import org.red5.server.api.service.IServiceCapableConnection;
@@ -25,7 +24,7 @@ public class AutoDock { // implements Observer {
 	private String docktarget = settings.readSetting(GUISettings.docktarget);;
 	private State state = State.getReference();
 	private boolean autodockingcamctr = false;
-	private AbstractArduinoComm comport = null;
+	private ArduinoPrime comport = null;
 	private IConnection grabber = null;
 	private int autodockctrattempts = 0;
 	private Application app = null;
@@ -33,7 +32,7 @@ public class AutoDock { // implements Observer {
 	private int rescomp = 2; // (multiplier - javascript sends clicksteer based on 640x480, autodock uses 320x240 images)
 	private final int allowforClickSteer = 1000;
 	
-	public AutoDock(Application theapp, IConnection thegrab, AbstractArduinoComm com) {
+	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com) {
 		this.app = theapp;
 		this.grabber = thegrab;
 		this.comport = com;
@@ -112,8 +111,8 @@ public class AutoDock { // implements Observer {
 								try {
 
 									Thread.sleep(allowforClickSteer); 
-									comport.camCommand(ArduinoPort.cameramove.rearstop);
-									comport.rotate(ArduinoPort.direction.left, 180);
+									comport.camCommand(ArduinoPrime.cameramove.rearstop);
+									comport.rotate(ArduinoPrime.direction.left, 180);
 									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
 									state.block(oculus.State.values.cameratilt, Integer.toString(comport.CAM_MAX), 10000); 
 //									autoDock("go");
@@ -206,7 +205,7 @@ public class AutoDock { // implements Observer {
 		app.message("docking initiated", "multiple", "speed slow motion moving dock docking");
 		state.set(State.values.docking, true);
 		state.set(State.values.dockstatus, DOCKING);
-		comport.speedset(ArduinoPort.speeds.slow);
+		comport.speedset(ArduinoPrime.speeds.slow);
 		state.set(State.values.movingforward, false);
 		
 		new Thread(new Runnable() {	
@@ -217,7 +216,9 @@ public class AutoDock { // implements Observer {
 					comport.goForward();
 					Util.delay(150);
 					comport.stopGoing();
-					comport.getDockStatus();
+			//		comport.getDockStatus();
+			// TODO; .......... change to two boards 
+					
 					state.block(oculus.State.values.batterycharging, "true", 400);
 					inchforward ++;
 				}
@@ -239,7 +240,7 @@ public class AutoDock { // implements Observer {
 						
 						comport.floodLight("off");	
 						comport.setSpotLightBrightness(0);
-						comport.camCommand(ArduinoPort.cameramove.horiz);
+						comport.camCommand(ArduinoPrime.cameramove.horiz);
 					}
 					
 					app.message("docked successfully", "multiple", "motion disabled dock docked battery charging"+str);
@@ -267,7 +268,7 @@ public class AutoDock { // implements Observer {
 //		}
 //		
 //		state.set(State.values.motionenabled, true);
-//		comport.speedset(ArduinoPort.speeds.fast);
+//		comport.speedset(ArduinoPrime.speeds.fast);
 //		comport.goBackward();
 //		app.message("un-docking", "multiple", "speed fast motion moving dock un-docked");
 //		state.set(State.values.dockstatus, UNDOCKED);
@@ -340,7 +341,7 @@ public class AutoDock { // implements Observer {
 					public void run() {
 						try {
 							Thread.sleep(allowforClickSteer); // was 1500 w/ dockgrab following
-							comport.speedset(ArduinoPort.speeds.fast);
+							comport.speedset(ArduinoPrime.speeds.fast);
 							comport.goForward();
 							Thread.sleep(s1FWDmilliseconds);
 							comport.stopGoing();
@@ -356,7 +357,7 @@ public class AutoDock { // implements Observer {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-							comport.speedset(ArduinoPort.speeds.fast);
+							comport.speedset(ArduinoPrime.speeds.fast);
 							comport.goForward();
 							Thread.sleep(s1FWDmilliseconds);
 							comport.stopGoing();
@@ -391,7 +392,7 @@ public class AutoDock { // implements Observer {
 						public void run() {
 							try {
 								Thread.sleep(allowforClickSteer);
-								comport.speedset(ArduinoPort.speeds.fast);
+								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goForward();
 								Thread.sleep(s2FWDmilliseconds);
 								comport.stopGoing();
@@ -406,7 +407,7 @@ public class AutoDock { // implements Observer {
 					new Thread(new Runnable() {
 						public void run() {
 							try {
-								comport.speedset(ArduinoPort.speeds.fast);
+								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goForward();
 								Thread.sleep(s2FWDmilliseconds);
 								comport.stopGoing();
@@ -480,7 +481,7 @@ public class AutoDock { // implements Observer {
 						public void run() {
 							try {
 								Thread.sleep(allowforClickSteer);
-								comport.speedset(ArduinoPort.speeds.fast);
+								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goBackward();
 								Thread.sleep(s1FWDmilliseconds);
 								comport.stopGoing();

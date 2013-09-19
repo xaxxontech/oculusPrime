@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.util.Enumeration;
 import java.util.Vector;
 
-import oculus.Application;
 import oculus.ManualSettings;
 import oculus.Settings;
 import oculus.Util;
@@ -20,7 +19,7 @@ public class Discovery {
 	
 	private static Settings settings = Settings.getReference();
 	private static final String motors = settings.readSetting(ManualSettings.serialport);
-	private static final String lights = settings.readSetting(ManualSettings.lightport);
+	// private static final String lights = settings.readSetting(ManualSettings.lightport);
 	
 	public static final long RESPONSE_DELAY = 1000;
 	public static final int TIMEOUT = 2000;	
@@ -32,7 +31,7 @@ public class Discovery {
 	public static final int FLOWCONTROL = SerialPort.FLOWCONTROL_NONE;
 
 	/* add known devices here, strings returned from the firmware */
-	public static final String ARDUINO_MOTOR_SHIELD = "arduinoShield";
+	// public static final String ARDUINO_MOTOR_SHIELD = "arduinoShield";
 	public static final String ARDUINO_PRIME = "oculusPrime";
 	public static final String LIGHTS = "L";
 	
@@ -43,7 +42,7 @@ public class Discovery {
 
 	/* list of all free ports */
 	private static Vector<String> ports = new Vector<String>();
-	private boolean lightsFound = false;
+	// private boolean lightsFound = false;
 	private boolean motorsFound = false;
 
 	/* constructor makes a list of available ports */
@@ -66,6 +65,7 @@ public class Discovery {
 		
 		} 
 		
+		/*
 		if(lights.equals(params.discovery.name())){	
 		
 			searchLights();	
@@ -78,7 +78,7 @@ public class Discovery {
 			
 			Util.debug("skipping discovery, lights on: " + lights, this);
 		
-		} 
+		}*/
 	}
 	
 	/** */
@@ -165,7 +165,7 @@ public class Discovery {
 		}
 	}
 	
-	/** Loop through all available serial ports and ask for product id's */
+	/** Loop through all available serial ports and ask for product id's 
 	public void searchLights() {
 	
 		// try to limit searching
@@ -181,7 +181,8 @@ public class Discovery {
 				if (serialPort != null) { close(); }
 			}
 		}
-	}
+	}*/
+	
 	/** Loop through all available serial ports and ask for product id's */
 	public void searchMotors() {
 			
@@ -202,7 +203,7 @@ public class Discovery {
 		if (id == null) return;
 		if (id.length() == 0) return;
 		id = id.trim();
-		
+		/*
 		if (id.length() == 1 ){
 			if(id.equals(LIGHTS)){		
 				
@@ -215,6 +216,7 @@ public class Discovery {
 				
 			}
 		} 
+		*/
 		
 		if(id.startsWith("id")){	
 			
@@ -222,13 +224,15 @@ public class Discovery {
 				
 			Util.debug("found product id[" + id + "] on comm port: " +  getPortName(), this);
 
-			if (id.equalsIgnoreCase(ARDUINO_MOTOR_SHIELD)) {
+			/*if (id.equalsIgnoreCase(ARDUINO_MOTOR_SHIELD)) {
 				
 				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
 				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_MOTOR_SHIELD);
 				motorsFound = true;
 				
-			} else if (id.equalsIgnoreCase(ARDUINO_PRIME)) {
+			} else*/
+			
+			if (id.equalsIgnoreCase(ARDUINO_PRIME)) {
 
 				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
 				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_PRIME);
@@ -266,7 +270,7 @@ public class Discovery {
 		String device = new String();
 		int read = 0;
 		try {
-			// Util.debug("doPortQuery, read buffer", this);
+			Util.debug("doPortQuery, read buffer", this);
 			if (inputStream.available() > 0) { //prevents linux hang
 				read = inputStream.read(buffer); 
 			}
@@ -276,19 +280,18 @@ public class Discovery {
 		}
 		
 		// read buffer
-		// Util.debug("doPortQuery, parse buffer", this);
+		Util.debug("doPortQuery, parse buffer", this);
 		for (int j = 0; j < read; j++) {
 			if(Character.isLetter((char) buffer[j]))
 				device += (char) buffer[j];
 		}
 		
 		lookup(device);
-
 		close();
 	}
 	
-	/** match types of firmware names and versions */
-	public AbstractArduinoComm getMotors(Application application) {
+	/** match types of firmware names and versions 
+	public ArduinoPrime getMotors(Application application) {
 
 		// if(state.equals(State.values.firmware, OCULUS_PRIME))
 		
@@ -297,6 +300,6 @@ public class Discovery {
 		
 		// default 
 		//return new ArduinoMotorSheild(application);
-	}
+	}*/
 }
 

@@ -6,8 +6,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
-import oculus.commport.AbstractArduinoComm;
-import oculus.commport.ArduinoPort;
+import oculus.commport.ArduinoPrime;
 import oculus.commport.Discovery;
 
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
@@ -37,7 +36,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private State state = State.getReference();
-	private AbstractArduinoComm comport = null;
+	private ArduinoPrime comport = null;
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
 	
@@ -121,7 +120,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				if (comport.isConnected()) { 
 					comport.setSpotLightBrightness(0);
 //					comport.floodLightOff();
-					comport.floodLight("off");
+//					comport.floodLight("off");
 					comport.stopGoing();
 				}
 
@@ -215,8 +214,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		salt = settings.readSetting("salt");
 
 		// must be blocking search of all ports, but only once!
-		Discovery discovery = new Discovery();
-		comport = discovery.getMotors(this); 
+		// Discovery discovery = 
+		// TODO; new............
+		new Discovery();
+		comport = new ArduinoPrime(this);//discovery.getMotors(this); 
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
 		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
@@ -430,7 +431,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		switch (fn) {
 	
 		case battstats: messageplayer(null,"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
-		case cameracommand: comport.camCommand(ArduinoPort.cameramove.valueOf(str));break;
+		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
@@ -467,8 +468,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrabtest: docker.dockGrab("test", 0, 0); break;
-		case digitalread: comport.digitalRead(Integer.parseInt(str)); break;
-		case analogwrite: comport.AnalogWrite(Integer.parseInt(str)); break;
+//		case digitalread: comport.digitalRead(Integer.parseInt(str)); break;
+//		case analogwrite: comport.AnalogWrite(Integer.parseInt(str)); break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str);
 		case move: move(str); break;
 		case nudge: nudge(str); break;
@@ -486,7 +487,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;
 
 		case speedset:
-			comport.speedset(ArduinoPort.speeds.valueOf(str));
+			comport.speedset(ArduinoPrime.speeds.valueOf(str));
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
 
@@ -500,7 +501,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				break;
 			}
 			moveMacroCancel();
-			comport.slide(ArduinoPort.direction.valueOf(str));
+			comport.slide(ArduinoPrime.direction.valueOf(str));
 			messageplayer("command received: " + fn + str, null, null);
 			break;
 			
@@ -514,7 +515,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				break;
 			}
 			moveMacroCancel();
-			comport.rotate(ArduinoPort.direction.valueOf(cmd[0]), Integer.parseInt(cmd[1]));
+			comport.rotate(ArduinoPrime.direction.valueOf(cmd[0]), Integer.parseInt(cmd[1]));
 			messageplayer("rotate: " + cmd[0]+ " "+cmd[1], "motion", "moving");
 			break;
 			
@@ -588,6 +589,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		//TODO: lights on second usb port hold over 
 		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
 		case spotlight: comport.setSpotLightBrightness(Integer.parseInt(str)); break;
+		
 		case floodlight: comport.floodLight(str); break;
 		
 			
@@ -1011,11 +1013,11 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			if (state.get(State.values.dockstatus) != null) str += " dock "+ state.get(State.values.dockstatus);
 			
 			// TODO: maybe no longer uses two port classes
-			if(AbstractArduinoComm.lightsAvailable()){
+			// if(AbstractArduinoComm.lightsAvailable()){
 				str += " light " + state.get(State.values.spotlightbrightness);
 				str += " floodlight " + state.get(State.values.floodlighton);
 				// Util.debug("SPOTLIGHT *** " + state.get(State.values.spotlightbrightness), this);
-			}
+			// }
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
 
@@ -1166,7 +1168,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		moveMacroCancel();
 		
-		ArduinoPort.direction dir = ArduinoPort.direction.valueOf(str);
+		ArduinoPrime.direction dir = ArduinoPrime.direction.valueOf(str);
 		switch (dir) {
 	
 		case backward: comport.goBackward(); break;
@@ -1190,7 +1192,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			return;
 		}
 
-		comport.nudge(ArduinoPort.direction.valueOf(str));
+		comport.nudge(ArduinoPrime.direction.valueOf(str));
 		messageplayer("command received: nudge" + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
 	}
@@ -1689,14 +1691,16 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if(str != null) result += "username " + str + " ";
 
 		// commport
-		if(AbstractArduinoComm.motorsAvailable()) result += "comport " + settings.readSetting(ManualSettings.serialport) + " ";
+		if(ArduinoPrime.motorsAvailable()) result += "comport " + settings.readSetting(ManualSettings.serialport) + " ";
 		else result += "comport nil ";
 		
 		// TODO: 
 		// lights
-		if(AbstractArduinoComm.lightsAvailable()) result += "lightport " + settings.readSetting(ManualSettings.lightport) + " ";
-		else result += "lightport nil ";
+		
+		// if(ArduinoPrime.motorsAvailable()) result += "lightport " + settings.readSetting(ManualSettings.lightport) + " ";
+		result += "lightport nil ";
 
+		
 		// law and wan
 		String lan = state.get(State.values.localaddress);
 		if(lan == null) result += "lanaddress error ";
@@ -1842,14 +1846,14 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		// Util.debug("updated(): " + key, this);
 		
 		if(key.equals(State.values.cameratilt.name())){
-			if(state.getInteger(State.values.cameratilt) > (AbstractArduinoComm.CAM_MAX /2) 
+			if(state.getInteger(State.values.cameratilt) > (ArduinoPrime.CAM_MAX /2) 
 					&! state.getBoolean(State.values.controlsinverted)){
 				IServiceCapableConnection sc = (IServiceCapableConnection) player;
 				sc.invoke("flipVideo", new Object[] { true });
 				state.set(State.values.controlsinverted, true);
 				messageplayer("inverting video and controls", null,null);
 			}
-			if(state.getInteger(State.values.cameratilt) < (AbstractArduinoComm.CAM_MAX /2) && 
+			if(state.getInteger(State.values.cameratilt) < (ArduinoPrime.CAM_MAX /2) && 
 					state.getBoolean(State.values.controlsinverted)){
 				IServiceCapableConnection sc = (IServiceCapableConnection) player;
 				sc.invoke("flipVideo", new Object[] { false });

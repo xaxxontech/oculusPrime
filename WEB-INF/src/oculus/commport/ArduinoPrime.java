@@ -1,8 +1,16 @@
 package oculus.commport;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import oculus.Application;
 import oculus.AutoDock;
+import oculus.GUISettings;
 import oculus.ManualSettings;
+import oculus.Settings;
 import oculus.State;
 import oculus.Util;
 import gnu.io.CommPortIdentifier;
@@ -11,22 +19,92 @@ import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
 
 /**
- * 
- * Support lights on second usb port, and current sense on motors. 
- * 
- * Battery and docking states now updated from this class  
- *
+ *  Communicate with the motors and lights on one arduino and battery board 
  */
-public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEventListener, ArduinoPort {
+public class ArduinoPrime  implements SerialPortEventListener {
+
+	public enum direction { stop, right, left, forward, backward };
+	public enum cameramove { stop, up, down, horiz, upabit, downabit, frontstop, rearstop };
+	public enum speeds { slow, med, fast }; // better motors, maybe add speeds? 
+
+	public static final long DEAD_TIME_OUT = 30000;
+	public static final long WATCHDOG_DELAY = 5000;	
+	public static final long DOCKING_DELAY = 1000;
+	public static final int SETUP = 2000;
 	
-	private int MAX_ATTEMPTS = 5; // how many tries before giving up looking
+	public static final byte STOP = 's';
+	public static final byte FORWARD = 'f';
+	public static final byte BACKWARD = 'b';
+	public static final byte LEFT = 'l';
+	public static final byte RIGHT = 'r';
 	
-	// TODO: hold over if two serial ports
-	private LightsComm light;
+	public static final byte CAM = 'O';
+	public static final byte ECHO = 'e';
+	
+	public static final byte FLOOD_LIGHT_LEVEL = 'p'; 
+	public static final byte SPOT_LIGHT_LEVEL = 'o';
+		
+	public static final byte FIND_HOME_TILT = 'm';
+	public static final byte HOME_TILT_FRONT = 't';
+	public static final byte HOME_TILT_REAR = 'z';
+	public static final byte GET_PRODUCT = 'x';
+	public static final byte GET_VERSION = 'y';
+	public static final byte[] ECHO_ON = { 'e', '1' };
+	public static final byte[] ECHO_OFF = { 'e', '0' };
+	
+	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
 	
 	// check if board has replied with correct firmware. 
 	private boolean verified = false;
 	
+	// toggle to see bytes sent in log 
+	public static final boolean DEBUGGING = true;
+	
+	// Tweak these constants here 
+	public static final int CAM_HORIZ = 19; // degrees (CAD measures 19)
+	public static final int CAM_MAX = 219; // degrees (CAD measures 211)
+	public static final int CAM_MIN = 0; // degrees
+	public static final int CAM_NUDGE = 5; // degrees
+	public static final long CAM_NUDGE_DELAY = 100; 
+	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
+
+	protected long lastSent = System.currentTimeMillis();
+	protected long lastRead = System.currentTimeMillis();
+	protected State state = State.getReference();
+	protected Application application = null;
+	protected SerialPort serialPort = null;	
+	protected String version = null;
+	protected OutputStream out = null;
+	protected InputStream in = null;
+	
+	protected static Settings settings = Settings.getReference();
+	protected final String portName = settings.readSetting(ManualSettings.serialport);
+	protected final String firmware = settings.readSetting(ManualSettings.firmware);
+	
+	// data buffer 
+	protected byte[] buffer = new byte[32];
+	protected int buffSize = 0;
+	
+	// thread safety 
+	protected volatile boolean isconnected = false;
+	public volatile boolean sliding = false;
+	
+	// tracking motor moves 
+	private static Timer cameraTimer = null;
+	
+	// take from settings 
+	public double clicknudgemomentummult = settings.getDouble(GUISettings.clicknudgemomentummult);	
+	public int maxclicknudgedelay = settings.getInteger(GUISettings.maxclicknudgedelay);
+	public int speedslow = settings.getInteger(GUISettings.speedslow);
+	public int speedmed = settings.getInteger(GUISettings.speedmed);
+	public int nudgedelay = settings.getInteger(GUISettings.nudgedelay);
+	public int maxclickcam = settings.getInteger(GUISettings.maxclickcam);
+	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
+	
+    private static final int TURNBOOST = 25; 
+	public int speedfast = 255;
+	public int turnspeed = 255;
+		
 	public ArduinoPrime(Application app) {	
 		
 		Util.log("............ starting up: " + settings.readSetting(ManualSettings.attempts), this);
@@ -43,14 +121,13 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 				public void run() {
 					connect();
 					Util.delay(SETUP);
-					if(isConnected()){
+					if(isconnected){
 						
 						Util.log("Connected to port: " + serialPort, this);
 						
 						sendCommand(FIND_HOME_TILT);
 						sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
 						state.set(State.values.cameratilt, CAM_HORIZ);
-						sendCommand((byte) DOCK_STATUS);
 					}
 				}
 			}).start();
@@ -67,83 +144,45 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 						application.restart();
 					}
 				}
-			}).start(); 	
-			
-			// keep polling port for battery 
-			new PowerThread(this);
-		}
-		
-		if(lightsAvailable()){
-			Util.log("..............lights on: " + settings.readSetting(ManualSettings.lightport), this);
-			light = new LightsComm(app);
-			floodLight("off");
-			setSpotLightBrightness(0);
-		} else {
-			Util.log("....... using lights on the motor board?? no controls being given in gui", this);
+			}).start(); 
 		}
 	}
 	
-	@Override 
+	public static boolean motorsAvailable(){
+		final String motors = settings.readSetting(ManualSettings.serialport); 
+		if(motors != null) {
+			if(motors.equals(Discovery.params.discovery.name()) || motors.equals(Discovery.params.disabled.name()))
+				return false;
+		}
+		
+		return true;
+	}
+
+	public void floodLight(String string) {
+		// TODo .......MUST FIXo
+		Util.debug("........ setSpotLightBrightness: " + string, this);
+		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, 0});
+		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte)55});
+		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte) 255});
+
+	}
+	
 	public void setSpotLightBrightness(int target){
 		
 		Util.debug("........ setSpotLightBrightness: " + target, this);
 		
-		if(light != null) { //TODO: hold over if two serial ports
-			Util.debug("____using onboard lights______ setSpotLightBrightness: " + target, this);
-			light.setSpotLightBrightness(target);
-			return;
-		} 
-		
-		sendCommand(new byte[]{ArduinoPort.LIGHT_LEVEL, (byte)target});
+		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
 		state.set(State.values.spotlightbrightness, target);
 		application.message("spotlight brightness set to "+target+"%", "light", Integer.toString(target));
 	}
 
-//	@Override 
-//	public void floodLightOff(){ 
-//		
-//		Util.debug("........ comport, floodLightOff ", this);
-//		
-//		if(light != null) { //TODO: hold over if two serial ports
-//			light.floodLight("off");
-//			return;
-//		}
-//		
-//		sendCommand(ArduinoPort.FLOOD_OFF);
-//		state.set(State.values.floodlighton, false);
-//		application.message("floodlight OFF", "floodlight", state.get(State.values.floodlighton));
-//	}
-	
-//	@Override 
-//	public void floodLightOn(){ 
-//		
-//		Util.debug("........ comport, floodLightOn ", this);
-//		
-//		if(light != null) { //TODO: hold over if two serial ports
-//			light.floodLight("on");
-//			return;
-//		}
-//		
-//		sendCommand(ArduinoPort.FLOOD_ON);
-//		state.set(State.values.floodlighton, true);
-//		application.message("floodlight ON", "floodlight", state.get(State.values.floodlighton));
-//	}
-	
-	@Override 
-	public void floodLight(String str) {
-		if(light != null) {
-			light.floodLight(str);
-		}
-	}
-	
-	/** respond to feedback from the device  */
-	@Override
+	/** respond to feedback from the device  */	
 	public void execute() {
 		String response = "";
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		if(AbstractArduinoComm.DEBUGGING) Util.debug("serial in: " + response, this);
+		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			isconnected = true;
@@ -203,32 +242,11 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 			application.message(null, "dock", AutoDock.UNDOCKED );
 		}
 
-		if(response.startsWith("power")){
+		if(response.startsWith("battery")){
 			
 			String level = response.split(" ")[1];
 			state.put(State.values.batterylife, level); // TODO: don't store the volts in state, just the value? +"V");
-			
-//			application.message(null, "multiple", "battery " + level + "V"); //not here, only if client asks
 		}
-		
-/*		
- 		if(response.startsWith("timeout")){
-			
-			// motors stopped by firmware, but tell state 
-			
-			boolean timeout = false;
-			if(state.getBoolean(State.values.moving)){
-				state.put(State.values.moving, false);
-				timeout = true;
-			}
-			if(state.getBoolean(State.values.moving)){
-				state.put(State.values.movingforward, false);
-				timeout = true;
-			}
-			
-			if(timeout) application.message(null, "motion", "STOPPED");
-		}
-*/
 		
 		if(response.startsWith("tiltpos")) {
 			String position = response.split(" ")[1];
@@ -237,7 +255,7 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 		}
 	}
 
-	@Override
+	
 	public void connect() {
 		try {
 
@@ -262,11 +280,480 @@ public class ArduinoPrime extends AbstractArduinoComm implements SerialPortEvent
 		}
 	}
 	
-	@Override
-	public void serialEvent(SerialPortEvent event) {
-		if (event.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
-			super.manageInput();
+	/** */
+	public void manageInput(){
+		try {
+			byte[] input = new byte[32];
+			int read = in.read(input);
+			for (int j = 0; j < read; j++) {
+				// print() or println() from arduino code
+				if ((input[j] == '>') || (input[j] == 13) || (input[j] == 10)) {
+					// do what ever is in buffer
+					if (buffSize > 0) execute();
+					buffSize = 0; // reset
+					// track input from arduino
+					lastRead = System.currentTimeMillis();
+				} else if (input[j] == '<') {
+					// start of message
+					buffSize = 0;
+				} else {
+					// buffer until ready to parse
+					buffer[buffSize++] = input[j];
+				}
+			}
+		} catch (IOException e) {
+			System.out.println("event : " + e.getMessage());
 		}
 	}
+		
+	public void serialEvent(SerialPortEvent event) {
+		if (event.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
+			manageInput();
+		}
+	}
+
+	public long getWriteDelta() {
+		return System.currentTimeMillis() - lastSent;
+	}
+	
+	public String getVersion() {
+		return version;
+	}
+	
+	public long getReadDelta() {
+		return System.currentTimeMillis() - lastRead;
+	}
+
+	
+	public void setEcho(boolean update) {
+		if (update) sendCommand(ECHO_ON);
+		else sendCommand(ECHO_OFF);
+	}
+
+	
+	public void reset() {
+		if (isconnected) {
+			new Thread(new Runnable() {
+				public void run() {
+					disconnect();
+					connect();
+				}
+			}).start();
+		}
+	}
+
+	/** shutdown serial port */
+	protected void disconnect() {
+		try {
+			if(in!=null) in.close();
+			if(out!=null) out.close();
+			isconnected = false;
+			version = null;
+		} catch (Exception e) {
+			Util.log("disconnect(): " + e.getMessage(), this);
+		}
+		if(serialPort!=null) serialPort.close();
+	}
+
+	/**
+	 * Send a multiple byte command to send the device
+	 * 
+	 * @param command
+	 *            is a byte array of messages to send
+	 */
+	public void sendCommand(byte[] cmd) {
+
+		if (!isconnected) return;
+		
+		if(DEBUGGING) {
+			String text = "sendCommand(): " + (char)cmd[0] + " ";
+			for(int i = 1 ; i < cmd.length ; i++) 
+				text += (byte)cmd[i] + " ";
+			
+			Util.debug(text, this);
+		}
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			switch (cmd[0]) {
+			case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
+			case ArduinoPrime.BACKWARD: cmd[0]=ArduinoPrime.FORWARD; break;
+			case ArduinoPrime.LEFT: cmd[0]=ArduinoPrime.RIGHT; break;
+			case ArduinoPrime.RIGHT: cmd[0]=ArduinoPrime.LEFT; 
+			}
+		}
+		
+		final byte[] command = cmd;
+		new Thread(new Runnable() {
+			public void run() {
+				try {
+
+					// send
+					out.write(command);
+		
+					// end of command
+					out.write(13);
+		
+				} catch (Exception e) {
+					reset();
+					Util.log("OCULUS: sendCommand(), " + e.getMessage(), this);
+				}
+			}
+		}).start();
+		
+		// track last write
+		lastSent = System.currentTimeMillis();
+	}
+	
+	
+	public void sendCommand(final byte cmd){
+		sendCommand(new byte[]{cmd});
+	}
+
+	public void goForward() {
+		sendCommand(new byte[] { FORWARD, (byte) state.getInteger(State.values.motorspeed) });
+		state.put(State.values.moving, true);
+		state.put(State.values.movingforward, true);
+		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+	}
+
+	public void goBackward() {
+		sendCommand(new byte[] { BACKWARD, (byte) state.getInteger(State.values.motorspeed) });
+		state.put(State.values.moving, true);
+		state.put(State.values.movingforward, false);
+		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+	}
+
+	public void turnRight() {
+		int tmpspeed = turnspeed;
+		int boost = TURNBOOST;
+		int speed = state.getInteger(State.values.motorspeed);
+		if (speed < turnspeed && (speed + boost) < speedfast)
+			tmpspeed = speed + boost;
+
+		sendCommand(new byte[] { RIGHT, (byte) tmpspeed });
+		state.put(State.values.moving, true);
+		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+	}
+
+	public void turnLeft() {
+		int tmpspeed = turnspeed;
+		int boost = TURNBOOST;
+		int speed = state.getInteger(State.values.motorspeed);
+		if (speed < turnspeed && (speed + boost) < speedfast)
+			tmpspeed = speed + boost;
+
+		sendCommand(new byte[] { LEFT, (byte) tmpspeed });
+		state.put(State.values.moving, true);
+		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+	}
+	
+	private class cameraUpTask extends TimerTask {
+		@Override
+		public void run(){
+			
+			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) + CAM_NUDGE);
+			
+			if (state.getInteger(State.values.cameratilt) >= CAM_MAX) {
+				cameraTimer.cancel();
+				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
+				state.set(State.values.cameratilt, CAM_MAX);
+				return;
+			}
+		
+			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
+		}
+	}
+	
+	private class cameraDownTask extends TimerTask {
+		@Override
+		public void run(){
+			
+			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - CAM_NUDGE);
+			
+			if (state.getInteger(State.values.cameratilt) <= CAM_MIN) {
+				cameraTimer.cancel();
+				sendCommand(new byte[] { HOME_TILT_FRONT }); // calibrate
+				state.set(State.values.cameratilt, CAM_MIN);
+				return;
+			}
+	
+			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
+		}
+	}
+	
+	public void camCommand(cameramove move){ 
+
+		Util.debug("camCommand(): " + move, this);
+		
+		if (state.getBoolean(State.values.autodocking)) {
+			application.messageplayer("command dropped, autodocking", null, null);
+			return;
+		}
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			switch (move) {
+			case up: move=cameramove.down; break;
+			case down: move=cameramove.up; break;
+			case upabit: move=cameramove.downabit; break;
+			case downabit: move=cameramove.upabit; break; 
+			}
+		}
+		
+		int position;
+		
+		switch (move) {
+		
+			case stop: 
+				if(cameraTimer != null) cameraTimer.cancel();
+				cameraTimer = null;
+				return;
+				
+			case up:  
+				cameraTimer = new java.util.Timer();  
+				cameraTimer.scheduleAtFixedRate(new cameraUpTask(), 0, CAM_NUDGE_DELAY);
+				return;
+			
+			case down:  
+				cameraTimer = new java.util.Timer();  
+				cameraTimer.scheduleAtFixedRate(new cameraDownTask(), 0, CAM_NUDGE_DELAY);
+				return;
+			
+			case horiz: 
+				sendCommand(new byte[] { CAM, (byte) CAM_HORIZ });
+				state.set(State.values.cameratilt, CAM_HORIZ);
+				return;
+			
+			case downabit: 
+				position= state.getInteger(State.values.cameratilt) - CAM_NUDGE*2;
+				if (position <= CAM_MIN) { 
+					position = CAM_MIN;
+					sendCommand(new byte[] { HOME_TILT_FRONT }); //calibrate 
+				}
+				else {  sendCommand(new byte[] { CAM, (byte) position }); }
+				state.set(State.values.cameratilt, position);
+				return; 
+			
+			case upabit: 
+				position = state.getInteger(State.values.cameratilt) + CAM_NUDGE*2;
+				if (position >= CAM_MAX) { 
+					position = CAM_MAX;
+					sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
+				}
+				else { sendCommand(new byte[] { CAM, (byte) position }); }
+				state.set(State.values.cameratilt, position);
+				return;
+				
+			case frontstop:  
+				sendCommand(new byte[] { HOME_TILT_FRONT });
+				state.set(State.values.cameratilt, CAM_MIN);
+				return;
+				
+			case rearstop: 
+				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX });
+				state.set(State.values.cameratilt, CAM_MAX);
+				return;
+		}
+	
+	}
+	
+
+	public void speedset(final speeds update) {
+		
+		Util.debug("speedset(): " + update, this);
+		
+		switch (update) {
+		case slow: state.put(State.values.motorspeed, speedslow); break;
+		case med: state.put(State.values.motorspeed, speedmed); break;
+		case fast: state.put(State.values.motorspeed, speedfast); break;
+		}
+	}
+
+	public void nudge(final direction dir) {
+		
+		Util.debug("nudge(): " + dir, this);
+		
+		new Thread(new Runnable() {
+			public void run() {
+				
+				int n = nudgedelay;
+				
+				switch (dir) {
+				case right: turnRight(); break;
+				case left: turnLeft(); break;
+				case forward: 
+					goForward();
+					state.put(State.values.movingforward, false);
+					n *= 4; 
+					break;
+				case backward:
+					goBackward();
+					n *= 4;
+				}
+				
+				Util.delay(n);
+
+				if (state.getBoolean(State.values.movingforward)) goForward();
+				else stopGoing();
+				
+			}
+		}).start();
+	}
+
+	public void rotate(final direction dir, final int degrees) {
+		new Thread(new Runnable() {
+			public void run() {
+				
+				final int tempspeed = state.getInteger(State.values.motorspeed);
+				state.put(State.values.motorspeed, speedfast);
+				
+				int n = fullrotationdelay * degrees / 360;
+				
+				switch (dir) {
+					case right: turnRight(); break;
+					case left: turnLeft(); 
+				}
+				
+				Util.delay(n);
+
+				stopGoing();
+				state.put(State.values.motorspeed, tempspeed);
+				application.message(null, "motion", "stopped");
+				
+			}
+		}).start();
+	}
+	
+	public void slide(final direction dir){
+		
+		Util.debug("slide(): " + dir, this);
+		
+		if (sliding == false) {
+			sliding = true;
+			
+			new Thread(new Runnable() {
+				public void run() {
+					try {	
+						
+						final int tempspeed = state.getInteger(State.values.motorspeed);
+						final int distance = 300;
+						final int turntime = 500;
+						
+						state.put(State.values.motorspeed, speedfast);
+						
+						switch (dir) {
+						case right: turnLeft(); break;
+						case left: turnRight(); break;
+						}
+				
+						Thread.sleep(turntime);
+						
+						if (sliding == true) {
+							goBackward();
+							Thread.sleep(distance);
+							
+							if (sliding == true) {
+								
+								switch (dir) {
+								case right: turnRight();
+								case left: turnLeft();
+								}	
+									
+								Thread.sleep(turntime);
+							 
+								if (sliding == true) {
+									goForward();
+									Thread.sleep(distance);
+									if (sliding == true) {
+										stopGoing();
+										sliding = false;
+										state.put(State.values.motorspeed, tempspeed);
+									}
+								}
+							}
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}).start();
+		}
+	}
+
+	public void slidecancel() {
+		if (sliding == true) sliding = false;
+	}
+
+	public void clickSteer(final int x, int y) {
+		
+		Util.debug("__clickSteer(): " + x, this);
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			y=-y;
+		}
+		
+		clickCam(y);
+		clickNudge(x);
+	}
+
+	private void clickNudge(final Integer x) {
+		
+		Util.debug("__clickNudge(): " + "x: " + x, this);
+		
+		//TODO:  unsure of this 
+		final double mult = Math.pow(((320.0 - (Math.abs(x))) / 320.0), 3)* clicknudgemomentummult + 1.0;
+		final int clicknudgedelay = (int) ((maxclicknudgedelay * (Math.abs(x)) / 320) * mult);
+		
+		Util.debug("__clickNudge() n: "+clicknudgemomentummult+" mult: "+mult+" clicknudgedelay-after: "+clicknudgedelay, this);
+		
+		new Thread(new Runnable() {	
+			public void run() {
+				try {
+					
+					final int tempspeed = state.getInteger(State.values.motorspeed);
+					state.put(State.values.motorspeed, speedfast);
+					
+					if (x > 0) turnRight();
+					else turnLeft();
+					
+					Thread.sleep(clicknudgedelay);
+					state.put(State.values.motorspeed, tempspeed);
+					
+					if (state.getBoolean(State.values.movingforward)) goForward();
+					else stopGoing();
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+	
+	}
+	public void stopGoing() {
+		sendCommand(STOP);
+		state.put(State.values.moving, false);
+		state.put(State.values.movingforward, false);
+		if (state.getBoolean(State.values.muteOnROVmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
+	}
+	
+	private void clickCam(final Integer y) {
+		
+		Util.debug("___clickCam(): " + "y: " + y, this);
+		
+		Integer n = maxclickcam * y / 240;  
+		state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - n);
+		
+		// range check 
+		if (state.getInteger(State.values.cameratilt) < CAM_MIN) state.set(State.values.cameratilt, CAM_MIN);
+		if (state.getInteger(State.values.cameratilt) > CAM_MAX) state.set(State.values.cameratilt, CAM_MAX);
+		
+		application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+		sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });	
+		
+	}
+
+	public boolean isConnected() {
+		return isConnected();
+	}
+
 }
 
