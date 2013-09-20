@@ -5,9 +5,9 @@ import java.net.*;
 
 import javax.swing.*;
 
-import oculus.PlayerCommands;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.PlayerCommands;
+import oculusPrime.State;
+import oculusPrime.Util;
 
 import java.awt.event.*;
 

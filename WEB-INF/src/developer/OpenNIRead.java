@@ -1,7 +1,7 @@
 package developer;
 
-import oculus.Application;
-import oculus.Settings;
+import oculusPrime.Application;
+import oculusPrime.Settings;
 
 import org.OpenNI.*;
 
@@ -28,7 +28,7 @@ public class OpenNIRead implements IObserver<ErrorStateEventArgs>{
 	
 	public void startDepthCam() {
 		
-		oculus.Util.log("start depth cam", this);
+		oculusPrime.Util.log("start depth cam", this);
 		
 		String sep = "\\"; // windows
 		if (Settings.os.equals("linux")) { sep = "/"; }

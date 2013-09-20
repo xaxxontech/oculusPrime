@@ -8,9 +8,9 @@ import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.*;
 
-import oculus.Application;
-import oculus.ManualSettings;
-import oculus.Settings;
+import oculusPrime.Application;
+import oculusPrime.ManualSettings;
+import oculusPrime.Settings;
 
 /**
  * Send yourself an email from your gmail account

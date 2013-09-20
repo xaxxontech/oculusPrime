@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
-import oculus.commport.ArduinoPrime;
-import oculus.commport.Discovery;
+import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.Discovery;
 
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
@@ -234,7 +234,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 		
 		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED))
-			commandServer = new oculus.TelnetServer(this);
+			commandServer = new oculusPrime.TelnetServer(this);
 		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
@@ -263,10 +263,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 					// stream = null;
 					String address = "127.0.0.1:" + state.get(State.values.httpPort);
 					if (Settings.os.equals("linux")) {
-						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculus/initialize.html");
+						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
 					}
 					else { // win
-						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculus/initialize.html");
+						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculusPrime/initialize.html");
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -283,10 +283,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 					// stream = "stop";
 					String address = "127.0.0.1:" + state.get(State.values.httpPort);
 					if (Settings.os.equals("linux")) {
-						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculus/server.html");
+						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
 					}
 					else { // win
-						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculus/server.html");
+						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculusPrime/server.html");
 					}
 
 				} catch (Exception e) {

@@ -7,8 +7,8 @@ import java.io.InputStreamReader;
 import java.net.UnknownHostException;
 
 
-import oculus.TelnetServer;
-import oculus.Util;
+import oculusPrime.TelnetServer;
+import oculusPrime.Util;
 
 public class ScriptServer extends AbstractTerminal {
 	public static final String SEPERATOR = " : ";

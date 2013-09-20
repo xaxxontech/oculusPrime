@@ -11,10 +11,10 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import oculus.ManualSettings;
-import oculus.PlayerCommands;
-import oculus.Settings;
-import oculus.Util;
+import oculusPrime.ManualSettings;
+import oculusPrime.PlayerCommands;
+import oculusPrime.Settings;
+import oculusPrime.Util;
 
 import org.junit.After;
 import org.junit.Before;

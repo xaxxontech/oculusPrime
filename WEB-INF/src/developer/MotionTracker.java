@@ -5,11 +5,11 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 
-import oculus.Application;
-import oculus.Observer;
-import oculus.Settings;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.Application;
+import oculusPrime.Observer;
+import oculusPrime.Settings;
+import oculusPrime.State;
+import oculusPrime.Util;
 
 import java.io.IOException;
 import java.nio.ShortBuffer;

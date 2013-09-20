@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 import java.util.Arrays;
 import java.util.List;
@@ -318,9 +318,9 @@ public enum PlayerCommands {
 		who("Returns info on current connected users"),
 		loginrecords("Returns list of RTMP driver login history for current server session"),
 		settings("Returns list of all settings from oculus_settings.txt"),
-		analogwrite("Sends command ‘a’ followed by two bytes (pin #, value) to ArduinOculus microcontroller"),
-		digitalread("Sends command ‘d’ followed by byte (pin #) to ArduinOculus microcontroller"),
-		messageclients("Send text to all other connected users. Similar to ‘chat,’ but without preceding user info"),
+		analogwrite("Sends command ï¿½aï¿½ followed by two bytes (pin #, value) to ArduinOculus microcontroller"),
+		digitalread("Sends command ï¿½dï¿½ followed by byte (pin #) to ArduinOculus microcontroller"),
+		messageclients("Send text to all other connected users. Similar to ï¿½chat,ï¿½ but without preceding user info"),
 		rssadd("Create new rss feed item with params: [title] description");
 
         private final String message;

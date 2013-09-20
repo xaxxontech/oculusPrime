@@ -6,7 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
-import oculus.Settings;
+import oculusPrime.Settings;
 
 import org.junit.After;
 import org.junit.Before;

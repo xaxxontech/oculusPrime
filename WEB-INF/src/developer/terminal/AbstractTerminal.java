@@ -3,7 +3,7 @@ package developer.terminal;
 import java.io.*;
 import java.net.*;
 
-import oculus.State;
+import oculusPrime.State;
 
 public abstract class AbstractTerminal  {
 	

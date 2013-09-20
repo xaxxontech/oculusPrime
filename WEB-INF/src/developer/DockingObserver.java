@@ -1,9 +1,9 @@
 package developer;
 
-import oculus.Application;
-import oculus.AutoDock;
-import oculus.Observer;
-import oculus.State;
+import oculusPrime.Application;
+import oculusPrime.AutoDock;
+import oculusPrime.Observer;
+import oculusPrime.State;
 
 /** Manage auto docking events like timeout and lost target */
 public class DockingObserver implements Observer {

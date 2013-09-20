@@ -24,7 +24,7 @@
 	<servlet>
 		<servlet-name>rtmpPortRequest</servlet-name>
 		<servlet-class>
-			oculus.RtmpPortRequest
+			oculusPrime.RtmpPortRequest
 		</servlet-class>
 		<load-on-startup>3</load-on-startup>
 	</servlet>
@@ -37,7 +37,7 @@
 	<servlet>
 		<servlet-name>frameGrabHTTP</servlet-name>
 		<servlet-class>
-			oculus.FrameGrabHTTP
+			oculusPrime.FrameGrabHTTP
 		</servlet-class>
 		<load-on-startup>4</load-on-startup>
 	</servlet>
@@ -52,7 +52,7 @@
 	<servlet>
 		<servlet-name>authGrab</servlet-name>
 		<servlet-class>
-			oculus.AuthGrab
+			oculusPrime.AuthGrab
 		</servlet-class>
 	</servlet>
 	<servlet-mapping>

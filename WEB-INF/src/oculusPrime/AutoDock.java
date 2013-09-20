@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -9,7 +9,7 @@ import java.io.ByteArrayInputStream;
 
 import javax.imageio.ImageIO;
 
-import oculus.commport.ArduinoPrime;
+import oculusPrime.commport.ArduinoPrime;
 
 import org.red5.server.api.IConnection;
 import org.red5.server.api.service.IServiceCapableConnection;
@@ -114,7 +114,7 @@ public class AutoDock { // implements Observer {
 									comport.camCommand(ArduinoPrime.cameramove.rearstop);
 									comport.rotate(ArduinoPrime.direction.left, 180);
 									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
-									state.block(oculus.State.values.cameratilt, Integer.toString(comport.CAM_MAX), 10000); 
+									state.block(oculusPrime.State.values.cameratilt, Integer.toString(comport.CAM_MAX), 10000); 
 //									autoDock("go");
 									state.set(State.values.autodocking, true);
 									dockGrab("find", 0, 0);
@@ -219,7 +219,7 @@ public class AutoDock { // implements Observer {
 			//		comport.getDockStatus();
 			// TODO; .......... change to two boards 
 					
-					state.block(oculus.State.values.batterycharging, "true", 400);
+					state.block(oculusPrime.State.values.batterycharging, "true", 400);
 					inchforward ++;
 				}
 				
@@ -589,7 +589,7 @@ public class AutoDock { // implements Observer {
 //		final OculusImage oculusImage = new OculusImage();
 //		oculusImage.dockSettings(docktarget); // can't set this every time dockGrab is called, only app start
 		
-		state.set(oculus.State.values.dockgrabbusy, true);
+		state.set(oculusPrime.State.values.dockgrabbusy, true);
 
 		if (state.getBoolean(State.values.framegrabbusy.name())
 				|| ! (state.get(State.values.stream).equals("camera") 

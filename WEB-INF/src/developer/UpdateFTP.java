@@ -5,11 +5,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
-import oculus.LoginRecords;
 //import oculus.Observer;
-import oculus.Settings;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.LoginRecords;
+import oculusPrime.Settings;
+import oculusPrime.State;
+import oculusPrime.Util;
 
 /** */
 public class UpdateFTP { // implements Observer {

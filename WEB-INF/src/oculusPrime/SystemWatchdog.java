@@ -1,12 +1,12 @@
-package oculus;
+package oculusPrime;
 
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import oculus.Settings;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.Settings;
+import oculusPrime.State;
+import oculusPrime.Util;
 
 public class SystemWatchdog {
 	

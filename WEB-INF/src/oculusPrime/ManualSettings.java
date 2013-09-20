@@ -1,8 +1,8 @@
-package oculus;
+package oculusPrime;
 
 import java.util.Properties;
 
-import oculus.commport.Discovery;
+import oculusPrime.commport.Discovery;
 
 /** place extensions to settings here */
 public enum ManualSettings {
@@ -27,6 +27,7 @@ public enum ManualSettings {
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
 		config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(attempts.name(), "0");
+		config.setProperty(lastboot.name(), "0");
 		return config;
 	}
 	

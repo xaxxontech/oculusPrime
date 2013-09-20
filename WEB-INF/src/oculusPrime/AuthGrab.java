@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -102,7 +102,7 @@ public class AuthGrab extends HttpServlet {
 		
 		// wait for result
 		if (app.frameGrab()) {
-			if( ! state.block(oculus.State.values.framegrabbusy, "false", 700)){
+			if( ! state.block(oculusPrime.State.values.framegrabbusy, "false", 700)){
 				Util.debug("getImage(), timeout ", this);
 				return;
 			}

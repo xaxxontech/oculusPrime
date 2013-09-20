@@ -1,9 +1,9 @@
 package developer;
 
-import oculus.Application;
-import oculus.Observer;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.Application;
+import oculusPrime.Observer;
+import oculusPrime.State;
+import oculusPrime.Util;
 
 public class AvoidObjects implements Observer {
 

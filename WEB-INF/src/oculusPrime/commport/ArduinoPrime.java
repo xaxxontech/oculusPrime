@@ -1,4 +1,4 @@
-package oculus.commport;
+package oculusPrime.commport;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -6,13 +6,13 @@ import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import oculus.Application;
-import oculus.AutoDock;
-import oculus.GUISettings;
-import oculus.ManualSettings;
-import oculus.Settings;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.Application;
+import oculusPrime.AutoDock;
+import oculusPrime.GUISettings;
+import oculusPrime.ManualSettings;
+import oculusPrime.Settings;
+import oculusPrime.State;
+import oculusPrime.Util;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;

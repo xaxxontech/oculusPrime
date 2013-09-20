@@ -3,8 +3,7 @@ package developer.swingtool;
 import java.io.*;
 import java.net.*;
 
-import oculus.ManualSettings;
-//import oculus.Settings;
+import oculusPrime.ManualSettings;
 
 public class Client {
 	
@@ -43,7 +42,7 @@ public class Client {
 		if(args.length==0) {	
 			
 			// force red5 path 
-			oculus.Settings settings = new oculus.Settings("../../");
+			oculusPrime.Settings settings = new oculusPrime.Settings("../../");
 			
 			// login info from settings
 			ip = "127.0.0.1";

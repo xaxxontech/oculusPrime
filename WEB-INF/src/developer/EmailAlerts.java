@@ -1,11 +1,11 @@
 package developer;
 
-import oculus.Application;
-import oculus.ManualSettings;
-import oculus.Observer;
-import oculus.Settings;
-import oculus.State;
-import oculus.Util;
+import oculusPrime.Application;
+import oculusPrime.ManualSettings;
+import oculusPrime.Observer;
+import oculusPrime.Settings;
+import oculusPrime.State;
+import oculusPrime.Util;
 
 /**  low of battery to warm user with email */
 public class EmailAlerts implements Observer {
@@ -29,7 +29,7 @@ public class EmailAlerts implements Observer {
 			if( ! settings.readSetting(ManualSettings.email_smtp_server).equals(Settings.DISABLED)){
 		
 				state.addObserver(this);
-				oculus.Util.debug("starting email alerts for battery life", this);
+				oculusPrime.Util.debug("starting email alerts for battery life", this);
 				
 			}
 		}

@@ -23,7 +23,7 @@
 	</bean>
 
 	<bean id="web.handler" 
-        class="oculus.Application"
+        class="oculusPrime.Application"
       />
 	
 

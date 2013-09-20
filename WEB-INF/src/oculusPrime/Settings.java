@@ -1,9 +1,9 @@
-package oculus;
+package oculusPrime;
 
 import java.io.*;
 import java.util.UUID;
 
-import oculus.State.values;
+import oculusPrime.State.values;
 
 public class Settings {
 	

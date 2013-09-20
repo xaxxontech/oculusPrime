@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 public interface Observer {
 	

@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import oculus.Util;
+import oculusPrime.Util;
 
 /**
  * Basic FTP functionality 

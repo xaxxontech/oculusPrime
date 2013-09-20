@@ -1,10 +1,10 @@
-package oculus;
+package oculusPrime;
 
 import java.io.*;
 import java.net.*;
 import java.util.Vector;
 
-import oculus.PlayerCommands.RequiresArguments;
+import oculusPrime.PlayerCommands.RequiresArguments;
 
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 
@@ -25,9 +25,9 @@ public class TelnetServer implements Observer {
 	public static final String STATETAG = "<state>";		
 	public static Vector<PrintWriter> printers = new Vector<PrintWriter>();
 	
-	private static oculus.State state = oculus.State.getReference();
+	private static oculusPrime.State state = oculusPrime.State.getReference();
 //	private static LoginRecords records = new LoginRecords();
-	private static oculus.Settings settings =Settings.getReference();
+	private static oculusPrime.Settings settings =Settings.getReference();
 	private static ServerSocket serverSocket = null;  	
 	private static Application app = null;
 	
@@ -309,7 +309,7 @@ public class TelnetServer implements Observer {
 	}
 
 	/** constructor */
-	public TelnetServer(oculus.Application a) {
+	public TelnetServer(oculusPrime.Application a) {
 		
 		if(app == null) app = a;
 		else return;

@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 import java.io.IOException;
 import java.io.PrintWriter;

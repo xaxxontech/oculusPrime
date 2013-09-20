@@ -1,4 +1,4 @@
-package oculus;
+package oculusPrime;
 
 import com.sun.speech.freetts.Voice;
 import com.sun.speech.freetts.VoiceManager;

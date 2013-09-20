@@ -4,17 +4,18 @@ import static org.junit.Assert.*;
 
 import java.util.Properties;
 
-import oculus.GUISettings;
-import oculus.ManualSettings;
-import oculus.PlayerCommands;
-import oculus.Settings;
+import oculusPrime.GUISettings;
+import oculusPrime.ManualSettings;
+import oculusPrime.PlayerCommands;
+import oculusPrime.Settings;
+
 import org.junit.Before;
 import org.junit.Test;
 
 public class SettingsTest {
 
 	// force red5 path 
-	oculus.Settings settings = new oculus.Settings("../../");
+	oculusPrime.Settings settings = new oculusPrime.Settings("../../");
 
 	@Before
 	public void setUp() {
@@ -48,14 +49,14 @@ public class SettingsTest {
 		// make sure no duplicates in Telnet and Player Commands 
 		for (PlayerCommands factory : PlayerCommands.values()) {
 			String val = factory.toString();
-			for (oculus.TelnetServer.Commands cmd : oculus.TelnetServer.Commands.values()){
+			for (oculusPrime.TelnetServer.Commands cmd : oculusPrime.TelnetServer.Commands.values()){
 				if(cmd.toString().equals(val)) 
 					fail("player commands overlap telnet commands: " + val);				
 			}
 		}
 		
 		// make sure no duplicates in Telnet and Player Commands 
-		for (oculus.TelnetServer.Commands factory : oculus.TelnetServer.Commands.values()) {
+		for (oculusPrime.TelnetServer.Commands factory : oculusPrime.TelnetServer.Commands.values()) {
 			String val = factory.toString();
 			for (PlayerCommands cmd : PlayerCommands.values()){
 				if(cmd.toString().equals(val)) 
