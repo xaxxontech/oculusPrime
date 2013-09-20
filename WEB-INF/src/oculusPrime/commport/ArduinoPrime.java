@@ -40,12 +40,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte BACKWARD = 'b';
 	public static final byte LEFT = 'l';
 	public static final byte RIGHT = 'r';
-	public static final byte CAM = 'O';
 	public static final byte ECHO = 'e';
 	
 	public static final byte FLOOD_LIGHT_LEVEL = 'p'; 
 	public static final byte SPOT_LIGHT_LEVEL = 'o';
 		
+	public static final byte CAM = 'v';
 	public static final byte FIND_HOME_TILT = 'm';
 	public static final byte HOME_TILT_FRONT = 't';
 	public static final byte HOME_TILT_REAR = 'z';
@@ -112,6 +112,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.movingforward, false);
 		state.put(State.values.moving, false);
 		state.put(State.values.motionenabled, true);
+		
+		state.put(State.values.floodlighton, false);
+		state.put(State.values.spotlightbrightness, 0);
 		
 		if(motorsAvailable()){
 			
