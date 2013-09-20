@@ -27,7 +27,6 @@ public enum ManualSettings {
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
 		config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(attempts.name(), "0");
-		config.setProperty(lastboot.name(), "0");
 		return config;
 	}
 	

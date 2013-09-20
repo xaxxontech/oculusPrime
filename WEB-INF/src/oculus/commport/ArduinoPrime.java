@@ -23,6 +23,9 @@ import gnu.io.SerialPortEventListener;
  */
 public class ArduinoPrime  implements SerialPortEventListener {
 
+	// toggle to see bytes sent in log 
+	public static final boolean DEBUGGING = true;
+	
 	public enum direction { stop, right, left, forward, backward };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, frontstop, rearstop };
 	public enum speeds { slow, med, fast }; // better motors, maybe add speeds? 
@@ -37,7 +40,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte BACKWARD = 'b';
 	public static final byte LEFT = 'l';
 	public static final byte RIGHT = 'r';
-	
 	public static final byte CAM = 'O';
 	public static final byte ECHO = 'e';
 	
@@ -51,22 +53,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte GET_VERSION = 'y';
 	public static final byte[] ECHO_ON = { 'e', '1' };
 	public static final byte[] ECHO_OFF = { 'e', '0' };
-	
-	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
-	
-	// check if board has replied with correct firmware. 
-	private boolean verified = false;
-	
-	// toggle to see bytes sent in log 
-	public static final boolean DEBUGGING = true;
-	
-	// Tweak these constants here 
+		
 	public static final int CAM_HORIZ = 19; // degrees (CAD measures 19)
 	public static final int CAM_MAX = 219; // degrees (CAD measures 211)
 	public static final int CAM_MIN = 0; // degrees
 	public static final int CAM_NUDGE = 5; // degrees
 	public static final long CAM_NUDGE_DELAY = 100; 
 	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
+
+	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
+	
+	// check if board has replied with correct firmware. 
+	private boolean verified = false;
 
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
@@ -117,6 +115,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		if(motorsAvailable()){
 			
+			Util.log("............ attempting to connect", this);
+			
 			new Thread(new Runnable() {
 				public void run() {
 					connect();
@@ -136,12 +136,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			new Thread(new Runnable() {
 				public void run() {
 					Util.delay(SETUP*3);
-					Util.log(".....checking firmware is valid", this);
-					if( ! verified){
-						Util.log("WARN: firmware is not responding, restarting", this);
+					
+					if(isconnected){ 
+						Util.log(".....checking firmware is valid", this);
+						if( ! verified){
+							Util.log("WARN: firmware is not responding, restarting", this);
+							settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+							settings.incrementSettings(ManualSettings.attempts);
+							application.restart();
+						}
+					} else {
+						Util.log("WARN: firmware failed to connect", this);
 						settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-						settings.incrementSettings(ManualSettings.attempts);
-						application.restart();
 					}
 				}
 			}).start(); 
@@ -150,10 +156,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	public static boolean motorsAvailable(){
 		final String motors = settings.readSetting(ManualSettings.serialport); 
-		if(motors != null) {
-			if(motors.equals(Discovery.params.discovery.name()) || motors.equals(Discovery.params.disabled.name()))
-				return false;
-		}
+		if(motors == null) return false;
+		if(motors.equals(Discovery.params.disabled.name())) return false;
+		if(motors.equals(Discovery.params.discovery.name())) return false;
 		
 		return true;
 	}
@@ -221,6 +226,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			application.message(this.getClass().getName() + " version: " + version, null, null);		
 		} 
 	
+		// TODO: use battery pass through 
 		if(response.equals(AutoDock.DOCKED)){
 			
 			Util.debug("docked: " + response ,this);
@@ -255,7 +261,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}
 	}
 
-	
 	public void connect() {
 		try {
 
@@ -279,7 +284,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			
 		}
 	}
-	
+
+	public boolean isConnected() {
+		return isconnected;
+	}
+
 	/** */
 	public void manageInput(){
 		try {
@@ -749,10 +758,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
 		sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });	
 		
-	}
-
-	public boolean isConnected() {
-		return isConnected();
 	}
 
 }

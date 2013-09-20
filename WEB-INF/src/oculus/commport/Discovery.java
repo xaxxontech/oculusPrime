@@ -203,34 +203,12 @@ public class Discovery {
 		if (id == null) return;
 		if (id.length() == 0) return;
 		id = id.trim();
-		/*
-		if (id.length() == 1 ){
-			if(id.equals(LIGHTS)){		
-				
-				Util.debug("___found lights on comm port: " +  getPortName(), this);	
-				settings.writeSettings(ManualSettings.lightport.name(), getPortName());
-				lightsFound = true;
-				
-				settings.writeFile("C:\\found.txt");
-				return;
-				
-			}
-		} 
-		*/
 		
 		if(id.startsWith("id")){	
 			
 			id = id.substring(2, id.length());
 				
 			Util.debug("found product id[" + id + "] on comm port: " +  getPortName(), this);
-
-			/*if (id.equalsIgnoreCase(ARDUINO_MOTOR_SHIELD)) {
-				
-				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
-				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_MOTOR_SHIELD);
-				motorsFound = true;
-				
-			} else*/
 			
 			if (id.equalsIgnoreCase(ARDUINO_PRIME)) {
 
@@ -289,17 +267,5 @@ public class Discovery {
 		lookup(device);
 		close();
 	}
-	
-	/** match types of firmware names and versions 
-	public ArduinoPrime getMotors(Application application) {
-
-		// if(state.equals(State.values.firmware, OCULUS_PRIME))
-		
-		//if(settings.readSetting(ManualSettings.firmware).equals(ARDUINO_PRIME))
-			return new ArduinoPrime(application);
-		
-		// default 
-		//return new ArduinoMotorSheild(application);
-	}*/
 }
 
