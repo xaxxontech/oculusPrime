@@ -19,6 +19,7 @@ public class AutoDock { // implements Observer {
 	public static final String UNDOCKED = "un-docked";
 	public static final String DOCKED = "docked";
 	public static final String DOCKING = "docking";
+	public static final String UNKNOWN = "unknown";
 
 	private Settings settings = Settings.getReference();
 	private String docktarget = settings.readSetting(GUISettings.docktarget);;

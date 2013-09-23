@@ -116,6 +116,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.floodlighton, false);
 		state.put(State.values.spotlightbrightness, 0);
 		
+		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
+		state.put(State.values.batterylife, AutoDock.UNKNOWN);
+		
 		if(motorsAvailable()){
 			
 			Util.log("............ attempting to connect", this);
@@ -229,32 +232,29 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			application.message(this.getClass().getName() + " version: " + version, null, null);		
 		} 
 	
-		// TODO: use battery pass through 
-		if(response.equals(AutoDock.DOCKED)){
-			
-			Util.debug("docked: " + response ,this);
-					
-			state.set(State.values.batterycharging, true);
-			state.put(State.values.dockstatus, AutoDock.DOCKED);
-			application.message(null, "dock", AutoDock.DOCKED);	
-			if (state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, false);
-		}
-			
-		if(response.equals(AutoDock.UNDOCKED)){
-			
-			Util.debug("docked: " + response ,this);
-			
-			state.set(State.values.batterycharging, false);
-			state.put(State.values.dockstatus, AutoDock.UNDOCKED);
-			if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
-			
-			application.message(null, "dock", AutoDock.UNDOCKED );
-		}
-
 		if(response.startsWith("battery")){
-			
-			String level = response.split(" ")[1];
-			state.put(State.values.batterylife, level); // TODO: don't store the volts in state, just the value? +"V");
+			String s = response.split(" ")[1];
+			if (s.equals("docked")) {
+				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+					application.message(null, "dock", AutoDock.DOCKED);
+					state.put(State.values.dockstatus, AutoDock.DOCKED);
+					state.set(State.values.batterycharging, true);
+				}
+				if (state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, false);
+			}
+			if (s.equals("undocked")) {
+				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
+					state.put(State.values.dockstatus, AutoDock.UNDOCKED);
+					application.message(null, "dock", AutoDock.UNDOCKED );
+					state.set(State.values.batterycharging, false);
+				}
+				if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
+				
+			}
+			String battinfo = response.split(" ")[2];
+			if (!state.get(State.values.batterylife).equals(battinfo)) {
+				state.put(State.values.batterylife, battinfo); 
+			}
 		}
 		
 		if(response.startsWith("tiltpos")) {

@@ -308,7 +308,7 @@ public class State {
 	public synchronized boolean exists(String key) {
 		return props.containsKey(key);
 	}
-
+	
 	/** */ 
 	public synchronized void delete(String key) {
 		props.remove(key);
