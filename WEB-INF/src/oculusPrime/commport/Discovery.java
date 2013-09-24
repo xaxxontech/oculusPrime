@@ -8,8 +8,8 @@ import java.util.Vector;
 
 import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
+import oculusPrime.State;
 import oculusPrime.Util;
-
 import gnu.io.*;
 
 public class Discovery {
@@ -19,7 +19,7 @@ public class Discovery {
 	
 	private static Settings settings = Settings.getReference();
 	private static final String motors = settings.readSetting(ManualSettings.serialport);
-	// private static final String lights = settings.readSetting(ManualSettings.lightport);
+	private static State state = State.getReference();
 	
 	public static final long RESPONSE_DELAY = 1000;
 	public static final int TIMEOUT = 2000;	
@@ -48,6 +48,11 @@ public class Discovery {
 	/* constructor makes a list of available ports */
 	public Discovery() {
 		
+		if(motors.equals(params.disabled.toString())) {
+			Util.debug("serial port is disabled", this);
+			return;
+		}
+		
 		getAvailableSerialPorts();
 		
 		if(ports.size() == 0){
@@ -59,26 +64,12 @@ public class Discovery {
 			
 			searchMotors(); 	
 		
-		} else { 		
+		} else { // port explicitly identified in settings		
 		
-			Util.debug("skipping discovery, motors on: " + motors, this);
-		
+			Util.debug("skipping discovery, motors specified on: " + motors, this);
+			state.put(State.values.serialport, motors);
 		} 
 		
-		/*
-		if(lights.equals(params.discovery.name())){	
-		
-			searchLights();	
-		
-		} else if(lights.equals(params.disabled)){ 
-			
-			Util.debug("lights are currently: " + lights, this);
-		
-		} else { 
-			
-			Util.debug("skipping discovery, lights on: " + lights, this);
-		
-		}*/
 	}
 	
 	/** */
@@ -212,8 +203,9 @@ public class Discovery {
 			
 			if (id.equalsIgnoreCase(ARDUINO_PRIME)) {
 
-				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
-				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_PRIME);
+//				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
+//				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_PRIME);
+				state.set(State.values.serialport, getPortName());
 				motorsFound = true;
 				
 			} 

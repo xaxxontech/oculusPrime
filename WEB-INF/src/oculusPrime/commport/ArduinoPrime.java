@@ -42,8 +42,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte RIGHT = 'r';
 	public static final byte ECHO = 'e';
 	
-	public static final byte FLOOD_LIGHT_LEVEL = 'p'; 
-	public static final byte SPOT_LIGHT_LEVEL = 'o';
+	public static final byte FLOOD_LIGHT_LEVEL = 'o'; 
+	public static final byte SPOT_LIGHT_LEVEL = 'p';
 		
 	public static final byte CAM = 'v';
 	public static final byte FIND_HOME_TILT = 'm';
@@ -64,11 +64,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
 	
 	// check if board has replied with correct firmware. 
-	private boolean verified = false;
+//	private boolean verified = false;
 
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
-	protected State state = State.getReference();
+	protected static State state = State.getReference();
 	protected Application application = null;
 	protected SerialPort serialPort = null;	
 	protected String version = null;
@@ -76,8 +76,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected InputStream in = null;
 	
 	protected static Settings settings = Settings.getReference();
-	protected final String portName = settings.readSetting(ManualSettings.serialport);
-	protected final String firmware = settings.readSetting(ManualSettings.firmware);
+	protected final String portName = state.get(State.values.serialport);
+//	protected final String firmware = settings.readSetting(ManualSettings.firmware);
 	
 	// data buffer 
 	protected byte[] buffer = new byte[32];
@@ -105,15 +105,13 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 	public ArduinoPrime(Application app) {	
 		
-		Util.log("............ starting up: " + settings.readSetting(ManualSettings.attempts), this);
-	
 		application = app;	
 		state.put(State.values.motorspeed, speedmed);
 		state.put(State.values.movingforward, false);
 		state.put(State.values.moving, false);
 		state.put(State.values.motionenabled, true);
 		
-		state.put(State.values.floodlighton, false);
+		state.put(State.values.floodlightlevel, 0);
 		state.put(State.values.spotlightbrightness, 0);
 		
 		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
@@ -121,7 +119,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		if(motorsAvailable()){
 			
-			Util.log("............ attempting to connect", this);
+			Util.log("attempting to connect to port", this);
 			
 			new Thread(new Runnable() {
 				public void run() {
@@ -129,62 +127,69 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.delay(SETUP);
 					if(isconnected){
 						
-						Util.log("Connected to port: " + serialPort, this);
+						Util.log("Connected to port: " + state.get(State.values.serialport), this);
 						
-						sendCommand(FIND_HOME_TILT);
+						setSpotLightBrightness(0);
+						floodLight(0);
+						sendCommand(FIND_HOME_TILT); 
 						sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
 						state.set(State.values.cameratilt, CAM_HORIZ);
 					}
 				}
 			}).start();
 			
-			/* be sure */
-			new Thread(new Runnable() {
-				public void run() {
-					Util.delay(SETUP*3);
-					
-					if(isconnected){ 
-						Util.log(".....checking firmware is valid", this);
-						if( ! verified){
-							Util.log("WARN: firmware is not responding, restarting", this);
-							settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-							settings.incrementSettings(ManualSettings.attempts);
-							application.restart();
-						}
-					} else {
-						Util.log("WARN: firmware failed to connect", this);
-						settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-					}
-				}
-			}).start(); 
+//			/* be sure */
+//			new Thread(new Runnable() {
+//				public void run() {
+//					Util.delay(SETUP*3);
+//					
+//					if(isconnected){ 
+//						Util.log(".....checking firmware is valid", this);
+//						if( ! verified){
+//							Util.log("WARN: firmware is not responding, restarting", this);
+//							settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+//							settings.incrementSettings(ManualSettings.attempts);
+//							application.restart();
+//						}
+//					} else {
+//						Util.log("WARN: firmware failed to connect", this);
+//						settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+//					}
+//				}
+//			}).start(); 
 		}
 	}
 	
 	public static boolean motorsAvailable(){
-		final String motors = settings.readSetting(ManualSettings.serialport); 
-		if(motors == null) return false;
+		final String motors = state.get(State.values.serialport); 
+		if(motors == null) return false; 
 		if(motors.equals(Discovery.params.disabled.name())) return false;
-		if(motors.equals(Discovery.params.discovery.name())) return false;
+//		if(motors.equals(Discovery.params.discovery.name())) return false;
 		
 		return true;
 	}
 
-	public void floodLight(String string) {
-		// TODo .......MUST FIXo
-		Util.debug("........ setSpotLightBrightness: " + string, this);
-		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, 0});
-		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte)55});
-		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte) 255});
+	public void floodLight(int target) {
+//		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, 0});
+//		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte)55});
+//		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte) 255});
+		application.message("floodLight brightness set to "+target+"%", "light", Integer.toString(target));
+		state.set(State.values.floodlightlevel, target);
 
+		Util.debug("floodlight: " + target, this);
+
+		target = target * 255 / 100;
+		sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)target});
 	}
 	
 	public void setSpotLightBrightness(int target){
-		
-		Util.debug("........ setSpotLightBrightness: " + target, this);
-		
-		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
+		application.message("spotlight brightness set to "+target+"%", "light", Integer.toString(target));		
 		state.set(State.values.spotlightbrightness, target);
-		application.message("spotlight brightness set to "+target+"%", "light", Integer.toString(target));
+		Util.debug("setSpotLightBrightness: " + target, this);
+		
+		target = target * 255 / 100;
+		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
+
 	}
 
 	/** respond to feedback from the device  */	
@@ -196,36 +201,36 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
-			isconnected = true;
+//			isconnected = true;
 			version = null;
-			sendCommand(GET_PRODUCT);
-			Util.delay(300);
-			sendCommand(GET_VERSION); // check is correct board! 
+//			sendCommand(GET_PRODUCT);
+//			Util.delay(300);
+			sendCommand(GET_VERSION);  
 		} 
 		
-		if(response.startsWith("id:")){ 
-			
-			String product = response.substring(response.lastIndexOf(":")+1).trim();
-			if(product.equals( firmware )){
-				
-				Util.debug("verified: " + response, this);
-				settings.writeSettings(ManualSettings.attempts.name(), "0");
-				verified = true;
-				
-			} else {
-				
-				Util.log("WARN: wrong firmware type in settings, restart needed", this);
-				
-				if(settings.getInteger(ManualSettings.attempts) > MAX_ATTEMPTS) {
-					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.disabled.name());
-				} else {
-					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-				}
-				
-				settings.incrementSettings(ManualSettings.attempts);
-				application.restart();
-			}
-		}
+//		if(response.startsWith("id:")){ 
+//			
+//			String product = response.substring(response.lastIndexOf(":")+1).trim();
+//			if(product.equals( firmware )){
+//				
+//				Util.debug("verified: " + response, this);
+//				settings.writeSettings(ManualSettings.attempts.name(), "0");
+//				verified = true;
+//				
+//			} else {
+//				
+//				Util.log("WARN: wrong firmware type in settings, restart needed", this);
+//				
+//				if(settings.getInteger(ManualSettings.attempts) > MAX_ATTEMPTS) {
+//					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.disabled.name());
+//				} else {
+//					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+//				}
+//				
+//				settings.incrementSettings(ManualSettings.attempts);
+//				application.restart();
+//			}
+//		}
 		
 		if(response.startsWith("version:")) {
 			version = response.substring(response.indexOf("version:") + 8, response.length());
@@ -240,7 +245,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					state.put(State.values.dockstatus, AutoDock.DOCKED);
 					state.set(State.values.batterycharging, true);
 				}
-				if (state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, false);
+//				if (state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, false);
 			}
 			if (s.equals("undocked")) {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
@@ -248,7 +253,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					application.message(null, "dock", AutoDock.UNDOCKED );
 					state.set(State.values.batterycharging, false);
 				}
-				if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
+//				if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
 				
 			}
 			String battinfo = response.split(" ")[2];
@@ -277,13 +282,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			// register for serial events
 			serialPort.addEventListener(this);
 			serialPort.notifyOnDataAvailable(true);
+			
+			isconnected = true;
 
 		} catch (Exception e) {
 			
 			Util.log("can't connect to port: " + e.getMessage(), this);
-			settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-			settings.incrementSettings(ManualSettings.attempts);
-			application.restart();
+//			settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+//			settings.incrementSettings(ManualSettings.attempts);
+//			application.restart();
 			
 		}
 	}

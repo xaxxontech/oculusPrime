@@ -791,6 +791,8 @@ function lightclick(level) {
 }
 
 function floodlight(str) {
+	if (str=="on") { str="100"; }
+	else { str="0"; }
 	message("sending floodlight: "+ str, sentcmdcolor);
 	callServer("floodlight", str);
 	lagtimer = new Date().getTime();

@@ -61,9 +61,9 @@ public class AutoDock { // implements Observer {
 				}
 
 				if (state.getInteger(State.values.spotlightbrightness) > 0 || 
-						state.getBoolean(State.values.floodlighton)) {
+						state.getBoolean(State.values.floodlightlevel)) {
 					comport.setSpotLightBrightness(0);
-					comport.floodLight("med");
+					comport.floodLight(39);
 				}
 			
 				dockGrab("start", 0, 0);
@@ -239,7 +239,7 @@ public class AutoDock { // implements Observer {
 							app.publish("stop"); 
 						}
 						
-						comport.floodLight("off");	
+						comport.floodLight(0);	
 						comport.setSpotLightBrightness(0);
 						comport.camCommand(ArduinoPrime.cameramove.horiz);
 					}
@@ -373,7 +373,7 @@ public class AutoDock { // implements Observer {
 		} // end of S1 check
 		if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
 
-			if (state.getBoolean(State.values.floodlighton)) comport.floodLight("low"); 
+			if (state.getInteger(State.values.floodlightlevel) > 0) comport.floodLight(15); 
 			
 			if (autodockingcamctr) { // if cam centered do check and comps below
 				autodockingcamctr = false;

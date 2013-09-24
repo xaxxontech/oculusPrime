@@ -586,11 +586,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 			break;
 
-		//TODO: lights on second usb port hold over 
 		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
 		case spotlight: comport.setSpotLightBrightness(Integer.parseInt(str)); break;
-		
-		case floodlight: comport.floodLight(str); break;
+		case floodlight: comport.floodLight(Integer.parseInt(str));  break;
 		
 			
 		//TODO: 	
@@ -1001,6 +999,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				if (!state.getBoolean(State.values.motionenabled)) mov = "DISABLED";
 				if (state.getBoolean(State.values.moving)) mov = "MOVING";
 				str += " speed " + spd + " cameratilt " + state.get(State.values.cameratilt) + " motion " + mov;
+				str += " light " + state.get(State.values.spotlightbrightness);
+				str += " floodlight " + state.get(State.values.floodlightlevel);
+
 			}
 
 			str += " vidctroffset " + settings.readSetting("vidctroffset");
@@ -1012,12 +1013,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 			if (state.get(State.values.dockstatus) != null) str += " dock "+ state.get(State.values.dockstatus);
 			
-			// TODO: maybe no longer uses two port classes
-			// if(AbstractArduinoComm.lightsAvailable()){
-				str += " light " + state.get(State.values.spotlightbrightness);
-				str += " floodlight " + state.get(State.values.floodlighton);
-				// Util.debug("SPOTLIGHT *** " + state.get(State.values.spotlightbrightness), this);
-			// }
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
 
@@ -1691,7 +1686,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if(str != null) result += "username " + str + " ";
 
 		// commport
-		if(ArduinoPrime.motorsAvailable()) result += "comport " + settings.readSetting(ManualSettings.serialport) + " ";
+		if(ArduinoPrime.motorsAvailable()) result += "comport " + state.get(State.values.serialport) + " ";
 		else result += "comport nil ";
 		
 		// TODO: 

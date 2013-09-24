@@ -9,9 +9,9 @@ import java.util.Vector;
 public class State {
 	
 	public enum values{ 
-		motionenabled, moving, movingforward, // motors
+		motionenabled, moving, movingforward, serialport, // motors
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
-		floodlighton, spotlightbrightness, // lights
+		floodlightlevel, spotlightbrightness, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
 		boottime, localaddress, externaladdress, httpPort, // system
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
