@@ -59,20 +59,31 @@ public class AutoDock { // implements Observer {
 					app.message("auto-dock in progress", null, null);
 					return;
 				}
+				
+				new Thread(new Runnable() {
+					public void run() {
+						try {
 
-				if (state.getInteger(State.values.spotlightbrightness) > 0 || 
-						state.getBoolean(State.values.floodlightlevel)) {
-					comport.setSpotLightBrightness(0);
-					comport.floodLight(39);
-				}
-			
-				dockGrab("start", 0, 0);
-				state.set(State.values.autodocking, true);
-				autodockingcamctr = false;
-				//autodockgrabattempts = 0;
-				autodockctrattempts = 0;
-				app.message("auto-dock in progress", "motion", "moving");
-				System.out.println("OCULUS: autodock started");
+							if (state.getInteger(State.values.spotlightbrightness) > 0 || 
+									state.getBoolean(State.values.floodlightlevel)) {
+								comport.setSpotLightBrightness(0);
+								comport.floodLight(39);
+								Thread.sleep(500); 
+							}
+							
+							dockGrab("start", 0, 0);
+							state.set(State.values.autodocking, true);
+							autodockingcamctr = false;
+							//autodockgrabattempts = 0;
+							autodockctrattempts = 0;
+							app.message("auto-dock in progress", "motion", "moving");
+							System.out.println("OCULUS: autodock started");
+				
+						} catch (Exception e) { e.printStackTrace(); }
+					}
+				}).start();
+				
+
 				
 			}
 			else { app.message("motion disabled","autodockcancelled", null); }
@@ -112,10 +123,13 @@ public class AutoDock { // implements Observer {
 								try {
 
 									Thread.sleep(allowforClickSteer); 
-									comport.camCommand(ArduinoPrime.cameramove.rearstop);
+									int pos = ArduinoPrime.CAM_MAX - 10;
+//									comport.camCommand(ArduinoPrime.cameramove.rearstop);
+									comport.cameraToPosition(pos);
 									comport.rotate(ArduinoPrime.direction.left, 180);
 									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
-									state.block(oculusPrime.State.values.cameratilt, Integer.toString(comport.CAM_MAX), 10000); 
+									state.block(oculusPrime.State.values.cameratilt, Integer.toString(pos), 10000); 
+									Thread.sleep(1500);
 //									autoDock("go");
 									state.set(State.values.autodocking, true);
 									dockGrab("find", 0, 0);
@@ -372,8 +386,8 @@ public class AutoDock { // implements Observer {
 			}
 		} // end of S1 check
 		if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
-
-			if (state.getInteger(State.values.floodlightlevel) > 0) comport.floodLight(15); 
+			int fl = state.getInteger(State.values.floodlightlevel);
+			if (fl > 0 && fl != 15) comport.floodLight(15); 
 			
 			if (autodockingcamctr) { // if cam centered do check and comps below
 				autodockingcamctr = false;
@@ -448,13 +462,13 @@ public class AutoDock { // implements Observer {
 				autodockctrattempts++;
 
 //				comport.clickSteer((x - dockx) * rescomp, (y - 120) * rescomp);
-				int minimum_clicksteerMovement = 12; //pixels out of 320 //TODO: this will vary with floor type, make settable
+				int minimum_clicksteerMovement = 8; //pixels out of 320 //TODO: this will vary with floor type, make settable
 				int movex = (x - dockx);
 				if (Math.abs(movex) < minimum_clicksteerMovement) {
 					if (movex > 0) { movex = minimum_clicksteerMovement; }
 					else { movex = -minimum_clicksteerMovement; }
 				}
-				comport.clickSteer(movex * rescomp, 120 * rescomp); // camera -- fully down
+				comport.clickSteer(movex * rescomp, (y-120) * rescomp); 
 				// 
 				new Thread(new Runnable() {
 					public void run() {

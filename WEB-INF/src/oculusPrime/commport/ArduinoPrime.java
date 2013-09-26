@@ -239,26 +239,36 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 		if(response.startsWith("battery")){
 			String s = response.split(" ")[1];
+			if (s.equals("timeout")) {
+				state.put(State.values.dockstatus, AutoDock.UNKNOWN);
+				state.put(State.values.batterylife, s);
+				application.message(null, "battery", s);
+				return;
+			}
+			
 			if (s.equals("docked")) {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					application.message(null, "dock", AutoDock.DOCKED);
 					state.put(State.values.dockstatus, AutoDock.DOCKED);
 					state.set(State.values.batterycharging, true);
 				}
-//				if (state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, false);
+				if (state.getBoolean(State.values.motionenabled)) {
+					state.set(State.values.motionenabled, false); }
 			}
+			
 			if (s.equals("undocked")) {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
 					state.put(State.values.dockstatus, AutoDock.UNDOCKED);
-					application.message(null, "dock", AutoDock.UNDOCKED );
+					application.message(null, "dock", AutoDock.UNDOCKED);
 					state.set(State.values.batterycharging, false);
 				}
-//				if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
-				
+				if (!state.getBoolean(State.values.motionenabled)) { 
+					state.set(State.values.motionenabled, true); }
 			}
+			
 			String battinfo = response.split(" ")[2];
 			if (!state.get(State.values.batterylife).equals(battinfo)) {
-				state.put(State.values.batterylife, battinfo); 
+				state.put(State.values.batterylife, battinfo);
 			}
 		}
 		
@@ -575,6 +585,13 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	}
 	
+	public void cameraToPosition(int position) {
+		if (position < CAM_MIN) { position = CAM_MIN; }
+		else if (position > CAM_MAX) { position = CAM_MAX; } 
+		sendCommand(new byte[] { CAM, (byte) position} );
+		state.set(State.values.cameratilt, position);
+		return;
+	}
 
 	public void speedset(final speeds update) {
 		

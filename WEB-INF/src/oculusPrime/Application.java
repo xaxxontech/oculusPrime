@@ -432,6 +432,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	
 		case battstats: messageplayer(null,"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
+		case cameratoposition: comport.cameraToPosition(Integer.parseInt(str));
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
@@ -1023,11 +1024,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 			messageplayer("status check received", "multiple", str.trim());
 
-		} else {
+		} else { 
 			if (s.equals("battcheck")) { 
-				String str = "battery "+state.get(State.values.batterylife);
-				messageplayer("status check received", "multiple", str);
-			} else { 
+				messageplayer("status check received", "battery", state.get(State.values.batterylife));
+			} else { // ping only
 				messageplayer("status check received",null, null); 
 			}
 		}

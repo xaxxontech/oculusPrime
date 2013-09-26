@@ -12,7 +12,7 @@ public enum PlayerCommands {
 	
 	// all valid commands
 	publish, floodlight, move, nudge, slide, dockgrab, battstats, docklineposupdate, autodock,  autodockcalibrate, 
-	speech, getdrivingsettings, drivingsettingsupdate,  cameracommand, 
+	speech, getdrivingsettings, drivingsettingsupdate,  cameracommand, cameratoposition, 
 	speedset, dock, relaunchgrabber, clicksteer, chat, statuscheck, systemcall, streamsettingsset, 
 	streamsettingscustom, motionenabletoggle, playerexit, playerbroadcast, password_update, 
 	new_user_add, user_list, delete_user, extrauser_password_update, username_update, 
