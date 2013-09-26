@@ -243,6 +243,7 @@ public class AutoDock { // implements Observer {
 					state.set(State.values.docking, false);
 					state.set(State.values.motionenabled, false);
 					state.set(State.values.dockstatus, DOCKED);
+					comport.speedset(ArduinoPrime.speeds.med);
 
 					String str = "";
 					

@@ -76,7 +76,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected InputStream in = null;
 	
 	protected static Settings settings = Settings.getReference();
-	protected final String portName = state.get(State.values.serialport);
+	protected final String portName = state.get(State.values.motorport);
 //	protected final String firmware = settings.readSetting(ManualSettings.firmware);
 	
 	// data buffer 
@@ -127,7 +127,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.delay(SETUP);
 					if(isconnected){
 						
-						Util.log("Connected to port: " + state.get(State.values.serialport), this);
+						Util.log("Connected to port: " + state.get(State.values.motorport), this);
 						
 						setSpotLightBrightness(0);
 						floodLight(0);
@@ -161,10 +161,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	
 	public static boolean motorsAvailable(){
-		final String motors = state.get(State.values.serialport); 
+		final String motors = state.get(State.values.motorport); 
 		if(motors == null) return false; 
 		if(motors.equals(Discovery.params.disabled.name())) return false;
-//		if(motors.equals(Discovery.params.discovery.name())) return false;
+		if(motors.equals(Discovery.params.discovery.name())) return false;
 		
 		return true;
 	}
@@ -201,45 +201,22 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
-//			isconnected = true;
 			version = null;
-//			sendCommand(GET_PRODUCT);
-//			Util.delay(300);
 			sendCommand(GET_VERSION);  
 		} 
-		
-//		if(response.startsWith("id:")){ 
-//			
-//			String product = response.substring(response.lastIndexOf(":")+1).trim();
-//			if(product.equals( firmware )){
-//				
-//				Util.debug("verified: " + response, this);
-//				settings.writeSettings(ManualSettings.attempts.name(), "0");
-//				verified = true;
-//				
-//			} else {
-//				
-//				Util.log("WARN: wrong firmware type in settings, restart needed", this);
-//				
-//				if(settings.getInteger(ManualSettings.attempts) > MAX_ATTEMPTS) {
-//					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.disabled.name());
-//				} else {
-//					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-//				}
-//				
-//				settings.incrementSettings(ManualSettings.attempts);
-//				application.restart();
-//			}
-//		}
 		
 		if(response.startsWith("version:")) {
 			version = response.substring(response.indexOf("version:") + 8, response.length());
 			application.message(this.getClass().getName() + " version: " + version, null, null);		
 		} 
 	
+		
+		/* 
+		 * if power info coming via prime board i2c 
+		 */
 		if(response.startsWith("battery")){
 			String s = response.split(" ")[1];
-			if (s.equals("timeout")) {
+			if (s.equals("timeout") && !ArduinoPower.powerAvailable()) {
 				state.put(State.values.dockstatus, AutoDock.UNKNOWN);
 				state.put(State.values.batterylife, s);
 				application.message(null, "battery", s);
@@ -272,6 +249,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			}
 		}
 		
+		
 		if(response.startsWith("tiltpos")) {
 			String position = response.split(" ")[1];
 			state.set(State.values.cameratilt, position);
@@ -279,7 +257,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}
 	}
 
-	public void connect() {
+	private void connect() {
 		try {
 
 			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portName).open(ArduinoPrime.class.getName(), SETUP);

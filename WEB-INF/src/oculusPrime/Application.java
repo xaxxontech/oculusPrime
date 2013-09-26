@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
+import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.Discovery;
 
@@ -217,7 +218,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		// Discovery discovery = 
 		// TODO; new............
 		new Discovery();
-		comport = new ArduinoPrime(this);//discovery.getMotors(this); 
+		comport = new ArduinoPrime(this);
+		new ArduinoPower(this);
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
 		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
@@ -1686,7 +1688,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if(str != null) result += "username " + str + " ";
 
 		// commport
-		if(ArduinoPrime.motorsAvailable()) result += "comport " + state.get(State.values.serialport) + " ";
+		if(ArduinoPrime.motorsAvailable()) result += "comport " + state.get(State.values.motorport) + " ";
 		else result += "comport nil ";
 		
 		// TODO: 

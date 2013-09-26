@@ -18,7 +18,8 @@ public class Discovery {
 	public static enum params {discovery, disabled};
 	
 	private static Settings settings = Settings.getReference();
-	private static final String motors = settings.readSetting(ManualSettings.serialport);
+	private static final String motors = settings.readSetting(ManualSettings.motorport);
+	private static final String power = settings.readSetting(ManualSettings.powerport);
 	private static State state = State.getReference();
 	
 	public static final long RESPONSE_DELAY = 1000;
@@ -33,7 +34,7 @@ public class Discovery {
 	/* add known devices here, strings returned from the firmware */
 	// public static final String ARDUINO_MOTOR_SHIELD = "arduinoShield";
 	public static final String ARDUINO_PRIME = "oculusPrime";
-	public static final String LIGHTS = "L";
+	public static final String ARDUINO_POWER = "oculusPower";
 	
 	/* reference to the underlying serial port */
 	private static SerialPort serialPort = null;
@@ -43,7 +44,9 @@ public class Discovery {
 	/* list of all free ports */
 	private static Vector<String> ports = new Vector<String>();
 	// private boolean lightsFound = false;
-	private boolean motorsFound = false;
+	private boolean deviceFound = false;
+	private String deviceid = null;
+	private String statevalue = null;
 
 	/* constructor makes a list of available ports */
 	public Discovery() {
@@ -60,15 +63,28 @@ public class Discovery {
 			return;
 		}
 		
-		if(motors.equals(params.discovery.name())){		
+		
+		if(power.equals(params.discovery.name())){	
+			deviceid = ARDUINO_POWER;
+			statevalue = State.values.powerport.toString();
+			searchDevice(); 	
 			
-			searchMotors(); 	
-		
 		} else { // port explicitly identified in settings		
-		
-			Util.debug("skipping discovery, motors specified on: " + motors, this);
-			state.put(State.values.serialport, motors);
+			Util.debug("skipping discovery, power specified on: " + power, this);
+			state.put(State.values.powerport, power);
 		} 
+		
+		if(motors.equals(params.discovery.name())){	
+			deviceid = ARDUINO_PRIME;
+			statevalue = State.values.motorport.toString();
+			searchDevice(); 	
+			
+		} else { // port explicitly identified in settings		
+			Util.debug("skipping discovery, motors specified on: " + motors, this);
+			state.put(State.values.motorport, motors);
+		} 
+
+		
 		
 	}
 	
@@ -175,12 +191,18 @@ public class Discovery {
 	}*/
 	
 	/** Loop through all available serial ports and ask for product id's */
-	public void searchMotors() {
+	private void searchDevice() {
 			
-		Util.debug("discovery for motors starting on " + ports.size()+" ports", this); 
-	
-		for (int i=0; i<ports.size(); i++) {
-			if (motorsFound) { break; } // stop if find it
+		Util.debug("discovery for "+deviceid+" starting on " + ports.size()+" ports", this);
+		
+		deviceFound = false;
+		int size = ports.size();
+		for (int i=0; i<size; i++) {
+			if (deviceFound) { 
+				ports.removeElementAt(i-1); // so don't include this port again on subsequent device search
+				break; // stop if find it 
+			}
+			
 			if (connect(ports.get(i), 115200)) {
 				Util.delay(TIMEOUT*2);
 				if (serialPort != null) { close(); }
@@ -188,8 +210,18 @@ public class Discovery {
 		}
 	}
 	
+//	private static void getAvailableSerialPorts() {
+//		ports.clear();
+//		@SuppressWarnings("rawtypes")
+//		Enumeration thePorts = CommPortIdentifier.getPortIdentifiers();
+//		while (thePorts.hasMoreElements()) {
+//			CommPortIdentifier com = (CommPortIdentifier) thePorts.nextElement();
+//			if (com.getPortType() == CommPortIdentifier.PORT_SERIAL) ports.add(com.getName());
+//		}
+//	}
+	
 	/** check if this is a known derive, update in state */
-	public void lookup(String id){	
+	private void lookup(String id){	
 		
 		if (id == null) return;
 		if (id.length() == 0) return;
@@ -201,12 +233,10 @@ public class Discovery {
 				
 			Util.debug("found product id[" + id + "] on comm port: " +  getPortName(), this);
 			
-			if (id.equalsIgnoreCase(ARDUINO_PRIME)) {
+			if (id.equalsIgnoreCase(deviceid)) {
 
-//				settings.writeSettings(ManualSettings.serialport.name(), getPortName());
-//				settings.writeSettings(ManualSettings.firmware.name(), ARDUINO_PRIME);
-				state.set(State.values.serialport, getPortName());
-				motorsFound = true;
+				deviceFound = true;
+				state.set(statevalue, getPortName());
 				
 			} 
 		}
@@ -252,6 +282,7 @@ public class Discovery {
 		// read buffer
 		Util.debug("doPortQuery, parse buffer", this);
 		for (int j = 0; j < read; j++) {
+			if(device.length()>0 && ((int)buffer[j] == 13 || (int)buffer[j] == 10)) { break; } //read one line only
 			if(Character.isLetter((char) buffer[j]))
 				device += (char) buffer[j];
 		}
