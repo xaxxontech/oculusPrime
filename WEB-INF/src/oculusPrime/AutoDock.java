@@ -40,6 +40,7 @@ public class AutoDock { // implements Observer {
 		// state.addObserver(this);
 		docktarget = settings.readSetting(GUISettings.docktarget);
 		oculusImage.dockSettings(docktarget);
+		state.set(State.values.autodocking, false);
 	}
 
 	public void autoDock(String str){//PlayerCommands.autodockargs arg) {
@@ -70,6 +71,7 @@ public class AutoDock { // implements Observer {
 								comport.floodLight(39);
 								Thread.sleep(500); 
 							}
+							else {  comport.floodLight(39); }
 							
 							dockGrab("start", 0, 0);
 							state.set(State.values.autodocking, true);
