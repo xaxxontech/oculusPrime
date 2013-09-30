@@ -32,6 +32,8 @@ public class AutoDock { // implements Observer {
 	private OculusImage oculusImage = new OculusImage();
 	private int rescomp = 2; // (multiplier - javascript sends clicksteer based on 640x480, autodock uses 320x240 images)
 	private final int allowforClickSteer = 1000;
+	private int dockattempts = 0;
+	private final int maxdockattempts = 3;
 	
 	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com) {
 		this.app = theapp;
@@ -78,6 +80,7 @@ public class AutoDock { // implements Observer {
 							autodockingcamctr = false;
 							//autodockgrabattempts = 0;
 							autodockctrattempts = 0;
+							dockattempts = 1;
 							app.message("auto-dock in progress", "motion", "moving");
 							System.out.println("OCULUS: autodock started");
 				
@@ -228,7 +231,7 @@ public class AutoDock { // implements Observer {
 		new Thread(new Runnable() {	
 			public void run() {		
 				int inchforward = 0;
-				while (inchforward < 30 && !state.getBoolean(State.values.batterycharging) && 
+				while (inchforward < 15 && !state.getBoolean(State.values.batterycharging) && 
 						state.getBoolean(State.values.docking)) {
 					comport.goForward();
 					Util.delay(150);
@@ -271,6 +274,33 @@ public class AutoDock { // implements Observer {
 						state.set(State.values.dockstatus, UNDOCKED);
 						app.message("docking timed out", "multiple", "dock un-docked motion stopped");
 						Util.debug("dock(): " + state.get(State.values.driver) + " docking timed out", this);
+						
+						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
+							// back up and retry
+							dockattempts ++;
+							comport.speedset(ArduinoPrime.speeds.fast);
+							comport.goBackward();
+							try {
+								Thread.sleep(400);
+								comport.stopGoing();
+								Thread.sleep(settings.getInteger(ManualSettings.stopdelay)); // let deaccelerate							
+							} catch (InterruptedException e) { e.printStackTrace(); }
+							dockGrab("start", 0, 0);
+							state.set(State.values.autodocking, true);
+							autodockingcamctr = false;
+						}
+						else { // give up
+							state.set(State.values.autodocking, false);
+							if (!state.get(State.values.stream).equals("stop") && state.get(State.values.driver)==null) { 
+								app.publish("stop"); 
+							}
+							
+							comport.floodLight(0);	
+							comport.setSpotLightBrightness(0);
+							String str = "motion disabled dock "+UNDOCKED+" battery draining cameratilt "
+									+state.get(State.values.cameratilt)+" autodockcancelled blank";
+							app.message("autodock completely failed", "multiple", str);
+						}
 					}
 						
 				}
@@ -485,7 +515,7 @@ public class AutoDock { // implements Observer {
 				}).start();
 			} else {
 				if (Math.abs(slopedeg - dockslopedeg) > 1.6
-						|| autodockctrattempts > 10) { // backup and try again
+						|| autodockctrattempts > 10) { // rotate a bit, then backup and try again
 					// System.out.println("backup "+dockslopedeg+" "+slopedeg+" ctrattempts:"+autodockctrattempts);
 					autodockctrattempts = 0;
 					int comp = 80;

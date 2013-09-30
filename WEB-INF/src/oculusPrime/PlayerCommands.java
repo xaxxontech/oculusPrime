@@ -20,7 +20,8 @@ public enum PlayerCommands {
 	arduinoecho, arduinoreset, setsystemvolume, beapassenger, muterovmiconmovetoggle, spotlight, 
 	spotlightsetbrightness, writesetting, holdservo, opennisensor, videosoundmode, pushtotalktoggle, restart, shutdown,
     setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
-    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, rotate;
+    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, rotate,
+    getlightlevel;
 	
 	enum autodockargs { go, cancel, framegrab };
 	
@@ -48,7 +49,7 @@ public enum PlayerCommands {
 	public enum RequiresArguments {
 	
 		publish("camera", "camandmic", "mic", "stop"), 
-		floodlight("on", "off"), 
+		floodlight("{INT}"), 
 		move("left", "right", "forward", "backward", "stop"),
 		nudge("left", "right", "forward", "backward"),
 		slide("left", "right"), 

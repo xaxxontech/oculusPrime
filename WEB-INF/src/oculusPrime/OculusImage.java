@@ -49,38 +49,35 @@ public class OculusImage {
 	}
 	
 	private void sendToImage(int[] pixelRGB) { // dev tool
-		Util.debug("sendtoImage "+pixelRGB.length,this);
-		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		for(int y=0; y<height; y++) {
-			for (int x=0; x<width; x++) {
-				int grey = pixelRGB[x + y*width];
-				if (grey==1) {grey=255;} // only if psuedo-boolean parr
-				int argb = (grey<<16) + (grey<<8) + grey;
-				Application.processedImage.setRGB(x, y, argb);
-			}
-		}
+//		Util.debug("sendtoImage "+pixelRGB.length,this);
+//		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+//		for(int y=0; y<height; y++) {
+//			for (int x=0; x<width; x++) {
+//				int grey = pixelRGB[x + y*width];
+//				if (grey==1) {grey=255;} // only if psuedo-boolean parr
+//				int argb = (grey<<16) + (grey<<8) + grey;
+//				Application.processedImage.setRGB(x, y, argb);
+//			}
+//		}
 	}
 	
 	private void sendToImage(Boolean[] pixelRGB) { // dev tool
-		Util.debug("sendtoImageBoolean "+pixelRGB.length,this);
-//		int fillsize =0; // debug log
-
-		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		for(int y=0; y<height; y++) {
-			for (int x=0; x<width; x++) {
-				int p = x + y*width;
-//				Util.log("p: "+p, this);
-				int argb;
-				if (pixelRGB[p]==true) { argb = (255<<16) + (0<<8) + 0; } // fillsize ++; } // red
-				else {  
-					int grey = parrorig[p]; 
-					argb = (grey<<16) + (grey<<8) + grey; 
-				}
-				Application.processedImage.setRGB(x, y, argb);
-
-			}
-		}
-//		Util.debug("fillsize "+fillsize,this);
+//		Util.debug("sendtoImageBoolean "+pixelRGB.length,this);
+//
+//		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+//		for(int y=0; y<height; y++) {
+//			for (int x=0; x<width; x++) {
+//				int p = x + y*width;
+//				int argb;
+//				if (pixelRGB[p]==true) { argb = (255<<16) + (0<<8) + 0; } // fillsize ++; } // red
+//				else {  
+//					int grey = parrorig[p]; 
+//					argb = (grey<<16) + (grey<<8) + grey; 
+//				}
+//				Application.processedImage.setRGB(x, y, argb);
+//
+//			}
+//		}
 
 	}
 	

@@ -432,7 +432,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		switch (fn) {
 	
-		case battstats: messageplayer(null,"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
+		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
 		case cameratoposition: comport.cameraToPosition(Integer.parseInt(str));
 		case getdrivingsettings:getDrivingSettings();break;
@@ -592,14 +592,13 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
 		case spotlight: comport.setSpotLightBrightness(Integer.parseInt(str)); break;
 		case floodlight: comport.floodLight(Integer.parseInt(str));  break;
-		
 			
-		//TODO: 	
 		case autodock:
 			Util.debug("playerCallServer(): autodock: " + str, this);
 			docker.autoDock(str); 
 			break;
-		
+		case getlightlevel:
+			docker.getLightLevel(); break;
 		case dock:
 			Util.debug("playerCallServer(): dock: " + str, this);
 //			if(str.equals("undock")) docker.undock();
@@ -1845,18 +1844,24 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if(key.equals(State.values.cameratilt.name())){
 			if(state.getInteger(State.values.cameratilt) > (ArduinoPrime.CAM_MAX /2) 
 					&! state.getBoolean(State.values.controlsinverted)){
-				IServiceCapableConnection sc = (IServiceCapableConnection) player;
-				sc.invoke("flipVideo", new Object[] { true });
+				if (player!=null) {
+					IServiceCapableConnection sc = (IServiceCapableConnection) player;
+					sc.invoke("flipVideo", new Object[] { true });
+					
+					messageplayer("inverting video and controls", null,null);
+				}
 				state.set(State.values.controlsinverted, true);
-				messageplayer("inverting video and controls", null,null);
 			}
 			if(state.getInteger(State.values.cameratilt) < (ArduinoPrime.CAM_MAX /2) && 
 					state.getBoolean(State.values.controlsinverted)){
-				IServiceCapableConnection sc = (IServiceCapableConnection) player;
-				sc.invoke("flipVideo", new Object[] { false });
-				//state.set(State.values.controlsinverted, false);
+				if (player!=null) {
+					IServiceCapableConnection sc = (IServiceCapableConnection) player;
+					sc.invoke("flipVideo", new Object[] { false });
+					//state.set(State.values.controlsinverted, false);
+					
+					messageplayer("un-inverting video and controls", null,null);
+				}
 				state.delete(State.values.controlsinverted);
-				messageplayer("un-inverting video and controls", null,null);
 			}
 		}
 		
@@ -1866,18 +1871,18 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 		}
 		
-		if(key.equals(State.values.docking.name())){
-			if(state.getBoolean(State.values.docking)){
-				state.set(State.values.dockstatus, AutoDock.DOCKING);
-				message("docking initiated", "multiple", "speed fast motion moving dock docking");
-			}
-		}
-		
-		if(key.equals(State.values.dockstatus.name())){
-			if(state.equals(State.values.dockstatus, AutoDock.DOCKING)){
-				message("docking initiated", "multiple", "speed fast motion moving dock docking");
-			}
-		}
+//		if(key.equals(State.values.docking.name())){
+//			if(state.getBoolean(State.values.docking)){
+//				state.set(State.values.dockstatus, AutoDock.DOCKING);
+//				message("docking initiated", "multiple", "speed fast motion moving dock docking");
+//			}
+//		}
+//		
+//		if(key.equals(State.values.dockstatus.name())){
+//			if(state.equals(State.values.dockstatus, AutoDock.DOCKING)){
+//				message("docking initiated", "multiple", "speed fast motion moving dock docking");
+//			}
+//		}
 	}
 }
 

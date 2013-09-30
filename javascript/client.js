@@ -670,13 +670,14 @@ function mainmenu(id) {
 }
 
 function rovvolumepopulate() {
-	var str = "<table><tr><td><span style='font-variant: small-caps'>rov</span> speaker volume: &nbsp;</td>";
+	var str = "<table><tr><td><span style='font-variant: small-caps;'>rov</span> speaker volume: &nbsp;</td>";
 	for (var i=0; i<=10; i++) {
-		str+="<td  id='rvoltd"+i+"' style='height: 26px; width: 8px; text-align: center;" +
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
+		str+="<td  id='rvoltd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
 		" border: 1px solid transparent; cursor: pointer;' onmouseover='rovvolumeover(&quot;"+i+"&quot;)'" +
-		" onmouseout='rovvolumeout(&quot;"+i+"&quot;)'>" +
-				"<span style='color: #4c56fe; font-size: 15px' id='rvolspan"+i+"'" +
-				" onclick='rovvolumeclick(&quot;"+i+"&quot;)'>|</span></td>";
+		" onmouseout='rovvolumeout(&quot;"+i+"&quot;)' onclick='rovvolumeclick(&quot;"+i+"&quot;)'>" +
+				"<span style='color: #4c56fe; font-size: "+fsz+"px' id='rvolspan"+i+"'" +
+				" >|</span></td>";
 	}
 	str += "</tr></table>";
 	document.getElementById("rovvolumecontrol").innerHTML = str;
@@ -732,11 +733,12 @@ function lightpopulate() {
 	if (spotlightlevel != -1) {
 		var str = "<table><tr><td>spotlight brightness: &nbsp;</td>";
 		for (var i=0; i<=10; i++) {
-			str+="<td  id='lighttd"+i+"' style='height: 26px; width: 8px; text-align: center;" +
+			if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
+			str+="<td  id='lighttd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
 			" border: 1px solid transparent; cursor: pointer;' onmouseover='lightover(&quot;"+i+"&quot;)'" +
-			" onmouseout='lightout(&quot;"+i+"&quot;)'>" +
-					"<span style='color: #4c56fe; font-size: 15px' id='lightspan"+i+"'" +
-					" onclick='lightclick(&quot;"+i+"&quot;)'>|</span></td>";
+			" onmouseout='lightout(&quot;"+i+"&quot;)'  onclick='lightclick(&quot;"+i+"&quot;)'>" +
+					"<span style='color: #4c56fe; font-size: "+fsz+"px' id='lightspan"+i+"'" +
+					">|</span></td>";
 		}
 		str += "</tr></table>";
 		str += "floodlight <a class='blackbg' href ='javascript: floodlight(&quot;on&quot;)'";

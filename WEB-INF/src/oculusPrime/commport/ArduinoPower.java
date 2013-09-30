@@ -13,9 +13,14 @@ import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
 
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+
 public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int SETUP = 2000;
+	public static final int DEAD_TIME_OUT = 10000;
+	public static final int WATCHDOG_DELAY = 2000;
 	
 	protected Application application = null;
 	protected static State state = State.getReference();
@@ -29,7 +34,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	
 	protected final String portName = state.get(State.values.powerport);
 
-	protected byte[] buffer = new byte[32];
+	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
 
 	
@@ -55,6 +60,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 		}
 		
+		new WatchDog(state).start();
+		
 	}
 	
 	public void connect() {
@@ -77,6 +84,27 @@ public class ArduinoPower implements SerialPortEventListener  {
 			
 			Util.log("can't connect to port: " + e.getMessage(), this);
 			
+		}
+	}
+	
+	/** inner class to check if getting responses in timely manor */
+	public class WatchDog extends Thread {
+		
+		public WatchDog(oculusPrime.State state) {
+			this.setDaemon(true);
+		}
+
+		public void run() {
+			Util.delay(SETUP);
+			while (true) {
+
+				if (System.currentTimeMillis() - lastRead > DEAD_TIME_OUT) {
+					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
+					application.message("battery PCB timeout", "battery", "timeout");
+				}
+				
+				Util.delay(WATCHDOG_DELAY);
+			}		
 		}
 	}
 	
@@ -167,9 +195,17 @@ public class ArduinoPower implements SerialPortEventListener  {
 			}
 			
 			String battinfo = response.split(" ")[2];
+			battinfo = battinfo.replaceFirst("\\.\\d*", "");
 			if (!state.get(State.values.batterylife).equals(battinfo)) {
 				state.put(State.values.batterylife, battinfo);
 			}
+
+			String extinfo = response.split(" ")[3];
+			if (!state.exists(State.values.batteryinfo.toString()) || 
+						!state.get(State.values.batteryinfo).equals(extinfo)) {
+				state.put(State.values.batteryinfo, extinfo);
+			}
+			
 		}
 
 	}
@@ -178,5 +214,4 @@ public class ArduinoPower implements SerialPortEventListener  {
 		return isconnected;
 	}
 
-	
 }
