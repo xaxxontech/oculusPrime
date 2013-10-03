@@ -58,9 +58,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				}
 			}).start();
 
+			new WatchDog(state).start();
+			
 		}
-		
-		new WatchDog(state).start();
 		
 	}
 	
@@ -101,6 +101,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (System.currentTimeMillis() - lastRead > DEAD_TIME_OUT) {
 					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
 					application.message("battery PCB timeout", "battery", "timeout");
+					close();
+					Util.delay(SETUP);
+					connect();
 				}
 				
 				Util.delay(WATCHDOG_DELAY);
@@ -160,7 +163,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
-			application.message(this.getClass().getName() + " board reset", null, null);
+			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);
 		} 
 	
 		if(response.startsWith("battery")){
@@ -213,5 +216,29 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public boolean isConnected() {
 		return isconnected;
 	}
+	
+	/** Close the serial port streams */
+	private void close() {
+		
+		try {
+			if (in != null) in.close();
+		} catch (Exception e) {
+			Util.log("input stream close() error " + e.getMessage(), this);
+		}
+		try {
+			if (out != null) out.close();
+		} catch (Exception e) {
+			Util.log("output stream close() error" + e.getMessage(), this);
+		}
+		
+		if (serialPort != null) {
+			Util.debug("close port: " + serialPort.getName() + " baud: " + serialPort.getBaudRate(), this);
+			serialPort.removeEventListener();
+			serialPort.close();
+			serialPort = null;
+		}
+		
 
+
+	}
 }

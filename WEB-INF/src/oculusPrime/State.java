@@ -11,7 +11,7 @@ public class State {
 	public enum values{ 
 		motionenabled, moving, movingforward, motorport, // motors
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
-		floodlightlevel, spotlightbrightness, // lights
+		floodlightlevel, spotlightbrightness, strobeflashon, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
 		boottime, localaddress, externaladdress, httpPort, // system
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
@@ -25,7 +25,7 @@ public class State {
 	
 	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
 	public enum booleanValues{ moving, movingforward, autodocking, docking, batterycharging, framegrabbusy, dockgrabbusy, motionenabled, 
-		floodlighton, driverstream, muteOnROVmove, controlsinverted };
+		floodlighton, driverstream, muteOnROVmove, controlsinverted, strobeflashon; };
 
 	public static final int ERROR = -1;
 

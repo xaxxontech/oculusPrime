@@ -21,8 +21,6 @@ import javax.imageio.ImageIO;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import developer.MotionTracker;
-
 //import org.red5.io.amf3.ByteArray;
 
 public class FrameGrabHTTP extends HttpServlet {

@@ -25,7 +25,6 @@ import developer.UpdateFTP;
 public class Application extends MultiThreadedApplicationAdapter implements Observer {
 
 	private static final int STREAM_CONNECT_DELAY = 2000;
-	private static final double LOW_BATTERY_THRESHOLD = 120.06; //TODO: set this value 
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private String salt = null;
@@ -228,9 +227,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			
-			openNIRead = new developer.OpenNIRead(this);
-			// developing 
-			// developer.MotionTracker.getReference().setApp(this);
+			openNIRead = new developer.OpenNIRead();
 
 		}
 			
@@ -604,8 +601,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 //			if(str.equals("undock")) docker.undock();
 			if(str.equals("dock")) docker.dock();
 			break;
-		
-		
+		case strobeflash:
+			comport.strobeflash(str);
+			messageplayer("strobeflash "+str, null, null);
+			break;
 		}
 	}
 
@@ -1865,11 +1864,11 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 		}
 		
-		if(key.equals(State.values.batterylife.name())){
-			if(state.getDouble(key) > LOW_BATTERY_THRESHOLD){
-				messageplayer("danger low battery, find the dock.. ", null, null);
-			}
-		}
+//		if(key.equals(State.values.batterylife.name())){
+//			if(state.getDouble(key) > LOW_BATTERY_THRESHOLD){
+//				messageplayer("danger low battery, find the dock.. ", null, null);
+//			}
+//		}
 		
 //		if(key.equals(State.values.docking.name())){
 //			if(state.getBoolean(State.values.docking)){

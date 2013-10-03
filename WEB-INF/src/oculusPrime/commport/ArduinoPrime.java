@@ -62,7 +62,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
 
 	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
-	
+	private static final long STROBEFLASH_MAX = 5000; //stobe timeout
 	// check if board has replied with correct firmware. 
 //	private boolean verified = false;
 
@@ -190,6 +190,37 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		target = target * 255 / 100;
 		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
 
+	}
+	
+	public void strobeflash(String mode) {
+		if (mode.equalsIgnoreCase("on")) {
+			state.set(State.values.strobeflashon, true);
+			final long strobestarted = System.currentTimeMillis();
+			new Thread(new Runnable() {
+				public void run() {
+					try {
+						while (state.getBoolean(State.values.strobeflashon)) {
+							if (System.currentTimeMillis() - strobestarted > STROBEFLASH_MAX) {
+								state.set(State.values.strobeflashon, false);
+							}
+							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)0});
+							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)255});
+							Thread.sleep(50);
+							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)255});
+							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)0});
+							Thread.sleep(50);
+							
+						}
+						Thread.sleep(50);
+						sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)0});
+						sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)0});
+
+					} catch (Exception e) { } }
+			}).start();
+		}
+		if (mode.equalsIgnoreCase("off")) {
+			state.set(State.values.strobeflashon, false);
+		}
 	}
 
 	/** respond to feedback from the device  */	

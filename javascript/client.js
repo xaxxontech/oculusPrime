@@ -63,6 +63,7 @@ var bworig;
 var rovvolume = 0;
 var xmlhttp=null;
 var spotlightlevel = -1;
+var floodlightlevel = -1;
 var videoscale = 100;
 var pingcountertimer;
 var pushtotalk;
@@ -405,6 +406,7 @@ function setstatus(status, value) {
 	// if (status == "framegrabbed") { framegrabbed(); }
 	if (status == "rovvolume") { rovvolume = parseInt(value); }
 	if (status == "light") { spotlightlevel = parseInt(value); }
+	if (status == "floodlight") { floodlightlevel = parseInt(value); }
 	if (status == "videoscale") { 
 		var vs = parseInt(value);	
 		if (vs != videoscale && (streammode == "camera" || streammode == "camandmic")){
@@ -2229,7 +2231,7 @@ function displaymessages() {
 function radar(mode) {
 	if (mode=="init") {		
 		callServer("opennisensor", "on"); 
-		message("sending opennisensor on " + str, sentcmdcolor);
+		message("sending opennisensor on", sentcmdcolor);
 		lagtimer = new Date().getTime(); // has to be *after* message()
 	}
 	if (mode=="on") {	
