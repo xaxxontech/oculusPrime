@@ -1,114 +1,113 @@
 package developer;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.List;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
+import java.util.Map;
 
-import org.openni.*;
+import oculusPrime.Util;
 
-public class OpenNIRead implements VideoStream.NewFrameListener {
+
+public class OpenNIRead  {
 	
 	private boolean depthCamInit = false;
 	public  boolean depthCamGenerating = false;
-    private VideoStream mVideoStream;
-    private Device device;
-    VideoFrameRef mLastFrame;
-    
+	private ByteBuffer frameData;
+	private int[] lastresult;
+	Process camproc;
 	
 	public OpenNIRead()  {
 	}
 	
 	public void startDepthCam() {
 		if (depthCamInit) return;
-		
 		oculusPrime.Util.log("start depth cam", this);
 
-		
-		OpenNI.initialize();
-		
-		List<DeviceInfo> devicesInfo = OpenNI.enumerateDevices();
-		if (devicesInfo.isEmpty()) {
-			oculusPrime.Util.log("No OpenNI device is connected, Error", this);
-			return;
-		}
-		device = Device.open(devicesInfo.get(0).getUri());
+		new Thread(new Runnable() { 
+			public void run() {
+				try {
+					
+					String sep = System.getProperty("file.separator");
+					String dir = System.getenv("RED5_HOME")+sep+"xtionread";
+					String javadir = System.getProperty("java.home");
+					String cmd = javadir+sep+"bin"+sep+"java"; 
+					String arg = dir+sep+"xtion.jar";
+					ProcessBuilder pb = new ProcessBuilder(cmd, "-jar", arg);
+					Map<String, String> env = pb.environment();
+					env.put("LD_LIBRARY_PATH", dir);
+					camproc = pb.start();
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+				}		
+			} 	
+		}).start();
 
-		SensorType type =  SensorType.DEPTH;
-		mVideoStream = VideoStream.create(device, type);
-		
-		VideoMode mode = new VideoMode(320, 240, 30, PixelFormat.DEPTH_1_MM.toNative());
-		mVideoStream.setVideoMode(mode);
-		mVideoStream.addNewFrameListener(this);
-		
-//		oculusPrime.Util.log(device.getSensorInfo(type).toString(), this);
-		mVideoStream.start();
-		
+		depthCamGenerating = true;
 		depthCamInit = true;
-		oculusPrime.Util.log("started depth cam", this);
+		
 	}
 	
 	public void stopDepthCam()  {
 		if (!depthCamInit) return;
-		
 		oculusPrime.Util.log("stop depth cam", this);
-		mVideoStream.stop();
-		OpenNI.shutdown();
-        
+
+		camproc.destroy();
+		
 		depthCamInit = false;
+		depthCamGenerating = false;
 	}
 	
 	public int[] readHorizDepth(int y) {
-		
-//		int width = 320;
-//		VideoFrameRef frame = mVideoStream.readFrame();
-//		
-//        ByteBuffer frameData = frame.getData().order(ByteOrder.LITTLE_ENDIAN);
-//        
-//        int[] result = new int[width];
-//        
-//        for (int x=0; x<width; x++) {
-//        	result[x] = (int) frameData.getShort(y*width+x) & 0xFFFF;
-//        }
-//
-//		return result;
 
-		/*
-		try {
-			context.waitAnyUpdateAll();
-				// sometimes throws: org.OpenNI.StatusException: Xiron OS got an event timeout!
-		} catch (StatusException e) {
+		int width = 320;
+		int[]result = new int[width];
+		int size = 320*240*2;
+		
+    	try {
+    		FileInputStream file = new FileInputStream("/run/shm/xtion.raw");
+			FileChannel ch = file.getChannel();
+			if (ch.size() == size) {
+				frameData = ByteBuffer.allocate((int) size);
+				ch.read(frameData.order(ByteOrder.LITTLE_ENDIAN));
+				ch.close();
+				file.close();
+			}
+			ch.close();
+			file.close();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		*/
-//		depth.getMetaData(depthMD);
-//		int[] result = new int[depthMD.getXRes()];
-//		int p=0;
-//		for (int x=0; x < depthMD.getXRes(); x++) {
-//			result[p]= depthMD.getData().readPixel(x, y); // depthMD.getYRes() / 2);
-//			p++;
-//		}
-        
-        
+
+    	boolean blank=true;
+		for (int x=0; x<width; x++) {
+	        
+	        int p = ((width * y)+x)*2;
+	        int depth = (int) frameData.getShort(p);
+	        result[x] = depth;
+	        
+	        if (depth != 0) { blank = false; }
+		}
 		
-		return new int[]{1,2,3};
+	//			Util.log(Integer.toString((int) frameData.getShort(4500)), this);
+
+			
+
+		if (blank) { return lastresult; }
+		else { 
+			lastresult = result;
+			return result; 
+		}
 		
 		
 	}
-
-	@Override
-	public void onFrameReady(VideoStream arg0) {
-        if (mLastFrame != null) {
-            mLastFrame.release();
-            mLastFrame = null;
-        }
-        
-        mLastFrame = mVideoStream.readFrame();
-
-//        mLastFrame.release();
-//        mLastFrame = null;        
-		
-	}
-
 
 	
 }

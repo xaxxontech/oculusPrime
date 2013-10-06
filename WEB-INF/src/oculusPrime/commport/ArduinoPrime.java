@@ -29,6 +29,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public enum direction { stop, right, left, forward, backward };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, frontstop, rearstop };
 	public enum speeds { slow, med, fast }; // better motors, maybe add speeds? 
+	public enum mode { on, off };
 
 	public static final long DEAD_TIME_OUT = 30000;
 	public static final long WATCHDOG_DELAY = 5000;	
@@ -173,7 +174,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 //		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, 0});
 //		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte)55});
 //		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte) 255});
-		application.message("floodLight brightness set to "+target+"%", "light", Integer.toString(target));
 		state.set(State.values.floodlightlevel, target);
 
 		Util.debug("floodlight: " + target, this);
@@ -183,7 +183,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	
 	public void setSpotLightBrightness(int target){
-		application.message("spotlight brightness set to "+target+"%", "light", Integer.toString(target));		
 		state.set(State.values.spotlightbrightness, target);
 		Util.debug("setSpotLightBrightness: " + target, this);
 		
@@ -193,7 +192,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	
 	public void strobeflash(String mode) {
-		if (mode.equalsIgnoreCase("on")) {
+		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString())) {
 			state.set(State.values.strobeflashon, true);
 			final long strobestarted = System.currentTimeMillis();
 			new Thread(new Runnable() {
@@ -212,13 +211,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 							
 						}
 						Thread.sleep(50);
-						sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)0});
-						sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)0});
-
+						setSpotLightBrightness(state.getInteger(State.values.spotlightbrightness));
+						floodLight(state.getInteger(State.values.floodlightlevel));
 					} catch (Exception e) { } }
 			}).start();
 		}
-		if (mode.equalsIgnoreCase("off")) {
+		if (mode.equalsIgnoreCase(ArduinoPrime.mode.off.toString())) {
 			state.set(State.values.strobeflashon, false);
 		}
 	}

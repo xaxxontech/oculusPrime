@@ -199,7 +199,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if (videosoundmode == null) { 
 			videosoundmode="high";  
 			if (Settings.os.equals("linux")) { // TODO: or motion/sound activity threshold enabled
-				videosoundmode="low";
+//				videosoundmode="low";
+				videosoundmode="high";
 			}
 		}
 		setGrabberVideoSoundMode(videosoundmode);
@@ -587,8 +588,14 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;
 
 		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
-		case spotlight: comport.setSpotLightBrightness(Integer.parseInt(str)); break;
-		case floodlight: comport.floodLight(Integer.parseInt(str));  break;
+		case spotlight: 
+			comport.setSpotLightBrightness(Integer.parseInt(str));
+			messageplayer("spotlight brightness set to "+str+"%", "light", str);		
+			break;
+		case floodlight: 
+			comport.floodLight(Integer.parseInt(str));  
+			messageplayer("floodLight brightness set to "+str+"%", "light", str);
+			break;
 			
 		case autodock:
 			Util.debug("playerCallServer(): autodock: " + str, this);
