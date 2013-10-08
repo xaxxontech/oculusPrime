@@ -29,8 +29,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected InputStream in = null;
 	
 	protected volatile boolean isconnected = false;
-	protected long lastSent = System.currentTimeMillis();
-	protected long lastRead = System.currentTimeMillis();
+//	protected long lastSent = System.currentTimeMillis();
+	protected long lastRead;
 	
 	protected final String portName = state.get(State.values.powerport);
 
@@ -40,7 +40,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 	
 	public ArduinoPower(Application app) {
 		application = app;	
-		Util.log("attempting to connect to port", this);
 		
 		if(powerAvailable()){
 			
@@ -53,12 +52,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 					if(isconnected){
 						
 						Util.log("Connected to port: " + state.get(State.values.motorport), this);
-
+						lastRead = System.currentTimeMillis();
+						new WatchDog(state).start();
 					}
 				}
 			}).start();
 
-			new WatchDog(state).start();
 			
 		}
 		

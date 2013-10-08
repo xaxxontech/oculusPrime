@@ -44,17 +44,22 @@ public class Discovery {
 	/* list of all free ports */
 	private static Vector<String> ports = new Vector<String>();
 	// private boolean lightsFound = false;
-	private boolean deviceFound = false;
-	private String deviceid = null;
+//	private String deviceid = null;
 	private String statevalue = null;
+	
+	private static Vector<String> searchDevices = new Vector<String>();
+	private static Vector<String> deviceStateStrings = new Vector<String>();
 
 	/* constructor makes a list of available ports */
+	/* order: discovery > searchDevice > connect > doPortQuery > getProduct > lookup
+	 * 
+	 */
 	public Discovery() {
 		
-		if(motors.equals(params.disabled.toString())) {
-			Util.debug("serial port is disabled", this);
-			return;
-		}
+//		if(motors.equals(params.disabled.toString())) {
+//			Util.debug("serial port is disabled", this);
+//			return;
+//		}
 		
 		getAvailableSerialPorts();
 		
@@ -65,9 +70,10 @@ public class Discovery {
 		
 		
 		if(power.equals(params.discovery.name())){	
-			deviceid = ARDUINO_POWER;
-			statevalue = State.values.powerport.toString();
-			searchDevice(); 	
+//			deviceid = ARDUINO_POWER;
+//			statevalue = State.values.powerport.toString();
+			deviceStateStrings.add(State.values.powerport.toString());
+			searchDevices.add(ARDUINO_POWER);
 			
 		} else { // port explicitly identified in settings		
 			Util.debug("skipping discovery, power specified on: " + power, this);
@@ -75,16 +81,19 @@ public class Discovery {
 		} 
 		
 		if(motors.equals(params.discovery.name())){	
-			deviceid = ARDUINO_PRIME;
-			statevalue = State.values.motorport.toString();
-			searchDevice(); 	
+//			deviceid = ARDUINO_PRIME;
+//			statevalue = State.values.motorport.toString();
+			deviceStateStrings.add(State.values.motorport.toString());
+			searchDevices.add(ARDUINO_PRIME);
+
 			
 		} else { // port explicitly identified in settings		
 			Util.debug("skipping discovery, motors specified on: " + motors, this);
 			state.put(State.values.motorport, motors);
 		} 
-
 		
+		
+		if (!searchDevices.isEmpty())  searchDevice(); 
 		
 	}
 	
@@ -193,32 +202,16 @@ public class Discovery {
 	/** Loop through all available serial ports and ask for product id's */
 	private void searchDevice() {
 			
-		Util.debug("discovery for "+deviceid+" starting on " + ports.size()+" ports", this);
+		Util.debug("discovery for "+Integer.toString(searchDevices.size())+" device(s) starting on " 
+				+ ports.size()+" ports", this);
 		
-		deviceFound = false;
 		int size = ports.size();
 		for (int i=0; i<size; i++) {
-			if (deviceFound) { 
-				ports.removeElementAt(i-1); // so don't include this port again on subsequent device search
-				break; // stop if find it 
-			}
-			
-			if (connect(ports.get(i), 115200)) {
-				Util.delay(TIMEOUT*2);
-				if (serialPort != null) { close(); }
-			}
+			connect(ports.get(i), 115200); 
+			Util.delay(TIMEOUT*2);
 		}
 	}
 	
-//	private static void getAvailableSerialPorts() {
-//		ports.clear();
-//		@SuppressWarnings("rawtypes")
-//		Enumeration thePorts = CommPortIdentifier.getPortIdentifiers();
-//		while (thePorts.hasMoreElements()) {
-//			CommPortIdentifier com = (CommPortIdentifier) thePorts.nextElement();
-//			if (com.getPortType() == CommPortIdentifier.PORT_SERIAL) ports.add(com.getName());
-//		}
-//	}
 	
 	/** check if this is a known derive, update in state */
 	private void lookup(String id){	
@@ -233,12 +226,12 @@ public class Discovery {
 				
 			Util.debug("found product id[" + id + "] on comm port: " +  getPortName(), this);
 			
-			if (id.equalsIgnoreCase(deviceid)) {
-
-				deviceFound = true;
-				state.set(statevalue, getPortName());
-				
-			} 
+			for (int n=0; n < searchDevices.size(); n++) {
+				if (id.equalsIgnoreCase(searchDevices.get(n))) {
+					state.set(deviceStateStrings.get(n), getPortName());
+					break;
+				} 
+			}
 		}
 	}
 	
