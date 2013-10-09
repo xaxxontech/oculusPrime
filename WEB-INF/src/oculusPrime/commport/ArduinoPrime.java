@@ -34,7 +34,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final long DEAD_TIME_OUT = 30000;
 	public static final long WATCHDOG_DELAY = 5000;	
 	public static final long DOCKING_DELAY = 1000;
-	public static final int SETUP = 2000;
+	public static final int SETUP = 4000;
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
@@ -62,10 +62,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final long CAM_NUDGE_DELAY = 100; 
 	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
 
-	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
 	private static final long STROBEFLASH_MAX = 5000; //stobe timeout
-	// check if board has replied with correct firmware. 
-//	private boolean verified = false;
 
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
@@ -78,7 +75,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	protected static Settings settings = Settings.getReference();
 	protected final String portName = state.get(State.values.motorport);
-//	protected final String firmware = settings.readSetting(ManualSettings.firmware);
+	protected final long nominalsysvolts = 12L;
 	
 	// data buffer 
 	protected byte[] buffer = new byte[32];
@@ -139,25 +136,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				}
 			}).start();
 			
-//			/* be sure */
-//			new Thread(new Runnable() {
-//				public void run() {
-//					Util.delay(SETUP*3);
-//					
-//					if(isconnected){ 
-//						Util.log(".....checking firmware is valid", this);
-//						if( ! verified){
-//							Util.log("WARN: firmware is not responding, restarting", this);
-//							settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-//							settings.incrementSettings(ManualSettings.attempts);
-//							application.restart();
-//						}
-//					} else {
-//						Util.log("WARN: firmware failed to connect", this);
-//						settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-//					}
-//				}
-//			}).start(); 
 		}
 	}
 	
@@ -171,9 +149,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void floodLight(int target) {
-//		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, 0});
-//		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte)55});
-//		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte) 255});
 		state.set(State.values.floodlightlevel, target);
 
 		Util.debug("floodlight: " + target, this);
@@ -306,9 +281,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		} catch (Exception e) {
 			
 			Util.log("can't connect to port: " + e.getMessage(), this);
-//			settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-//			settings.incrementSettings(ManualSettings.attempts);
-//			application.restart();
 			
 		}
 	}
@@ -373,6 +345,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			new Thread(new Runnable() {
 				public void run() {
 					disconnect();
+					Util.delay(SETUP);
 					connect();
 				}
 			}).start();
@@ -634,7 +607,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					n *= 4;
 				}
 				
-				Util.delay(n);
+				Util.delay((int) voltsComp(n));
 
 				if (state.getBoolean(State.values.movingforward)) goForward();
 				else stopGoing();
@@ -650,14 +623,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				final int tempspeed = state.getInteger(State.values.motorspeed);
 				state.put(State.values.motorspeed, speedfast);
 				
-				int n = fullrotationdelay * degrees / 360;
+				double n = fullrotationdelay * degrees / 360;
 				
 				switch (dir) {
 					case right: turnRight(); break;
 					case left: turnLeft(); 
 				}
 				
-				Util.delay(n);
+				Util.delay((int) voltsComp(n));
 
 				stopGoing();
 				state.put(State.values.motorspeed, tempspeed);
@@ -665,6 +638,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 			}
 		}).start();
+	}
+	
+	private double voltsComp(double n) {
+		double sysvolts = 12.0;
+		if (state.exists(State.values.sysvolts.toString())) {
+			sysvolts= Double.parseDouble(state.get(State.values.sysvolts));
+		}
+		
+		n = n * Math.pow(12.0/sysvolts, 2.5);
+		return n;
 	}
 	
 	public void slide(final direction dir){
@@ -759,7 +742,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					if (x > 0) turnRight();
 					else turnLeft();
 					
-					Thread.sleep(clicknudgedelay);
+					Util.delay((int) voltsComp(clicknudgedelay));
 					state.put(State.values.motorspeed, tempspeed);
 					
 					if (state.getBoolean(State.values.movingforward)) goForward();

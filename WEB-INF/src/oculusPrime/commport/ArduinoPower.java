@@ -3,6 +3,8 @@ package oculusPrime.commport;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
@@ -18,9 +20,9 @@ import gnu.io.SerialPortEventListener;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final int SETUP = 2000;
+	public static final int SETUP = 4000;
 	public static final int DEAD_TIME_OUT = 10000;
-	public static final int WATCHDOG_DELAY = 2000;
+	public static final int WATCHDOG_DELAY = 5000;
 	
 	protected Application application = null;
 	protected static State state = State.getReference();
@@ -40,6 +42,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	
 	public ArduinoPower(Application app) {
 		application = app;	
+
 		
 		if(powerAvailable()){
 			
@@ -200,12 +203,27 @@ public class ArduinoPower implements SerialPortEventListener  {
 			battinfo = battinfo.replaceFirst("\\.\\d*", "");
 			if (!state.get(State.values.batterylife).equals(battinfo)) {
 				state.put(State.values.batterylife, battinfo);
+			
 			}
 
 			String extinfo = response.split(" ")[3];
 			if (!state.exists(State.values.batteryinfo.toString()) || 
 						!state.get(State.values.batteryinfo).equals(extinfo)) {
+
 				state.put(State.values.batteryinfo, extinfo);
+	
+				// extract sysvolts '_sV:'
+			    Pattern pat = Pattern.compile("_sV:\\d+\\.\\d+");
+			    Matcher mat = pat.matcher(extinfo);
+			    while (mat.find()) {
+			    	String sysvolts = mat.group().replaceFirst("_sV:", "");
+			    	if (!state.exists(State.values.sysvolts.toString()) || 
+							!state.get(State.values.sysvolts).equals(sysvolts)) {
+			    		state.put(State.values.sysvolts, sysvolts);
+			    	}
+			    	break;
+			    }
+			    
 			}
 			
 		}
