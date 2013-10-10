@@ -629,10 +629,15 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 <table><tr><td style="height: 10px"></td></tr></table>
 Driving settings:
 <table><tr><td style="height: 7px"></td></tr></table>
-<div style="white-space: nowrap">speed offsets: slow <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+<div style="white-space: nowrap">speed offsets &nbsp; &nbsp; slow <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="slowoffset" type="text" size="4" >
 med <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="medoffset" type="text" size="4" ></div>
+
+steering comp <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="steeringcomp" type="text" size="4" >
+(format: L/R% eg. &quotL5&quot) <br>
+
 nudge delay ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="nudgedelay" type="text" size="4" ><br>
 
@@ -641,11 +646,11 @@ onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="fullrotat
 
 max clicksteer horiz ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="maxclicknudgedelay" type="text" size="4" >
-momentum x<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+momentum <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="clicknudgemomentummult" type="text" size="4" ><br>
-max clicksteer tilt angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+max clicksteer vertical angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="maxclickcam" type="text" size="4" >
-(0-128, - left, + right)
+
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: drivingsettingssend();">
 <span class="cancelbox">&radic;</span> send values</a> &nbsp;

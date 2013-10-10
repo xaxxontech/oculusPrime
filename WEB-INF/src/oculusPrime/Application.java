@@ -935,7 +935,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			String str = comport.speedslow + " " + comport.speedmed + " "
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
 					+ " " + comport.clicknudgemomentummult+ " " + comport.maxclickcam
-					+ " " + comport.fullrotationdelay;
+					+ " " + comport.fullrotationdelay + " " + settings.readSetting(GUISettings.steeringcomp.name());
 			sendplayerfunction("drivingsettingsdisplay", str);
 		}
 	}
@@ -963,10 +963,13 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 			comport.fullrotationdelay = Integer.parseInt(comps[6]);
 			settings.writeSettings(GUISettings.fullrotationdelay.name(), Integer.toString(comport.fullrotationdelay));
+			
+			comport.setSteeringComp(comps[7]);
+			settings.writeSettings(GUISettings.steeringcomp.name(), comps[7]);
 
 			String s = comport.speedslow + " " + comport.speedmed + " " 
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
-					+ " " + comport.clicknudgemomentummult;
+					+ " " + comport.clicknudgemomentummult +  " "  + comport.steeringcomp;
 			
 			messageplayer("driving settings set to: " + s, null, null);
 		}

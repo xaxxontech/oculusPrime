@@ -6,7 +6,7 @@ public enum GUISettings {
 
 	/** these settings must be available in basic configuration */
 	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay,
-	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, 
+	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
 	clicknudgemomentummult, maxclickcam, muteonrovmove, 
 	videoscale, volume, loginnotify, reboot, pushtotalk; 
 	
@@ -15,7 +15,7 @@ public enum GUISettings {
 		Properties config = new Properties();
 		config.setProperty(skipsetup.name() , "no");
 		config.setProperty(speedslow.name() , "50");
-		config.setProperty(speedmed.name() , "130");
+		config.setProperty(speedmed.name() , "150");
 		config.setProperty(docktarget.name() , "1.194_0.23209_0.17985_0.22649_129_116_80_67_-0.045455");
 		config.setProperty(vidctroffset.name() , "-46");
 		config.setProperty(vlow.name() , "320_240_4_85");
@@ -27,7 +27,7 @@ public enum GUISettings {
 		config.setProperty(pushtotalk.name() , "true");
 		config.setProperty(maxclicknudgedelay.name() , "180");
 		config.setProperty(nudgedelay.name() , "80");
-		config.setProperty(clicknudgemomentummult.name() , "0.1");
+		config.setProperty(clicknudgemomentummult.name() , "0.25");
 		config.setProperty(maxclickcam.name() , "30");
 		config.setProperty(volume.name() , "20");
 		config.setProperty(muteonrovmove.name() , "true"); 
@@ -36,6 +36,7 @@ public enum GUISettings {
 		config.setProperty(reboot.name() , "false");
 		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2000");
+		config.setProperty(steeringcomp.name(), "0");
 		
 		return config;
 	}

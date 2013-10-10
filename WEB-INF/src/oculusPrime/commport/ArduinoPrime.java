@@ -75,7 +75,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	protected static Settings settings = Settings.getReference();
 	protected final String portName = state.get(State.values.motorport);
-	protected final long nominalsysvolts = 12L;
+	protected final double nominalsysvolts = 12.0;
 	
 	// data buffer 
 	protected byte[] buffer = new byte[32];
@@ -96,6 +96,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public int nudgedelay = settings.getInteger(GUISettings.nudgedelay);
 	public int maxclickcam = settings.getInteger(GUISettings.maxclickcam);
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
+	public int steeringcomp = 0;
 	
     private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
@@ -114,6 +115,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
+		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
 		
 		if(motorsAvailable()){
 			
@@ -420,14 +422,29 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void goForward() {
-		sendCommand(new byte[] { FORWARD, (byte) state.getInteger(State.values.motorspeed) });
+		int speed= state.getInteger(State.values.motorspeed);
+		int L = speed;
+		int R = speed;
+		int comp = (int) ((double) steeringcomp * Math.pow((double) speed/(double) speedfast, 2.0));
+		if (steeringcomp < 0) R += comp; // right motor reduced
+		else if (steeringcomp > 0) L -= comp; // left motor reduced
+		
+		sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
 
 	public void goBackward() {
-		sendCommand(new byte[] { BACKWARD, (byte) state.getInteger(State.values.motorspeed) });
+		int speed= state.getInteger(State.values.motorspeed);
+		int L = speed;
+		int R = speed;
+		
+		int comp = (int) ((double) steeringcomp * speed/speedfast);
+		if (steeringcomp < 0) L += comp; // left motor reduced
+		else if (steeringcomp > 0) R -= comp; // right motor reduced
+		
+		sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L });
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, false);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
@@ -439,8 +456,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		int speed = state.getInteger(State.values.motorspeed);
 		if (speed < turnspeed && (speed + boost) < speedfast)
 			tmpspeed = speed + boost;
-
-		sendCommand(new byte[] { RIGHT, (byte) tmpspeed });
+		
+		sendCommand(new byte[] { RIGHT,  (byte) tmpspeed, (byte) tmpspeed });
 		state.put(State.values.moving, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
@@ -451,8 +468,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		int speed = state.getInteger(State.values.motorspeed);
 		if (speed < turnspeed && (speed + boost) < speedfast)
 			tmpspeed = speed + boost;
-
-		sendCommand(new byte[] { LEFT, (byte) tmpspeed });
+		
+		sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
 		state.put(State.values.moving, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
@@ -569,6 +586,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public void cameraToPosition(int position) {
 		if (position < CAM_MIN) { position = CAM_MIN; }
 		else if (position > CAM_MAX) { position = CAM_MAX; } 
+		if (position == 13) { position = 12; } // can't send 13, firmware will be seen as end of command
 		sendCommand(new byte[] { CAM, (byte) position} );
 		state.set(State.values.cameratilt, position);
 		return;
@@ -646,7 +664,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			sysvolts= Double.parseDouble(state.get(State.values.sysvolts));
 		}
 		
-		n = n * Math.pow(12.0/sysvolts, 2.5);
+		n = n * Math.pow(nominalsysvolts/sysvolts, 2.5);
 		return n;
 	}
 	
@@ -766,16 +784,29 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		Util.debug("___clickCam(): " + "y: " + y, this);
 		
-		Integer n = maxclickcam * y / 240;  
-		state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - n);
+		int n = maxclickcam * y / 240;
+		n = state.getInteger(State.values.cameratilt) -n;
+//		state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - n);
 		
 		// range check 
-		if (state.getInteger(State.values.cameratilt) < CAM_MIN) state.set(State.values.cameratilt, CAM_MIN);
-		if (state.getInteger(State.values.cameratilt) > CAM_MAX) state.set(State.values.cameratilt, CAM_MAX);
+//		if (state.getInteger(State.values.cameratilt) < CAM_MIN) state.set(State.values.cameratilt, CAM_MIN);
+//		if (state.getInteger(State.values.cameratilt) > CAM_MAX) state.set(State.values.cameratilt, CAM_MAX);
+		if (n < CAM_MIN) { n= CAM_MIN; }
+		if (n > CAM_MAX) { n= CAM_MAX; }
+		if (n == 13) { n=12; }
+		sendCommand(new byte[] { CAM, (byte) n });	
 		
+		state.set(State.values.cameratilt, n);
 		application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
-		sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });	
-		
+
+	}
+	
+	public void setSteeringComp(String str) {
+		if (str.contains("L")) { // left is negative
+			steeringcomp = Integer.parseInt(str.replaceAll("\\D", "")) * -1;
+		}
+		else { steeringcomp = Integer.parseInt(str.replaceAll("\\D", "")); }
+		steeringcomp = (int) ((double) steeringcomp * 255/100);
 	}
 
 }
