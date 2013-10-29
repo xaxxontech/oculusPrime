@@ -105,7 +105,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public ArduinoPrime(Application app) {	
 		
 		application = app;	
-		state.put(State.values.motorspeed, speedmed);
+		state.put(State.values.motorspeed, speedfast);
 		state.put(State.values.movingforward, false);
 		state.put(State.values.moving, false);
 		state.put(State.values.motionenabled, true);
@@ -423,6 +423,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	public void goForward() {
 		int speed= state.getInteger(State.values.motorspeed);
+		
+		//comp for voltage on slow speed 
+		if (speed==speedslow) {
+			speed = (int) voltsComp((double) speed);
+			if (speed > 255) { speed = 255; }
+			Util.debug("speed (slow) = "+speed, this);
+		}
+		
 		int L = speed;
 		int R = speed;
 		int comp = (int) ((double) steeringcomp * Math.pow((double) speed/(double) speedfast, 2.0));
@@ -437,6 +445,13 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	public void goBackward() {
 		int speed= state.getInteger(State.values.motorspeed);
+
+		//comp for voltage on slow speed 
+		if (speed==speedslow) {
+			speed = (int) voltsComp((double) speed);
+			if (speed > 255) { speed = 255; }
+		}
+		
 		int L = speed;
 		int R = speed;
 		
@@ -666,6 +681,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		n = n * Math.pow(nominalsysvolts/sysvolts, 2.5);
 		return n;
+	}
+	
+	public void delayWithVoltsComp(int n) {
+		int delay = (int) voltsComp((double) n);
+		Util.debug("delay = "+delay, this);
+		Util.delay(delay);
 	}
 	
 	public void slide(final direction dir){

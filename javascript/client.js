@@ -5,7 +5,7 @@ var systimeoffset;
 var enablekeyboard = false;
 var lagtimer = 0;
 var officiallagtimer = 0;
-var maxlogbuffer = 50000;
+//var maxlogbuffer = 1000; // was 50000
 var statusflashingarray= new Array();
 var pinginterval = null; //timer
 var pingcountdown = null; //timer
@@ -38,7 +38,7 @@ var cameramoving = false;
 var broadcasting = null;
 var broadcastmicon = false; 
 var clicksteeron = true;
-var maxmessagecontents = 150000;
+var maxmessagecontents = 50000; // was 150000
 var maxmessageboxsize = 4000;
 var tempimage = new Image();
 tempimage.src = 'images/eye.gif';

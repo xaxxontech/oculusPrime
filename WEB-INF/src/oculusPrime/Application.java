@@ -39,6 +39,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private ArduinoPrime comport = null;
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
+	private ScriptRunner scriptRunner = null;
 	
 	// try to make private 
 	public static TelnetServer commandServer = null;
@@ -233,8 +234,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 			
 		
-		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED))
-			commandServer = new oculusPrime.TelnetServer(this);
+		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) {
+			commandServer = new TelnetServer(this);
+			scriptRunner = new ScriptRunner();
+		}
 		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
@@ -243,7 +246,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 		grabberInitialize();
 				
-		new SystemWatchdog();
+		new SystemWatchdog(); // reboots OS every 2 days
 		Util.debug("initialize done", this);
 
 	}

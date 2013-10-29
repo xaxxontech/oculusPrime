@@ -1,6 +1,5 @@
 package oculusPrime;
 
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.awt.image.ConvolveOp;
@@ -116,7 +115,6 @@ public class AutoDock { // implements Observer {
 					int x = Integer.parseInt(cmd[2]);
 					int y = Integer.parseInt(cmd[3]);
 
-					// NEW
 					if (!state.getBoolean(State.values.controlsinverted)) { // need to face backwards
 						
 						app.message(null, "autodocklock", s);
@@ -236,8 +234,6 @@ public class AutoDock { // implements Observer {
 					comport.goForward();
 					Util.delay(150);
 					comport.stopGoing();
-			//		comport.getDockStatus();
-			// TODO; .......... change to two boards 
 					
 					state.block(oculusPrime.State.values.batterycharging, "true", 400);
 					inchforward ++;
@@ -248,7 +244,7 @@ public class AutoDock { // implements Observer {
 					state.set(State.values.docking, false);
 					state.set(State.values.motionenabled, false);
 					state.set(State.values.dockstatus, DOCKED);
-					comport.speedset(ArduinoPrime.speeds.med);
+					comport.speedset(ArduinoPrime.speeds.fast);
 
 					String str = "";
 					
@@ -281,7 +277,8 @@ public class AutoDock { // implements Observer {
 							comport.speedset(ArduinoPrime.speeds.fast);
 							comport.goBackward();
 							try {
-								Thread.sleep(400);
+//								Thread.sleep(400);
+								comport.delayWithVoltsComp(400);
 								comport.stopGoing();
 								Thread.sleep(settings.getInteger(ManualSettings.stopdelay)); // let deaccelerate							
 							} catch (InterruptedException e) { e.printStackTrace(); }
@@ -391,7 +388,8 @@ public class AutoDock { // implements Observer {
 							Thread.sleep(allowforClickSteer); // was 1500 w/ dockgrab following
 							comport.speedset(ArduinoPrime.speeds.fast);
 							comport.goForward();
-							Thread.sleep(s1FWDmilliseconds);
+//							Thread.sleep(s1FWDmilliseconds);
+							comport.delayWithVoltsComp(s1FWDmilliseconds);
 							comport.stopGoing();
 							Thread.sleep(stopdelay);
 							dockGrab("find", 0, 0);
@@ -407,7 +405,8 @@ public class AutoDock { // implements Observer {
 						try {
 							comport.speedset(ArduinoPrime.speeds.fast);
 							comport.goForward();
-							Thread.sleep(s1FWDmilliseconds);
+//							Thread.sleep(s1FWDmilliseconds);
+							comport.delayWithVoltsComp(s1FWDmilliseconds);
 							comport.stopGoing();
 							Thread.sleep(stopdelay); // let deaccelerate
 							dockGrab("find", 0, 0);
@@ -442,7 +441,8 @@ public class AutoDock { // implements Observer {
 								Thread.sleep(allowforClickSteer);
 								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goForward();
-								Thread.sleep(s2FWDmilliseconds);
+//								Thread.sleep(s2FWDmilliseconds);
+								comport.delayWithVoltsComp(s2FWDmilliseconds);
 								comport.stopGoing();
 								Thread.sleep(stopdelay); // let deaccelerate
 								dockGrab("find", 0, 0);
@@ -457,7 +457,8 @@ public class AutoDock { // implements Observer {
 							try {
 								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goForward();
-								Thread.sleep(s2FWDmilliseconds);
+//								Thread.sleep(s2FWDmilliseconds);
+								comport.delayWithVoltsComp(s2FWDmilliseconds);
 								comport.stopGoing();
 								Thread.sleep(stopdelay); // let deaccelerate
 								dockGrab("find", 0, 0);
@@ -490,7 +491,6 @@ public class AutoDock { // implements Observer {
 			}
 		} 
 		if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
-			Util.debug("autodock stage 3", this);
 			if ((Math.abs(x - dockx) > 5) && autodockctrattempts <= 10) {
 				autodockctrattempts++;
 
@@ -531,7 +531,8 @@ public class AutoDock { // implements Observer {
 								Thread.sleep(allowforClickSteer);
 								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goBackward();
-								Thread.sleep(s1FWDmilliseconds);
+//								Thread.sleep(s1FWDmilliseconds);
+								comport.delayWithVoltsComp(s1FWDmilliseconds);
 								comport.stopGoing();
 								Thread.sleep(stopdelay); // let deaccelerate
 								dockGrab("find", 0, 0);
