@@ -373,6 +373,7 @@ function setstatus(status, value) {
 		keyboard("enable");
 		setTimeout("videomouseaction = true;",30); // firefox screen glitch fix
 		clearTimeout(logintimer);
+		callServer("videosoundmode", "high");
 	}
 	if (status == "storecookie") {
 		createCookie("auth",value,30); 
@@ -498,11 +499,18 @@ function keyBoardPressed(event) {
 		if (keycode == 51) { speedset('fast'); } // 3
 		if (keycode == 82) { camera('upabit'); } // R
 		if (keycode == 70) { camera('horiz'); } // F
-		if (keycode == 86) { camera('downabit'); } // v
+		if (keycode == 86) { camera('downabit'); } // V
 		if (keycode == 77) { // M
 			if (document.getElementById("menu_menu_over").style.display == "none") {
 				mainmenu('mainmenulink'); 
 			} else { javascript: popupmenu('menu', 'close'); }
+		}
+		if (keycode == 73) { // I
+			if (streammode == "stop") {
+				publish("camera");
+			} else {
+				publish("stop");
+			}
 		}
 		if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 		
@@ -2154,6 +2162,17 @@ function camiconbutton(str,id) {
 	if (str == "click") {
 		if (id=="pubstop") { id="stop"; } // stop already in use?
 		publish(id); 
+	}
+	
+	if (id=="camera") {
+		if (str=="over") {
+			document.getElementById("steering_textbox").innerHTML = "CAMERA ON/OFF".toUpperCase();
+			document.getElementById("steeringkeytextbox").innerHTML = "I";
+		}
+		else {
+			document.getElementById("steering_textbox").innerHTML = "";
+			document.getElementById("steeringkeytextbox").innerHTML = "";
+		}
 	}
 }
 

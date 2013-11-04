@@ -85,6 +85,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected volatile boolean isconnected = false;
 	public volatile boolean sliding = false;
 	
+//	private boolean invertswap = false;
+	
 	// tracking motor moves 
 	private static Timer cameraTimer = null;
 	
@@ -422,6 +424,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void goForward() {
+
+//		if (state.getBoolean(State.values.controlsinverted) &! invertswap) 
+//			{ invertswap = true; goBackward(); }
+//		invertswap = false;
+		
 		int speed= state.getInteger(State.values.motorspeed);
 		
 		//comp for voltage on slow speed 
@@ -431,11 +438,23 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			Util.debug("speed (slow) = "+speed, this);
 		}
 		
+		// no full speed when on dock voltage
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed==speedfast) {
+			speed = speedmed;
+		}
+		
 		int L = speed;
 		int R = speed;
 		int comp = (int) ((double) steeringcomp * Math.pow((double) speed/(double) speedfast, 2.0));
-		if (steeringcomp < 0) R += comp; // right motor reduced
-		else if (steeringcomp > 0) L -= comp; // left motor reduced
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			if (steeringcomp < 0) L += comp; // left motor reduced
+			else if (steeringcomp > 0) R -= comp; // right motor reduced
+		}
+		else {
+			if (steeringcomp < 0) R += comp; // right motor reduced
+			else if (steeringcomp > 0) L -= comp; // left motor reduced
+		}
 		
 		sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 		state.put(State.values.moving, true);
@@ -444,6 +463,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void goBackward() {
+
+//		if (state.getBoolean(State.values.controlsinverted) &! invertswap) 
+//			{ invertswap = true; goForward(); }
+//		invertswap = false;
+	
 		int speed= state.getInteger(State.values.motorspeed);
 
 		//comp for voltage on slow speed 
@@ -455,9 +479,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		int L = speed;
 		int R = speed;
 		
-		int comp = (int) ((double) steeringcomp * speed/speedfast);
-		if (steeringcomp < 0) L += comp; // left motor reduced
-		else if (steeringcomp > 0) R -= comp; // right motor reduced
+		int comp = (int) ((double) steeringcomp * Math.pow((double) speed/(double) speedfast, 2.0));
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			if (steeringcomp < 0) R += comp; // right motor reduced
+			else if (steeringcomp > 0) L -= comp; // left motor reduced
+		}
+		else {
+			if (steeringcomp < 0) L += comp; // left motor reduced
+			else if (steeringcomp > 0) R -= comp; // right motor reduced
+		}	
 		
 		sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L });
 		state.put(State.values.moving, true);
@@ -466,6 +497,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void turnRight() {
+
+//		if (state.getBoolean(State.values.controlsinverted) && !invertswap) 
+//			{ invertswap = true; turnLeft(); }
+//		invertswap = false;
+		
 		int tmpspeed = turnspeed;
 		int boost = TURNBOOST;
 		int speed = state.getInteger(State.values.motorspeed);
@@ -478,6 +514,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void turnLeft() {
+		
+//		if (state.getBoolean(State.values.controlsinverted) && !invertswap) 
+//			{ invertswap = true; turnRight(); }
+//		invertswap = false;		
+		
 		int tmpspeed = turnspeed;
 		int boost = TURNBOOST;
 		int speed = state.getInteger(State.values.motorspeed);

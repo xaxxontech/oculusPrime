@@ -120,8 +120,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 				if (comport.isConnected()) { 
 					comport.setSpotLightBrightness(0);
-//					comport.floodLightOff();
-//					comport.floodLight("off");
+					comport.floodLight(0);
 					comport.stopGoing();
 				}
 
@@ -597,7 +596,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;
 		case floodlight: 
 			comport.floodLight(Integer.parseInt(str));  
-			messageplayer("floodLight brightness set to "+str+"%", "light", str);
+			messageplayer("floodLight brightness set to "+str+"%", "floodlight", str);
 			break;
 			
 		case autodock:
@@ -1854,7 +1853,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		// Util.debug("updated(): " + key, this);
 		
 		if(key.equals(State.values.cameratilt.name())){
-			if(state.getInteger(State.values.cameratilt) > (ArduinoPrime.CAM_MAX /2) 
+			if(state.getInteger(State.values.cameratilt) > 150 //(ArduinoPrime.CAM_MAX /2) 
 					&! state.getBoolean(State.values.controlsinverted)){
 				if (player!=null) {
 					IServiceCapableConnection sc = (IServiceCapableConnection) player;
