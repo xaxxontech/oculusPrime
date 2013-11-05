@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TooManyListenersException;
 
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
@@ -61,6 +62,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final int CAM_NUDGE = 5; // degrees
 	public static final long CAM_NUDGE_DELAY = 100; 
 	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
+	public static final String FIRMWARE_ID = "oculusPrime";
 
 	private static final long STROBEFLASH_MAX = 5000; //stobe timeout
 
@@ -100,6 +102,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
 	public int steeringcomp = 0;
 	
+	public String portname = settings.readSetting(ManualSettings.motorport);
+	
     private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
 	public int turnspeed = 255;
@@ -117,33 +121,45 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
+		state.put(State.values.motorport, portname);
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
 		
-		if(motorsAvailable()){
+		if(motorsReady()){
 			
-			Util.log("attempting to connect to port", this);
+			Util.log("attempting to connect to port"+portname, this);
 			
-			new Thread(new Runnable() {
-				public void run() {
-					connect();
-					Util.delay(SETUP);
+//			new Thread(new Runnable() {
+//				public void run() {
+					if (!isconnected) {
+						connect();
+						Util.delay(SETUP);
+					}
 					if(isconnected){
 						
 						Util.log("Connected to port: " + state.get(State.values.motorport), this);
 						
-						setSpotLightBrightness(0);
-						floodLight(0);
-						sendCommand(FIND_HOME_TILT); 
-						sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
-						state.set(State.values.cameratilt, CAM_HORIZ);
+						initialize();
 					}
-				}
-			}).start();
+//				}
+//			}).start();
 			
 		}
 	}
 	
-	public static boolean motorsAvailable(){
+	public void initialize() {
+		
+		Util.debug("initialize", this);
+		
+		registerListeners();
+		setSpotLightBrightness(0);
+		floodLight(0);
+		sendCommand(FIND_HOME_TILT); 
+		sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
+		state.set(State.values.cameratilt, CAM_HORIZ);
+		
+	}
+	
+	public static boolean motorsReady (){
 		final String motors = state.get(State.values.motorport); 
 		if(motors == null) return false; 
 		if(motors.equals(Discovery.params.disabled.name())) return false;
@@ -224,7 +240,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		 */
 		if(response.startsWith("battery")){
 			String s = response.split(" ")[1];
-			if (s.equals("timeout") && !ArduinoPower.powerAvailable()) {
+			if (s.equals("timeout") && !ArduinoPower.powerReady()) {
 				state.put(State.values.dockstatus, AutoDock.UNKNOWN);
 				state.put(State.values.batterylife, s);
 				application.message(null, "battery", s);
@@ -276,10 +292,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			out = serialPort.getOutputStream();
 			in = serialPort.getInputStream();
 
-			// register for serial events
-			serialPort.addEventListener(this);
-			serialPort.notifyOnDataAvailable(true);
-			
 			isconnected = true;
 
 		} catch (Exception e) {
@@ -287,6 +299,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			Util.log("can't connect to port: " + e.getMessage(), this);
 			
 		}
+	}
+	
+	protected void registerListeners() {
+		try {
+			serialPort.addEventListener(this);
+		} catch (TooManyListenersException e) {
+			e.printStackTrace();
+		}
+		serialPort.notifyOnDataAvailable(true);
+
 	}
 
 	public boolean isConnected() {

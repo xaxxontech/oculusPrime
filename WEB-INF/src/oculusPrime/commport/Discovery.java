@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.util.Enumeration;
 import java.util.Vector;
 
+import oculusPrime.Application;
 import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
@@ -18,9 +19,10 @@ public class Discovery {
 	public static enum params {discovery, disabled};
 	
 	private static Settings settings = Settings.getReference();
-	private static final String motors = settings.readSetting(ManualSettings.motorport);
-	private static final String power = settings.readSetting(ManualSettings.powerport);
+//	private static final String motors = settings.readSetting(ManualSettings.motorport);
+//	private static final String power = settings.readSetting(ManualSettings.powerport);
 	private static State state = State.getReference();
+	private Application application = null;
 	
 	public static final long RESPONSE_DELAY = 1000;
 	public static final int TIMEOUT = 2000;	
@@ -31,11 +33,6 @@ public class Discovery {
 	public static final int PARITY = SerialPort.PARITY_NONE;
 	public static final int FLOWCONTROL = SerialPort.FLOWCONTROL_NONE;
 
-	/* add known devices here, strings returned from the firmware */
-	// public static final String ARDUINO_MOTOR_SHIELD = "arduinoShield";
-	public static final String ARDUINO_PRIME = "oculusPrime";
-	public static final String ARDUINO_POWER = "oculusPower";
-	
 	/* reference to the underlying serial port */
 	private static SerialPort serialPort = null;
 	private static InputStream inputStream = null;
@@ -43,23 +40,17 @@ public class Discovery {
 
 	/* list of all free ports */
 	private static Vector<String> ports = new Vector<String>();
-	// private boolean lightsFound = false;
-//	private String deviceid = null;
-	private String statevalue = null;
 	
 	private static Vector<String> searchDevices = new Vector<String>();
-	private static Vector<String> deviceStateStrings = new Vector<String>();
+//	private static Vector<String> deviceStateStrings = new Vector<String>();
 
 	/* constructor makes a list of available ports */
 	/* order: discovery > searchDevice > connect > doPortQuery > getProduct > lookup
 	 * 
 	 */
-	public Discovery() {
+	public Discovery(Application app) {	
 		
-//		if(motors.equals(params.disabled.toString())) {
-//			Util.debug("serial port is disabled", this);
-//			return;
-//		}
+		application = app;
 		
 		getAvailableSerialPorts();
 		
@@ -69,29 +60,19 @@ public class Discovery {
 		}
 		
 		
-		if(power.equals(params.discovery.name())){	
-//			deviceid = ARDUINO_POWER;
-//			statevalue = State.values.powerport.toString();
-			deviceStateStrings.add(State.values.powerport.toString());
-			searchDevices.add(ARDUINO_POWER);
+		if(application.powerport.portname.equals(params.discovery.name())){	
+			searchDevices.add(ArduinoPower.FIRMWARE_ID);
 			
 		} else { // port explicitly identified in settings		
-			Util.debug("skipping discovery, power specified on: " + power, this);
-			state.put(State.values.powerport, power);
+			Util.debug("skipping discovery, power specified on: " + application.powerport.portname, this);
 		} 
 		
-		if(motors.equals(params.discovery.name())){	
-//			deviceid = ARDUINO_PRIME;
-//			statevalue = State.values.motorport.toString();
-			deviceStateStrings.add(State.values.motorport.toString());
-			searchDevices.add(ARDUINO_PRIME);
-
+		if(application.comport.portname.equals(params.discovery.name())){	
+			searchDevices.add(ArduinoPrime.FIRMWARE_ID);
 			
 		} else { // port explicitly identified in settings		
-			Util.debug("skipping discovery, motors specified on: " + motors, this);
-			state.put(State.values.motorport, motors);
+			Util.debug("skipping discovery, motors specified on: " + application.comport.portname, this);
 		} 
-		
 		
 		if (!searchDevices.isEmpty())  searchDevice(); 
 		
@@ -124,7 +105,7 @@ public class Discovery {
 	}
 
 	/** connects on start up, return true is currently connected */
-	private boolean connect(final String address, final int rate) {
+	private void connect(final String address, final int rate) {
 
 		Util.debug("try to connect to: " + address + " buad:" + rate, this);
 
@@ -150,14 +131,14 @@ public class Discovery {
 		} catch (Exception e) {
 			Util.log("error connecting to: " + address, this);
 			close();
-			return false;
+//			return false;
 		}
 
 		// be sure
-		if (inputStream == null) return false;
-		if (outputStream == null) return false;
-
-		return true;
+//		if (inputStream == null) return false;
+//		if (outputStream == null) return false;
+//
+//		return true;
 	}
 
 	/** Close the serial port streams */
@@ -181,24 +162,7 @@ public class Discovery {
 		}
 	}
 	
-	/** Loop through all available serial ports and ask for product id's 
-	public void searchLights() {
-	
-		// try to limit searching
-		if(ports.contains(motors)) ports.remove(motors);
-		if(motors != null) ports.remove(motors);
-			
-		Util.debug("discovery for lights starting on ports: " + ports.size(), this);
-		
-		for (int i = ports.size() - 1; i >= 0; i--) {
-			if (lightsFound) { break; } // stop if find it
-			if (connect(ports.get(i), 57600)) {
-				Util.delay(TIMEOUT*2);
-				if (serialPort != null) { close(); }
-			}
-		}
-	}*/
-	
+
 	/** Loop through all available serial ports and ask for product id's */
 	private void searchDevice() {
 			
@@ -228,8 +192,30 @@ public class Discovery {
 			
 			for (int n=0; n < searchDevices.size(); n++) {
 				if (id.equalsIgnoreCase(searchDevices.get(n))) {
-					state.set(deviceStateStrings.get(n), getPortName());
-					break;
+//					state.set(deviceStateStrings.get(n), getPortName());
+					
+					if (id.equalsIgnoreCase(ArduinoPrime.FIRMWARE_ID)) {
+						state.set(State.values.motorport, getPortName());
+						application.comport.serialPort = serialPort;
+						application.comport.in = inputStream;
+						application.comport.out = outputStream;
+						application.comport.initialize();
+						application.comport.isconnected = true;
+						break;
+					}
+					
+					else if (id.equalsIgnoreCase(ArduinoPower.FIRMWARE_ID)) {
+						state.set(State.values.powerport, getPortName());
+						application.powerport.serialPort = serialPort;
+						application.powerport.in = inputStream;
+						application.powerport.out = outputStream;
+						application.powerport.isconnected = true;
+						application.powerport.initialize();
+						break;
+					}
+					
+					else { close(); }
+					
 				} 
 			}
 		}
@@ -245,7 +231,7 @@ public class Discovery {
 			return;
 		}
 		try {
-			outputStream.write(new byte[] { 'x', 13 });
+			outputStream.write(new byte[] { 'x', 13 }); // send 'get product' command
 		} catch (IOException e) {
 			Util.log(e.getStackTrace().toString(),this);
 			return;
@@ -281,7 +267,7 @@ public class Discovery {
 		}
 		
 		lookup(device);
-		close();
+//		close();
 	}
 }
 

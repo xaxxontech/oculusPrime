@@ -36,12 +36,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private State state = State.getReference();
-	private ArduinoPrime comport = null;
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
 	private ScriptRunner scriptRunner = null;
 	
-	// try to make private 
+	public ArduinoPrime comport = null;
+	public ArduinoPower powerport = null;
 	public static TelnetServer commandServer = null;
 	public static developer.OpenNIRead openNIRead = null;
 	public static Speech speech = new Speech();
@@ -214,12 +214,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 
-		// must be blocking search of all ports, but only once!
-		// Discovery discovery = 
-		// TODO; new............
-		new Discovery();
 		comport = new ArduinoPrime(this);
-		new ArduinoPower(this);
+		powerport = new ArduinoPower(this);
+		new Discovery(this);
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
 		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
@@ -1698,7 +1695,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if(str != null) result += "username " + str + " ";
 
 		// commport
-		if(ArduinoPrime.motorsAvailable()) result += "comport " + state.get(State.values.motorport) + " ";
+		if(ArduinoPrime.motorsReady()) result += "comport " + state.get(State.values.motorport) + " ";
 		else result += "comport nil ";
 		
 		// TODO: 
