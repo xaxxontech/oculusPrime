@@ -43,9 +43,7 @@ public class TelnetServer implements Observer {
 			final String ip = socket.getInetAddress().toString().substring(1);
 			
 			if (banlist.isBanned(ip)){
-				
-				// banlist.failed(ip);
-				
+			
 				try {
 					// socket.shutdownInput();
 					// socket.shutdownOutput();

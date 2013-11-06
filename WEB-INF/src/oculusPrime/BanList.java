@@ -18,7 +18,7 @@ public class BanList {
 	public static String banfile = System.getenv("RED5_HOME") +sep+"conf"+sep+"banlist.txt";
 
 	private static final int BAN = 3; // how many log ins to add to bad 
-	private static final int BLOCK = 10; // how many log ins to add to block file 
+	private static final int BLOCK = 5; // how many log ins to add to block file 
 	private static final long BAN_TIME_OUT = 20000; // time to ban 
 	
 	private HashMap<String, Integer> list = new HashMap<String, Integer>();
@@ -30,24 +30,20 @@ public class BanList {
 	}
 	
 	private BanList() {
-	
-		// create file if missing 
+		
 		if( ! new File(banfile).exists()){
-			try {
+			try { // create file if missing 
 				new File(banfile).createNewFile();
 			} catch (IOException e) {
 				Util.log(e.getLocalizedMessage(), this);
 			}
 		}
 		
-		// import from file
 		try {
-				
-			String line = null;
+			String line = null; // import from file
 			BufferedReader br = new BufferedReader(new FileReader(new File(banfile)));
 			while((line = br.readLine()) != null) list.put(line.trim(), Integer.MAX_VALUE/2);		
-			br.close();
-					
+			br.close();		
 		} catch (Exception e) {
 			Util.log(e.getLocalizedMessage(), this);
 		}
@@ -83,12 +79,12 @@ public class BanList {
 	
 		if(list.containsKey(address)) {
 			
-			Util.log("....... isBanned: " + address + " value: " + list.get(address), this);
+			// Util.log("....... isBanned: " + address + " value: " + list.get(address), this);
 	
 			if(list.get(address) >= BLOCK) addBlockedFile(address);
 			
 			if(list.get(address) >= BAN){
-				Util.log("....... isBanned: failed: " + address, this);
+				// Util.log("....... isBanned: failed: " + address, this);
 				failed(address);
 				return true; 
 			}
@@ -110,11 +106,9 @@ public class BanList {
 		@Override
 		public void run() {
 			if(list.isEmpty()){
-				Util.log("Banned list is empty..", this);
+				// Util.log("Banned list is empty..", this);
 				return;
 			}
-		
-			// if(list.size() <= 1) return;
 			
 			Util.log("Banned list: " + list.toString(), this);
 			
