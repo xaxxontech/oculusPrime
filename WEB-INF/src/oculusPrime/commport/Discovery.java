@@ -26,6 +26,7 @@ public class Discovery {
 	
 	public static final long RESPONSE_DELAY = 1000;
 	public static final int TIMEOUT = 2000;	
+	public static final int BAUD = 115200;
 
 	/* serial port configuration parameters */
 	public static final int DATABITS = SerialPort.DATABITS_8;
@@ -105,9 +106,9 @@ public class Discovery {
 	}
 
 	/** connects on start up, return true is currently connected */
-	private void connect(final String address, final int rate) {
+	private void connect(final String address) {
 
-		Util.debug("try to connect to: " + address + " buad:" + rate, this);
+		Util.debug("try to connect to: " + address, this);
 
 		try {
 
@@ -115,14 +116,14 @@ public class Discovery {
 			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(address).open("Discovery", TIMEOUT);
 
 			/* configure the serial port */
-			serialPort.setSerialPortParams(rate, DATABITS, STOPBITS, PARITY);
+			serialPort.setSerialPortParams(BAUD, DATABITS, STOPBITS, PARITY);
 			serialPort.setFlowControlMode(FLOWCONTROL);
 
 			/* extract the input and output streams from the serial port */
 			inputStream = serialPort.getInputStream();
 			outputStream = serialPort.getOutputStream();
 			
-			Util.debug("connected: " + address + " buad:" + rate, this);
+			Util.debug("connected: " + address, this);
 			
 			Util.delay(TIMEOUT*2);
 			
@@ -171,7 +172,7 @@ public class Discovery {
 		
 		int size = ports.size();
 		for (int i=0; i<size; i++) {
-			connect(ports.get(i), 115200); 
+			connect(ports.get(i)); 
 			Util.delay(TIMEOUT*2);
 		}
 	}

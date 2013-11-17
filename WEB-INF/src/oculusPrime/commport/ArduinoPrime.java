@@ -28,7 +28,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final boolean DEBUGGING = true;
 	
 	public enum direction { stop, right, left, forward, backward };
-	public enum cameramove { stop, up, down, horiz, upabit, downabit, frontstop, rearstop };
+	public enum cameramove { stop, up, down, horiz, upabit, downabit, frontstop, rearstop, frontstopblocking };
 	public enum speeds { slow, med, fast }; // better motors, maybe add speeds? 
 	public enum mode { on, off };
 
@@ -36,6 +36,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final long WATCHDOG_DELAY = 5000;	
 	public static final long DOCKING_DELAY = 1000;
 	public static final int SETUP = 4000;
+	public static final int BAUD = 115200;
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
@@ -70,10 +71,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected long lastRead = System.currentTimeMillis();
 	protected static State state = State.getReference();
 	protected Application application = null;
-	protected SerialPort serialPort = null;	
+	protected static SerialPort serialPort = null;	
+	protected static OutputStream out = null;
+	protected static InputStream in = null;
 	protected String version = null;
-	protected OutputStream out = null;
-	protected InputStream in = null;
 	
 	protected static Settings settings = Settings.getReference();
 	protected final String portName = state.get(State.values.motorport);
@@ -238,6 +239,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		/* 
 		 * if power info coming via prime board i2c 
 		 */
+		/*
 		if(response.startsWith("battery")){
 			String s = response.split(" ")[1];
 			if (s.equals("timeout") && !ArduinoPower.powerReady()) {
@@ -273,6 +275,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				state.put(State.values.batterylife, battinfo);
 			}
 		}
+		*/
 		
 		
 		if(response.startsWith("tiltpos")) {
@@ -286,7 +289,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		try {
 
 			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portName).open(ArduinoPrime.class.getName(), SETUP);
-			serialPort.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+			serialPort.setSerialPortParams(BAUD, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
 			// open streams
 			out = serialPort.getOutputStream();
@@ -302,13 +305,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	
 	protected void registerListeners() {
-		try {
-			serialPort.addEventListener(this);
-		} catch (TooManyListenersException e) {
-			e.printStackTrace();
+		if (serialPort != null) {
+			try {
+				serialPort.addEventListener(this);
+			} catch (TooManyListenersException e) {
+				e.printStackTrace();
+			}
+			serialPort.notifyOnDataAvailable(true);
 		}
-		serialPort.notifyOnDataAvailable(true);
-
 	}
 
 	public boolean isConnected() {
@@ -656,6 +660,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			case rearstop: 
 				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX });
 				state.set(State.values.cameratilt, CAM_MAX);
+				return;
+			
+			case frontstopblocking:
+				sendCommand(FIND_HOME_TILT); 
 				return;
 		}
 	

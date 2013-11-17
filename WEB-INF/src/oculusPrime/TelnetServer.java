@@ -103,6 +103,7 @@ public class TelnetServer implements Observer {
 //			if(state.get(oculus.State.values.user.name())==null) state.set(oculus.State.values.user.name(), user);
 			if(settings.getBoolean(GUISettings.loginnotify)) app.saySpeech("lawg inn telnet");
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
+			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
 			// loop on input from the client
 			String str = null;
@@ -221,6 +222,7 @@ public class TelnetServer implements Observer {
 			sendToSocket("shutting down "+reason);
 			Util.debug("closing socket [" + clientSocket + "] " + reason, this);
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
+			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
 			try {
 

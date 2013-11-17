@@ -18,7 +18,7 @@ public class State {
 		muteOnROVmove, volume, framegrabbusy, //audio video
 		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
 		
-		cameratilt, motorspeed, lastusercommand, controlsinverted, // NEW! 
+		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers, // NEW! 
 		
 		centerpoint; // experimental, xiton distance reading
 	};
