@@ -36,6 +36,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private State state = State.getReference();
+	private BanList banlist = BanList.getRefrence();
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
 	private ScriptRunner scriptRunner = null;
@@ -74,8 +75,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		String logininfo[] = ((String) params[0]).split(" ");
 
 		// always accept local grabber
-		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals(""))
-			return true;
+		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
 
 		if (logininfo.length == 1) { // test for cookie auth
 			String username = logintest("", logininfo[0]);
@@ -84,6 +84,14 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				return true;
 			}
 		}
+		
+		// TODO: test if this IP is brute 
+		if(banlist.isBanned(connection.getRemoteAddress())){
+			Util.log("appConnect(): " + connection.getRemoteAddress() + " has been banned", this);
+			banlist.failed(connection.getRemoteAddress());
+			return false;
+		}
+		
 		if (logininfo.length > 1) { // test for user/pass/remember
 			String encryptedPassword = (passwordEncryptor.encryptPassword(logininfo[0] + salt + logininfo[1])).trim();
 			if (logintest(logininfo[0], encryptedPassword) != null) {
@@ -94,6 +102,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				return true;
 			}
 		}
+		
+		// TODO: record failure
+		banlist.failed(connection.getRemoteAddress());			
 		String str = "login from: " + connection.getRemoteAddress() + " failed";
 		Util.log("appConnect(): " + str);
 		messageGrabber(str, "");
@@ -399,6 +410,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	 * @param str
 	 *            is the argument string to pass along
 	 */
+	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(final PlayerCommands fn, final String str) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
@@ -654,6 +666,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	 * @param str
 	 *            is the parameters to pass on to the function.
 	 */
+	@SuppressWarnings("incomplete-switch")
 	public void grabberCallServer(final grabberCommands cmd, final String str) {
 		
 		switch (cmd) {
@@ -1145,6 +1158,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 //		} catch (Exception e) { e.printStackTrace(); }
 //	}
 
+	@SuppressWarnings("incomplete-switch")
 	public void move(final String str) {
 
 		if (str.equals("stop")) {
@@ -1176,7 +1190,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		ArduinoPrime.direction dir = ArduinoPrime.direction.valueOf(str);
 		switch (dir) {
-	
 		case backward: comport.goBackward(); break;
 		case right: comport.turnRight(); break;
 		case left: comport.turnLeft(); 

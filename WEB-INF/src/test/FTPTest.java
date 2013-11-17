@@ -17,7 +17,7 @@ import developer.UpdateFTP;
 
 public class FTPTest {
 	
-	private String host, port, user, pass;
+	private String host, port,user, pass;
 
 	@Before
 	public void setUp() throws Exception {
