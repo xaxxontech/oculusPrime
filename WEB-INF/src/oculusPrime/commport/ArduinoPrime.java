@@ -69,6 +69,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
+	protected long lastReset = System.currentTimeMillis();
 	protected static State state = State.getReference();
 	protected Application application = null;
 	protected static SerialPort serialPort = null;	
@@ -77,7 +78,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected String version = null;
 	
 	protected static Settings settings = Settings.getReference();
-	protected final String portName = state.get(State.values.motorport);
+//	protected final String portName = state.get(State.values.motorport);
 	protected final double nominalsysvolts = 12.0;
 	
 	// data buffer 
@@ -158,6 +159,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
 		state.set(State.values.cameratilt, CAM_HORIZ);
 		
+		lastRead = System.currentTimeMillis();
+		lastReset = lastRead;		
 	}
 	
 	public static boolean motorsReady (){
@@ -223,7 +226,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
+		Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			version = null;
@@ -288,7 +291,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	private void connect() {
 		try {
 
-			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portName).open(ArduinoPrime.class.getName(), SETUP);
+			Util.debug("attempting connect to "+portname, this);
+			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portname).open(ArduinoPrime.class.getName(), SETUP);
 			serialPort.setSerialPortParams(BAUD, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
 			// open streams
@@ -375,8 +379,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			new Thread(new Runnable() {
 				public void run() {
 					disconnect();
-					Util.delay(SETUP);
 					connect();
+					Util.delay(SETUP);
+					initialize();
 				}
 			}).start();
 		}

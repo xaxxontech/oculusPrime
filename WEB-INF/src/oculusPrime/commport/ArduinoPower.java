@@ -83,13 +83,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 		registerListeners();
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;
-		new WatchDog(state).start();
+		new WatchDog().start();
 		
 	}
 	
 	public void connect() {
 		try {
 
+			Util.debug("attempting connect to "+portname, this);
 			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portname).open(ArduinoPrime.class.getName(), SETUP);
 			serialPort.setSerialPortParams(BAUD, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
@@ -121,8 +122,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 	
 	/** inner class to check if getting responses in timely manor */
 	private class WatchDog extends Thread {
-		
-		public WatchDog(oculusPrime.State state) {
+		oculusPrime.State state = oculusPrime.State.getReference();
+
+		public WatchDog() {
 			this.setDaemon(true);
 		}
 
@@ -137,6 +139,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 					reset();
 				}
 				
+				/*
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null &&
 						state.getInteger(oculusPrime.State.values.telnetusers) == 0) {
@@ -145,6 +148,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 					Util.log("battery board periodic reset", this);
 					reset();
 				}
+				*/
 				
 				Util.delay(WATCHDOG_DELAY);
 			}		
@@ -152,14 +156,18 @@ public class ArduinoPower implements SerialPortEventListener  {
 	}
 	
 	public void reset() {
-		close();
-		Util.delay(SETUP * 2);
-		connect();
-		registerListeners();
-		long now = System.currentTimeMillis();
-
-		lastReset = now;
-		lastRead = now;
+		if (isconnected) {
+			
+			close();
+	//		Util.delay(SETUP * 2);
+			connect();
+			Util.delay(SETUP);
+			registerListeners();
+			long now = System.currentTimeMillis();
+	
+			lastReset = now;
+			lastRead = now;
+		}
 	}
 	
 	@Override
@@ -211,7 +219,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
+		Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);
@@ -300,12 +308,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 		
 		if (serialPort != null) {
 			Util.debug("close port: " + serialPort.getName() + " baud: " + serialPort.getBaudRate(), this);
-			serialPort.removeEventListener();
+//			serialPort.removeEventListener();
 			serialPort.close();
 			serialPort = null;
 		}
 		
-
+		isconnected = false;
 
 	}
 }

@@ -200,8 +200,9 @@ public class Discovery {
 						application.comport.serialPort = serialPort;
 						application.comport.in = inputStream;
 						application.comport.out = outputStream;
-						application.comport.initialize();
 						application.comport.isconnected = true;
+						application.comport.portname = getPortName();
+						application.comport.initialize();
 						break;
 					}
 					
@@ -211,6 +212,7 @@ public class Discovery {
 						application.powerport.in = inputStream;
 						application.powerport.out = outputStream;
 						application.powerport.isconnected = true;
+						application.powerport.portname = getPortName();
 						application.powerport.initialize();
 						break;
 					}

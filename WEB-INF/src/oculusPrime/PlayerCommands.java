@@ -17,7 +17,7 @@ public enum PlayerCommands {
 	streamsettingscustom, motionenabletoggle, playerexit, playerbroadcast, password_update, 
 	new_user_add, user_list, delete_user, extrauser_password_update, username_update, 
 	disconnectotherconnections, showlog, assumecontrol, softwareupdate,
-	arduinoecho, arduinoreset, setsystemvolume, beapassenger, muterovmiconmovetoggle, spotlight, 
+	arduinoecho, motorsreset, setsystemvolume, beapassenger, muterovmiconmovetoggle, spotlight, 
 	spotlightsetbrightness, writesetting, holdservo, opennisensor, videosoundmode, pushtotalktoggle, restart, shutdown,
     setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
     loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, rotate,

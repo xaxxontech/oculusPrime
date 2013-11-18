@@ -553,7 +553,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			messageplayer("echo set to: " + str, null, null);
 			break;
 
-		case arduinoreset:
+		case motorsreset:
 			comport.reset();
 			messageplayer("resetting arduinoculus", null, null);
 			break;
@@ -625,6 +625,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;
 		case powerreset:
 			powerport.reset();
+			break;
 		}
 	}
 
