@@ -21,7 +21,7 @@ public enum PlayerCommands {
 	spotlightsetbrightness, writesetting, holdservo, opennisensor, videosoundmode, pushtotalktoggle, restart, shutdown,
     setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
     loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, rotate,
-    getlightlevel, strobeflash;
+    getlightlevel, strobeflash, block, unblock;
 	
 	enum autodockargs { go, cancel, framegrab };
 	
@@ -42,7 +42,7 @@ public enum PlayerCommands {
 		arduinoecho, arduinoreset, muterovmiconmovetoggle, 
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
-	    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd;	
+	    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssaddb, lock, unbloc;	
 	}
 	
 	// sub-set that are require parameters 
