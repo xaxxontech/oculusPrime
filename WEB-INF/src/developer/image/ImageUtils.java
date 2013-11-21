@@ -43,7 +43,7 @@ public class ImageUtils {
 		}
 		return img;
 	}
-	
+
 	public int[][] convertToMatrix(int[] greyimg, int width, int height) {
 //		var result:Array = [];
 		int[][] matrix = new int[width/matrixres][height/matrixres]; //TODO: may need to add or subtract 1?

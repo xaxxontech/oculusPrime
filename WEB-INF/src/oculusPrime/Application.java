@@ -1,10 +1,19 @@
 package oculusPrime;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
+
+import javax.imageio.ImageIO;
 
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -838,48 +847,16 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			sc.invoke("framegrab", new Object[] {});
 			state.set(State.values.framegrabbusy.name(), true);
 		}
+		
+		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
 
-	/** */
-	public void frameGrabbed(ByteArray _RAWBitmapImage) { // , final String
-															// filename) {
-		/*
-		// Use functionality in org.red5.io.amf3.ByteArray to get parameters of
-		// the ByteArray
-		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
-		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
-													// into a standard Java
-													// array of bytes
-		byte c[] = new byte[BWholeSize];
-		_RAWBitmapImage.readBytes(c);
+	/** called by Flash oculusPrime_grabber.swf 
+	 * is NOT blocking for some reason 
+	 * */
+	public void frameGrabbed(ByteArray _RAWBitmapImage) { 
 
-		// Transform the byte array into a java buffered image
-		ByteArrayInputStream db = new ByteArrayInputStream(c);
-
-		if (BCurrentlyAvailable > 0) {
-			// System.out.println("The byte Array currently has "
-			// + BCurrentlyAvailable + " bytes. The Buffer has " +
-			// db.available());
-			try {
-				BufferedImage JavaImage = ImageIO.read(db);
-				// Now lets try and write the buffered image out to a file
-				if (JavaImage != null) {
-					// If you sent a jpeg to the server, just change PNG to JPEG
-					// and Red5ScreenShot.png to .jpeg
-					ImageIO.write(JavaImage, "JPEG", new File(Settings.framefile));
-					if (emailgrab) {
-						emailgrab = false;
-						new developer.SendMail("Oculus Screen Shot",
-								"image attached", Settings.framefile, this);
-					}
-				}
-			} catch (IOException e) {
-				//log.info("Save_ScreenShot: Writing of screenshot failed " + e);
-				System.out.println("OCULUS: IO Error " + e);
-			}
-		}
-		*/
 		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
 		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
 													// into a standard Java
@@ -888,12 +865,52 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		_RAWBitmapImage.readBytes(c);
 		if (BCurrentlyAvailable > 0) {
 			state.set(State.values.framegrabbusy.name(), false);
-//			FrameGrabHTTP.img = c;
-//			AuthGrab.img = c;
 			framegrabimg = c;
 		}
 	}
+	
+	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
+	 **/
+	public void frameGrabbed() {
+	
+		try {
+			
+			// read file into bytebuffer
+			FileInputStream file = new FileInputStream("/run/shm/test/framegrab.sol");
+			FileChannel ch = file.getChannel();
+			int size = (int) ch.size();
+			ByteBuffer frameData = ByteBuffer.allocate( size );
+			ch.read(frameData.order(ByteOrder.LITTLE_ENDIAN));
+			ch.close();
+			file.close();
 
+			// dump bytebuffer to byte[]
+			int headersize = 1228843 - (640*480*4);
+//			byte b[] = new byte[size - headersize];
+			frameData.position(headersize); // skip past header
+//			frameData.get(b, 0, size-headersize); // write remaining data to byte[]
+			
+			// convert byte[] to BufferedImage
+			processedImage  = new BufferedImage(640, 480, BufferedImage.TYPE_INT_RGB);
+			int width = 640;
+			int height = 480;
+			for(int y=0; y<height; y++) {
+				for (int x=0; x<width; x++) {
+//					int argb = frameData.getInt();    // argb ok for png only 
+					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					processedImage.setRGB(x, y, rgb);
+				}
+			}
+			
+			state.set(State.values.framegrabbusy.name(), false);
+
+			
+		} catch (Exception e) {			e.printStackTrace();		}
+
+		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
+
+	}
+	
 	public void messageplayer(String str, String status, String value) {
 		
 		if (player instanceof IServiceCapableConnection) {

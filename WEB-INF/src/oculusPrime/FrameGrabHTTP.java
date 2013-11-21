@@ -88,11 +88,21 @@ public class FrameGrabHTTP extends HttpServlet {
 				}
 			}
 			
+			
 			if (Application.framegrabimg != null) {
 				for (int i=0; i<Application.framegrabimg.length; i++) {
 					out.write(Application.framegrabimg[i]);
 				}
 			}
+			
+			else {
+	//			BufferedImage newBufferedImage = new BufferedImage(Application.processedImage.getWidth(),
+	//					Application.processedImage.getHeight(), Application.processedImage.TYPE_INT_RGB);
+	//			  newBufferedImage.createGraphics().drawImage(Application.processedImage, 0, 0, Color.WHITE, null);
+				
+				ImageIO.write(Application.processedImage, "JPG", out);
+			}
+			
 		    out.close();
 		}
 	}
@@ -103,6 +113,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		res.setContentType("image/gif");
 		OutputStream out = res.getOutputStream();
 		ImageIO.write(Application.processedImage, "GIF", out);
+		out.close();
 	}
 	
 	private void radarGrab(HttpServletRequest req, HttpServletResponse res) 

@@ -672,7 +672,7 @@ public class AutoDock { // implements Observer {
 					}
 
 					if (Application.framegrabimg != null) {
-						Util.debug("getDock(): img received, processing...", this);
+						Util.debug("dockGrab(): img received, processing...", this);
 
 						// convert bytes to image
 						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);

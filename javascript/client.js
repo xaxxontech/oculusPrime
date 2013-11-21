@@ -346,7 +346,7 @@ function setstatus(status, value) {
 		var bclr = a.style.backgroundColor;
 		b=document.getElementById(status+"_title");
 		var tclr = b.style.color;
-		var tbclr = "#1b1b1b";
+		var tbclr = "#000000";
 		if (statusflashingarray[status]==null) {
 			statusflashingarray[status]="flashing";
 			a.style.color = bclr;
@@ -2001,11 +2001,11 @@ function userlistpopulate(list) {
 					str += "new password: ";
 					str += "<input id='extrauserpass_"+users[i]+"' class='inputbox' type='password' name='password' size='10'"; 
 					str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
-					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#262626&quot;'><br/>";
+					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'><br/>";
 					str += "re-enter new password: ";
 					str += "<input id='extrauserpassagain_"+users[i]+"' class='inputbox' type='password' name='password' size='10'"; 
 					str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
-					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#262626&quot;'><br/>";
+					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'><br/>";
 					str += "<a class='blackbg' href='javascript: updateextrapass(&quot;"+users[i]+"&quot;);'>";
 					str += "<span class='cancelbox'>&radic;</span> update</a> &nbsp;";
 					str += "<a class='blackbg' href='javascript: closebox(&quot;passfield_"+users[i]+"&quot;);'>";
