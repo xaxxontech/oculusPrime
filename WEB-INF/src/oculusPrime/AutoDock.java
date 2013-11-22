@@ -649,6 +649,8 @@ public class AutoDock { // implements Observer {
 
 		if (grabber instanceof IServiceCapableConnection) {
 			state.set(State.values.framegrabbusy.name(), true);
+			Application.framegrabimg = null;
+			Application.processedImage = null;
 			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 			sc.invoke("framegrabMedium", new Object[] {});
 		}
@@ -671,69 +673,80 @@ public class AutoDock { // implements Observer {
 						}
 					}
 
+					BufferedImage img = null;
 					if (Application.framegrabimg != null) {
 						Util.debug("dockGrab(): img received, processing...", this);
 
 						// convert bytes to image
 						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
-						BufferedImage img = ImageIO.read(in);
+						img = ImageIO.read(in);
+						in.close();
 						
-						int w= img.getWidth();
-						int h= img.getHeight();
+					}
+						
+					else if (Application.processedImage != null) {
+						Util.debug("frame received, processing processedImage", this);
+						img = Application.processedImage;
+					}
+					
+					else { Util.log("dockgrab failure", this); return; }
+						
+					int w= img.getWidth();
+					int h= img.getHeight();
 
-						float[] matrix = { 0.111f, 0.111f, 0.111f, 0.111f,
-								0.111f, 0.111f, 0.111f, 0.111f, 0.111f, };
+					float[] matrix = { 0.111f, 0.111f, 0.111f, 0.111f,
+							0.111f, 0.111f, 0.111f, 0.111f, 0.111f, };
 
-						BufferedImageOp op = new ConvolveOp(new Kernel(3, 3, matrix));
-						img = op.filter(img, new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB));
-						
-						int[] argb = img.getRGB(0, 0, w, h, null, 0, w);
-						
-						if (state.getBoolean(State.values.controlsinverted)) { 
-							for (int yy=0; yy<h/2; yy++) {
-								for (int xx=0; xx<w; xx++) {
-									int temp = argb[xx+yy*w];
-									argb[xx+yy*w] = argb[xx+(h-yy-1)*w];
-									argb[xx+(h-yy-1)*w] = temp;
-								}
+					BufferedImageOp op = new ConvolveOp(new Kernel(3, 3, matrix));
+					img = op.filter(img, new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB));
+					
+					int[] argb = img.getRGB(0, 0, w, h, null, 0, w);
+					
+					if (state.getBoolean(State.values.controlsinverted)) { 
+						for (int yy=0; yy<h/2; yy++) {
+							for (int xx=0; xx<w; xx++) {
+								int temp = argb[xx+yy*w];
+								argb[xx+yy*w] = argb[xx+(h-yy-1)*w];
+								argb[xx+(h-yy-1)*w] = temp;
 							}
 						}
-			
-						if (mode.equals("calibrate")) {
-							String[] results = oculusImage.findBlobStart(x, y, img.getWidth(), img.getHeight(), argb);
-							autoDock("dockgrabbed calibrate " + results[0]
-									+ " " + results[1] + " " + results[2] + " "
-									+ results[3] + " " + results[4] + " "
-									+ results[5] + " " + results[6] + " "
-									+ results[7] + " " + results[8]);
-						}
-						if (mode.equals("start")) {
-							oculusImage.lastThreshhold = -1;
-						}
-						if (mode.equals("find") || mode.equals("start")) {
-							String results[] = oculusImage.findBlobs(argb, w, h);
-							String str = results[0] + " " + results[1] + " "
-									+ results[2] + " " + results[3] + " "
-									+ results[4];
-							// results = x,y,width,height,slope
-							autoDock("dockgrabbed find " + str);
-						}
-
-						if (mode.equals("test")) {
-							oculusImage.lastThreshhold = -1;
-							String results[] = oculusImage.findBlobs(argb, w, h);
-							String str = results[0] + " " + results[1] + " "
-									+ results[2] + " " + results[3] + " "
-									+ results[4];
-							// results = x,y,width,height,slope
-							autoDock("dockgrabbed find " + str);
-							app.message(str, null, null);
-							app.sendplayerfunction("processedImg", "load");
-						}
-
-						state.set(State.values.dockgrabbusy.name(), false);
-
 					}
+		
+					if (mode.equals("calibrate")) {
+						String[] results = oculusImage.findBlobStart(x, y, img.getWidth(), img.getHeight(), argb);
+						autoDock("dockgrabbed calibrate " + results[0]
+								+ " " + results[1] + " " + results[2] + " "
+								+ results[3] + " " + results[4] + " "
+								+ results[5] + " " + results[6] + " "
+								+ results[7] + " " + results[8]);
+					}
+					if (mode.equals("start")) {
+						oculusImage.lastThreshhold = -1;
+					}
+					if (mode.equals("find") || mode.equals("start")) {
+						String results[] = oculusImage.findBlobs(argb, w, h);
+						String str = results[0] + " " + results[1] + " "
+								+ results[2] + " " + results[3] + " "
+								+ results[4];
+						// results = x,y,width,height,slope
+						autoDock("dockgrabbed find " + str);
+					}
+
+					if (mode.equals("test")) {
+						oculusImage.lastThreshhold = -1;
+						String results[] = oculusImage.findBlobs(argb, w, h);
+						String str = results[0] + " " + results[1] + " "
+								+ results[2] + " " + results[3] + " "
+								+ results[4];
+						// results = x,y,width,height,slope
+						autoDock("dockgrabbed find " + str);
+						app.message(str, null, null);
+						app.sendplayerfunction("processedImg", "load");
+					}
+
+					state.set(State.values.dockgrabbusy.name(), false);
+
+					
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

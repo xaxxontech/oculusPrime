@@ -71,6 +71,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		OutputStream out = res.getOutputStream();
 
 		Application.framegrabimg = null;
+		Application.processedImage = null;
 		if (app.frameGrab()) {
 			
 			int n = 0;
@@ -95,7 +96,7 @@ public class FrameGrabHTTP extends HttpServlet {
 				}
 			}
 			
-			else {
+			else if (Application.processedImage != null) {
 	//			BufferedImage newBufferedImage = new BufferedImage(Application.processedImage.getWidth(),
 	//					Application.processedImage.getHeight(), Application.processedImage.TYPE_INT_RGB);
 	//			  newBufferedImage.createGraphics().drawImage(Application.processedImage, 0, 0, Color.WHITE, null);

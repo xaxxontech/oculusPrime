@@ -227,6 +227,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 		docker = new AutoDock(this, grabber, comport);
 		loginRecords.setApplication(this);
+
+		if (Settings.os.equals("linux")) {
+			str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
+			Util.systemCall(str);
+		}
+		
 	}
  
 	/** */
@@ -268,6 +274,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	}
 
 	private void grabberInitialize() {
+
+//		if (Settings.os.equals("linux")) {
+//			String str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
+//			Util.systemCall(str);
+//		}
+
 		if (settings.getBoolean(GUISettings.skipsetup)) {
 			grabber_launch();
 		} else {
@@ -853,7 +865,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	}
 
 	/** called by Flash oculusPrime_grabber.swf 
-	 * is NOT blocking for some reason 
+	 * is NOT blocking for some reason ?
 	 * */
 	public void frameGrabbed(ByteArray _RAWBitmapImage) { 
 
@@ -870,33 +882,33 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	}
 	
 	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
+	 * linux only for now
 	 **/
 	public void frameGrabbed() {
 	
 		try {
 			
 			// read file into bytebuffer
-			FileInputStream file = new FileInputStream("/run/shm/test/framegrab.sol");
+			FileInputStream file = new FileInputStream("/run/shm/oculusPrimeFlashSO/framegrab.sol");
 			FileChannel ch = file.getChannel();
 			int size = (int) ch.size();
 			ByteBuffer frameData = ByteBuffer.allocate( size );
-			ch.read(frameData.order(ByteOrder.LITTLE_ENDIAN));
+			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
 			ch.close();
 			file.close();
 
-			// dump bytebuffer to byte[]
-			int headersize = 1228843 - (640*480*4);
-//			byte b[] = new byte[size - headersize];
+//			int headersize = 1228843 - (640*480*4);
+			int headersize = size - (640*480*4)-1;
+			Util.debug("size: "+size, this);
+
 			frameData.position(headersize); // skip past header
-//			frameData.get(b, 0, size-headersize); // write remaining data to byte[]
 			
-			// convert byte[] to BufferedImage
 			processedImage  = new BufferedImage(640, 480, BufferedImage.TYPE_INT_RGB);
 			int width = 640;
 			int height = 480;
 			for(int y=0; y<height; y++) {
 				for (int x=0; x<width; x++) {
-//					int argb = frameData.getInt();    // argb ok for png only 
+//					int rgb = frameData.getInt();    // argb ok for png only 
 					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
 					processedImage.setRGB(x, y, rgb);
 				}
@@ -905,10 +917,47 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			state.set(State.values.framegrabbusy.name(), false);
 
 			
-		} catch (Exception e) {			e.printStackTrace();		}
+		} catch (Exception e) {  e.printStackTrace();  }
 
 		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
 
+	}
+	
+	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
+	 * linux only for now
+	 **/
+	public void mediumFrameGrabbed() {
+		try {
+			
+			// read file into bytebuffer
+			FileInputStream file = new FileInputStream("/run/shm/oculusPrimeFlashSO/framegrabMedium.sol");
+			FileChannel ch = file.getChannel();
+			int size = (int) ch.size();
+			ByteBuffer frameData = ByteBuffer.allocate( size );
+			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
+			ch.close();
+			file.close();
+
+			int width = 320;
+			int height = 240;
+//			int headersize = 307248 - (width*height*4);
+			int headersize = size - (width*height*4) -1;
+			frameData.position(headersize); // skip past header
+			
+			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			for(int y=0; y<height; y++) {
+				for (int x=0; x<width; x++) {
+//					int rgb = frameData.getInt();    // argb ok for png only 
+					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					processedImage.setRGB(x, y, rgb);
+				}
+			}
+			
+			state.set(State.values.framegrabbusy.name(), false);
+			
+		} catch (Exception e) {			e.printStackTrace();		}
+
+		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
 	}
 	
 	public void messageplayer(String str, String status, String value) {
