@@ -55,7 +55,7 @@ public class BanList {
 	
 	public void addBlockedFile(String ip){
 		
-		Util.log("....... adding to file: " + ip, this);
+		// Util.log("....... adding to file: " + ip, this);
 		
 		list.put(ip, Integer.MAX_VALUE/2);	
 		
@@ -93,6 +93,29 @@ public class BanList {
 		return false;
 	}
 
+	public synchronized void remove(String address) {
+		
+		// Util.log("....... remove from file: " + address, this);
+		
+		if(list.containsKey(address)) {
+		
+			list.remove(address);
+		
+			if(new File(banfile).exists()){
+				try {
+						
+					BufferedWriter bw = new BufferedWriter(new FileWriter(new File(banfile)));
+					Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 
+					while(i.hasNext()) bw.append(i.next().getKey() + "\n"); 
+					bw.close();
+							
+				} catch (Exception e) {
+					Util.log(e.getLocalizedMessage(), this);
+				}
+			}		
+		}
+	}
+
 	public synchronized void failed(String remoteAddress) {
 		
 		if(remoteAddress.equals("127.0.0.1")) return;
@@ -101,7 +124,7 @@ public class BanList {
 		else list.put(remoteAddress, 1);
 			
 	}
-
+	
 	private class ClearTimer extends TimerTask {
 		@Override
 		public void run() {
@@ -110,7 +133,7 @@ public class BanList {
 				return;
 			}
 			
-			Util.log("Banned list: " + list.toString(), this);
+			// Util.log("Banned list: " + list.toString(), this);
 			
 			try {
 				Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 

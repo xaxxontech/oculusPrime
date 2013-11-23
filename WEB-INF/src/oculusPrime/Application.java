@@ -639,9 +639,19 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			comport.strobeflash(str);
 			messageplayer("strobeflash "+str, null, null);
 			break;
+
 		case powerreset:
 			powerport.reset();
 			break;
+			
+		case block:
+			banlist.addBlockedFile(str);
+			break;
+			
+		case unblock:
+			banlist.remove(str);
+			break;
+			
 		}
 	}
 
