@@ -30,7 +30,7 @@ public class AutoDock { // implements Observer {
 	private Application app = null;
 	private OculusImage oculusImage = new OculusImage();
 	private int rescomp = 2; // (multiplier - javascript sends clicksteer based on 640x480, autodock uses 320x240 images)
-	private final int allowforClickSteer = 1000;
+	private final int allowforClickSteer = 500;
 	private int dockattempts = 0;
 	private final int maxdockattempts = 3;
 	
@@ -385,7 +385,8 @@ public class AutoDock { // implements Observer {
 
 					public void run() {
 						try {
-							Thread.sleep(allowforClickSteer); // was 1500 w/ dockgrab following
+//							Thread.sleep(allowforClickSteer); // was 1500 w/ dockgrab following
+							comport.delayWithVoltsComp(allowforClickSteer);
 							comport.speedset(ArduinoPrime.speeds.fast);
 							comport.goForward();
 //							Thread.sleep(s1FWDmilliseconds);
@@ -438,7 +439,7 @@ public class AutoDock { // implements Observer {
 					new Thread(new Runnable() {
 						public void run() {
 							try {
-								Thread.sleep(allowforClickSteer);
+								comport.delayWithVoltsComp(allowforClickSteer);
 								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goForward();
 //								Thread.sleep(s2FWDmilliseconds);
@@ -478,7 +479,7 @@ public class AutoDock { // implements Observer {
 					new Thread(new Runnable() {
 						public void run() {
 							try {
-								Thread.sleep(allowforClickSteer);
+								comport.delayWithVoltsComp(allowforClickSteer);
 								dockGrab("find", 0, 0);
 							} catch (Exception e) {
 								e.printStackTrace();
@@ -506,7 +507,7 @@ public class AutoDock { // implements Observer {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-							Thread.sleep(allowforClickSteer);
+							comport.delayWithVoltsComp(allowforClickSteer);
 							dockGrab("find", 0, 0);
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -528,7 +529,7 @@ public class AutoDock { // implements Observer {
 					new Thread(new Runnable() {
 						public void run() {
 							try {
-								Thread.sleep(allowforClickSteer);
+								comport.delayWithVoltsComp(allowforClickSteer);
 								comport.speedset(ArduinoPrime.speeds.fast);
 								comport.goBackward();
 //								Thread.sleep(s1FWDmilliseconds);
