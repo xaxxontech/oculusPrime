@@ -218,7 +218,8 @@ public class OculusImage {
 		String[] result = new String[]{"0","0","0","0","0"}; //x,y,width,height,slope
 		convertToGrey(bar);
 		parrorig = parr.clone();
-
+		int minimumsize = (int) (width*height*0.002);
+		
 		if (lastThreshhold == -1)  {lastThreshhold = imgaverage; } 
 		int threshhold = lastThreshhold;
 		
@@ -257,7 +258,7 @@ public class OculusImage {
 		for (pixel=0; pixel<width*height; pixel++) { // zero to end, find all blobs
 			if (parr[pixel]==1) { // finds a white one 
 					Boolean[] temp = floodFill(parr, pixel);
-					if (temp.length > 150) { // discard tiny blobs
+					if (temp.length > minimumsize) { // discard tiny blobs  was 150
 						blobs.add(temp);
 						blobstarts.add(pixel);
 					}
