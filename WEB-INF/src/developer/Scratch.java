@@ -3,11 +3,11 @@ package developer;
 public class Scratch {
 
         public static void main(String[] args) {
-        	int width=320;
-        	int height=240;
-    		int minimumsize = (int) (width*height*0.002);
 
-                System.out.println(minimumsize);
+        		int rescomp = 1;
+//        		int n = (int) (40/(rescomp/2f));
+        		int n = Integer.parseInt("51")/(2/rescomp);
+        		System.out.println(n);
 
         }
 

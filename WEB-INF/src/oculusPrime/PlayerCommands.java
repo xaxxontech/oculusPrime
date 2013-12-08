@@ -21,7 +21,7 @@ public enum PlayerCommands {
 	spotlightsetbrightness, writesetting, holdservo, opennisensor, videosoundmode, pushtotalktoggle, restart, shutdown,
     setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
     loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, rotate,
-    getlightlevel, strobeflash, powerreset, block, unblock;
+    getlightlevel, strobeflash, powerreset, block, unblock, powershutdown, reboot, systemshutdown;
 	
 	enum autodockargs { go, cancel, framegrab };
 	
@@ -43,7 +43,7 @@ public enum PlayerCommands {
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
 	    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssaddb, block, 
-	    unblock;	
+	    unblock, powershutdown, reboot, systemshutdown;	
 
 	}
 	

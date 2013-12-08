@@ -220,7 +220,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 		setGrabberVideoSoundMode(videosoundmode);
 
-		docker = new AutoDock(this, grabber, comport);
+		docker = new AutoDock(this, grabber, comport, powerport);
 		loginRecords.setApplication(this);
 
 		if (Settings.os.equals("linux")) {
@@ -478,7 +478,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 //		case monitor: monitor(str); break;
 		case showlog: showlog(str); break;
-		case dockgrab: docker.dockGrab("start",0,0); break;
 		case publish: publish(str); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case restart: restart(); break;
@@ -495,7 +494,16 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
-		case dockgrabtest: docker.dockGrab("test", 0, 0); break;
+		case dockgrab: 
+			if (str.equals("highres")) docker.lowres = false;
+			docker.dockGrab("start", 0, 0);
+			docker.lowres = true;
+			break;
+		case dockgrabtest:
+			if (str.equals("highres")) docker.lowres = false;
+			docker.dockGrab("test", 0, 0);
+			docker.lowres = true;
+			break;
 //		case digitalread: comport.digitalRead(Integer.parseInt(str)); break;
 //		case analogwrite: comport.AnalogWrite(Integer.parseInt(str)); break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str);
@@ -650,6 +658,18 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 		case unblock:
 			banlist.remove(str);
+			break;
+		
+		case powershutdown:
+			powerport.shutdown();
+			break;
+			
+		case reboot:
+			Util.reboot();
+			break;
+		
+		case systemshutdown:
+			Util.shutdown();
 			break;
 			
 		}
@@ -904,7 +924,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 //			int headersize = 1228843 - (640*480*4);
 			int headersize = size - (640*480*4)-1;
-			Util.debug("size: "+size, this);
 
 			frameData.position(headersize); // skip past header
 			
@@ -1074,6 +1093,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
             }
 			messageplayer("docking cancelled", "multiple", str);
 			state.set(State.values.docking, false);
+//			powerport.manualSetBatteryUnDocked();
 		}
 		
 		// if (state.getBoolean(State.values.sliding) 
@@ -1960,24 +1980,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 		}
 		
-//		if(key.equals(State.values.batterylife.name())){
-//			if(state.getDouble(key) > LOW_BATTERY_THRESHOLD){
-//				messageplayer("danger low battery, find the dock.. ", null, null);
-//			}
-//		}
-		
-//		if(key.equals(State.values.docking.name())){
-//			if(state.getBoolean(State.values.docking)){
-//				state.set(State.values.dockstatus, AutoDock.DOCKING);
-//				message("docking initiated", "multiple", "speed fast motion moving dock docking");
-//			}
-//		}
-//		
-//		if(key.equals(State.values.dockstatus.name())){
-//			if(state.equals(State.values.dockstatus, AutoDock.DOCKING)){
-//				message("docking initiated", "multiple", "speed fast motion moving dock docking");
-//			}
-//		}
 	}
 }
 

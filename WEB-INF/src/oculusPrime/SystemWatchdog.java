@@ -38,11 +38,12 @@ public class SystemWatchdog {
 				Util.log("rebooting, last boot was: " + boot, this);
 				
 				// reboot 
-				if (Settings.os.equals("windows")) {
-					Util.systemCall("shutdown -r -f -t 01");	
-				} else {
-					Util.systemCall("shutdown -r now");
-				}
+				Util.reboot();
+//				if (Settings.os.equals("windows")) {
+//					Util.systemCall("shutdown -r -f -t 01");	
+//				} else {
+//					Util.systemCall("shutdown -r now");
+//				}
 			}
 		}
 	}

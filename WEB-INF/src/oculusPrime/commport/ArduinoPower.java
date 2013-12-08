@@ -29,6 +29,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int RESET_DELAY = 3600000;
 	public static final int BAUD = 115200;
 	public static final String FIRMWARE_ID = "oculusPower";
+//	public static final byte BATTERYPLUSPFETOFF = 'm';
+//	public static final byte BATTERYPLUSPFETON= 'n';
+	public static final byte INITIATESHUTDOWN= 'p';
+	public static final byte CONFIRMSHUTDOWN= 'w'; 
 	
 	protected Application application = null;
 	protected State state = State.getReference();
@@ -37,12 +41,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected static InputStream in = null;
 	
 	protected volatile boolean isconnected = false;
-//	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead;
 	protected long lastReset;
-	
-//	protected final String portname = state.get(State.values.powerport);
-	
+		
 	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
 	protected static Settings settings = Settings.getReference();
@@ -57,19 +58,15 @@ public class ArduinoPower implements SerialPortEventListener  {
 			
 			Util.log("attempting to connect to port "+portname, this);
 			
-//			new Thread(new Runnable() {
-//				public void run() {
-					if (!isconnected) {
-						connect();
-						Util.delay(SETUP);
-					}
-					if(isconnected){
-						
-						Util.log("Connected to port: " + state.get(State.values.powerport), this);
-						initialize();
-					}
-//				}
-//			}).start();
+				if (!isconnected) {
+					connect();
+					Util.delay(SETUP);
+				}
+				if(isconnected){
+					
+					Util.log("Connected to port: " + state.get(State.values.powerport), this);
+					initialize();
+				}
 
 			
 		}
@@ -255,6 +252,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.set(State.values.motionenabled, true); }
 		}
 		
+		if (s.equals("shutdown")) {
+			sendCommand(CONFIRMSHUTDOWN);
+			Util.log("POWER BOARD CALLED SYSTEM SHUTDOWN");
+			Util.shutdown();
+		}
+		
 		String battinfo = response.split(" ")[1];
 		battinfo = battinfo.replaceFirst("\\.\\d*", "");
 		if (!state.get(State.values.batterylife).equals(battinfo)) {
@@ -316,4 +319,58 @@ public class ArduinoPower implements SerialPortEventListener  {
 		isconnected = false;
 
 	}
+	
+	/**
+	 * Send a multiple byte command to send the device
+	 * 
+	 * @param command
+	 *            is a byte array of messages to send
+	 */
+	public void sendCommand(byte[] cmd) {
+
+		if (!isconnected) return;
+		
+		String text = "sendCommand(): " + (char)cmd[0] + " ";
+		for(int i = 1 ; i < cmd.length ; i++) 
+			text += (byte)cmd[i] + " ";
+		
+		Util.debug(text, this);
+		
+		final byte[] command = cmd;
+		new Thread(new Runnable() {
+			public void run() {
+				try {
+
+					// send
+					out.write(command);
+		
+					// end of command
+					out.write(13);
+		
+				} catch (Exception e) {
+					reset();
+					Util.log("ArduinoPower: sendCommand(), " + e.getMessage(), this);
+				}
+			}
+		}).start();
+		
+		// track last write
+//		lastSent = System.currentTimeMillis();
+	}
+	
+	private void sendCommand(final byte cmd){
+		sendCommand(new byte[]{cmd});
+	}
+	
+	public void shutdown() {
+		sendCommand(INITIATESHUTDOWN);
+	}
+	
+//	public void prepareBatteryToDock() {
+//		sendCommand(BATTERYPLUSPFETOFF);
+//	}
+//	
+//	public void manualSetBatteryUnDocked() {
+//		sendCommand(BATTERYPLUSPFETON);
+//	}
 }
