@@ -5,7 +5,7 @@ import java.util.Properties;
 public enum GUISettings {
 
 	/** these settings must be available in basic configuration */
-	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay,
+	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay, onemeterdelay,
 	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
 	clicknudgemomentummult, maxclickcam, muteonrovmove, 
 	videoscale, volume, loginnotify, reboot, pushtotalk; 
@@ -36,6 +36,7 @@ public enum GUISettings {
 		config.setProperty(reboot.name() , "false");
 		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2000");
+		config.setProperty(onemeterdelay.name(), "1200");
 		config.setProperty(steeringcomp.name(), "0");
 		
 		return config;

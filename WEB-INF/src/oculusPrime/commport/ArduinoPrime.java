@@ -33,7 +33,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public enum mode { on, off };
 
 	public static final long DEAD_TIME_OUT = 30000;
-	public static final long WATCHDOG_DELAY = 5000;	
+	public static final int WATCHDOG_DELAY = 5000;	
+	public static final long RESET_DELAY = 14400000; // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
 	public static final int SETUP = 4000;
 	public static final int BAUD = 115200;
@@ -102,6 +103,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public int nudgedelay = settings.getInteger(GUISettings.nudgedelay);
 	public int maxclickcam = settings.getInteger(GUISettings.maxclickcam);
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
+	public int onemeterdelay = settings.getInteger(GUISettings.onemeterdelay);
 	public int steeringcomp = 0;
 	
 	public String portname = settings.readSetting(ManualSettings.motorport);
@@ -141,11 +143,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						Util.log("Connected to port: " + state.get(State.values.motorport), this);
 						
 						initialize();
+
 					}
 //				}
 //			}).start();
 			
 		}
+		new WatchDog().start();
+
 	}
 	
 	public void initialize() {
@@ -161,6 +166,39 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;		
+	}
+	
+	/** inner class to check if getting responses in timely manor */
+	public class WatchDog extends Thread {
+		oculusPrime.State state = oculusPrime.State.getReference();
+
+		public WatchDog() {
+			this.setDaemon(true);
+		}
+
+		public void run() {
+			Util.delay(SETUP);
+			Util.debug("watchdog startup",this);
+			while (true) {
+				long now = System.currentTimeMillis();
+
+//				if (now - lastRead > DEAD_TIME_OUT) {
+//					application.message("motors PCB timeout, attempting reset", null, null);
+//					reset();
+//				}
+				
+				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
+						state.get(oculusPrime.State.values.driver) == null &&
+						state.getInteger(oculusPrime.State.values.telnetusers) == 0 && isconnected) {
+					// check for autodocking = false; driver = false; telnet = false;
+					// application.message("battery board periodic reset", "battery", "resetting");
+					Util.log("motors board periodic reset", this);
+					reset();
+				}
+								
+				Util.delay(WATCHDOG_DELAY);
+			}		
+		}
 	}
 	
 	public static boolean motorsReady (){
@@ -238,48 +276,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			application.message(this.getClass().getName() + " version: " + version, null, null);		
 		} 
 	
-		
-		/* 
-		 * if power info coming via prime board i2c 
-		 */
-		/*
-		if(response.startsWith("battery")){
-			String s = response.split(" ")[1];
-			if (s.equals("timeout") && !ArduinoPower.powerReady()) {
-				state.put(State.values.dockstatus, AutoDock.UNKNOWN);
-				state.put(State.values.batterylife, s);
-				application.message(null, "battery", s);
-				return;
-			}
-			
-			if (s.equals("docked")) {
-				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					application.message(null, "dock", AutoDock.DOCKED);
-					state.put(State.values.dockstatus, AutoDock.DOCKED);
-					state.set(State.values.batterycharging, true);
-				}
-				if (state.getBoolean(State.values.motionenabled)) {
-					state.set(State.values.motionenabled, false); }
-			}
-			
-			if (s.equals("undocked")) {
-				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
-					state.put(State.values.dockstatus, AutoDock.UNDOCKED);
-					state.put(State.values.batterylife, "draining");
-					application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" battery draining");
-					state.set(State.values.batterycharging, false);
-				}
-				if (!state.getBoolean(State.values.motionenabled)) { 
-					state.set(State.values.motionenabled, true); }
-			}
-			
-			String battinfo = response.split(" ")[2];
-			if (!state.get(State.values.batterylife).equals(battinfo)) {
-				state.put(State.values.batterylife, battinfo);
-			}
-		}
-		*/
-		
 		
 		if(response.startsWith("tiltpos")) {
 			String position = response.split(" ")[1];
@@ -737,6 +733,30 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				switch (dir) {
 					case right: turnRight(); break;
 					case left: turnLeft(); 
+				}
+				
+				Util.delay((int) voltsComp(n));
+
+				stopGoing();
+				state.put(State.values.motorspeed, tempspeed);
+				application.message(null, "motion", "stopped");
+				
+			}
+		}).start();
+	}
+	
+	public void movedistance(final direction dir, final double meters) {
+		new Thread(new Runnable() {
+			public void run() {
+				
+				final int tempspeed = state.getInteger(State.values.motorspeed);
+				state.put(State.values.motorspeed, speedfast);
+				
+				double n = onemeterdelay * meters;
+				
+				switch (dir) {
+					case forward: goForward(); break;
+					case backward: goBackward(); 
 				}
 				
 				Util.delay((int) voltsComp(n));

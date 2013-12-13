@@ -307,7 +307,12 @@ public class TelnetServer implements Observer {
 	public void updated(String key) {
 		String value = state.get(key);
 		if(value==null)	sendToGroup(STATETAG + " deleted: " + key); 
-		else sendToGroup(STATETAG + " " + key + " " + value); 
+		else {
+			
+			if (State.isNonTelnetBroadCast(key)) { return; }
+			
+			sendToGroup(STATETAG + " " + key + " " + value); 
+		}
 	}
 	
 	/** send input back to all the clients currently connected */

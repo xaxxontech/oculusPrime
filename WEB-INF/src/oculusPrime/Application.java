@@ -436,6 +436,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 		}
 			
+		// skip telnet ping broadcast
 		if(fn != PlayerCommands.statuscheck) state.put(State.values.lastusercommand, System.currentTimeMillis()); 
 		
 		String[] cmd = null;
@@ -553,6 +554,20 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			moveMacroCancel();
 			comport.rotate(ArduinoPrime.direction.valueOf(cmd[0]), Integer.parseInt(cmd[1]));
 			messageplayer("rotate: " + cmd[0]+ " "+cmd[1], "motion", "moving");
+			break;
+			
+		case movedistance:
+			if (!state.getBoolean(State.values.motionenabled.name())) {
+				messageplayer("motion disabled", "motion", "disabled");
+				break;
+			}
+			if (state.getBoolean(State.values.autodocking.name())) {
+				messageplayer("command dropped, autodocking", null, null);
+				break;
+			}
+			moveMacroCancel();
+			comport.movedistance(ArduinoPrime.direction.valueOf(cmd[0]), Double.parseDouble(cmd[1]));
+			messageplayer("move distance: " + cmd[0]+ " "+cmd[1]+"m", "motion", "moving");
 			break;
 			
 		case systemcall:
@@ -1040,7 +1055,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			String str = comport.speedslow + " " + comport.speedmed + " "
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
 					+ " " + comport.clicknudgemomentummult+ " " + comport.maxclickcam
-					+ " " + comport.fullrotationdelay + " " + settings.readSetting(GUISettings.steeringcomp.name());
+					+ " " + comport.fullrotationdelay + " " + comport.onemeterdelay + " " 
+					+ settings.readSetting(GUISettings.steeringcomp.name());
 			sendplayerfunction("drivingsettingsdisplay", str);
 		}
 	}
@@ -1068,13 +1084,18 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 			comport.fullrotationdelay = Integer.parseInt(comps[6]);
 			settings.writeSettings(GUISettings.fullrotationdelay.name(), Integer.toString(comport.fullrotationdelay));
+
+			comport.onemeterdelay = Integer.parseInt(comps[7]);
+			settings.writeSettings(GUISettings.onemeterdelay.name(), Integer.toString(comport.onemeterdelay));
 			
-			comport.setSteeringComp(comps[7]);
-			settings.writeSettings(GUISettings.steeringcomp.name(), comps[7]);
+			comport.setSteeringComp(comps[8]);
+			settings.writeSettings(GUISettings.steeringcomp.name(), comps[8]);
 
 			String s = comport.speedslow + " " + comport.speedmed + " " 
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
-					+ " " + comport.clicknudgemomentummult +  " "  + comport.steeringcomp;
+					+ " " + comport.clicknudgemomentummult +  " "  + comport.maxclickcam
+					+ " " + comport.fullrotationdelay 
+					+ " " + comport.onemeterdelay +  " "  + comport.steeringcomp;
 			
 			messageplayer("driving settings set to: " + s, null, null);
 		}
@@ -1304,7 +1325,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 
 		comport.nudge(ArduinoPrime.direction.valueOf(str));
-		messageplayer("command received: nudge" + str, null, null);
+		messageplayer("command received: nudge " + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
 	}
 

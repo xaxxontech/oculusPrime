@@ -56,28 +56,13 @@ public class Util {
 		}
 	}
 
-	/*
-	 * 
-	 */
-	public static String getTime(long ms) {
-
-		// Sat May 03 15:33:11 PDT 2008
-		String date = new Date(ms).toString();
-
-		int index1 = date.indexOf(' ', 0);
-		int index2 = date.indexOf(' ', index1 + 1);
-		int index3 = date.indexOf(' ', index2 + 1);
-		int index4 = date.indexOf(' ', index3 + 1);
-		String time = date.substring(index3 + 1, index4);
-
-		return time;
-	}
 
 	/*
 	 * 
 	 */
 	public static String getTime() {
-		return getTime(System.currentTimeMillis());
+        Date date = new Date();
+		return date.toString();
 	}
 
 	/**

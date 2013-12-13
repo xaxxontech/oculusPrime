@@ -66,6 +66,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 					
 					Util.log("Connected to port: " + state.get(State.values.powerport), this);
 					initialize();
+					new WatchDog().start();
 				}
 
 			
@@ -80,7 +81,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		registerListeners();
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;
-		new WatchDog().start();
+
 		
 	}
 	
@@ -154,16 +155,18 @@ public class ArduinoPower implements SerialPortEventListener  {
 	
 	public void reset() {
 		if (isconnected) {
+			new Thread(new Runnable() {
+				public void run() {
+					close();
+					connect();
+					Util.delay(SETUP);
+					registerListeners();
+					long now = System.currentTimeMillis();
 			
-			close();
-	//		Util.delay(SETUP * 2);
-			connect();
-			Util.delay(SETUP);
-			registerListeners();
-			long now = System.currentTimeMillis();
-	
-			lastReset = now;
-			lastRead = now;
+					lastReset = now;
+					lastRead = now;
+				}
+			}).start();
 		}
 	}
 	

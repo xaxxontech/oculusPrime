@@ -6,6 +6,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
+import oculusPrime.PlayerCommands.AdminCommands;
+
 public class State {
 	
 	public enum values{ 
@@ -27,6 +29,9 @@ public class State {
 	public enum booleanValues{ moving, movingforward, autodocking, docking, batterycharging, framegrabbusy, dockgrabbusy, motionenabled, 
 		floodlighton, driverstream, muteOnROVmove, controlsinverted, strobeflashon; };
 
+	/** not to be broadcast over telnet channel when updated, to reduce chatter */
+	public enum nonTelnetBroadcast { batteryinfo; };	
+		
 	public static final int ERROR = -1;
 
 	/** notify these on change events */
@@ -380,5 +385,13 @@ public class State {
 		return value;
 	}
 
+	/** @return true if given command is in the sub-set */
+	public static boolean isNonTelnetBroadCast(final String str) {
+		try {
+			nonTelnetBroadcast.valueOf(str);
+		} catch (Exception e) {return false;}
+		
+		return true; 
+	}
 	
 }
