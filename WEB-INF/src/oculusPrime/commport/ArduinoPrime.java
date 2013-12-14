@@ -132,8 +132,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			
 			Util.log("attempting to connect to port"+portname, this);
 			
-//			new Thread(new Runnable() {
-//				public void run() {
 					if (!isconnected) {
 						connect();
 						Util.delay(SETUP);
@@ -145,10 +143,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						initialize();
 
 					}
-//				}
-//			}).start();
 			
 		}
+		
 		new WatchDog().start();
 
 	}
@@ -177,10 +174,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}
 
 		public void run() {
+			
+			
 			Util.delay(SETUP);
-			Util.debug("watchdog startup",this);
+			
 			while (true) {
 				long now = System.currentTimeMillis();
+				
+//				if (isconnected) Util.debug("watchdog",this);
+				if (now - lastReset > RESET_DELAY && isconnected) Util.debug("past reset delay", this); 
 
 //				if (now - lastRead > DEAD_TIME_OUT) {
 //					application.message("motors PCB timeout, attempting reset", null, null);
@@ -189,7 +191,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null &&
-						state.getInteger(oculusPrime.State.values.telnetusers) == 0 && isconnected) {
+						state.getInteger(oculusPrime.State.values.telnetusers) < 1 && isconnected) {
 					// check for autodocking = false; driver = false; telnet = false;
 					// application.message("battery board periodic reset", "battery", "resetting");
 					Util.log("motors board periodic reset", this);

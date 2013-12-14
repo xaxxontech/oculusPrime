@@ -111,8 +111,8 @@ public class AutoDock { // implements Observer {
 			if (cmd[1].equals("find") && state.getBoolean(State.values.autodocking)) { // x,y,width,height,slope
 				int width = Integer.parseInt(cmd[4]);
 				if (width < (int) (0.02*imgwidth) || width > (int) (0.875*imgwidth) || cmd[5].equals("0")) { // unrealistic widths,failed to find target
-					if (lowres && (!settings.readSetting(GUISettings.vset).equals("vmed") || 
-								!settings.readSetting(GUISettings.vset).equals("vlow"))) {  // failed, switch to highres if avail and try again 
+					if (lowres && !(settings.readSetting(GUISettings.vset).equals("vmed") || 
+								settings.readSetting(GUISettings.vset).equals("vlow"))) {  // failed, switch to highres if avail and try again 
 						lowres = false;
 						dockGrab("start", 0, 0);
 						Util.debug("trying again in higher resolution",this);

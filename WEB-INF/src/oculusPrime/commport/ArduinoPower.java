@@ -66,11 +66,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 					
 					Util.log("Connected to port: " + state.get(State.values.powerport), this);
 					initialize();
-					new WatchDog().start();
 				}
 
 			
 		}
+
+		new WatchDog().start();
 		
 	}
 	
@@ -119,7 +120,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	}
 	
 	/** inner class to check if getting responses in timely manor */
-	private class WatchDog extends Thread {
+	public class WatchDog extends Thread {
 		oculusPrime.State state = oculusPrime.State.getReference();
 
 		public WatchDog() {
@@ -127,11 +128,15 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 
 		public void run() {
+
+			
 			Util.delay(SETUP);
 			while (true) {
+//				if (isconnected)  Util.debug("watchdog", this);
+				
 				long now = System.currentTimeMillis();
 
-				if (now - lastRead > DEAD_TIME_OUT) {
+				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
 					application.message("battery PCB timeout", "battery", "timeout");
 					reset();
