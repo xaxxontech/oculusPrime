@@ -1,4 +1,4 @@
-package developer;
+package developer.depth;
 
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;

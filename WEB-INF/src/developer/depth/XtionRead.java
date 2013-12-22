@@ -1,4 +1,4 @@
-package developer;
+package developer.depth;
 
 /*
  * this class to be run standalone as jar under oculusPrime/xtionread/

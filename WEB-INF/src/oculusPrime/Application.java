@@ -48,7 +48,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
 	public static TelnetServer commandServer = null;
-	public static developer.OpenNIRead openNIRead = null;
+	public static developer.depth.OpenNIRead openNIRead = null;
 	public static Speech speech = new Speech();
 	public static byte[] framegrabimg  = null;
 	public static Boolean passengerOverride = false;
@@ -246,7 +246,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			
-			openNIRead = new developer.OpenNIRead();
+			openNIRead = new developer.depth.OpenNIRead();
 
 		}
 			
