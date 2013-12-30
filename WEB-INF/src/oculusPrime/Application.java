@@ -936,15 +936,22 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
 			ch.close();
 			file.close();
-
+			
+			int width=640;
+			int height=480;
+			
+			if (settings.readSetting(GUISettings.vset).equals("vmed") || 
+					settings.readSetting(GUISettings.vset).equals("vlow")) {  // failed, switch to highres if avail and try again 
+				width=320;
+				height=240;
+			}
+			
 //			int headersize = 1228843 - (640*480*4);
-			int headersize = size - (640*480*4)-1;
+			int headersize = size - (width*height*4)-1;
 
 			frameData.position(headersize); // skip past header
 			
-			processedImage  = new BufferedImage(640, 480, BufferedImage.TYPE_INT_RGB);
-			int width = 640;
-			int height = 480;
+			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 			for(int y=0; y<height; y++) {
 				for (int x=0; x<width; x++) {
 //					int rgb = frameData.getInt();    // argb ok for png only 

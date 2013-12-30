@@ -27,8 +27,8 @@ public class FindCenter extends JFrame {
 	
 	private int[][] ctrMatrix;
 	ImageUtils imageUtils = new ImageUtils();
-//	final String url = "http://192.168.0.182:5080/oculus/frameGrabHTTP";
-	final String url = "http://127.0.0.1:5080/oculus/frameGrabHTTP";
+	final String url = "http://192.168.0.111:5080/oculusPrime/frameGrabHTTP";
+//	final String url = "http://127.0.0.1:5080/oculusPrime/frameGrabHTTP";
 	
 	/*
 	 * INSTRUCTIONS

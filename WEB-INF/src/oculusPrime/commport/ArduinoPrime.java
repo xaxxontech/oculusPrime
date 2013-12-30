@@ -453,10 +453,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void goForward() {
-
-//		if (state.getBoolean(State.values.controlsinverted) &! invertswap) 
-//			{ invertswap = true; goBackward(); }
-//		invertswap = false;
 		
 		int speed= state.getInteger(State.values.motorspeed);
 		
@@ -472,20 +468,35 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			speed = speedmed;
 		}
 		
-		int L = speed;
-		int R = speed;
-		int comp = (int) ((double) steeringcomp * Math.pow((double) speed/(double) speedfast, 2.0));
+		// send un-comped forward command to get wheels moving
+		sendCommand(new byte[] { FORWARD, (byte) speed, (byte) speed});
+
+		final int spd = speed;
 		
-		if (state.getBoolean(State.values.controlsinverted)) {
-			if (steeringcomp < 0) L += comp; // left motor reduced
-			else if (steeringcomp > 0) R -= comp; // right motor reduced
-		}
-		else {
-			if (steeringcomp < 0) R += comp; // right motor reduced
-			else if (steeringcomp > 0) L -= comp; // left motor reduced
-		}
+		if (steeringcomp != 0) {
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(95); // needs to be less than docking moves
+					
+					int L = spd;
+					int R = spd;
+					
+					int comp = (int) ((double) steeringcomp * Math.pow((double) spd/(double) speedfast, 2.0));
+					
+					if (state.getBoolean(State.values.controlsinverted)) {
+						if (steeringcomp < 0) L += comp; // left motor reduced
+						else if (steeringcomp > 0) R -= comp; // right motor reduced
+					}
+					else {
+						if (steeringcomp < 0) R += comp; // right motor reduced
+						else if (steeringcomp > 0) L -= comp; // left motor reduced
+					}
+					
+					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});					}
+			}).start();
 		
-		sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
+		}
+
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
@@ -504,22 +515,37 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			speed = (int) voltsComp((double) speed);
 			if (speed > 255) { speed = 255; }
 		}
+
+		sendCommand(new byte[] { BACKWARD, (byte) speed, (byte) speed });
 		
-		int L = speed;
-		int R = speed;
+		final int spd = speed;
 		
-		int comp = (int) ((double) steeringcomp * Math.pow((double) speed/(double) speedfast, 2.0));
+		if (steeringcomp != 0) {
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(95); //needs to be less than docking moves
+					
+					int L = spd;
+					int R = spd;
+					
+					int comp = (int) ((double) steeringcomp * Math.pow((double) spd/(double) speedfast, 2.0));
+					
+					if (state.getBoolean(State.values.controlsinverted)) {
+						if (steeringcomp < 0) R += comp; // right motor reduced
+						else if (steeringcomp > 0) L -= comp; // left motor reduced
+					}
+					else {
+						if (steeringcomp < 0) L += comp; // left motor reduced
+						else if (steeringcomp > 0) R -= comp; // right motor reduced
+					}	
+					
+					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});		
+				}
+			}).start();
 		
-		if (state.getBoolean(State.values.controlsinverted)) {
-			if (steeringcomp < 0) R += comp; // right motor reduced
-			else if (steeringcomp > 0) L -= comp; // left motor reduced
 		}
-		else {
-			if (steeringcomp < 0) L += comp; // left motor reduced
-			else if (steeringcomp > 0) R -= comp; // right motor reduced
-		}	
+
 		
-		sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L });
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, false);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();

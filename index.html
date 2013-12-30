@@ -485,6 +485,14 @@ class="inputbox" style="width: 150px; background-color: #000000;">
 <a class="cancelbox" href="" onmousedown="chat();">&radic;</a>
 </div>
 
+<!--  aux_popup_menu -->
+<div id="aux_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="aux_menu_over" style="position: absolute; display: none; z-index: 5;">
+<div id="aux_menu_topbar" style="line-height: 18px; cursor: move;"
+onmousedown="popupmenu('aux', 'move');" > &nbsp; </div>
+<div id="aux_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+</div>
+
 <!--  context_popup_menu -->
 <div id="context_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
 <div id="context_menu_over" style="position: absolute; display: none; z-index: 5;">
@@ -500,6 +508,7 @@ onmousedown="popupmenu('context', 'move');" > &nbsp; </div>
 onmousedown="popupmenu('menu', 'move');" > &nbsp; </div>
 <div id="menu_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
 </div>
+
 
 <!--  main menu -->
 <div id="main_menu" style="display: none;">
@@ -906,6 +915,8 @@ primesense sensor <a class="blackbg" href="javascript: radar('init');">on</a> /
 <a class="blackbg" href="javascript: radar('shutdown');">off</a><br> 
 radar view <a class="blackbg" href="javascript: radar('on');">on</a> / 
 <a class="blackbg" href="javascript: radar('off');">off</a><br> 
+depth view <a class="blackbg" href="javascript: depthView('on');">on</a> / 
+<a class="blackbg" href="javascript: depthView('off');">off</a><br> 
 
 processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> / 
 <a class="blackbg" href="javascript: processedImg('close');">off</a><br> 

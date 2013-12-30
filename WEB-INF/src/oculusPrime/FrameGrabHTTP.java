@@ -21,22 +21,15 @@ import javax.imageio.ImageIO;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-//import org.red5.io.amf3.ByteArray;
-
 public class FrameGrabHTTP extends HttpServlet {
 	
 	private static Application app = null;
-//	public static byte[] img  = null;
 	private State state = State.getReference();
 	
 	private static int var;
 	private static BufferedImage radarImage = null;
-//	private static boolean radarImageGenerating = false;
 	private static Settings settings = Settings.getReference();
 	
-//	MotionTracker tracker = MotionTracker.getReference();
-	
-	/** */ 
 	public static void setApp(Application a) {
 		if(app != null) return;
 		app = a;
@@ -49,20 +42,18 @@ public class FrameGrabHTTP extends HttpServlet {
 	
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         if (req.getParameter("mode") != null) {
-            String mode = req.getParameter("mode");
-            if (mode.equals("radar")) {
-        		radarGrab(req,res);            	
+
+        	String mode = req.getParameter("mode");
+            
+            if (mode.equals("radar"))  radarGrab(req,res);            	
+            else if(mode.equals("processedImg"))  processedImg(req,res); 
+            else if (mode.equals("depthFrame") &&  Application.openNIRead.depthCamGenerating) { 	
+            	Application.processedImage = Application.openNIRead.generateDepthFrameImg();
+            	processedImg(req,res);
             }
-           
-            // TODO: BRAD
-//            if(mode.equals("hist")) {
-//            	histGrab(req,res);    
-//            }
-        	
-            if(mode.equals("processedImg")) { processedImg(req,res); }
+
         }
-		else { frameGrab(req,res); }
-        
+		else { frameGrab(req,res); }        
 	}
 	
 	private void frameGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
@@ -97,9 +88,6 @@ public class FrameGrabHTTP extends HttpServlet {
 			}
 			
 			else if (Application.processedImage != null) {
-	//			BufferedImage newBufferedImage = new BufferedImage(Application.processedImage.getWidth(),
-	//					Application.processedImage.getHeight(), Application.processedImage.TYPE_INT_RGB);
-	//			  newBufferedImage.createGraphics().drawImage(Application.processedImage, 0, 0, Color.WHITE, null);
 				
 				ImageIO.write(Application.processedImage, "JPG", out);
 			}
@@ -114,7 +102,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		res.setContentType("image/gif");
 		OutputStream out = res.getOutputStream();
 		ImageIO.write(Application.processedImage, "GIF", out);
-		out.close();
+//		out.close();
 	}
 	
 	private void radarGrab(HttpServletRequest req, HttpServletResponse res) 
@@ -127,42 +115,9 @@ public class FrameGrabHTTP extends HttpServlet {
 		OutputStream out = res.getOutputStream();
 		ImageIO.write(radarImage, "GIF", out);
 	}
-	
-	
-	/*
-	private void histGrab(HttpServletRequest req, HttpServletResponse res) 
-			throws ServletException, IOException {
-	
-			int number = 1;
-			try {
-				String frame = req.getParameter("frame");
-				number = Integer.valueOf(frame);
-			} catch (NumberFormatException e) {
-				// Util.log("histGrab: " + e.getLocalizedMessage(), this);
-				number = 1;
-			}
-			
-			// TODO: brad 
-			// set thread time delay for testing
-			String delay = req.getParameter("delay");
-			if(delay!=null){
-				try {
-					tracker.setPollDelay(Integer.valueOf(delay));
-				} catch (NumberFormatException e) {
-					//Util.log("histGrab: " + e.getLocalizedMessage(), this);
-				}
-			}
-		
-			res.setContentType("image/gif");
-			OutputStream out = res.getOutputStream();
-			ImageIO.write(tracker.getHistogram(number), "GIF", out);
-		}
-		*/
-		
+
 	
 	private void generateRadarImage() {
-//		radarImageGenerating = true;
-//		new Thread(new Runnable() { public void run() {
 
 			int w = 240;
 			int h = 320;
@@ -183,9 +138,9 @@ public class FrameGrabHTTP extends HttpServlet {
 			
 			// retrieve & render pixel data and shadows
 			int maxDepthInMM = 3500;
-			if (app.openNIRead.depthCamGenerating == true) { 	
+			if (Application.openNIRead.depthCamGenerating == true) { 	
 				WritableRaster raster = image.getRaster();
-				int[] xdepth = app.openNIRead.readHorizDepth(120); 
+				int[] xdepth = Application.openNIRead.readHorizDepth(120); 
 				/* TODO: need to figure out some way to drop request if taking too long
 				 * above line hangs whole servlet?
 				 */

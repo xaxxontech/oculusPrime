@@ -2274,13 +2274,13 @@ function radar(mode) {
 		str += "<div style='position: relative; top: -70px; left: 107px; width: 75px;'>";
 		str +="<span style='background-color: #666666; color: #000000;'>ROV</span></div>";
 		str += "</div>"
-		popupmenu('context', 'show', x, y, str, 240, 1, 0);
+		popupmenu('aux', 'show', x, y, str, 240, 1, 0);
 //		radarimagereload();
 	}
 	if (mode=="off") {
-		lagtimer = new Date().getTime(); // has to be *after* message()
+		// lagtimer = new Date().getTime(); // has to be *after* message()
 		// document.getElementById("radarimg").src="";
-		popupmenu("context", "close");
+		popupmenu("aux", "close");
 	}
 	if (mode=="shutdown") { // unused
 		callServer("opennisensor", "off");
@@ -2290,22 +2290,17 @@ function radar(mode) {
 
 
 var radartimer = null;
-//var radartimeout = null;
 
 function radarrepeat() {
 	clearTimeout(radartimer);
-//	clearTimeout(radartimeout);
-	radartimer = setTimeout("radarimagereload();", 250);
+	radartimer = setTimeout("radarimagereload();", 50);
 }
 
 function radarimagereload() {
 	radartimer = null;
 	var img = document.getElementById('radarimg');
-//	img.src= "";
 	img.src = "frameGrabHTTP?mode=radar&date="+new Date().getTime();
-//	img.addEventListener("load", radarrepeat, false);
 	img.onload = function() { radarrepeat(); }
-	// radartimeout = setTimeout("radartimedout();", 500);
 }
 
 function processedImg(mode) {
@@ -2322,11 +2317,38 @@ function processedImg(mode) {
 	//	radarimagereload();
 	}
 	if (mode=="close") {
-		lagtimer = new Date().getTime(); // has to be *after* message()
+//		lagtimer = new Date().getTime(); // has to be *after* message()
 		// document.getElementById("radarimg").src="";
 		popupmenu("context", "close");
 	}
 
 }
 
+function depthView(mode) {
+	if (mode=="on") {
+		var v = document.getElementById("video");
+		var xy = findpos(v);
+		var x = xy[0]+v.offsetWidth;
+		var y=xy[1];
+		src = "frameGrabHTTP?mode=depthFrame";
+		var str ="<img id='depthImg' src='"+src+"' alt='' ";
+		str +="onload='depthViewRepeat();' "
+		str += "width='320' height='240'>"
+		popupmenu('aux', 'show', x, y, str, 320, 1, 0);
+//		radarimagereload();
+	}
+	else  { popupmenu("aux", "close"); }
 
+}
+
+function depthViewRepeat() {
+	clearTimeout(radartimer);
+	radartimer = setTimeout("depthViewImgReload();", 50);
+}
+
+function depthViewImgReload() {
+	radartimer = null;
+	var img = document.getElementById('depthImg');
+	img.src = "frameGrabHTTP?mode=depthFrame&date="+new Date().getTime();
+	img.onload = function() { depthViewRepeat(); }
+}

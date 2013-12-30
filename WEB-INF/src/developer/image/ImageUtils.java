@@ -81,6 +81,8 @@ public class ImageUtils {
 	 */
 	public int[] findCenter(int[][] matrix, int[][] ctrMatrix, int width, int height) {
 		
+		// dwg: https://docs.google.com/drawings/d/1mXlNnGVg62TUn8UnI9gv8bW4FxUaraerTErVoA_CFrU/edit
+		
 		int widthRes = width/matrixres;
 		int heightRes = height/matrixres;
 		int compared = 0;
