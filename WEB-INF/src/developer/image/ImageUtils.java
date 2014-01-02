@@ -52,7 +52,7 @@ public class ImageUtils {
 		int yy;
 		int runningttl;
 		for (int x = 0; x < width; x += matrixres) {			
-			//TODO: finished to here
+
 			for (int y=0; y<height; y+=matrixres) {
 				
 				runningttl = 0;

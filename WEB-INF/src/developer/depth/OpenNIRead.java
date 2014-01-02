@@ -1,6 +1,5 @@
 package developer.depth;
 
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,8 +22,8 @@ public class OpenNIRead  {
 	File lockfile = new File("/run/shm/xtion.raw.lock");
 	ImageUtils imageUtils = new ImageUtils();
 	
-	public OpenNIRead()  {
-	}
+//	public OpenNIRead()  {
+//	}
 	
 	public void startDepthCam() {
 		if (depthCamInit) return;
@@ -73,24 +72,6 @@ public class OpenNIRead  {
 		int[]result = new int[width];
 		int size = 320*240*2;
 		
-		/*
-    	try {
-    		FileInputStream file = new FileInputStream("/run/shm/xtion.raw");
-			FileChannel ch = file.getChannel();
-			if (ch.size() == size) {
-				frameData = ByteBuffer.allocate((int) size);
-				ch.read(frameData.order(ByteOrder.LITTLE_ENDIAN));
-				ch.close();
-				file.close();
-			}
-			ch.close();
-			file.close();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		*/
-		
 		getFrame(size);
 
     	boolean blank=true;
@@ -103,9 +84,6 @@ public class OpenNIRead  {
 	        if (depth != 0) { blank = false; }
 		}
 		
-	//			Util.log(Integer.toString((int) frameData.getShort(4500)), this);
-
-			
 
 		if (blank) { return lastresult; }
 		else { 
@@ -116,11 +94,11 @@ public class OpenNIRead  {
 		
 	}
 	
-	private int[] readFullFrame() {
+	private short[] readFullFrame() {
 		
 		int width = 320;
 		int height = 240;
-		int[] result = new int[width*height];
+		short[] result = new short[width*height];
 		int size = width*height*2;
 
 		boolean blank=true;
@@ -131,7 +109,7 @@ public class OpenNIRead  {
 				for (int x=0; x<width; x++) {
 			        
 			        int p = ((width * y)+x)*2;
-			        int depth = (int) frameData.getShort(p);
+			        short depth = frameData.getShort(p);
 			        result[i] = depth;
 			        i++;
 			        if (depth != 0) { blank = false; }
@@ -181,7 +159,7 @@ public class OpenNIRead  {
 	}
 	
 	public BufferedImage generateDepthFrameImg() {
-		int[] depth = readFullFrame();
+		short[] depth = readFullFrame();
 		int width = 320;
 		int height = 240;
 		final int maxDepthInMM = 3500; // 3500

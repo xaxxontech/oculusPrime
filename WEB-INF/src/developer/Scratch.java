@@ -9,16 +9,9 @@ import oculusPrime.Util;
 public class Scratch {
 
         public static void main(String[] args) {
+        	// int n = 7-320/10/2;
+        	int[][] n = new int[4][9];
+        	System.out.println(n[0].length);
 
-    		File lockfile = new File("C://temp//test.txt");
-
-    		try {
-				lockfile.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    		lockfile.delete();
         }
-
 }
