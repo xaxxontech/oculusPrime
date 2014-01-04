@@ -7,9 +7,9 @@ import oculusPrime.commport.Discovery;
 /** place extensions to settings here */
 public enum ManualSettings {
 	
-	lastboot, attempts, motorport, powerport, developer, debugenabled, commandport,  
+	lastboot, attempts, motorport, powerport, developer, debugenabled, telnetport, commandport,  
 	stopdelay, vself, email_smtp_server, email_smtp_port, email_username, email_password, 
-	email_from_address; 
+	email_from_address, ; 
 	
 	 // new counter to see if constantly searching
 
@@ -30,6 +30,7 @@ public enum ManualSettings {
 		config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(attempts.name(), "0");
 		config.setProperty(lastboot.name(), "0");
+		config.setProperty(lastboot.name(), Settings.DISABLED);
 		return config;
 	}
 	
