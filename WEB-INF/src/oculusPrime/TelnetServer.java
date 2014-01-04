@@ -27,6 +27,7 @@ public class TelnetServer implements Observer {
 	private BanList banlist = BanList.getRefrence();
 	
 	private static ServerSocket serverSocket = null;  	
+	private static ServerSocket telnetSocket = null;  	
 	private static Application app = null;
 	
 	/** Threaded client handler */
@@ -118,7 +119,7 @@ public class TelnetServer implements Observer {
 			Util.log(user+" connected via socket", this);
 			this.start();
 		}
-
+		
 		/** do the client thread */
 		@Override
 		public void run() {
@@ -159,7 +160,7 @@ public class TelnetServer implements Observer {
 			// close up, must have a closed socket  
 			shutDown("user disconnected");
 		}
-
+		
 		/**
 		 * @param str is a multi word string of commands to pass to Application. 
 		 */
@@ -357,25 +358,283 @@ public class TelnetServer implements Observer {
 			}
 		}));
 		
-		/** do long time */
+		/** command connections*/
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				while(true) go();
+				while(true) startCommandListener();
+			}
+		}).start();
+		
+		/** local connections */
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				while(! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) 
+					startLocalListener();
 			}
 		}).start();
 	}
 	
 	/** do forever */ 
-	private void go(){
-		
-		// wait for system to startup 
-		Util.delay(1000);
-		
-		final Integer port = settings.getInteger(ManualSettings.commandport);
-		if(port < 1024) return;
+	private void startLocalListener(){
+
+		/**/
+		final Integer port = settings.getInteger(ManualSettings.telnetport);
 		try {
-			serverSocket = new ServerSocket(port);
+			telnetSocket = new ServerSocket(port);
+		} catch (Exception e) {
+			Util.log("startLocalListener telnet server sock error: " + e.getMessage(), this);
+			return;
+		} 
+		
+		Util.debug("startLocalListener listening with socket: " + telnetSocket.toString(), this);
+		
+		while (true) {
+			
+			// new user has connected
+			try {
+				new LocalConnectionHandler(telnetSocket.accept());
+			} catch (IOException e) {
+				try {
+					telnetSocket.close();
+				} catch (IOException e1) {
+					Util.log("socket error: " + e1.getMessage());
+				}
+				
+				Util.log("socket error: " + e.getMessage());
+				return;	
+			}
+		}
+	}
+	
+	/** Threaded client handler {*/ 
+	class LocalConnectionHandler extends Thread {
+	
+		private Socket clientSocket = null;
+		private BufferedReader in = null;
+		private PrintWriter out = null;
+		
+		public LocalConnectionHandler(Socket socket) {
+		
+			clientSocket = socket;
+			final String ip = socket.getInetAddress().toString().substring(1);
+			
+			if( ! ip.equals("127.0.0.1")){ 
+				Util.log("connection fail on attempt ip: " + ip, this);
+				try {
+					socket.shutdownInput();
+					socket.shutdownOutput();
+				} catch (IOException e) {
+					Util.log("LocalConnectionHandler: " + e.getMessage(), this);
+				}
+				return;
+			}
+				
+			/**/
+			try {
+			
+				in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+				out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream())), true);
+			
+			} catch (IOException e) {	
+			    shutDown("fail aquire tcp streams: " + e.getMessage());
+				banlist.failed(ip); 
+				return;
+			}
+			
+			// keep track of all other user sockets output streams			
+			printers.add(out);	
+			sendToSocket("local user : connected via socket");
+			Util.log(ip + " connected via socket", this);
+			this.start();
+		}
+
+		/** do the client thread */
+		@Override
+		public void run() {
+			
+			if(settings.getBoolean(GUISettings.loginnotify)) app.saySpeech("lawg inn telnet");
+			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
+			
+			// loop on input from the client
+			String str = null;
+			while (true) {
+				try {
+					str = in.readLine();
+				} catch (Exception e) {
+					Util.debug("readLine(): " + e.getMessage(), this);
+					break;
+				}
+
+				// client is terminating?
+				if (str == null) {
+					Util.debug("read thread, closing.", this);
+					break;
+				}
+						
+				// parse and run it 
+				str = str.trim();
+				if(str.length()>=1){
+					
+					Util.debug("sending from "+clientSocket.getInetAddress().toString() + " : " + str, this);	
+					
+					if( ! manageCommand(str)) {				
+						Util.debug("doPlayer(" + str + ")", this);	
+						doPlayer(str);
+					}
+				}
+			}
+		
+			// close up, must have a closed socket  
+			shutDown("user disconnected");
+		}
+		
+
+		/**
+		 * @param str is a multi word string of commands to pass to Application. 
+		 */
+		private void doPlayer(final String str){
+			
+			final String[] cmd = str.split(" ");
+			String args = new String(); 			
+			for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
+			
+			PlayerCommands player = null; 
+			try { // create command from input 
+				player = PlayerCommands.valueOf(cmd[0]);
+			} catch (Exception e) {
+				sendToSocket("error: unknown command, " + cmd[0]);
+				return;
+			}
+			
+			// test if needs an argument, but is missing. 
+			if(player.requiresArgument()){
+				
+				RequiresArguments req = PlayerCommands.RequiresArguments.valueOf(cmd[0]);
+			
+				if(cmd.length==1){
+					sendToSocket("error: this command requires arguments " + req.getArguments());
+					return;
+				}
+			
+				if(req.getValues().size() > 1){
+					if( ! req.matchesArgument(cmd[1])){
+						sendToSocket("error: this command requires arguments " + req.getArguments());
+						return;
+					}
+				}
+					
+				if(req.usesBoolean()){
+					if( ! PlayerCommands.validBoolean(cmd[1])){
+						sendToSocket("error: requires {BOOLEAN}");
+						return;
+					}	
+				}
+				
+				if(req.usesInt()){
+					if( ! PlayerCommands.validInt(cmd[1])){
+						sendToSocket("error: requires {INT}");
+						return;
+					}
+				}
+				
+				if(req.usesDouble()){
+					if( ! PlayerCommands.validDouble(cmd[1])){
+						sendToSocket("error: requires {DOUBLE}");
+						return;
+					}
+				}
+	
+				if(req.requiresParse()){
+					
+					// do min test, check for the same number of arguments 
+					String[] list = req.getArgumentList()[0].split(" ");
+					if(list.length != (cmd.length-1)){
+						sendToSocket("error: wrong number args, requires [" + list.length + "]");
+						return;
+					}		
+				}
+			}
+		
+			// check for null vs string("")
+			args = args.trim();
+			if(args.length()==0) args = "";
+			
+			// now send it, assign driver status 1st 
+			Application.passengerOverride = true;	
+			app.playerCallServer(player, args);
+			Application.passengerOverride = false;		
+		}
+		
+		// close resources
+		private void shutDown(final String reason) {
+
+			// log to console, and notify other users of leaving
+			sendToSocket("shutting down "+reason);
+			Util.debug("closing socket [" + clientSocket + "] " + reason, this);
+			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
+			
+			try {
+
+				// close resources
+				printers.remove(out);
+				if(in!=null) in.close();
+				if(out!=null) out.close();
+				if(clientSocket!=null) clientSocket.close();
+			
+			} catch (Exception e) {
+				Util.log("shutdown: " + e.getMessage(), this);
+			}
+		}
+		
+		/** add extra commands, macros here. Return true if the command was found */ 
+		private boolean manageCommand(final String str){
+			
+			final String[] cmd = str.split(" ");
+			Commands telnet = null;
+			try {
+				telnet = Commands.valueOf(cmd[0]);
+			} catch (Exception e) {
+				return false;
+			}
+			
+			switch (telnet) {
+			
+			case chat: // overrides playercommands chat
+				String args = new String(); 		
+				for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
+				if(args.length()>1)
+					app.playerCallServer(PlayerCommands.chat, 
+							"<i>localhost</i>:" + args);
+				return true;
+			
+			case bye: 
+			case exit:
+			case quit: shutDown("user quit"); return true;
+			}
+			
+			// command was not managed 
+			return false;	
+		}
+		
+		private void sendToSocket(String str) {
+			Boolean multiline = false;
+			if (str.matches(".*<br>.*")) { 
+				multiline = true;
+				str = (str.replaceAll("<br>", "\r\n")).trim();
+			}
+			if (multiline) { out.print("<multiline> "); }
+			out.println("<telnet> " + str+"\r");
+			if (multiline) { out.println("</multiline>"); }
+		}
+	}// end inner class
+	
+	/** do forever */ 
+	private void startCommandListener(){
+		
+		try {
+			serverSocket = new ServerSocket(settings.getInteger(ManualSettings.commandport));
 		} catch (Exception e) {
 			Util.log("server sock error: " + e.getMessage(), this);
 			return;
