@@ -21,6 +21,8 @@ public class OpenNIRead  {
 	Process camproc;
 	File lockfile = new File("/run/shm/xtion.raw.lock");
 	ImageUtils imageUtils = new ImageUtils();
+	private int width = 320;
+	private int height = 240;
 	
 //	public OpenNIRead()  {
 //	}
@@ -68,9 +70,8 @@ public class OpenNIRead  {
 	
 	public int[] readHorizDepth(int y) {
 
-		int width = 320;
 		int[]result = new int[width];
-		int size = 320*240*2;
+		int size = width*height*2;
 		
 		getFrame(size);
 
@@ -94,10 +95,8 @@ public class OpenNIRead  {
 		
 	}
 	
-	private short[] readFullFrame() {
+	public short[] readFullFrame() {
 		
-		int width = 320;
-		int height = 240;
 		short[] result = new short[width*height];
 		int size = width*height*2;
 
@@ -124,6 +123,44 @@ public class OpenNIRead  {
 
 		return result; 
 		
+	}
+	
+	public short[] readFullFrameAveraged() {
+		short[] result = new short[width*height];
+		int max = 5;
+		int size = width*height*2;
+
+		short[][] frames = new short[width*height][max];
+    	for (int f=0; f<max; f++) {
+    		getFrame(size);
+	    	int i = 0;
+			for (int y=0; y<height; y++) {
+				for (int x=0; x<width; x++) {
+			        
+			        int p = ((width * y)+x)*2;
+			        short depth = frameData.getShort(p);
+			        frames[i][f] = depth;
+			        i++;
+				}	
+	    	}
+			Util.delay(100);
+    	}
+
+    	for (int i=0; i<width*height; i++) {
+			int total = 0;
+			int compared = 0;
+			for (int f=0;f<max;f++) {
+				if (frames[i][f] != 0) {
+					total += frames[i][f];
+					compared ++;
+				}
+			}
+			if (compared != 0) {
+				result[i] = (short) (total/compared);
+			}
+		}
+    	
+		return result;
 	}
 
 	private boolean getFrame(int size) {
@@ -160,22 +197,29 @@ public class OpenNIRead  {
 	
 	public BufferedImage generateDepthFrameImg() {
 		short[] depth = readFullFrame();
-		int width = 320;
-		int height = 240;
-		final int maxDepthInMM = 3500; // 3500
+		final int maxDepthInMM = 5000; // 3500
 		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 //		Graphics2D g2d = img.createGraphics();
 		
 		for(int y=0; y<height; y++) {
 //			for (int x=width-1; x>=0; x--) { 
 			for(int x=0; x<width; x++) {
-				int hue = depth[x + y*width];
-				if (hue > maxDepthInMM)	hue = maxDepthInMM;
-				if (hue != 0) {
-					hue = 255 - (int) ((float) (hue)/maxDepthInMM * 255f);
-				}
-//				argb = (grey<<16) + (grey<<8) + grey;
-				int argb = (hue<<16) + (0<<8) + hue;
+//				int hue = depth[x + y*width];
+//				if (hue > maxDepthInMM)	hue = maxDepthInMM;
+//				if (hue != 0) {
+//					hue = 255 - (int) ((float) (hue)/maxDepthInMM * 255f);
+//				}
+//				int argb = (hue<<16) + (0<<8) + hue;
+				
+				
+				short d = depth[x + y*width];
+				if (d > maxDepthInMM)	d = 0;
+				int red = d  >> 8;
+				red *=8;
+				int blue=0;
+				if (d != 0) blue = 255 - (int) ((float) (d)/maxDepthInMM * 255f);
+				int argb = (red<<16) + (0<<8) + blue;
+				
 				img.setRGB(width-x-1, y, argb);    // flip horiz
 			}
 		}

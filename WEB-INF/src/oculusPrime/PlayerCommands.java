@@ -20,9 +20,9 @@ public enum PlayerCommands {
 	arduinoecho, motorsreset, setsystemvolume, beapassenger, muterovmiconmovetoggle, spotlight, 
 	spotlightsetbrightness, writesetting, holdservo, opennisensor, videosoundmode, pushtotalktoggle, restart, shutdown,
     setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
-    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, rotate,
+    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, 
     getlightlevel, strobeflash, powerreset, block, unblock, powershutdown, reboot, systemshutdown, 
-    movedistance;
+    forward, backward, left, right;
 	
 	enum autodockargs { go, cancel, framegrab };
 	

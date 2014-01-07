@@ -2325,30 +2325,31 @@ function processedImg(mode) {
 }
 
 function depthView(mode) {
-	if (mode=="on") {
+	if (mode=="off")  { popupmenu("aux", "close"); }
+	else {
 		var v = document.getElementById("video");
 		var xy = findpos(v);
 		var x = xy[0]+v.offsetWidth;
 		var y=xy[1];
-		src = "frameGrabHTTP?mode=depthFrame";
+		src = "frameGrabHTTP?mode="+mode;
 		var str ="<img id='depthImg' src='"+src+"' alt='' ";
-		str +="onload='depthViewRepeat();' "
+		str +="onload='depthViewRepeat(&quot;"+mode+"&quot;);' "
 		str += "width='320' height='240'>"
 		popupmenu('aux', 'show', x, y, str, 320, 1, 0);
 //		radarimagereload();
 	}
-	else  { popupmenu("aux", "close"); }
+
 
 }
 
-function depthViewRepeat() {
+function depthViewRepeat(mode) {
 	clearTimeout(radartimer);
-	radartimer = setTimeout("depthViewImgReload();", 50);
+	radartimer = setTimeout("depthViewImgReload('"+mode+"');", 50);
 }
 
-function depthViewImgReload() {
+function depthViewImgReload(mode) {
 	radartimer = null;
 	var img = document.getElementById('depthImg');
-	img.src = "frameGrabHTTP?mode=depthFrame&date="+new Date().getTime();
-	img.onload = function() { depthViewRepeat(); }
+	img.src = "frameGrabHTTP?mode="+mode+"&date="+new Date().getTime();
+	img.onload = function() { depthViewRepeat(mode); }
 }

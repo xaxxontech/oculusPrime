@@ -758,6 +758,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				double n = fullrotationdelay * degrees / 360;
 				
+				short[] depthFrameBefore = null;
+				if (Application.openNIRead.depthCamGenerating)   
+					depthFrameBefore = Application.openNIRead.readFullFrame();						
+
+				
 				switch (dir) {
 					case right: turnRight(); break;
 					case left: turnLeft(); 
@@ -766,8 +771,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				Util.delay((int) voltsComp(n));
 
 				stopGoing();
+				
+				String msg = null;
+				if (depthFrameBefore != null) { 
+					Util.delay(500); // allow for slow to stop
+					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
+					double angle[] = Application.scanMatch.findAngle(depthFrameBefore, depthFrameAfter);
+					msg = "angle moved: "+angle[0]+", best avg: "+angle[1];
+				}
+				
 				state.put(State.values.motorspeed, tempspeed);
-				application.message(null, "motion", "stopped");
+				application.message(msg, "motion", "stopped");
 				
 			}
 		}).start();
@@ -782,16 +796,44 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				double n = onemeterdelay * meters;
 				
+				short[] depthFrameBefore = null;
+				short[] depthFrameAfter = null;
+				
 				switch (dir) {
-					case forward: goForward(); break;
-					case backward: goBackward(); 
+					case forward:
+						if (Application.openNIRead.depthCamGenerating)   
+							depthFrameBefore = Application.openNIRead.readFullFrame();						
+						goForward(); 
+						break;
+					case backward: 
+						if (Application.openNIRead.depthCamGenerating)   
+							depthFrameAfter = Application.openNIRead.readFullFrame();						
+						goBackward(); 
 				}
 				
 				Util.delay((int) voltsComp(n));
 
 				stopGoing();
+				
+				String msg = null;
+				
+				if (depthFrameBefore != null) { // went forward
+					Util.delay(750); // allow for slow to stop
+					depthFrameAfter = Application.openNIRead.readFullFrame();
+					double[] distanceMoved = Application.scanMatch.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
+					msg = "distance moved d: "+(int) distanceMoved[0]+", angle:"+(int) distanceMoved[1] +
+							", best avg: "+distanceMoved[2];
+				}
+				else if (depthFrameAfter != null) { // went backward
+					Util.delay(750);
+					depthFrameBefore = Application.openNIRead.readFullFrame();
+					double[] distanceMoved = Application.scanMatch.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
+					msg = "distance moved d: -"+(int) distanceMoved[0]+", angle: "+(int) distanceMoved[1] +
+							", best avg: "+distanceMoved[2];	
+				}
+				
 				state.put(State.values.motorspeed, tempspeed);
-				application.message(null, "motion", "stopped");
+				application.message(msg, "motion", "stopped");
 				
 			}
 		}).start();

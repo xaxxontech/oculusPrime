@@ -9,9 +9,15 @@ import oculusPrime.Util;
 public class Scratch {
 
         public static void main(String[] args) {
-        	// int n = 7-320/10/2;
-        	int[][] n = new int[4][9];
-        	System.out.println(n[0].length);
+
+//        	int b = 0xffff;
+//        	System.out.println(b);
+//        	int c =  0x10000 + b;
+//        	System.out.println(c);
+//        	System.out.println(c - b );
+//        	System.out.println(c & 0xffff);
+        	System.out.println(255 << 8);
+        	System.out.println(0xff00);
 
         }
 }

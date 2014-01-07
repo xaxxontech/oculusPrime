@@ -23,6 +23,7 @@ import org.red5.io.amf3.ByteArray;
 
 import developer.SendMail;
 import developer.UpdateFTP;
+import developer.depth.ScanMatch;
 
 
 /** red5 application */
@@ -49,6 +50,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	public ArduinoPower powerport = null;
 	public static TelnetServer commandServer = null;
 	public static developer.depth.OpenNIRead openNIRead = null;
+	public static developer.depth.ScanMatch scanMatch = null; 
 	public static Speech speech = new Speech();
 	public static byte[] framegrabimg  = null;
 	public static Boolean passengerOverride = false;
@@ -247,6 +249,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			
 			openNIRead = new developer.depth.OpenNIRead();
+			scanMatch = new developer.depth.ScanMatch();
 
 		}
 			
@@ -542,7 +545,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			messageplayer("command received: " + fn + str, null, null);
 			break;
 			
-		case rotate:
+		case left:
+		case right:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
 				messageplayer("motion disabled", "motion", "disabled");
 				break;
@@ -552,11 +556,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				break;
 			}
 			moveMacroCancel();
-			comport.rotate(ArduinoPrime.direction.valueOf(cmd[0]), Integer.parseInt(cmd[1]));
-			messageplayer("rotate: " + cmd[0]+ " "+cmd[1], "motion", "moving");
+			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Integer.parseInt(str));
+			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
 			break;
 			
-		case movedistance:
+		case forward:
+		case backward:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
 				messageplayer("motion disabled", "motion", "disabled");
 				break;
@@ -566,8 +571,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				break;
 			}
 			moveMacroCancel();
-			comport.movedistance(ArduinoPrime.direction.valueOf(cmd[0]), Double.parseDouble(cmd[1]));
-			messageplayer("move distance: " + cmd[0]+ " "+cmd[1]+"m", "motion", "moving");
+//			comport.movedistance(ArduinoPrime.direction.valueOf(cmd[0]), Double.parseDouble(cmd[1]));
+			comport.movedistance(ArduinoPrime.direction.valueOf(fn.toString()),Double.parseDouble(str));
+			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
 			break;
 			
 		case systemcall:
