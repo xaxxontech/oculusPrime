@@ -1,7 +1,11 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.Map;
 
 /*
@@ -18,28 +22,121 @@ import java.util.Map;
  * 
  */
 public class ScriptRunner {
-
-	public static final String dirName = "C:\\oculusPrime\\webapps\\oculusPrime\\scripts\\startup";
 	
-	Process proc;
-
-	public static void main(String[] args) {
+	public static final HashMap<String, Process> pids = new HashMap<String, Process>();
+	
+	public static final String sep = System.getProperty("file.separator");
+	public static String dirName = System.getenv("RED5_HOME") +sep+"webapps"+sep+"oculusPrime"+sep+"scripts"+sep+"startup";
+	
+	// public static void main(String[] args) { runScripts(); }
+	
+	public static void runScripts(){
 		
 		File[] python = getPythonScripts();
+		File[] batch = getBatchScripts();
+		File[] shell = getShellScripts();
+		File[] ruby = getRubyScripts();
 
 		if (new File(dirName).isDirectory()) {
 			System.out.println("python scripts: " + python.length);
-			System.out.println("ruby scripts: " + getRubyScripts().length);
+			System.out.println(" batch scripts: " + batch.length);
+			System.out.println("shell scripts: " + shell.length);
+			System.out.println("ruby scripts: " + ruby.length);
 		}
+				
+		for(int i = 0 ; i < batch.length ; i++) launchWindowsBatch(batch[i]);
+	
+	//	for(int i = 0 ; i < python.length ; i++) launchPython(python[i]);
 		
-		for(int i = 0 ; i < python.length ; i++){
-			System.out.println("name: " + python[i].getAbsolutePath() + "\n");
-			Util.systemCallBlocking( "python " + python[i].getAbsolutePath());
-		}
+		//for(int i = 0 ; i < shell.length ; i++) launchPython(python[i]);
+		
 	}
 	
-
-	public void launch(){
+	public static void launchPython(final File script){
+		new Thread(new Runnable() { 
+			public void run() {
+				try {
+					
+					System.out.println("___ launch python script: " + script.getAbsolutePath());
+					
+					ProcessBuilder pb = new ProcessBuilder("C:\\Python27\\python.exe", script.getAbsolutePath());   
+					pb.directory(new File(script.getParent()));
+					
+					// pb.environment().put(key, value);
+					Process proc = pb.start();
+					
+					// record launched scripts
+					pids.put(script.getName(), proc);
+					
+					BufferedReader err = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+					BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+					
+					String line = null;
+					while((line = in.readLine()) != null){
+						if(line.length() > 0){
+							Util.log("[" + script.getName() + "] output: " + line);
+						}
+					}
+					
+					while((line = err.readLine()) != null){
+						if(line.length() > 0){
+							Util.log("[" + script.getName() + "] error: " + line);
+						}
+					}
+					
+					err.close();
+					in.close();
+					
+				} catch (Exception e) {
+					Util.log("[" + script.getName() + "] exception: " + e.getLocalizedMessage());
+				}		
+			} 	
+		}).start();
+	}
+	
+	public static void launchWindowsBatch(final File script){
+		new Thread(new Runnable() { 
+			public void run() {
+				try {
+					
+					// System.out.println("___ launch script: " + script.getAbsolutePath());
+					
+					ProcessBuilder pb = new ProcessBuilder(script.getAbsolutePath()); 
+					pb.directory(new File(script.getParent()));
+					
+					// pb.environment().put(key, value);
+					Process proc = pb.start();
+					
+					// record launched scripts
+					pids.put(script.getName(), proc);
+					
+					BufferedReader err = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+					BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+					
+					String line = null;
+					while((line = in.readLine()) != null){
+						if(line.length() > 0){
+							Util.log("[" + script.getName() + "] output: " + line);
+						}
+					}
+					
+					while((line = err.readLine()) != null){
+						if(line.length() > 0){
+							Util.log("[" + script.getName() + "] error: " + line);
+						}
+					}
+					
+					err.close();
+					in.close();
+					
+				} catch (Exception e) {
+					Util.log(e.getLocalizedMessage(), this);
+				}		
+			} 	
+		}).start();
+	}
+/*
+	public static void launch_(){
 		new Thread(new Runnable() { 
 			public void run() {
 				try {
@@ -52,7 +149,7 @@ public class ScriptRunner {
 					ProcessBuilder pb = new ProcessBuilder(cmd, "-jar", arg);
 					Map<String, String> env = pb.environment();
 					env.put("LD_LIBRARY_PATH", dir);
-					proc = pb.start();
+					Process proc = pb.start();
 					
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -60,7 +157,7 @@ public class ScriptRunner {
 			} 	
 		}).start();
 	}
-	
+	*/
 
 	public static File[] getPythonScripts() {
 
@@ -80,6 +177,30 @@ public class ScriptRunner {
 		File[] files = dir.listFiles(new FilenameFilter() {
 			public boolean accept(File dir, String name) {
 				return name.toLowerCase().endsWith(".rb");
+			}
+		});
+
+		return files;
+	}
+	
+	public static File[] getBatchScripts() {
+
+		File dir = new File(dirName);
+		File[] files = dir.listFiles(new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				return name.toLowerCase().endsWith(".bat");
+			}
+		});
+
+		return files;
+	}
+	
+	public static File[] getShellScripts() {
+
+		File dir = new File(dirName);
+		File[] files = dir.listFiles(new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				return name.toLowerCase().endsWith(".sh");
 			}
 		});
 
