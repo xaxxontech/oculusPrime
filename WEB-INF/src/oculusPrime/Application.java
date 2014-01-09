@@ -246,11 +246,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
 		
-		if (settings.getBoolean(ManualSettings.developer.name())) {
-			
+		if (settings.getBoolean(ManualSettings.developer.name())) {			
 			openNIRead = new developer.depth.OpenNIRead();
 			scanMatch = new developer.depth.ScanMatch();
-
 		}
 			
 		

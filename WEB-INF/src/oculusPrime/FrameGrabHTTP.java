@@ -52,8 +52,9 @@ public class FrameGrabHTTP extends HttpServlet {
             	processedImg(req,res);
             }
             else if (mode.equals("floorPlane") && Application.openNIRead.depthCamGenerating) {
-            	short[] depthFrame = Application.openNIRead.readFullFrame();
-            	Application.processedImage = Application.scanMatch.floorPlaneImg(depthFrame);
+//            	short[] depthFrame = Application.openNIRead.readFullFrame();
+//            	Application.processedImage = Application.scanMatch.floorPlaneImg(depthFrame);
+            	Application.processedImage = Application.scanMatch.floorPlaneImg();
             	processedImg(req,res);
             }
 

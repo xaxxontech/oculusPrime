@@ -9,6 +9,7 @@ import java.nio.channels.FileChannel;
 import java.util.Map;
 
 import developer.image.ImageUtils;
+import oculusPrime.Application;
 import oculusPrime.Util;
 
 
@@ -23,8 +24,13 @@ public class OpenNIRead  {
 	ImageUtils imageUtils = new ImageUtils();
 	private int width = 320;
 	private int height = 240;
+//	Application app;
 	
 //	public OpenNIRead()  {
+//	}
+	
+//	public OpenNIRead(Application a) {
+//		app = a;
 //	}
 	
 	public void startDepthCam() {

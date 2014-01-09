@@ -11,6 +11,8 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JLabel;
 
+import oculusPrime.Application;
+
 public class TestPanel extends JFrame {
 
 	private JPanel contentPane;
@@ -37,34 +39,37 @@ public class TestPanel extends JFrame {
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion610-1.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion610-2.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion350-1.raw"));
-	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion350-2.raw"));
+//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion350-2.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion500-1.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion500-2.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion517-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion517-2.raw"));
+	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion517-2.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion25deg-1.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion25deg-2.raw"));
 //	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion450-1.raw"));
 //	    	    	short[] frameAfter = s.getFrame(new File(leader+"xtion450-2.raw")); // INCOMPLETE!!
 			    				    	
 			    	
-//			    	int[][] frameCells1 = s.resampleAveragePixel(frameBefore,4,4);
+			    	int[][] frameCells1 = s.resampleAveragePixelWithFloorPlane(frameBefore, 2, 2);
 //			    	int[][] scaledFrameCells = s.scaleResampledPixels(frameCells1, 450);
 //			    	System.out.println(frameCells1[40][30]);
-//			    	short[] pixels1 = s.cellsToPixels(scaledFrameCells);
+			    	int[] pixels1 = s.cellsToPixels(frameCells1);
 			    	
 //			    	frameCells1 = s.resampleClosestPixel(pixels1, 10);
 //			    	pixels1 = s.cellsToPixels(frameCells1, 10);
 			    	
-			    	BufferedImage img2 = s.generateDepthFrameImg(frameBefore);
-			    	
+			    	BufferedImage img2 = s.generateDepthFrameImgWithFloorPlane(pixels1);
 			    	lblNewLabel.setIcon(new ImageIcon(img2));
 					panel.repaint();
 
 					
-					
-			    	int[][] frameCells = s.resampleAveragePixelWithFloorPlane(frameBefore, 2, 2);
-			    	int[] pixels = s.cellsToPixels(frameCells);
+					int[][] frameCells = s.resampleAveragePixel(frameBefore, 2, 2);
+			    	int[][] frameCellsFP = s.findFloorPlane(frameCells);
+			    	int[] pixels = s.cellsToPixels(frameCellsFP);
+			    	
+//			    	int[][] frameCells = s.resampleAveragePixelWithFloorPlane(frameBefore, 2, 2);
+//			    	int[] pixels = s.cellsToPixels(frameCells);
+			    	
 			    	BufferedImage img1 = s.generateDepthFrameImgWithFloorPlane(pixels);
 
 			    	lblNewLabel_1.setIcon(new ImageIcon(img1));
