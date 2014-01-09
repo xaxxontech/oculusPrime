@@ -33,13 +33,13 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private IConnection player = null;
 	private boolean pendingplayerisnull = true;
 	private boolean initialstatuscalled = false; 
+	private ScriptRunner scriptRunner = new ScriptRunner();
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private State state = State.getReference();
 	private BanList banlist = BanList.getRefrence();
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
-	private ScriptRunner scriptRunner = null;
 	
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
@@ -234,23 +234,17 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
 		
-		if (settings.getBoolean(ManualSettings.developer.name())) {
+		if (settings.getBoolean(ManualSettings.developer.name())) openNIRead = new developer.OpenNIRead();
+	
+		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) commandServer = new TelnetServer(this);
 			
-			openNIRead = new developer.OpenNIRead();
-
-		}
-			
-		
-		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) {
-			commandServer = new TelnetServer(this);
-			scriptRunner = new ScriptRunner();
-		}
-		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
+		scriptRunner.runScripts();
+		
 		grabberInitialize();
 				
 		new SystemWatchdog(); // reboots OS every 2 days
