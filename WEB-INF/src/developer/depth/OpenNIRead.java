@@ -24,14 +24,6 @@ public class OpenNIRead  {
 	ImageUtils imageUtils = new ImageUtils();
 	private int width = 320;
 	private int height = 240;
-//	Application app;
-	
-//	public OpenNIRead()  {
-//	}
-	
-//	public OpenNIRead(Application a) {
-//		app = a;
-//	}
 	
 	public void startDepthCam() {
 		if (depthCamInit) return;
@@ -195,7 +187,6 @@ public class OpenNIRead  {
 			ch.close();
 			file.close();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return false;
@@ -210,21 +201,22 @@ public class OpenNIRead  {
 		for(int y=0; y<height; y++) {
 //			for (int x=width-1; x>=0; x--) { 
 			for(int x=0; x<width; x++) {
-//				int hue = depth[x + y*width];
-//				if (hue > maxDepthInMM)	hue = maxDepthInMM;
-//				if (hue != 0) {
-//					hue = 255 - (int) ((float) (hue)/maxDepthInMM * 255f);
-//				}
-//				int argb = (hue<<16) + (0<<8) + hue;
+				
+				int hue = depth[x + y*width];
+				if (hue > maxDepthInMM)	hue = maxDepthInMM;
+				if (hue != 0) {
+					hue = 255 - (int) ((float) (hue)/maxDepthInMM * 255f);
+				}
+				int argb = (hue<<16) + (0<<8) + hue;
 				
 				
-				short d = depth[x + y*width];
-				if (d > maxDepthInMM)	d = 0;
-				int red = d  >> 8;
-				red *=8;
-				int blue=0;
-				if (d != 0) blue = 255 - (int) ((float) (d)/maxDepthInMM * 255f);
-				int argb = (red<<16) + (0<<8) + blue;
+//				short d = depth[x + y*width];
+//				if (d > maxDepthInMM)	d = 0;
+//				int red = d  >> 8;
+//				red *=8;
+//				int blue=0;
+//				if (d != 0) blue = 255 - (int) ((float) (d)/maxDepthInMM * 255f);
+//				int argb = (red<<16) + (0<<8) + blue;
 				
 				img.setRGB(width-x-1, y, argb);    // flip horiz
 			}

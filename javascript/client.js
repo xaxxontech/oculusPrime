@@ -2327,6 +2327,12 @@ function processedImg(mode) {
 function depthView(mode) {
 	if (mode=="off")  { popupmenu("aux", "close"); }
 	else {
+		var w = 320;
+		var h = 240;
+		if (mode=="floorPlaneTop") {
+			w = 232;
+			h = 240;
+		}
 		var v = document.getElementById("video");
 		var xy = findpos(v);
 		var x = xy[0]+v.offsetWidth;
@@ -2334,11 +2340,10 @@ function depthView(mode) {
 		src = "frameGrabHTTP?mode="+mode;
 		var str ="<img id='depthImg' src='"+src+"' alt='' ";
 		str +="onload='depthViewRepeat(&quot;"+mode+"&quot;);' "
-		str += "width='320' height='240'>"
-		popupmenu('aux', 'show', x, y, str, 320, 1, 0);
+		str += "width='"+w+"' height='"+h+"'>"
+		popupmenu('aux', 'show', x, y, str, w, 1, 0);
 //		radarimagereload();
 	}
-
 
 }
 

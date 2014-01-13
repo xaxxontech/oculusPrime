@@ -8,47 +8,19 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Vector;
 
 import oculusPrime.Application;
 
 
-public class ScanMatch {
+public class ScanUtils {
 	
-	/*
-	 * read 320x240 frame before move, store in variable: short[] frameBefore
-	 * then, move bot -- linear or rotation
-	 * read another 320x340 frame, store in variable: short[] frameAfter
-	 * if linear move forward 0.6m:
-	 * 		resample frameBefore (lower resolution)...? 32x24 (instead of averaging, take *closest* pixel??)
-	 * 		resample frameAfter, ctr-scale up to match distance checking for		
-	 * 			-tricky float operation or what? closest pixel as well?
-	 * 		overlay frameBefore over frameAfter in various positions, choose closest match
-	 * 		check for range: +/- 50% guessed distance (2mm increments), +/- 10 deg X, +/- 10 deg Y (resolution incrm.)
-	 * 			-check for each range starting from *centers* - if progress is getting consistently WORSE, quit
-	 * 		scale-resampled frameAfters are good for +/-5mm (ie., 1 resampled frameAfter for 10 possible positions)
-	 * 
-	 * 
-	 */
-	
-	final int width=320;
-	final int height=240;
-	private final int camFOVx = 58; // degrees
-	private final int camFOVy = 45; // degrees
+	private final static int width=320;
+	private final static int height=240;
+	private final static int camFOVx = 58; // degrees
+	private final static int camFOVy = 45; // degrees
 	public final int maxDepthInMM = 5000; // 3500
-//	int res = 10; // re-samples 320x240 to 32x24
-//	short[] frameBeforeMove = null;
-//	short[] frameAfterMove = null;
-//	private final int fpIndicatorDepth = 9999; 
-	private final int depthCamVertDistfromFloor = 290;
-	double yAngleCompStart = 0;
-//	private Application app;
-//
-//	public ScanMatch(Application a) {
-//		app = a;
-//	}
-//
-//	public ScanMatch() {}
+	private final static int depthCamVertDistfromFloor = 290;
+	static double yAngleCompStart = 0;
 	
 	/**
 	 * Load framedata from file. 
@@ -94,6 +66,7 @@ public class ScanMatch {
 	 * @param framePixels short[] array of 16-bit depth data
 	 * @return int[][] xy array of closest pixels
 	 */
+	// as yet unused, average pixel seems better accuracy
 	public int[][] resampleClosestPixel(short[] framePixels, int res) {
 		
 		int[][] result = new int[width/res][height/res];
@@ -125,7 +98,7 @@ public class ScanMatch {
 	 * @param framePixels short[] array of 16-bit depth data
 	 * @return int[][] xy array of averaged pixels
 	 */
-	public int[][] resampleAveragePixel(short[] framePixels, int resX, int resY) {
+	public static int[][] resampleAveragePixel(short[] framePixels, int resX, int resY) {
 		
 		int[][] result = new int[width/resX][height/resY]; //TODO: may need to add or subtract 1?
 		int xx;
@@ -157,110 +130,7 @@ public class ScanMatch {
 	}
 	
 	
-	public int[][] resampleAveragePixelWithFloorPlane(short[] framePixels, int resX, int resY) {
-		
-		int xx;
-		int yy;
-		final int zerosmax = (int) (resX*resY*0.25);
-		final double yAngleTolerance = 1;
-		final double maxYangleComp = 3;
-		double yAngleCompStart = 0;
-		double yAngleComp = yAngleCompStart;
-		int winningTotal = 0;
-		double yAngleCompIncrement = 0.2;
-//		double winningYangleComp = yAngleComp;
-		int fail = 0;
-		ArrayList<int[][]> results = new ArrayList<int[][]>(); 
-		int c = 0;
-		int index = 0;
-		int winningIndex = -1;
-		int[][] result;
-		
-		while ( true ) {
-			int total = 0;
-
-			result = new int[width/resX][height/resY];
-			for (int x = 0; x < width; x += resX) {			
-				for (int y=0; y<height; y+= resY) {
-					
-					// floor plane angles
-					int fpMin = 0;
-					int fpMax = 0;
-					
-					final int yStart = height/2 + (int) ((double) height/camFOVy * (8 -yAngleComp)); 
-					if (y > yStart) { // lower portion FOV only    (y > (int) (height * 0.6)
-						double yAngle = (y - (height/2.0)) * camFOVy/height; // horiz=0 degrees, below = positive
-						fpMin = (int) ( depthCamVertDistfromFloor / Math.sin((yAngle + yAngleComp + yAngleTolerance)*Math.PI/180) );
-						fpMax = (int) ( depthCamVertDistfromFloor / Math.sin((yAngle + yAngleComp - yAngleTolerance)*Math.PI/180) );
-	//					if (fpMax > 2500) fpMax = 2500;
-					}
-					
-					int zeros = 0;
-					int runningTotal = 0;
-					for (xx=0; xx<resX; xx++) {
-						for (yy=0; yy<resY; yy++) {
-							int p = framePixels[x + xx + (y+yy)*width];
-							if (p==0)  { zeros ++; }
-							runningTotal += p;
-						}
-					}
-					if (zeros < zerosmax) {
-						int d= runningTotal / (resX*resY);
-						if (d>fpMin && d<fpMax)  {
-//							d = fpIndicatorDepth;
-							d = 0x10000 + d;
-							total ++;
-
-						}
-						result[x/resX][y/resY] = d;
-					}
-					
-				}
-			}
-			
-			if (total > 0 && total > winningTotal) {
-				winningTotal = total;
-//				winningYangleComp = yAngleComp;
-				winningIndex = index;
-				results.add(result); // only save good ones
-				index++;
-//				fail--;
-				if (fail <0) fail = 0;
-			}
-//			else  fail++;
-			 
-//			if (fail > 2) {
-//				System.out.println("fail");
-//				break; // getting progressively worse, don't bother checking the rest
-//			}
-			
-			yAngleComp = yAngleCompStart + yAngleCompIncrement * c;
-
-			if (yAngleCompIncrement > 0) {
-				if (yAngleComp > yAngleCompStart + maxYangleComp) {
-					yAngleComp = yAngleCompStart - yAngleCompIncrement * c;
-					if (yAngleComp < yAngleCompStart - maxYangleComp)  break;
-				}
-			}
-			else {
-				c++;
-				if (yAngleComp < yAngleCompStart - maxYangleComp)  {
-					yAngleComp = yAngleCompStart + yAngleCompIncrement * c;
-					if (yAngleComp > yAngleCompStart + maxYangleComp)  break;
-				}
-			}
-			
-			yAngleCompIncrement *= -1;
-
-		}
-
-//		System.out.println(winningYangleComp);
-		if (winningIndex != -1)    return results.get(winningIndex);
-		else   return result;
-	}
-	
-	
-	public int[][] findFloorPlane(int[][] frameCells) {
+	public static int[][] findFloorPlane(int[][] frameCells) {
 
 		int cWidth = frameCells.length;
 		int cHeight = frameCells[0].length;
@@ -300,7 +170,7 @@ public class ScanMatch {
 					
 					int d= frameCells[x][y];
 					if (d>fpMin && d<fpMax)  {
-						d = 0x10000 + d;
+						d = 0x10000 + d; // set 17th bit = 1 to indicate floor plane
 						total ++;
 
 					}
@@ -315,8 +185,6 @@ public class ScanMatch {
 				winningIndex = index;
 				results.add(result); // only save good ones
 				index++;
-//				fail--;
-//				if (fail <0) fail = 0;
 				fail = 0;
 			}
 			else  {
@@ -331,19 +199,15 @@ public class ScanMatch {
 			yAngleComp = yAngleCompStart + yAngleCompIncrement * c;
 
 			if (yAngleCompIncrement > 0) {
-//				if (yAngleComp > yAngleCompStart + maxYangleComp) {
 				if (yAngleComp > maxYangleComp) {
 					yAngleComp = yAngleCompStart - yAngleCompIncrement * c;
-//					if (yAngleComp < yAngleCompStart - maxYangleComp)  break;
 					if (yAngleComp < -maxYangleComp)  break;
 				}
 			}
 			else {
 				c++;
-//				if (yAngleComp < yAngleCompStart - maxYangleComp)  {
 				if (yAngleComp < -maxYangleComp)  {
 					yAngleComp = yAngleCompStart + yAngleCompIncrement * c;
-//					if (yAngleComp > yAngleCompStart + maxYangleComp)  break;
 					if (yAngleComp > maxYangleComp)  break;
 				}
 			}
@@ -501,7 +365,6 @@ public class ScanMatch {
 		return result;
 	}
 	
-
 	/**
 	 * Find actual depth traveled by comparing overlaid pixels in various positions.
 	 * @param frameBefore 16-bit pixel array
@@ -626,12 +489,106 @@ public class ScanMatch {
 
 		return generateDepthFrameImgWithFloorPlane(pixels);
 	}
+	
+	public static void addFrameToMap(short[] depth, int distance, double angle) {
+		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
+		int[][] frameCellsFP = findFloorPlane(frameCells);
+    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP);
+    	Mapper.add(floorPlaneCells, distance, angle);
+	}
+	
+	public BufferedImage floorPlaneTopViewImg() {
+		short[] depth = Application.openNIRead.readFullFrame();
+		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
+		int[][] frameCellsFP = findFloorPlane(frameCells);
+    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP);
+    	return byteCellsToImage(floorPlaneCells);
+	}
+	
+	/**
+	 * Project floorplane from depth view into plan view
+	 * @param frameCells two dimensional array with floorplane highlighted by 5th bit
+	 * @return two dimensional byte array 00=unknown, 01=floor plane, 11=not floor plane
 
+	 */
+	public static byte[][] floorPlaneToPlanView(int[][] frameCells) {
+		int maxDepth = 3500;
+		final int h = 240;
+//		final int yres =(int) ((double) maxDepth /h);
+//		final int xres = yres;
+//		final int h = (int) ((double)maxDepth /yres);
+		final int w = (int) (Math.sin((camFOVx/2)*Math.PI/180) * h) * 2;
+//		System.out.println("width: "+w+", height: "+h);
+		final int cwidth = frameCells.length;
+		final int cheight = frameCells[0].length;
+		final double angle =  (double)camFOVx/2*Math.PI/180; // 0.392699082; // 22.5 deg in radians from ctr, or half included view angle
 		
+		byte[][] result = new byte[w][h];
+
+		final int xdctr = cwidth/2;
+
+		for (int y=0; y<cheight; y++) {
+			for (int x=0; x<cwidth; x++ ) {
+				int d=frameCells[x][y]; // depth
+				
+				byte b = 0b11;
+				if ((d & 0xf0000) >> 16 == 1)  { // 17th bit set at 1, is floor plane
+					d = d & 0xffff;
+					b = 0b01;
+				}
+//				int y = (int) ((float)xdepth[xd]/(float)maxDepthInMM*(float)h);
+				int ry = (int) ((double) d/ (double) maxDepth  * (double) h);
+				double xdratio = (double)(x - xdctr)/ (double) xdctr;
+				int rx = (w/2) - ((int) (Math.tan(angle)*(double) ry * xdratio));
+
+//					System.out.println("x: "+x+", y: "+y+", d: "+d+", rx:"+rx+", ry: "+ry);
+				
+				if (ry<h && ry>=0 && rx>=0 && rx<w) {
+					result[rx][h-ry-1] = b;
+				}
+				
+				
+			}
+		}
+		
+//		result[3][3]=true;
+		return result;
+	}
+	
+	public BufferedImage byteCellsToImage(byte[][] cells ) {
+
+		final int cwidth = cells.length;
+		final int cheight= cells[0].length;
+		BufferedImage img = new BufferedImage(cwidth, cheight, BufferedImage.TYPE_INT_RGB);
+		
+		for(int y=0; y<cheight; y++) {
+			int intensity = (int) (((double)(cheight-y)/cheight)*255.0);
+//			intensity = 100;
+			for(int x=0; x<cwidth; x++) {
+				
+				/* single hue */
+				int argb = 0;
+				switch (cells[x][y]) {
+					case 0b01: argb=0x00ff00; break;
+					case 0b11: argb=(intensity<<16)+(0<<8)+intensity; break;
+					default: argb = 0x000000;
+				}
+//				if (x==4) 	argb = 0x0000ff;
+//				int argb = (hue<<16) + (0<<8) + hue;
+
+				img.setRGB(x, y, argb);    // flip horiz
+//				img.setRGB(x, y, argb);    // flip horiz
+
+			}
+		}
+		
+		return img;
+	}
+	
 	
     public static void main(String[] args) {
     	
-    	ScanMatch s = new ScanMatch();
+    	ScanUtils s = new ScanUtils();
     	String leader = "Z:\\temp\\"; // windows
 //    	String leader = "/mnt/skyzorg/temp/"; // linux 
 //    	short[] frameBefore = s.getFrame(new File(leader+"xtion610-1.raw"));
@@ -644,19 +601,21 @@ public class ScanMatch {
 //    	short[] frameAfter = s.getFrame(new File(leader+"xtion517-2.raw"));
 //    	short[] frameBefore = s.getFrame(new File(leader+"xtion25deg-1.raw"));
 //    	short[] frameAfter = s.getFrame(new File(leader+"xtion25deg-2.raw"));
-    	short[] frameBefore = s.getFrame(new File(leader+"xtion450-1.raw"));
-    	short[] frameAfter = s.getFrame(new File(leader+"xtion450-2.raw"));
+//    	short[] frameBefore = s.getFrame(new File(leader+"xtion450-1.raw"));
+//    	short[] frameAfter = s.getFrame(new File(leader+"xtion450-2.raw"));
 
     	
 //    	int[][] zork =  s.resampleClosestPixel(frameBefore, 4);
 //    	System.out.println(zork[12][12]);
 //    	System.out.println(zork[4][4]);
 
-    	double[] d = s.findDepth(frameBefore, frameAfter, 500);
-    	System.out.println("winner d: "+(int) d[0]+", xɵ:"+d[1]); //+", y: "+d[2]);
+//    	double[] d = s.findDepth(frameBefore, frameAfter, 500);
+//    	System.out.println("winner d: "+(int) d[0]+", xɵ:"+d[1]); //+", y: "+d[2]);
     	
 //    	double a = s.findAngle(frameBefore, frameAfter);
 //    	System.out.println("winner angle: "+a);
+    	
+    	s.floorPlaneToPlanView(new int[][]{new int[]{0}, new int[]{0}});
     }
 
 }

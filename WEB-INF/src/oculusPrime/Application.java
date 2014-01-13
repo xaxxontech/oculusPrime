@@ -23,7 +23,7 @@ import org.red5.io.amf3.ByteArray;
 
 import developer.SendMail;
 import developer.UpdateFTP;
-import developer.depth.ScanMatch;
+import developer.depth.ScanUtils;
 
 
 /** red5 application */
@@ -50,7 +50,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	public ArduinoPower powerport = null;
 	public static TelnetServer commandServer = null;
 	public static developer.depth.OpenNIRead openNIRead = null;
-	public static developer.depth.ScanMatch scanMatch = null; 
+	public static developer.depth.ScanUtils scanUtils = null; 
 	public static Speech speech = new Speech();
 	public static byte[] framegrabimg  = null;
 	public static Boolean passengerOverride = false;
@@ -248,7 +248,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {			
 			openNIRead = new developer.depth.OpenNIRead();
-			scanMatch = new developer.depth.ScanMatch();
+			scanUtils = new developer.depth.ScanUtils();
 		}
 	
 		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) commandServer = new TelnetServer(this);

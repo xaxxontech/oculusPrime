@@ -7,6 +7,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TooManyListenersException;
 
+import developer.depth.Mapper;
+import developer.depth.ScanUtils;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;
@@ -190,8 +192,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 //				}
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
-						state.get(oculusPrime.State.values.driver) == null &&
-						state.getInteger(oculusPrime.State.values.telnetusers) < 1 && isconnected) {
+						state.get(oculusPrime.State.values.driver) == null && isconnected &&
+						!state.getBoolean(oculusPrime.State.values.moving)) {
+//						state.getInteger(oculusPrime.State.values.telnetusers) < 1 && isconnected) { //TODO: this started barfing after commit 5ddbcd7
+					
 					// check for autodocking = false; driver = false; telnet = false;
 					// application.message("battery board periodic reset", "battery", "resetting");
 					Util.log("motors board periodic reset", this);
@@ -759,9 +763,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				double n = fullrotationdelay * degrees / 360;
 				
 				short[] depthFrameBefore = null;
-				if (Application.openNIRead.depthCamGenerating)   
+				if (Application.openNIRead.depthCamGenerating) {
 					depthFrameBefore = Application.openNIRead.readFullFrame();						
-
+					if (Mapper.map.size()==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+				}
 				
 				switch (dir) {
 					case right: turnRight(); break;
@@ -776,8 +781,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (depthFrameBefore != null) { 
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
-					double angle[] = Application.scanMatch.findAngle(depthFrameBefore, depthFrameAfter);
+					double angle[] = Application.scanUtils.findAngle(depthFrameBefore, depthFrameAfter);
 					msg = "angle moved: "+angle[0]+", best avg: "+angle[1];
+					ScanUtils.addFrameToMap(depthFrameAfter, 0, angle[0]);
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);
@@ -801,13 +807,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				switch (dir) {
 					case forward:
-						if (Application.openNIRead.depthCamGenerating)   
-							depthFrameBefore = Application.openNIRead.readFullFrame();						
+						if (Application.openNIRead.depthCamGenerating) {   
+							depthFrameBefore = Application.openNIRead.readFullFrame();	
+							if (Mapper.map.size()==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+						}
 						goForward(); 
 						break;
 					case backward: 
-						if (Application.openNIRead.depthCamGenerating)   
+						if (Application.openNIRead.depthCamGenerating) {  
 							depthFrameAfter = Application.openNIRead.readFullFrame();						
+							if (Mapper.map.size()==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+						}
 						goBackward(); 
 				}
 				
@@ -820,16 +830,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (depthFrameBefore != null) { // went forward
 					Util.delay(750); // allow for slow to stop
 					depthFrameAfter = Application.openNIRead.readFullFrame();
-					double[] distanceMoved = Application.scanMatch.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
-					msg = "distance moved d: "+(int) distanceMoved[0]+", angle:"+(int) distanceMoved[1] +
-							", best avg: "+distanceMoved[2];
+					double[] moved = Application.scanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
+					msg = "distance moved d: "+(int) moved[0]+", angle:"+(int) moved[1] +
+							", best avg: "+moved[2];
+					ScanUtils.addFrameToMap(depthFrameAfter, (int) moved[0], moved[1]);
 				}
 				else if (depthFrameAfter != null) { // went backward
 					Util.delay(750);
 					depthFrameBefore = Application.openNIRead.readFullFrame();
-					double[] distanceMoved = Application.scanMatch.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
-					msg = "distance moved d: -"+(int) distanceMoved[0]+", angle: "+(int) distanceMoved[1] +
-							", best avg: "+distanceMoved[2];	
+					double[] moved = Application.scanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
+					msg = "distance moved d: -"+(int) moved[0]+", angle: "+(int) moved[1] +
+							", best avg: "+moved[2];	
+					ScanUtils.addFrameToMap(depthFrameAfter, (int) moved[0], moved[1]);
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);

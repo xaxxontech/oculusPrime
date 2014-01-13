@@ -54,7 +54,11 @@ public class FrameGrabHTTP extends HttpServlet {
             else if (mode.equals("floorPlane") && Application.openNIRead.depthCamGenerating) {
 //            	short[] depthFrame = Application.openNIRead.readFullFrame();
 //            	Application.processedImage = Application.scanMatch.floorPlaneImg(depthFrame);
-            	Application.processedImage = Application.scanMatch.floorPlaneImg();
+            	Application.processedImage = Application.scanUtils.floorPlaneImg();
+            	processedImg(req,res);
+            }
+            else if (mode.equals("floorPlaneTop") && Application.openNIRead.depthCamGenerating) {
+            	Application.processedImage = Application.scanUtils.floorPlaneTopViewImg();
             	processedImg(req,res);
             }
 
@@ -125,12 +129,12 @@ public class FrameGrabHTTP extends HttpServlet {
 	
 	private void generateRadarImage() {
 
-			int w = 240;
-			int h = 320;
+			final int w = 240;
+			final int h = 320;
 			BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
 	
-			int voff = 0;
-			double angle = 0.392699082; // 22.5 deg in radians from ctr, or half included view angle
+			final int voff = 0; // offset
+			final double angle = 0.392699082; // 22.5 deg in radians from ctr, or half included view angle
 			Graphics2D g2d = image.createGraphics();
 			
 			//render background
