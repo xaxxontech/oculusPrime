@@ -1,35 +1,28 @@
 package developer;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import developer.depth.ScanUtils;
+
 
 public class Scratch {
 
         public static void main(String[] args) {
-        	
-        	int cwidth = 2591;
-        	int cheight = 3419;
-        	double angle = 24.8679;
-        	angle = angle *Math.PI/180;
-        	int x = 0;
-        	int y = 1727;
-        	
-			// WRONG: 
-//        	int newX = (int) Math.round( Math.cos(angle+Math.atan((double)y/x)) *  
-//					(y/Math.sin(Math.atan((double)y/x))) + Math.sin(angle)*(cheight-y)  );
+  
+//        	List<List<Byte>> map = new ArrayList<List<Byte>>();
+//        	int[][] map = new int[][] {
+//        			{1,2,3},
+//        			{4,5,6},
+//        			{7,8,9}
+//        	};	
+//        	int[][] temp = map;
+    		int distance = (int) (1000 * ((double) 334/3500)); // scaled
+			int dx = -(int) (Math.sin(Math.toRadians(-45.0))*distance*1.0); 
 
-        	//WORKS
-        	// newX = x/cos a + sin a * (h-(sin a * (x/cos a))-y)
-        	int newX = (int) Math.round( x/Math.cos(angle) + Math.sin(angle) * 
-        			(cheight-(Math.sin(angle)*(x/Math.cos(angle)))-y) );
-        	
-        	
-			// WORKS:
-			int newY = (int) Math.round( Math.sin(angle+Math.atan((double)y/x)) *  
-					(y/Math.sin(Math.atan((double)y/x))) );
-			
-			x=0;
-			System.out.println("x1y1: " +x+", "+y+"   x2y2:" +newX+", "+newY);
-//			System.out.println(Math.atan(1/x));
-			// answer >> x2y2: 1493, 1930
+			System.out.println(distance);
+        	System.out.println(dx);
+	
 			
         }
 }

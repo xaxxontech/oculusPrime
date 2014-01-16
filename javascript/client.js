@@ -494,6 +494,8 @@ function keyBoardPressed(event) {
 		if (keycode == 68) { // D
 			nudge("right");
 		}
+		if (keycode == 84) { nudge("forward"); } // T
+		if (keycode == 66) { nudge("backward") } // B
 		if (keycode == 49) { speedset('slow'); } // 1
 		if (keycode == 50) { speedset('med'); } // 2
 		if (keycode == 51) { speedset('fast'); } // 3

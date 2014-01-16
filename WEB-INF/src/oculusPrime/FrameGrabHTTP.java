@@ -17,9 +17,14 @@ import java.util.Calendar;
 //import java.util.Timer;
 //import java.util.TimerTask;
 
+
+
 import javax.imageio.ImageIO;
 import javax.servlet.*;
 import javax.servlet.http.*;
+
+import developer.depth.Mapper;
+import developer.depth.ScanUtils;
 
 public class FrameGrabHTTP extends HttpServlet {
 	
@@ -58,7 +63,15 @@ public class FrameGrabHTTP extends HttpServlet {
             	processedImg(req,res);
             }
             else if (mode.equals("floorPlaneTop") && Application.openNIRead.depthCamGenerating) {
-            	Application.processedImage = Application.scanUtils.floorPlaneTopViewImg();
+            	Application.processedImage = ScanUtils.floorPlaneTopViewImg();
+            	processedImg(req,res);
+            }
+            else if (mode.equals("map") && Application.openNIRead.depthCamGenerating) {
+            	Application.processedImage = ScanUtils.byteCellsToImage(Mapper.map);         		
+//            	if (req.getParameter("scale") != null) {
+//            		double scale = Double.parseDouble(req.getParameter("scale"));
+//                	Application.processedImage = ScanUtils.byteCellsToImage(Mapper.map, scale);         		
+//            	}
             	processedImg(req,res);
             }
 

@@ -1,6 +1,5 @@
 package developer.depth;
 
-import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -8,10 +7,7 @@ import java.io.File;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
 import javax.swing.JLabel;
-
-import oculusPrime.Application;
 
 public class TestPanel extends JFrame {
 
@@ -31,47 +27,53 @@ public class TestPanel extends JFrame {
 					TestPanel frame = new TestPanel();
 					frame.setVisible(true);
 					
-//					int res =5;
 					
-			    	ScanUtils s = new ScanUtils();
-			    	String leader = "Z:\\temp\\"; // windows
-//	    	    	String leader = "/mnt/skyzorg/temp/"; // linux 
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion610-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion610-2.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion350-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion350-2.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion500-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion500-2.raw"));
-	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion517-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion517-2.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion25deg-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion25deg-2.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion450-1.raw"));
-//	    	    	short[] frameBefore = s.getFrame(new File(leader+"xtion450-2.raw")); // INCOMPLETE!!
-			    				    	
+			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
+//	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
+	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion500-1.raw"));
+	    	    	short[] frameAfter = ScanUtils.getFrame(new File(leader+"xtion500-2.raw"));
 			    	
-			    	int[][] frameCells1 = s.resampleAveragePixel(frameBefore, 2, 2);
-			    	int[][] zork = s.findFloorPlane(frameCells1);
-			    	byte[][] fp = s.floorPlaneToPlanView(zork);
+	    	    	int res =2;
+	    	    	int h = 240;
+	    	    	
+	    	    	int[][] frameCells1 = ScanUtils.resampleAveragePixel(frameAfter, res, res);
+			    	int[][] zork = ScanUtils.findFloorPlane(frameCells1);
+			    	byte[][] fp = ScanUtils.floorPlaneToPlanView(zork, h);
+			    	Mapper.add(fp, 0, 0); 
 			    	
-//			    	frameCells1 = s.resampleClosestPixel(pixels1, 10);
-//			    	pixels1 = s.cellsToPixels(frameCells1, 10);
-			    	
-			    	BufferedImage img2 = s.byteCellsToImage(fp);
+			    	BufferedImage img2 = ScanUtils.byteCellsToImage(Mapper.map);
 			    	lblNewLabel.setIcon(new ImageIcon(img2));
+			    	panel.setBounds(5,0,img2.getWidth(),img2.getHeight()+5);
 					panel.repaint();
-					System.out.println("img2: "+img2.getWidth()+", "+img2.getHeight());
-
+			    	System.out.println("img2: "+img2.getWidth()+", "+img2.getHeight());
 					
-			    	byte[][] glorg = Mapper.rotate(fp, -30);
-//			    	
-			    	BufferedImage img1 = s.byteCellsToImage(glorg);
+			    	
+			    	int[][] frameCells2 = ScanUtils.resampleAveragePixel(frameAfter, res, res);
+			    	int[][] blorg = ScanUtils.findFloorPlane(frameCells2);
+			    	byte[][] asdf = ScanUtils.floorPlaneToPlanView(blorg, h);
+//			    	Mapper.add(asdf, 555, 0);
+//			    	Mapper.add(asdf, 0, 35);
+//			    	Mapper.add(asdf, 0, 35);
+//			    	Mapper.add(asdf, 0, 19);
+//			    	Mapper.add(asdf, 999, 0);
+//			    	Mapper.add(asdf, 999, 0);
+//			    	Mapper.add(asdf, 999, 0);
+//			    	Mapper.add(asdf, 999, 0);
+//			    	Mapper.add(asdf, 0, 35);
+//			    	Mapper.add(asdf, 0, 35);
+//			    	Mapper.add(asdf, 0, 19);
+//			    	Mapper.add(asdf, 999, 0);
+//			    	Mapper.add(asdf, 999, 0);
+			    	Mapper.add(asdf,  0, -135);
+//			    	Mapper.add(asdf,  0,  1);
+			    	Mapper.add(asdf,  999,  0);
+
+			    	BufferedImage img1 = ScanUtils.byteCellsToImage(Mapper.map);
 
 			    	lblNewLabel_1.setIcon(new ImageIcon(img1));
-					panel_1.setBounds(340, 25, img1.getWidth(), img1.getHeight());
+					panel_1.setBounds(340, 0, img1.getWidth(), img1.getHeight()+10);
 					panel_1.repaint();
-					System.out.println("img1: "+img1.getWidth()+", "+img1.getHeight());
-										
+ 					System.out.println("img1: "+img1.getWidth()+", "+img1.getHeight());
 					
 					
 				} catch (Exception e) {
@@ -86,20 +88,24 @@ public class TestPanel extends JFrame {
 	 */
 	public TestPanel() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 750, 500);
+		setBounds(0, 0, 750, 500);
 		contentPane = new JPanel();
-		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+//		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
 		
-		panel.setBounds(5, 25, 320, 240);
+		panel.setBounds(0, 0, 320, 240);
 		contentPane.add(panel);
+//		panel.setLayout(null);
+		lblNewLabel.setBounds(160, 0, 0, 0);
 		
 		panel.add(lblNewLabel);
 		
-		panel_1.setBounds(340, 25, 320, 240);
+		panel_1.setBounds(340, 0, 320, 240);
 		contentPane.add(panel_1);
+//		panel_1.setLayout(null);
+		lblNewLabel_1.setBounds(160, 0, 0, 0);
 		
 		panel_1.add(lblNewLabel_1);
 	}

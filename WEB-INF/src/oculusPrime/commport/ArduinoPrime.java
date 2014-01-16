@@ -81,7 +81,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected String version = null;
 	
 	protected static Settings settings = Settings.getReference();
-//	protected final String portName = state.get(State.values.motorport);
 	protected final double nominalsysvolts = 12.0;
 	
 	// data buffer 
@@ -725,6 +724,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public void nudge(final direction dir) {
 		
 		Util.debug("nudge(): " + dir, this);
+
+		if (Application.openNIRead.depthCamGenerating) {
+			switch (dir) {
+			case right:
+			case left:  rotate(dir, 15); break;
+			case forward: 
+			case backward: movedistance(dir, 0.4); break;
+			}
+			return;
+		}
 		
 		new Thread(new Runnable() {
 			public void run() {
@@ -765,7 +774,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				short[] depthFrameBefore = null;
 				if (Application.openNIRead.depthCamGenerating) {
 					depthFrameBefore = Application.openNIRead.readFullFrame();						
-					if (Mapper.map.size()==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+					if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
 				}
 				
 				switch (dir) {
@@ -809,14 +818,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					case forward:
 						if (Application.openNIRead.depthCamGenerating) {   
 							depthFrameBefore = Application.openNIRead.readFullFrame();	
-							if (Mapper.map.size()==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+							if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
 						}
 						goForward(); 
 						break;
 					case backward: 
 						if (Application.openNIRead.depthCamGenerating) {  
 							depthFrameAfter = Application.openNIRead.readFullFrame();						
-							if (Mapper.map.size()==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+							if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
 						}
 						goBackward(); 
 				}

@@ -23,6 +23,7 @@ import org.red5.io.amf3.ByteArray;
 
 import developer.SendMail;
 import developer.UpdateFTP;
+import developer.depth.Mapper;
 import developer.depth.ScanUtils;
 
 
@@ -688,6 +689,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case systemshutdown:
 			Util.shutdown();
 			break;
+			
+		case clearmap: Mapper.clearMap();
 			
 		}
 	}

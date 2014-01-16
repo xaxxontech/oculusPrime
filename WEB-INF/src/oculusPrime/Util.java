@@ -429,7 +429,7 @@ public class Util {
 	
 	public static void shutdown() {
 		if (Settings.os.equals("linux")) {
-			String str  = Settings.redhome + Settings.sep + "systemshutdown.sh"; // windows & linux
+			String str  = Settings.redhome + Settings.sep + "systemshutdown.sh"; 
 			Util.systemCall(str);
 		}
 		else { Util.systemCall("shutdown -s -f -t 01"); } // windows		

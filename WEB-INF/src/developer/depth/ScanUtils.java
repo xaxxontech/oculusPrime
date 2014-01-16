@@ -1,5 +1,6 @@
 package developer.depth;
 
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,13 +22,15 @@ public class ScanUtils {
 	public final int maxDepthInMM = 5000; // 3500
 	private final static int depthCamVertDistfromFloor = 290;
 	static double yAngleCompStart = 0;
+	public final static int maxDepthFPTV = 3500;
+
 	
 	/**
 	 * Load framedata from file. 
 	 * @param f file to be loaded
 	 * @return short integer array containing each pixel depth
 	 */
-	public short[] getFrame(File f) {
+	public static short[] getFrame(File f) {
 		
 		ByteBuffer frameData = null;
 		short[] result = new short[width*height];
@@ -493,15 +496,15 @@ public class ScanUtils {
 	public static void addFrameToMap(short[] depth, int distance, double angle) {
 		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
 		int[][] frameCellsFP = findFloorPlane(frameCells);
-    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP);
+    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
     	Mapper.add(floorPlaneCells, distance, angle);
 	}
 	
-	public BufferedImage floorPlaneTopViewImg() {
+	public static BufferedImage floorPlaneTopViewImg() {
 		short[] depth = Application.openNIRead.readFullFrame();
 		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
 		int[][] frameCellsFP = findFloorPlane(frameCells);
-    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP);
+    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
     	return byteCellsToImage(floorPlaneCells);
 	}
 	
@@ -511,9 +514,7 @@ public class ScanUtils {
 	 * @return two dimensional byte array 00=unknown, 01=floor plane, 11=not floor plane
 
 	 */
-	public static byte[][] floorPlaneToPlanView(int[][] frameCells) {
-		int maxDepth = 3500;
-		final int h = 240;
+	public static byte[][] floorPlaneToPlanView(int[][] frameCells, final int h) {
 //		final int yres =(int) ((double) maxDepth /h);
 //		final int xres = yres;
 //		final int h = (int) ((double)maxDepth /yres);
@@ -521,7 +522,7 @@ public class ScanUtils {
 //		System.out.println("width: "+w+", height: "+h);
 		final int cwidth = frameCells.length;
 		final int cheight = frameCells[0].length;
-		final double angle =  (double)camFOVx/2*Math.PI/180; // 0.392699082; // 22.5 deg in radians from ctr, or half included view angle
+		final double angle =  (double)camFOVx/2*Math.PI/180; // 0.392699082; // 29 deg in radians from ctr, or half included view angle
 		
 		byte[][] result = new byte[w][h];
 
@@ -531,13 +532,14 @@ public class ScanUtils {
 			for (int x=0; x<cwidth; x++ ) {
 				int d=frameCells[x][y]; // depth
 				
-				byte b = 0b11;
-				if ((d & 0xf0000) >> 16 == 1)  { // 17th bit set at 1, is floor plane
+				byte b = 0;
+				if (y>cheight/2-3 && y<cheight/2+3)  b = 0b11; // horiz
+				else if ((d & 0xf0000) >> 16 == 1)  { // 17th bit set at 1, is floor plane
 					d = d & 0xffff;
 					b = 0b01;
 				}
 //				int y = (int) ((float)xdepth[xd]/(float)maxDepthInMM*(float)h);
-				int ry = (int) ((double) d/ (double) maxDepth  * (double) h);
+				int ry = (int) ((double) d/ (double) maxDepthFPTV  * (double) h);
 				double xdratio = (double)(x - xdctr)/ (double) xdctr;
 				int rx = (w/2) - ((int) (Math.tan(angle)*(double) ry * xdratio));
 
@@ -555,22 +557,22 @@ public class ScanUtils {
 		return result;
 	}
 	
-	public BufferedImage byteCellsToImage(byte[][] cells ) {
+	public static BufferedImage byteCellsToImage(byte[][] cells ) {
 
 		final int cwidth = cells.length;
-		final int cheight= cells[0].length;
+		int cheight= cells[0].length;
 		BufferedImage img = new BufferedImage(cwidth, cheight, BufferedImage.TYPE_INT_RGB);
-		
+
 		for(int y=0; y<cheight; y++) {
-			int intensity = (int) (((double)(cheight-y)/cheight)*255.0);
+//			int intensity = (int) (((double)(cheight-y)/cheight)*255.0);
 //			intensity = 100;
-			for(int x=0; x<cwidth; x++) {
+				for(int x=0; x<cwidth; x++) {
 				
 				/* single hue */
 				int argb = 0;
 				switch (cells[x][y]) {
 					case 0b01: argb=0x00ff00; break;
-					case 0b11: argb=(intensity<<16)+(0<<8)+intensity; break;
+					case 0b11: argb=0xff00ff; break; // argb=(intensity<<16)+(0<<8)+intensity; break;
 					default: argb = 0x000000;
 				}
 //				if (x==4) 	argb = 0x0000ff;
@@ -581,10 +583,10 @@ public class ScanUtils {
 
 			}
 		}
-		
+//		img = (BufferedImage) img.getScaledInstance((int) Math.round(cwidth*scale),
+//				(int)Math.round(height*scale), Image.SCALE_DEFAULT);
 		return img;
 	}
-	
 	
     public static void main(String[] args) {
     	
@@ -615,7 +617,7 @@ public class ScanUtils {
 //    	double a = s.findAngle(frameBefore, frameAfter);
 //    	System.out.println("winner angle: "+a);
     	
-    	s.floorPlaneToPlanView(new int[][]{new int[]{0}, new int[]{0}});
+//    	s.floorPlaneToPlanView(new int[][]{new int[]{0}, new int[]{0}});
     }
 
 }
