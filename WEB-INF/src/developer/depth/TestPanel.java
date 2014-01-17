@@ -28,53 +28,42 @@ public class TestPanel extends JFrame {
 					frame.setVisible(true);
 					
 					
-			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
-//	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
-	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion500-1.raw"));
-	    	    	short[] frameAfter = ScanUtils.getFrame(new File(leader+"xtion500-2.raw"));
+//			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
+	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
+//	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion500-1.raw"));
+//	    	    	short[] frameAfter = ScanUtils.getFrame(new File(leader+"xtion500-2.raw"));
+			    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion15deg-1.raw"));
+//	    	    	short[] frameAfter = ScanUtils.getFrame(new File(leader+"xtion15deg-2.raw"));
 			    	
 	    	    	int res =2;
-	    	    	int h = 240;
+	    	    	int h = 320;
 	    	    	
-	    	    	int[][] frameCells1 = ScanUtils.resampleAveragePixel(frameAfter, res, res);
-			    	int[][] zork = ScanUtils.findFloorPlane(frameCells1);
-			    	byte[][] fp = ScanUtils.floorPlaneToPlanView(zork, h);
-			    	Mapper.add(fp, 0, 0); 
+	    	    	int[][] frameCells1 = ScanUtils.resampleAveragePixel(frameBefore, res, res);
+//			    	int[][] zork = ScanUtils.findFloorPlane(frameCells1);
+//			    	byte[][] fp = ScanUtils.floorPlaneAndHorizToPlanView(zork, frameBefore, h);
+//			    	Mapper.add(fp, 0, 0); 
 			    	
-			    	BufferedImage img2 = ScanUtils.byteCellsToImage(Mapper.map);
-			    	lblNewLabel.setIcon(new ImageIcon(img2));
-			    	panel.setBounds(5,0,img2.getWidth(),img2.getHeight()+5);
+//			    	BufferedImage img2 = ScanUtils.byteCellsToImage(fp);
+//			    	BufferedImage img2 = ScanUtils.(fp);
+//			    	lblNewLabel.setIcon(new ImageIcon(img2));
+//			    	panel.setBounds(5,0,img2.getWidth(),img2.getHeight()+10);
 					panel.repaint();
-			    	System.out.println("img2: "+img2.getWidth()+", "+img2.getHeight());
+					
 					
 			    	
 			    	int[][] frameCells2 = ScanUtils.resampleAveragePixel(frameAfter, res, res);
 			    	int[][] blorg = ScanUtils.findFloorPlane(frameCells2);
-			    	byte[][] asdf = ScanUtils.floorPlaneToPlanView(blorg, h);
-//			    	Mapper.add(asdf, 555, 0);
-//			    	Mapper.add(asdf, 0, 35);
-//			    	Mapper.add(asdf, 0, 35);
-//			    	Mapper.add(asdf, 0, 19);
-//			    	Mapper.add(asdf, 999, 0);
-//			    	Mapper.add(asdf, 999, 0);
-//			    	Mapper.add(asdf, 999, 0);
-//			    	Mapper.add(asdf, 999, 0);
-//			    	Mapper.add(asdf, 0, 35);
-//			    	Mapper.add(asdf, 0, 35);
-//			    	Mapper.add(asdf, 0, 19);
-//			    	Mapper.add(asdf, 999, 0);
-//			    	Mapper.add(asdf, 999, 0);
-			    	Mapper.add(asdf,  0, -135);
-//			    	Mapper.add(asdf,  0,  1);
-			    	Mapper.add(asdf,  999,  0);
-
+			    	byte[][] asdf = ScanUtils.floorPlaneAndHorizToPlanView(blorg,frameAfter, h);
+			    	Mapper.add(asdf,  0, ScanUtils.findAngle(frameBefore, frameAfter, 15));
 			    	BufferedImage img1 = ScanUtils.byteCellsToImage(Mapper.map);
 
 			    	lblNewLabel_1.setIcon(new ImageIcon(img1));
 					panel_1.setBounds(340, 0, img1.getWidth(), img1.getHeight()+10);
 					panel_1.repaint();
- 					System.out.println("img1: "+img1.getWidth()+", "+img1.getHeight());
 					
+// 					System.out.println(ScanUtils.findAngleTopView(frameBefore, frameAfter, 15));
+ 					System.out.println(ScanUtils.findAngle(frameBefore, frameAfter, 15));
+ 					
 					
 				} catch (Exception e) {
 					e.printStackTrace();

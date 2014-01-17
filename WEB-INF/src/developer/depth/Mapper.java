@@ -38,9 +38,9 @@ public class Mapper {
 		cw = cells.length;
 		ch = cells[0].length;
 		originX = cw/2;
-		originY = ch-1;
+		originY = ch-1; //+ (int) (ScanUtils.cameraSetBack * (double) ch/ScanUtils.maxDepthFPTV);
 		dx=0; //perfectly straight default
-		distance = (int) (distance * ((double) ch/ScanUtils.maxDepthFPTV)); // scaled
+		distance = (int) (distance * (double) ch/ScanUtils.maxDepthFPTV); // scaled
 		dy=-distance; //perfectly straight default
 		
 		double newangle =angle + lastAngle;

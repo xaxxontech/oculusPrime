@@ -23,7 +23,7 @@ public class ScanUtils {
 	private final static int depthCamVertDistfromFloor = 290;
 	static double yAngleCompStart = 0;
 	public final static int maxDepthFPTV = 3500;
-
+	public static final int  cameraSetBack = 51; // from rotation center, xoffset is negligible
 	
 	/**
 	 * Load framedata from file. 
@@ -54,6 +54,7 @@ public class ScanUtils {
 		        
 		        int p = ((width * y)+x)*2;
 		        short depth = frameData.getShort(p);
+//		        if (depth !=0)  depth -= ScanUtils.cameraSetBack; // depth is to center of rotation
 		        result[i] = depth;
 		        i++;
 			}	
@@ -117,10 +118,8 @@ public class ScanUtils {
 				for (xx=0; xx<resX; xx++) {
 					for (yy=0; yy<resY; yy++) {
 						int p = framePixels[x + xx + (y+yy)*width];
-//						if (p!=0)   count ++;
 						if (p==0)  { zeros ++; }
-//						if (p<maxDepthInMM)   runningTotal += p;
-						runningTotal += p;
+						runningTotal += p; 
 					}
 				}
 //				if (count !=0)    result[x/res][y/res] = runningTotal / count;
@@ -233,7 +232,7 @@ public class ScanUtils {
 	 * @param distance in mm of travel (guess)
 	 * @return int[][] xy array of closest pixels 
 	 */
-	public int[][] scaleResampledPixels(final int[][] frameCells, final int dMoved) {
+	public static int[][] scaleResampledPixels(final int[][] frameCells, final int dMoved) {
 		//  N=n/(D-d)*D -- derived from: 
 		//		https://docs.google.com/drawings/d/1zmwqU5HqGTvd9sBjpN0iLXc7LmAA54QiBJ_AL23HGL4/edit
 		int cwidth =  frameCells.length;
@@ -350,7 +349,7 @@ public class ScanUtils {
 	 * @param frameCells resampled 2-dimensional array matrix to be converted
 	 * @return width x height 16-bit integer array of pixels
 	 */
-	public int[] cellsToPixels(int[][] frameCells) {
+	public static int[] cellsToPixels(int[][] frameCells) {
 		int[] result = new int[width*height];
 
 		int resX = width/frameCells.length;
@@ -374,7 +373,7 @@ public class ScanUtils {
 	 * @param frameAfter 16-bit pixel array
 	 * @return initial-guess depth in mm
 	 */
-	public double[] findDepth(short[] frameBefore, short[] frameAfter, int guessedDistance) {
+	public static double[] findDepth(short[] frameBefore, short[] frameAfter, int guessedDistance) {
 		/*
 		 * convert frameBefore to lower res
 		 * compare frameAfter to frameBefore at various depths -- start from guessed distance
@@ -435,12 +434,14 @@ public class ScanUtils {
 		return new double[]{(double) winningDepth, angle, winningAvg}; //, winningY};
 	}
 	
-	public double[] findAngle(short[] frameBefore, short[] frameAfter) { //, int guessedRotation) {
+	public static double findAngle(short[] frameBefore, short[] frameAfter, double angleGuess) {
 		// left = positive angle (right hand rule)
 		int resX = 4;
 		int resY = 4;
-		final int[][] cellsBefore = resampleAveragePixel(frameBefore, resX, resY);
-		final int[][] cellsAfter = resampleAveragePixel(frameAfter, resX, resY);
+		int[][] cellsBefore = resampleAveragePixel(frameBefore, resX, resY);
+		int[][] cellsAfter = resampleAveragePixel(frameAfter, resX, resY);
+//		cellsBefore = scaleResampledPixels(cellsBefore, cameraSetBack);
+//		cellsAfter = scaleResampledPixels(cellsAfter, cameraSetBack);
 		final int cwidth =  cellsAfter.length;
 		final int cheight = cellsAfter[0].length;
 		double winningAvg = 9999999; 
@@ -453,7 +454,7 @@ public class ScanUtils {
 //			endX = cwidth/2; // right
 //		}
 
-		for (int xx=-cwidth/2; xx<=cwidth/2; xx++) { // angle
+		for (int xx=-cwidth/2; xx<=cwidth/2; xx++) { // angle: x-only assumed perfectly horiz rotation
 
 			int total = 0;
 			int compared = 0;
@@ -478,10 +479,109 @@ public class ScanUtils {
 		}
 
 		//		System.out.println(winningX);
-		double angle =  (double) winningX/(width/2/resX) * camFOVx/2;
-		return new double[] {angle, winningAvg};
+		 ;
+		double angle =  (double) (winningX)/(width/resX) * camFOVx; // comp for camera setback somehow
+		if (winningX == 0) { angle = angleGuess; } // or use findAngleTopView as fallback, then best guess? or only if on carpet?
+		
+		return angle;
 	}
 	
+	// TODO: limit range check with timed odometry approximation
+	// TODO: evaluate accuracy by looking at total pixels compared (higher = more accurate)
+	public static double findAngleTopView(short[] frameBefore, short[] frameAfter, int angleGuess) { //, double angleGuess) {
+		final int h = 320;
+		final int w = (int) (Math.sin(Math.toRadians(camFOVx/2)) * h) * 2;
+		final byte[][] cellsBefore = projectFrameHorizToTopView(frameBefore, h);
+		final byte[][] cellsAfter = projectFrameHorizToTopView(frameAfter, h);
+		
+		
+		int winningTtl = 0; 
+		double winningAngle = 9999;
+//		int winningCompared = 0; // TODO: testing only
+		final double fovHalf =  Math.toRadians(camFOVx/2); // radians
+		final double angleIncrement = Math.toRadians(0.1); 
+//		byte[][] winningTest = cellsAfter; //  = new byte[w][h]; // TODO: testing only
+		
+//		angleRangeMax = angleGuess + angleGuess + fovHalf/2 ;
+//		angleRangeMin = 0-angleGuess+fovHalf/4
+		 
+		for (double angle = -fovHalf; angle <= fovHalf; angle += angleIncrement) {
+//		for (double angle = -fovHalf*0.66; angle <= fovHalf*0.66; angle += angleIncrement) {
+//		for (double angle = -Math.toRadians(25); angle <= Math.toRadians(25); angle += angleIncrement) {
+			
+//			double angle=fovHalf*0.66; // TESTING
+//			double angle = Math.toRadians(-19.14);
+		
+			int total = 0;
+//			int compared = 0;
+			byte[][] test = cellsAfter; // TODO: testing only
+
+			for (int x=0; x<w; x++ ) {
+				for (int y=0; y<h; y++) {
+					if (cellsBefore[x][y]==0b01) {
+//						compared ++;
+						double anglexy = Math.atan((w/2-x)/(double)(h-1-y));
+						double hyp = (h-1-y)/Math.cos(anglexy); // cos a = y/h
+
+						int xx = -(int) Math.round(hyp * Math.sin(anglexy+angle)-w/2);  // sin angleXY+angle = (w/2-xx)/hyp
+						int yy = -(int) Math.round(hyp * Math.cos(anglexy+angle)-h+1); // cos angleXY+angle = (h-1-yy)/hyp
+						
+						if (xx>=0 && xx<w && yy>=0 && yy<h ) {
+							if (cellsAfter[xx][yy]==0b01)   total ++;
+							test[xx][yy] = 0b11; // TODO: testing only
+						}
+
+					}
+					
+				}
+			}
+	
+			if (total > winningTtl) {
+				winningTtl = total;
+				winningAngle = angle;
+//				winningTest = test;
+//				winningCompared = compared; // TODO: testing only
+			}
+		
+		}
+		
+//		System.out.println("compared :"+winningCompared);
+//		System.out.println("winningTtl :"+winningTtl);
+//		System.out.println("winningAngle :"+Math.toDegrees(winningAngle));
+//		return winningTest; 
+		
+		if (winningAngle == 9999 || Math.abs(winningAngle) == fovHalf) winningAngle = angleGuess;
+		else winningAngle = -Math.toDegrees(winningAngle);
+		return winningAngle;
+		//TODO: comp for xtion offset from rotation center
+	}
+	
+	// for measuring distance and/or angle moved purposes
+	public static byte[][] projectFrameHorizToTopView(short[] frame, int h) {
+		final int w = (int) (Math.sin((camFOVx/2)*Math.PI/180) * h) * 2;
+
+		final double angle =  (double)camFOVx/2*Math.PI/180;
+		
+		byte[][] result = new byte[w][h];
+
+		final int xdctr = w/2;
+		
+		for (int y = height/2-1; y<=height/2+1; y++) { // middle 3 horiz pixels //TODO: incorporate yAngleCompStart
+			for (int x=0; x<width; x++) {
+	
+				int d = frame[y*width+x];
+				int ry = (int) ((double) d/ (double) maxDepthFPTV  * (double) h);
+				double xdratio = (double)(x*(double) w/width - xdctr)/ (double) xdctr;
+				int rx = (w/2) - ((int) (Math.tan(angle)*(double) ry * xdratio));
+				
+				if (ry<h && ry>=0 && rx>=0 && rx<w) {
+					result[rx][h-ry-1] = 0b01;
+				}
+			}
+		}
+		
+		return result;
+	}
 	
 	public BufferedImage floorPlaneImg() {
 
@@ -496,7 +596,8 @@ public class ScanUtils {
 	public static void addFrameToMap(short[] depth, int distance, double angle) {
 		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
 		int[][] frameCellsFP = findFloorPlane(frameCells);
-    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
+//    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
+    	byte[][] floorPlaneCells = floorPlaneAndHorizToPlanView(frameCellsFP, depth, 240);
     	Mapper.add(floorPlaneCells, distance, angle);
 	}
 	
@@ -504,8 +605,9 @@ public class ScanUtils {
 		short[] depth = Application.openNIRead.readFullFrame();
 		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
 		int[][] frameCellsFP = findFloorPlane(frameCells);
-    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
-    	return byteCellsToImage(floorPlaneCells);
+//    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
+    	byte[][] floorPlaneCells = floorPlaneAndHorizToPlanView(frameCellsFP, depth, 240);
+     	return byteCellsToImage(floorPlaneCells);
 	}
 	
 	/**
@@ -557,6 +659,57 @@ public class ScanUtils {
 		return result;
 	}
 	
+	public static byte[][] floorPlaneAndHorizToPlanView(final int[][] frameCells, final short frame[], final int h) {
+		final int w = (int) (Math.sin((camFOVx/2)*Math.PI/180) * h) * 2;
+		final int cwidth = frameCells.length;
+		final int cheight = frameCells[0].length;
+		final double angle =  (double)camFOVx/2*Math.PI/180; // 0.392699082; // 29 deg in radians from ctr, or half included view angle
+		
+		byte[][] result = new byte[w][h];
+
+		final int xdctr = cwidth/2;
+
+		for (int y=0; y<cheight; y++) {
+			for (int x=0; x<cwidth; x++ ) {
+				int d=frameCells[x][y]; // depth
+				
+				byte b = 0;
+				if ((d & 0xf0000) >> 16 == 1)  {
+					d = d & 0xffff;
+					b = 0b01;
+				}
+
+				int ry = (int) ((double) d/ (double) maxDepthFPTV  * (double) h);
+				double xdratio = (double)(x - xdctr)/ (double) xdctr;
+				int rx = (w/2) - ((int) (Math.tan(angle)*(double) ry * xdratio));
+				
+				if (ry<h && ry>=0 && rx>=0 && rx<w && b!=0) {
+					result[rx][h-ry-1] = b;
+				}
+				
+				
+			}
+		}
+		
+		
+		// now overlay horiz
+		for (int y = height/2-1; y<=height/2+1; y++) {
+			for (int x=0; x<width; x++) {
+	
+				int d = frame[y*width+x];
+				int ry = (int) ((double) d/ (double) maxDepthFPTV  * (double) h);
+				double xdratio = (double)(x*(double) cwidth/width - xdctr)/ (double) xdctr;
+				int rx = (w/2) - ((int) (Math.tan(angle)*(double) ry * xdratio));
+				
+				if (ry<h && ry>=0 && rx>=0 && rx<w) {
+					result[rx][h-ry-1] = 0b11;
+				}
+			}
+		}
+
+		return result;
+	}
+	
 	public static BufferedImage byteCellsToImage(byte[][] cells ) {
 
 		final int cwidth = cells.length;
@@ -571,15 +724,14 @@ public class ScanUtils {
 				/* single hue */
 				int argb = 0;
 				switch (cells[x][y]) {
-					case 0b01: argb=0x00ff00; break;
-					case 0b11: argb=0xff00ff; break; // argb=(intensity<<16)+(0<<8)+intensity; break;
+					case 0b01: argb=0x0000ff; break;
+					case 0b11: argb=0x00ff00; break; // argb=(intensity<<16)+(0<<8)+intensity; break;
 					default: argb = 0x000000;
 				}
 //				if (x==4) 	argb = 0x0000ff;
 //				int argb = (hue<<16) + (0<<8) + hue;
 
-				img.setRGB(x, y, argb);    // flip horiz
-//				img.setRGB(x, y, argb);    // flip horiz
+				img.setRGB(x, y, argb);  
 
 			}
 		}
@@ -587,6 +739,7 @@ public class ScanUtils {
 //				(int)Math.round(height*scale), Image.SCALE_DEFAULT);
 		return img;
 	}
+
 	
     public static void main(String[] args) {
     	

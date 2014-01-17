@@ -790,9 +790,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (depthFrameBefore != null) { 
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
-					double angle[] = Application.scanUtils.findAngle(depthFrameBefore, depthFrameAfter);
-					msg = "angle moved: "+angle[0]+", best avg: "+angle[1];
-					ScanUtils.addFrameToMap(depthFrameAfter, 0, angle[0]);
+					double angle = ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, degrees);
+//					double angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, degrees);
+					msg = "angle moved: "+angle;
+					ScanUtils.addFrameToMap(depthFrameAfter, 0, angle);
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);
@@ -839,7 +840,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (depthFrameBefore != null) { // went forward
 					Util.delay(750); // allow for slow to stop
 					depthFrameAfter = Application.openNIRead.readFullFrame();
-					double[] moved = Application.scanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
+					double[] moved = ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
 					msg = "distance moved d: "+(int) moved[0]+", angle:"+(int) moved[1] +
 							", best avg: "+moved[2];
 					ScanUtils.addFrameToMap(depthFrameAfter, (int) moved[0], moved[1]);

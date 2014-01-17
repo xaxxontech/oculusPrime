@@ -10,18 +10,15 @@ public class Scratch {
 
         public static void main(String[] args) {
   
-//        	List<List<Byte>> map = new ArrayList<List<Byte>>();
-//        	int[][] map = new int[][] {
-//        			{1,2,3},
-//        			{4,5,6},
-//        			{7,8,9}
-//        	};	
-//        	int[][] temp = map;
-    		int distance = (int) (1000 * ((double) 334/3500)); // scaled
-			int dx = -(int) (Math.sin(Math.toRadians(-45.0))*distance*1.0); 
-
-			System.out.println(distance);
-        	System.out.println(dx);
+        	int winningX = 20;
+        	int width=320;
+        	int resX =4;
+        	int camFOVx = 58;
+    		double angle =  (double) (winningX)/(width/resX) * camFOVx; // -1 cell comp...?
+    		
+    		
+			System.out.println(angle);
+//        	System.out.println(dx);
 	
 			
         }
