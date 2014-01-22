@@ -786,13 +786,31 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 				stopGoing();
 				
-				String msg = null;
+				String msg = "";
 				if (depthFrameBefore != null) { 
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
-					double angle = ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, degrees);
-//					double angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, degrees);
-					msg = "angle moved: "+angle;
+					
+//					double angle = ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, degrees);
+//					if (Math.abs(angle) > Math.abs(degrees) * 1.7 || Math.abs(angle) < Math.abs(degrees) * 0.3) {
+//						msg += "findAngle found: "+angle+", trying findAngleTopView<br>";
+//						angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, (int) degrees); 
+//					}
+//					if (Math.abs(angle) > Math.abs(degrees) * 1.7 || Math.abs(angle) < Math.abs(degrees) * 0.3) {
+//						angle = degrees;
+//					}
+					
+					double guessedAngle = degrees;
+					if (dir == direction.right) guessedAngle = -guessedAngle; 
+					double angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, (int) guessedAngle);
+					if (angle == 9999 || Math.abs(angle - guessedAngle) >= Math.abs(guessedAngle/2) ||
+							Math.abs(angle) < Math.abs(guessedAngle/6))  {
+						angle=ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, guessedAngle);
+						msg += "no dice, trying findAngle... ";
+					}
+					if (angle == 9999 || Math.abs(angle) < Math.abs(guessedAngle/8))  angle = guessedAngle;
+					
+					msg += "angle moved: "+angle;
 					ScanUtils.addFrameToMap(depthFrameAfter, 0, angle);
 				}
 				
@@ -848,7 +866,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				else if (depthFrameAfter != null) { // went backward
 					Util.delay(750);
 					depthFrameBefore = Application.openNIRead.readFullFrame();
-					double[] moved = Application.scanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
+					double[] moved = ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
 					msg = "distance moved d: -"+(int) moved[0]+", angle: "+(int) moved[1] +
 							", best avg: "+moved[2];	
 					ScanUtils.addFrameToMap(depthFrameAfter, (int) moved[0], moved[1]);

@@ -10,15 +10,19 @@ public class Scratch {
 
         public static void main(String[] args) {
   
-        	int winningX = 20;
-        	int width=320;
-        	int resX =4;
-        	int camFOVx = 58;
-    		double angle =  (double) (winningX)/(width/resX) * camFOVx; // -1 cell comp...?
-    		
-    		
-			System.out.println(angle);
-//        	System.out.println(dx);
+//        	int adj = 2582;
+//        	int opp =  738;
+//        	 int cheight = 320;
+//    		final int cwidth = (int) (Math.sin((58/2)*Math.PI/180) * cheight) * 2;
+//
+//        	
+//    		double angle =  89.9;
+//    		int newW =  (int) Math.round( Math.cos(angle)*cwidth + Math.abs(Math.sin(angle))*cheight );
+//        	int newH = (int) Math.round( Math.cos(angle)*cheight + Math.abs(Math.sin(angle))*cwidth ) ;
+//    		
+//    		int n=17;
+//			System.out.println(cwidth+", "+newW+", "+newH);
+        	System.out.println(0b10);
 	
 			
         }

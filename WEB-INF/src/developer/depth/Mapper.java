@@ -38,7 +38,8 @@ public class Mapper {
 		cw = cells.length;
 		ch = cells[0].length;
 		originX = cw/2;
-		originY = ch-1; //+ (int) (ScanUtils.cameraSetBack * (double) ch/ScanUtils.maxDepthFPTV);
+		final int scaledCameraSetback = (int) ((double)ScanUtils.cameraSetBack* ch/ScanUtils.maxDepthFPTV);
+		originY = ch-1-scaledCameraSetback; //+ (int) (ScanUtils.cameraSetBack * (double) ch/ScanUtils.maxDepthFPTV);
 		dx=0; //perfectly straight default
 		distance = (int) (distance * (double) ch/ScanUtils.maxDepthFPTV); // scaled
 		dy=-distance; //perfectly straight default
@@ -150,13 +151,13 @@ public class Mapper {
 		// add new entry	
     	for (int x=0; x<cw; x++) {
 			for (int y=0; y<ch; y++) {
-				if (cells[x][y] != 0)   
+				// write to map if contents are something, and don't overwrite wall or origins
+				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] != 0b10  && map[cornerX + x][cornerY + y] != 0b11) {   
 					map[cornerX + x][cornerY + y] = cells[x][y];
-//				System.out.println(originX+", "+originY);
-
+				}
 			}
     	}
-    	map[cornerX+originX][cornerY+originY]=0b01; // TODO: testing only
+    	map[cornerX+originX][cornerY+originY]=0b10; // TODO: testing only
 
 	}
 	
@@ -172,7 +173,22 @@ public class Mapper {
     	int newW =  (int) Math.round( Math.cos(angle)*cwidth + Math.abs(Math.sin(angle))*cheight );
     	int newH = (int) Math.round( Math.cos(angle)*cheight + Math.abs(Math.sin(angle))*cwidth ) ;
 		
-    	byte[][] result = new byte[newW][newH];
+    	byte[][] result = new byte[0][0];
+    	try {
+    		result = new byte[newW][newH];
+    	}
+    	catch( Exception e) {  // trying to debug occasional NegativeArraySizeException
+    		e.printStackTrace();
+    		System.out.println("****ERROR VARS");
+    		System.out.println("cwidth: "+cwidth);
+    		System.out.println("cheight: "+cheight);
+    		System.out.println("newW: "+newW);
+    		System.out.println("newH: "+newH);
+    		System.out.println("angle: "+Math.toDegrees(angle));
+    		System.out.println("lastAngle: "+Math.toDegrees(lastAngle));
+    		
+    		
+    	}
 
     	// TODO: remove, testing only 
 //    	for (int xx=0; xx<newW; xx++) { for (int yy=0; yy<newH; yy++) {

@@ -107,7 +107,7 @@ public class OpenNIRead  {
 			        
 			        int p = ((width * y)+x)*2;
 			        short depth = frameData.getShort(p);
-			        if (depth !=0)  depth -= ScanUtils.cameraSetBack; // depth is to center of rotation
+//			        if (depth !=0)  depth -= ScanUtils.cameraSetBack; // depth is to center of rotation
 			        result[i] = depth;
 			        i++;
 			        if (depth != 0) { blank = false; }
@@ -119,7 +119,7 @@ public class OpenNIRead  {
 	    		if (!rcpt) Util.debug("depth frame not rcvd", this);
 	    	}
     	}
-
+    	
 		return result; 
 		
 	}
