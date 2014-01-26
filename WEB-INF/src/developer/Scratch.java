@@ -22,7 +22,9 @@ public class Scratch {
 //    		
 //    		int n=17;
 //			System.out.println(cwidth+", "+newW+", "+newH);
-        	System.out.println(0b10);
+        	int z= 6;
+            	System.out.println((double) z * 250/0xff);
+            	System.out.println(40f/0xefff);
 	
 			
         }

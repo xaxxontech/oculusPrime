@@ -776,6 +776,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					depthFrameBefore = Application.openNIRead.readFullFrame();						
 					if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
 				}
+				application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+				state.delete(State.values.angle);
 				
 				switch (dir) {
 					case right: turnRight(); break;
@@ -791,27 +793,26 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
 					
-//					double angle = ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, degrees);
-//					if (Math.abs(angle) > Math.abs(degrees) * 1.7 || Math.abs(angle) < Math.abs(degrees) * 0.3) {
-//						msg += "findAngle found: "+angle+", trying findAngleTopView<br>";
-//						angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, (int) degrees); 
+//					double guessedAngle = degrees;
+//					if (dir == direction.right) guessedAngle = -guessedAngle; 
+//					double angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, (int) guessedAngle);
+//					if (angle == 9999 || Math.abs(angle - guessedAngle) >= Math.abs(guessedAngle/2) ||
+//							Math.abs(angle) < Math.abs(guessedAngle/6))  {
+//						angle=ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, guessedAngle);
+//						msg += "no dice, trying findAngle... ";
 //					}
-//					if (Math.abs(angle) > Math.abs(degrees) * 1.7 || Math.abs(angle) < Math.abs(degrees) * 0.3) {
-//						angle = degrees;
-//					}
+//					if (angle == 9999 || Math.abs(angle) < Math.abs(guessedAngle/8))  angle = guessedAngle;
+//					msg += "angle moved via scanmatch: "+angle;
+
+					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					while (!state.exists(State.values.angle.toString())) { } //wait
+					double angle = state.getDouble(State.values.angle.toString());
+					msg += "<br>angle moved via gyro: "+angle;
 					
-					double guessedAngle = degrees;
-					if (dir == direction.right) guessedAngle = -guessedAngle; 
-					double angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, (int) guessedAngle);
-					if (angle == 9999 || Math.abs(angle - guessedAngle) >= Math.abs(guessedAngle/2) ||
-							Math.abs(angle) < Math.abs(guessedAngle/6))  {
-						angle=ScanUtils.findAngle(depthFrameBefore, depthFrameAfter, guessedAngle);
-						msg += "no dice, trying findAngle... ";
-					}
-					if (angle == 9999 || Math.abs(angle) < Math.abs(guessedAngle/8))  angle = guessedAngle;
-					
-					msg += "angle moved: "+angle;
 					ScanUtils.addFrameToMap(depthFrameAfter, 0, angle);
+					
+
+
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);

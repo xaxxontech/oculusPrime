@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import oculusPrime.commport.ArduinoGyro;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.Discovery;
@@ -49,6 +50,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
+	public ArduinoGyro gyroport = null; // TODO: testing
 	public static TelnetServer commandServer = null;
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null; 
@@ -240,6 +242,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 		comport = new ArduinoPrime(this);
 		powerport = new ArduinoPower(this);
+		gyroport = new ArduinoGyro(this);
 		new Discovery(this);
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));

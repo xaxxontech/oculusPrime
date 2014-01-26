@@ -19,8 +19,6 @@ public class Discovery {
 	public static enum params {discovery, disabled};
 	
 	private static Settings settings = Settings.getReference();
-//	private static final String motors = settings.readSetting(ManualSettings.motorport);
-//	private static final String power = settings.readSetting(ManualSettings.powerport);
 	private static State state = State.getReference();
 	private Application application = null;
 	
@@ -43,7 +41,6 @@ public class Discovery {
 	private static Vector<String> ports = new Vector<String>();
 	
 	private static Vector<String> searchDevices = new Vector<String>();
-//	private static Vector<String> deviceStateStrings = new Vector<String>();
 
 	/* constructor makes a list of available ports */
 	/* order: discovery > searchDevice > connect > doPortQuery > getProduct > lookup
@@ -68,12 +65,23 @@ public class Discovery {
 			Util.debug("skipping discovery, power specified on: " + application.powerport.portname, this);
 		} 
 		
+		
 		if(application.comport.portname.equals(params.discovery.name())){	
 			searchDevices.add(ArduinoPrime.FIRMWARE_ID);
 			
 		} else { // port explicitly identified in settings		
 			Util.debug("skipping discovery, motors specified on: " + application.comport.portname, this);
 		} 
+
+		
+		if(application.gyroport.portname.equals(params.discovery.name())){	
+			searchDevices.add(ArduinoGyro.FIRMWARE_ID);
+			
+		} else { // port explicitly identified in settings		
+			Util.debug("skipping discovery, gyro specified on: " + application.gyroport.portname, this);
+		} 
+		
+		
 		
 		if (!searchDevices.isEmpty())  searchDevice(); 
 		
@@ -216,6 +224,18 @@ public class Discovery {
 						application.powerport.initialize();
 						break;
 					}
+					
+					else if (id.equalsIgnoreCase(ArduinoGyro.FIRMWARE_ID)) {
+						state.set(State.values.gyroport, getPortName());
+						application.gyroport.serialPort = serialPort;
+						application.gyroport.in = inputStream;
+						application.gyroport.out = outputStream;
+						application.gyroport.isconnected = true;
+						application.gyroport.portname = getPortName();
+						application.gyroport.initialize();
+						break;
+					}
+					
 					
 					else { close(); }
 					

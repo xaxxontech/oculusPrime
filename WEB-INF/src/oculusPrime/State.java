@@ -22,7 +22,9 @@ public class State {
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers, // NEW! 
 		
-		centerpoint; // experimental, xiton distance reading
+		gyroport, angle, // TODO: testing only 
+		
+		;
 	};
 	
 	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
