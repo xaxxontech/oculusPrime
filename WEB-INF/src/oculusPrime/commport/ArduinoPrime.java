@@ -805,14 +805,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 //					msg += "angle moved via scanmatch: "+angle;
 
 					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
-					while (!state.exists(State.values.angle.toString())) { } //wait
+					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
 					double angle = state.getDouble(State.values.angle.toString());
-					msg += "<br>angle moved via gyro: "+angle;
-					
 					ScanUtils.addFrameToMap(depthFrameAfter, 0, angle);
-					
-
-
+					msg += "angle moved via gyro: "+angle;
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);
@@ -838,14 +834,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					case forward:
 						if (Application.openNIRead.depthCamGenerating) {   
 							depthFrameBefore = Application.openNIRead.readFullFrame();	
-							if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+							if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0);
+							application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+							state.delete(State.values.angle);
 						}
 						goForward(); 
 						break;
 					case backward: 
 						if (Application.openNIRead.depthCamGenerating) {  
 							depthFrameAfter = Application.openNIRead.readFullFrame();						
-							if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameBefore, 0, 0); 
+							if (Mapper.map.length==0)  ScanUtils.addFrameToMap(depthFrameAfter, 0, 0);
+							application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+							state.delete(State.values.angle);
 						}
 						goBackward(); 
 				}
@@ -858,19 +858,31 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				if (depthFrameBefore != null) { // went forward
 					Util.delay(750); // allow for slow to stop
+
+					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
+					double angle = state.getDouble(State.values.angle.toString());
+					
 					depthFrameAfter = Application.openNIRead.readFullFrame();
-					double[] moved = ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
-					msg = "distance moved d: "+(int) moved[0]+", angle:"+(int) moved[1] +
-							", best avg: "+moved[2];
-					ScanUtils.addFrameToMap(depthFrameAfter, (int) moved[0], moved[1]);
+					
+//					int distance = ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000), angle);
+					int distance = ScanUtils.findDistanceTopView(depthFrameBefore, depthFrameAfter, angle, (int)(meters*1000));
+					msg = "distance moved d: "+distance+", angle:"+angle;
+					ScanUtils.addFrameToMap(depthFrameAfter, distance, angle);
 				}
 				else if (depthFrameAfter != null) { // went backward
 					Util.delay(750);
+					
+					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
+					double angle = state.getDouble(State.values.angle.toString());
+					
 					depthFrameBefore = Application.openNIRead.readFullFrame();
-					double[] moved = ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000));
-					msg = "distance moved d: -"+(int) moved[0]+", angle: "+(int) moved[1] +
-							", best avg: "+moved[2];	
-					ScanUtils.addFrameToMap(depthFrameAfter, (int) moved[0], moved[1]);
+					
+//					int distance = -ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000), -angle);
+					int distance = -ScanUtils.findDistanceTopView(depthFrameBefore, depthFrameAfter, -angle, (int)(meters*1000));
+					msg = "distance moved d: "+distance+", angle:"+angle;
+					ScanUtils.addFrameToMap(depthFrameBefore, distance, angle);
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);

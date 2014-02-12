@@ -19,6 +19,8 @@ public class Mapper {
 	private static int ch; // cells height
 	private static int dx; // change in bot position within map (before shift)
 	private static int dy; 
+	private static int cornerX =0; 
+	private static int cornerY =0;
 	
 	public static void clearMap() {
 		map = new byte[0][0];
@@ -29,9 +31,46 @@ public class Mapper {
 		lastAngle = 0;
 	}
 	
-	public static void add(byte[][] cells, int distance, final double angle) {
-		final int lastOriginX = originX;
-		final int lastOriginY = originY;
+	
+	public static void addArcPath(final byte[][] cells, int distance, final double angle) {
+//    	double arcPathX = Math.cos(Math.toRadians((180-angle)/2))*distance;
+    	int arcPathY = (int) Math.round(Math.sin(Math.toRadians((180-angle)/2))*distance);
+    	byte[][] newcells = transFormMap(cells, arcPathY, 90-((180-angle)/2)); //arcpath distances, partial rotation
+    	newcells = transFormMap(cells, 0, angle-(90-((180-angle)/2)) ); // remaining rotation
+    	
+    	add(newcells);
+	}
+	
+	public static void add(byte[][] cells) {
+		// prep map for new entry
+		if (map.length == 0) { // 1st entry into map, distance must be 0
+			map = new byte[cw][ch];
+			botX = originX;
+			botY = originY;
+	    	for (int x=0; x<cw; x++) {
+				for (int y=0; y<ch; y++) {
+					map[x][y] = cells[x][y];
+				}
+	    	}
+	    	map[originX][originY]=0b10; // TODO: testing only
+	    	return;
+		}
+		
+    	for (int x=0; x<cw; x++) {
+			for (int y=0; y<ch; y++) {
+				// write to map if contents are something, and don't overwrite wall or origins
+				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] != 0b10  && map[cornerX + x][cornerY + y] != 0b11) {   
+					map[cornerX + x][cornerY + y] = cells[x][y];
+				}
+			}
+    	}
+    	map[cornerX+originX][cornerY+originY]=0b10; // TODO: testing only
+
+	}
+	
+	public static byte[][] transFormMap(byte[][] cells, int distance, final double angle) {
+//		final int lastOriginX = originX;
+//		final int lastOriginY = originY;
 //		final int lastCW = cw;
 //		final int lastCH = ch;
 		
@@ -40,9 +79,13 @@ public class Mapper {
 		originX = cw/2;
 		final int scaledCameraSetback = (int) ((double)ScanUtils.cameraSetBack* ch/ScanUtils.maxDepthFPTV);
 		originY = ch-1-scaledCameraSetback; //+ (int) (ScanUtils.cameraSetBack * (double) ch/ScanUtils.maxDepthFPTV);
-		dx=0; //perfectly straight default
+		
+		if (map.length == 0) return cells;
+		
 		distance = (int) (distance * (double) ch/ScanUtils.maxDepthFPTV); // scaled
-		dy=-distance; //perfectly straight default
+		
+		dx=0;
+		dy=-distance;
 		
 		double newangle =angle + lastAngle;
 		lastAngle = newangle;
@@ -51,6 +94,7 @@ public class Mapper {
 		else if (newangle < -180 ) newangle = 360+newangle;
 		
 		// TODO: calculate arcpath drift on straight moves before rotate, add result to dx,dy
+		// arcpath drift: x = Math.cos(Math.toRadians((180-angle)/2))*distance;
 		// easiest initially: just run this thru as single rotate 1st, then do linear move
 		
 		if (newangle != 0)  {
@@ -76,43 +120,30 @@ public class Mapper {
 			}
 		}
 		
+		cornerX = botX - dx - originX;
+		cornerY = botY + dy - originY;
 
-//		cells[originX][originY]=0b01; // TODO: testing only 
-		int cornerX =0; 
-		int cornerY =0;
-		
-		// prep map for new entry
-		if (map.length == 0) { // 1st entry into map, distance must be 0
-			map = new byte[cw][ch];
-			botX = originX;
-			botY = originY;
+		int mapWidth = map.length;
+		int mapHeight = map[0].length;
+		int shiftMapX = 0;
+		int shiftMapY = 0;
+
+		// shift required
+		if (cornerX < 0) { 
+			shiftMapX = -cornerX;
+			mapWidth = map.length + shiftMapX;
+			cornerX = 0;
 		}
-		else {
-			
-			cornerX = botX - dx - originX;
-			cornerY = botY + dy - originY;
-
-			int mapWidth = map.length;
-			int mapHeight = map[0].length;
-			int shiftMapX = 0;
-			int shiftMapY = 0;
-
-			// shift required
-			if (cornerX < 0) { 
-				shiftMapX = -cornerX;
-				mapWidth = map.length + shiftMapX;
-				cornerX = 0;
-			}
-			if (cornerY < 0) {
-				shiftMapY = -cornerY;
-				mapHeight = map[0].length + shiftMapY;
-				cornerY = 0;
-			}
-			
-			// enlarge required
-			if (map.length < cornerX+cw && shiftMapX==0)    mapWidth = cornerX + cw;
-			if (map[0].length < cornerY+ch && shiftMapY==0)   mapHeight = cornerY + ch; // + shiftMapY;
-			
+		if (cornerY < 0) {
+			shiftMapY = -cornerY;
+			mapHeight = map[0].length + shiftMapY;
+			cornerY = 0;
+		}
+		
+		// enlarge required
+		if (map.length < cornerX+cw && shiftMapX==0)    mapWidth = cornerX + cw;
+		if (map[0].length < cornerY+ch && shiftMapY==0)   mapHeight = cornerY + ch; // + shiftMapY;
+		
 //			System.out.println("map.length: "+map.length);
 //			System.out.println("mapWidth: "+mapWidth);
 //			System.out.println("cornerX: "+cornerX);
@@ -125,40 +156,28 @@ public class Mapper {
 //			System.out.println("dy: "+dy);
 //			System.out.println("newangle: "+newangle);
 //			System.out.println(" ");
-			
-			// if map needs enlarging and maybe shifting:
-			if (mapWidth > map.length || mapHeight > map[0].length || shiftMapX > 0 || shiftMapY >0 ) { 
-				byte[][] temp = map;
-				map = new byte[mapWidth][mapHeight];
-		    	for (int x=0; x<temp.length; x++) {
-					for (int y=0; y<temp[0].length; y++) {
+		
+		// if map needs enlarging and maybe shifting:
+		if (mapWidth > map.length || mapHeight > map[0].length || shiftMapX > 0 || shiftMapY >0 ) { 
+			byte[][] temp = map;
+			map = new byte[mapWidth][mapHeight];
+	    	for (int x=0; x<temp.length; x++) {
+				for (int y=0; y<temp[0].length; y++) {
 //						System.out.println("mapsize: "+mapWidth+", "+mapHeight+
 //							"   map: "+(x+shiftMapX)+", "+(y+shiftMapY)+"   xy:"+x+", "+y+
 //							"   temp: "+temp.length+", "+temp[0].length+
 //							"   c: "+cw+", "+ch);
-							
-						map[x + shiftMapX][y + shiftMapY] = temp[x][y];
-					}
-		    	}
- 			}
-//			cells[positionX][positionY]=0b01; // TODO: testing only 
-			botX = cornerX + originX;
-			botY = cornerY + originY;
-
-		}
-		
-
-		// add new entry	
-    	for (int x=0; x<cw; x++) {
-			for (int y=0; y<ch; y++) {
-				// write to map if contents are something, and don't overwrite wall or origins
-				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] != 0b10  && map[cornerX + x][cornerY + y] != 0b11) {   
-					map[cornerX + x][cornerY + y] = cells[x][y];
+						
+					map[x + shiftMapX][y + shiftMapY] = temp[x][y];
 				}
-			}
-    	}
-    	map[cornerX+originX][cornerY+originY]=0b10; // TODO: testing only
+	    	}
+		}
+//			cells[positionX][positionY]=0b01; // TODO: testing only 
+		botX = cornerX + originX;
+		botY = cornerY + originY;
 
+		return cells;
+		
 	}
 	
 	private static byte[][] rotate(byte[][] cells, double angle) {

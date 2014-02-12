@@ -371,8 +371,9 @@ public class ScanUtils {
 	 * @param frameBefore 16-bit pixel array
 	 * @param frameAfter 16-bit pixel array
 	 * @return initial-guess depth in mm
+	 * UNUSED 
 	 */
-	public static double[] findDepth(short[] frameBefore, short[] frameAfter, int guessedDistance) {
+	public static double[] findDepthAndAngle(short[] frameBefore, short[] frameAfter, int guessedDistance) {
 		/*
 		 * convert frameBefore to lower res
 		 * compare frameAfter to frameBefore at various depths -- start from guessed distance
@@ -438,6 +439,115 @@ public class ScanUtils {
 		return new double[]{(double) winningDepth, angle, winningAvg}; //, winningY};
 	}
 	
+	
+
+	public static int findDepth(short[] frameBefore, short[] frameAfter, int guessedDistance, double angle) {
+		/*
+		 * convert frameBefore to lower res
+		 * compare frameAfter to frameBefore at various depths -- start from guessed distance
+		 * don't compare cells if any are 0
+		 * start with simple overlay, no iterations, no quitting on worsening 
+		 * 
+		 */
+		
+		int resX = 5;
+		int resY = 5;
+		final int[][] cellsBeforeUnscaled = resampleAveragePixel(frameBefore, resX, resY);
+		final int[][] cellsAfter = resampleAveragePixel(frameAfter, resX, resY);
+		final int cwidth =  cellsAfter.length;
+		final int cheight = cellsAfter[0].length;
+		final int xx = (int) (Math.round((width/(double) camFOVx)/resX * angle));
+		double winningAvg = 9999999; 
+		int winningDepth = 0; 
+		
+		for (int d=guessedDistance-guessedDistance/2; d<guessedDistance+guessedDistance/2; d+=2) {
+			int[][] cellsBeforeScaled = scaleResampledPixels(cellsBeforeUnscaled, d);
+
+				int total = 0;
+				int compared = 0;
+				for (int x=0; x<cellsBeforeScaled.length; x++) {
+					for (int y=0; y<cellsBeforeScaled[0].length; y++) {
+						if (x+xx>=0 && x+xx <cwidth && y>=0 && y < cheight) {
+							if(cellsBeforeScaled[x+xx][y] != 0 && cellsAfter[x][y] != 0 &&
+							(cellsBeforeScaled[x+xx][y] & 0xf0000) >> 16 != 1 && (cellsAfter[x][y] & 0xf0000) >> 16 != 1) {
+
+								int diff = Math.abs(cellsBeforeScaled[x+xx][y] - cellsAfter[x][y]);
+								total +=  diff;
+								compared ++;
+							}
+						}
+					}
+				}
+				double avgdiff = (double) total /compared;
+//					System.out.println("depth: "+d+", avgdiff: "+avgdiff+", compared: "+compared+", x:"+xx+", y:"+yy);
+				if ( avgdiff < winningAvg) {
+					winningAvg = avgdiff;
+					winningDepth = d;
+				}
+			
+		}
+
+		return winningDepth;
+	}
+	
+	public static int findDistanceTopView(short[] frameBefore, short[] frameAfter, double angle, final int guessedDistance) { 
+		final int h = 320;
+		final int w = (int) (Math.sin(Math.toRadians(camFOVx/2)) * h) * 2; // narrower for better resuts?
+		final byte[][] cellsBefore = projectFrameHorizToTopView(frameBefore, h);
+		final byte[][] cellsAfter = projectFrameHorizToTopView(frameAfter, h);
+		final double scaledCameraSetback = (double) cameraSetBack* h/maxDepthFPTV; // pixels
+		final int scaledGuessedDistance = guessedDistance * h/maxDepthFPTV; // pixels
+		angle = -Math.toRadians(angle);
+
+		int winningTtl = 0; 
+		int winningDistance = 99999;
+	
+		 
+		for (int d=scaledGuessedDistance-scaledGuessedDistance/2; d<scaledGuessedDistance+scaledGuessedDistance/2; d++) {
+//		for (int d=0; d<scaledGuessedDistance*2; d++) {
+
+			int total = 0;
+
+			for (int x=0; x<w; x++ ) {
+				for (int y=0; y<h; y++) {
+					
+					if (cellsBefore[x][y] != 0) {
+
+						double anglexy = Math.atan((w/2-x)/(double)(h-1-y - scaledCameraSetback));
+						double hyp = (h-1-y- scaledCameraSetback)/Math.cos(anglexy); // cos a = y/h
+
+						int xx = -(int) Math.round(hyp * Math.sin(anglexy+angle)-w/2);  // sin angleXY+angle = (w/2-xx)/hyp
+						int yy = -(int) Math.round(hyp * Math.cos(anglexy+angle) -h+1+scaledCameraSetback) +d; // cos angleXY+angle = (h-1-yy)/hyp
+						
+						if (xx>=0 && xx<w && yy>=0 && yy<h ) { 
+							if (cellsAfter[xx][yy] != 0)   total ++;
+						}
+						
+					}
+					
+				}
+			}
+	
+			if (total > winningTtl) {
+				winningTtl = total;
+				winningDistance = d;
+			}
+		
+		}
+		
+		System.out.println("winningTtl: "+winningTtl);
+//		winningDistance = (int) Math.round((double)winningDistance * maxDepthFPTV/h);
+		winningDistance = winningDistance * maxDepthFPTV/h;
+		return winningDistance;
+	}
+	
+	/**
+	 * Find angle using 1st-person POV
+	 * @param frameBefore
+	 * @param frameAfter
+	 * @param angleGuess
+	 * @return
+	 */
 	public static double findAngle(short[] frameBefore, short[] frameAfter, double angleGuess) {
 		// left = positive angle (right hand rule)
 		int resX = 4;
@@ -506,7 +616,7 @@ public class ScanUtils {
 	
 	// TODO: limit range check with timed odometry approximation
 	// TODO: evaluate accuracy by looking at total pixels compared (higher = more accurate)
-	public static double findAngleTopView(short[] frameBefore, short[] frameAfter, int angleGuess) { 
+	public static double findAngleTopView(short[] frameBefore, short[] frameAfter, double angleGuess) { 
 		final int h = 320;
 		final int w = (int) (Math.sin(Math.toRadians(camFOVx/2)) * h) * 2;
 		final byte[][] cellsBefore = projectFrameHorizToTopView(frameBefore, h);
@@ -584,20 +694,21 @@ public class ScanUtils {
 		byte[][] result = new byte[w][h];
 
 		final int xdctr = w/2;
+		int horizoffset = 0; 
 		
-		for (int y = height/2-2; y<=height/2+2; y++) { // middle 3 horiz pixels //TODO: incorporate yAngleCompStart
+		for (int y = height/2-horizoffset; y<=height/2+horizoffset; y++) { // TODO: incorporate yAngleCompStart
 			for (int x=0; x<width; x++) {
 	
-				int d = frame[y*width+x]; // -cameraSetBack;
-				int ry = (int) ((double) d/ maxDepthFPTV  * h);
+				int d = frame[y*width+x];
+				int ry = (int) Math.round((double) d/ maxDepthFPTV  * h);
 				double xdratio = (x*(double) w/width - xdctr)/ (double) xdctr;
-				int rx = (w/2) - (int) (Math.tan(angle)*(double) ry * xdratio);
+				int rx = (w/2) - (int) Math.round(Math.tan(angle)*(double) ry * xdratio);
 				
-				if (ry<h && ry>=0 && rx>=0 && rx<w) {
-					result[rx][h-ry-1] = 0b01;
-//					result[rx][h-ry-2] = 0b01;
-//					result[rx+1][h-ry-1] = 0b01;
-//					result[rx-1][h-ry-1] = 0b01;
+				if (ry<h && ry>0 && rx>=0 && rx<w) {
+					result[rx][h-ry-1] = 0b11;
+//					result[rx][h-ry-2] = 0b11;
+//					result[rx+1][h-ry-1] = 0b11;
+//					result[rx-1][h-ry-1] = 0b11;
 				}
 			}
 		}
@@ -616,18 +727,17 @@ public class ScanUtils {
 	}
 	
 	public static void addFrameToMap(short[] depth, int distance, double angle) {
-		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
-		int[][] frameCellsFP = findFloorPlane(frameCells);
-//    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
-    	byte[][] floorPlaneCells = floorPlaneAndHorizToPlanView(frameCellsFP, depth, 240);
-    	Mapper.add(floorPlaneCells, distance, angle);
+//		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
+//		int[][] frameCellsFP = findFloorPlane(frameCells);
+//    	byte[][] floorPlaneCells = floorPlaneAndHorizToPlanView(frameCellsFP, depth, 240);
+//    	Mapper.addArcPath(floorPlaneCells, distance, angle);
+		Mapper.addArcPath(projectFrameHorizToTopView(depth, 240), distance, angle);
 	}
 	
 	public static BufferedImage floorPlaneTopViewImg() {
 		short[] depth = Application.openNIRead.readFullFrame();
 		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
 		int[][] frameCellsFP = findFloorPlane(frameCells);
-//    	byte[][] floorPlaneCells = floorPlaneToPlanView(frameCellsFP, 240);
     	byte[][] floorPlaneCells = floorPlaneAndHorizToPlanView(frameCellsFP, depth, 240);
      	return byteCellsToImage(floorPlaneCells);
 	}
@@ -697,8 +807,8 @@ public class ScanUtils {
 				
 				byte b = 0;
 				if ((d & 0xf0000) >> 16 == 1)  {
-					d = (d & 0xffff); //  -cameraSetBack; //TODO: -cameraSetBack isn't quite right
-					b = 0b01;
+					d = (d & 0xffff); 
+					b = 0b01; 
 				}
 
 				int ry = (int) ((double) d/ (double) maxDepthFPTV  * (double) h);
@@ -715,8 +825,8 @@ public class ScanUtils {
 		
 		
 		// now overlay horiz
-		for (int y = height/2-1; y<=height/2+1; y++) {
-			for (int x=0; x<width; x++) {
+		for (int y = height/2-0; y<=height/2+0; y++) {
+			for (int x=0; x<width; x+=1) {
 	
 				int d = frame[y*width+x]; // -cameraSetBack;
 				int ry = (int) ((double) d/ (double) maxDepthFPTV  * (double) h);
