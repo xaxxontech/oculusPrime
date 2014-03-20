@@ -15,9 +15,9 @@ import oculusPrime.Application;
 
 public class ScanUtils {
 	
-	private final static int width=320;
-	private final static int height=240;
-	private final static int camFOVx = 58; // degrees
+	final static int width=320;
+	final static int height=240;
+	final static int camFOVx = 58; // degrees
 	private final static int camFOVy = 45; // degrees
 	public final static int maxDepthInMM = 5000; // 3500
 	private final static int depthCamVertDistfromFloor = 290;
@@ -535,7 +535,7 @@ public class ScanUtils {
 		
 		}
 		
-		System.out.println("winningTtl: "+winningTtl);
+//		System.out.println("winningTtl: "+winningTtl);
 //		winningDistance = (int) Math.round((double)winningDistance * maxDepthFPTV/h);
 		winningDistance = winningDistance * maxDepthFPTV/h;
 		return winningDistance;
@@ -619,8 +619,8 @@ public class ScanUtils {
 	public static double findAngleTopView(short[] frameBefore, short[] frameAfter, double angleGuess) { 
 		final int h = 320;
 		final int w = (int) (Math.sin(Math.toRadians(camFOVx/2)) * h) * 2;
-		final byte[][] cellsBefore = projectFrameHorizToTopView(frameBefore, h);
-		final byte[][] cellsAfter = projectFrameHorizToTopView(frameAfter, h);
+		final byte[][] cellsBefore = projectFrameHorizToTopViewForAngle(frameBefore, h);
+		final byte[][] cellsAfter = projectFrameHorizToTopViewForAngle(frameAfter, h);
 		final double scaledCameraSetback = (double) cameraSetBack* h/maxDepthFPTV;
 
 //		System.out.println("scaledCameraSetback: "+scaledCameraSetback);
@@ -716,6 +716,32 @@ public class ScanUtils {
 		return result;
 	}
 	
+	// for measuring distance and/or angle moved purposes
+	public static byte[][] projectFrameHorizToTopViewForAngle(short[] frame, int h) { 
+		final int w = (int) (Math.sin(Math.toRadians(camFOVx)/2) * h) * 2;
+		final double angle = Math.toRadians(camFOVx/2);
+		
+		byte[][] result = new byte[w][h];
+
+		final int xdctr = w/2;
+		
+		for (int y = height/2-2; y<=height/2+2; y++) { // middle 5 horiz pixels 
+			for (int x=0; x<width; x++) {
+	
+				int d = frame[y*width+x]; 
+				int ry = (int) ((double) d/ maxDepthFPTV  * h);
+				double xdratio = (x*(double) w/width - xdctr)/ (double) xdctr;
+				int rx = (w/2) - (int) (Math.tan(angle)*(double) ry * xdratio);
+				
+				if (ry<h && ry>=0 && rx>=0 && rx<w) {
+					result[rx][h-ry-1] = 0b01;
+				}
+			}
+		}
+		
+		return result;
+	}
+	
 	public BufferedImage floorPlaneImg() {
 
 		short[] depth = Application.openNIRead.readFullFrame();
@@ -726,12 +752,14 @@ public class ScanUtils {
 		return generateDepthFrameImgWithFloorPlane(pixels);
 	}
 	
+	// TODO: unused
 	public static void addFrameToMap(short[] depth, int distance, double angle) {
 //		int[][] frameCells = resampleAveragePixel(depth, 2, 2);
 //		int[][] frameCellsFP = findFloorPlane(frameCells);
 //    	byte[][] floorPlaneCells = floorPlaneAndHorizToPlanView(frameCellsFP, depth, 240);
 //    	Mapper.addArcPath(floorPlaneCells, distance, angle);
-		Mapper.addArcPath(projectFrameHorizToTopView(depth, 240), distance, angle);
+		
+//		Mapper.addArcPath(projectFrameHorizToTopView(depth, 240), distance, angle);
 	}
 	
 	public static BufferedImage floorPlaneTopViewImg() {
@@ -843,6 +871,7 @@ public class ScanUtils {
 		return result;
 	}
 	
+	// unused?
 	public static BufferedImage byteCellsToImage(byte[][] cells ) {
 
 		final int cwidth = cells.length;
@@ -855,15 +884,17 @@ public class ScanUtils {
 				for(int x=0; x<cwidth; x++) {
 				
 				/* single hue */
-				int argb = 0;
-				switch (cells[x][y]) {
-					case 0b01: argb=0x0000ff; break; // blue
-					case 0b11: argb=0x00ff00; break; // green  // argb=(intensity<<16)+(0<<8)+intensity; break;
-					case 0b10: argb=0xff0000; break; // red
-					default: argb = 0x000000;
-				}
-//				if (x==4) 	argb = 0x0000ff;
-//				int argb = (hue<<16) + (0<<8) + hue;
+//				int argb = 0;
+//				switch (cells[x][y]) {
+//					case 0b01: argb=0x0000ff; break; // blue
+//					case 0b11: argb=0x00ff00; break; // green  // argb=(intensity<<16)+(0<<8)+intensity; break;
+//					case 0b10: argb=0xff0000; break; // red
+//					default: argb = 0x000000;
+//				}
+
+				int hue = cells[x][y];
+//				if (hue != 0) System.out.println(hue);
+				int argb =  (hue<<8) + 0;
 
 				img.setRGB(x, y, argb);  
 
@@ -871,6 +902,29 @@ public class ScanUtils {
 		}
 //		img = (BufferedImage) img.getScaledInstance((int) Math.round(cwidth*scale),
 //				(int)Math.round(height*scale), Image.SCALE_DEFAULT);
+		return img;
+	}
+	
+	public static BufferedImage cellsToImage(short[][] cells ) {
+
+		final int cwidth = cells.length;
+		int cheight= cells[0].length;
+		BufferedImage img = new BufferedImage(cwidth, cheight, BufferedImage.TYPE_INT_RGB);
+
+		for(int y=0; y<cheight; y++) {
+
+			for(int x=0; x<cwidth; x++) {
+
+				int hue = cells[x][y];
+				int argb  = 0;
+				if (hue == -1) argb = 0xff0000; 
+				else argb =  hue<<8;
+
+				img.setRGB(x, y, argb);  
+
+			}
+		}
+
 		return img;
 	}
 

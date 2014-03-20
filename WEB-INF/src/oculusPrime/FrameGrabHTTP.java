@@ -67,7 +67,7 @@ public class FrameGrabHTTP extends HttpServlet {
             	processedImg(req,res);
             }
             else if (mode.equals("map") && Application.openNIRead.depthCamGenerating) {
-            	Application.processedImage = ScanUtils.byteCellsToImage(Mapper.map);         		
+            	Application.processedImage = ScanUtils.cellsToImage(Mapper.map);         		
 //            	if (req.getParameter("scale") != null) {
 //            		double scale = Double.parseDouble(req.getParameter("scale"));
 //                	Application.processedImage = ScanUtils.byteCellsToImage(Mapper.map, scale);         		

@@ -159,6 +159,9 @@ public class ArduinoGyro implements SerialPortEventListener {
 		if (s[0].equals("angle")) {
 			state.set(State.values.angle, s[1]);
 		}
+		else if (s[0].equals("cliff")) {
+			application.message("cliff detected", null, null);
+		}
 	}
 	
 	/**

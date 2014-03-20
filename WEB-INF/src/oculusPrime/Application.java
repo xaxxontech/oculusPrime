@@ -557,7 +557,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 			moveMacroCancel();
 			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Integer.parseInt(str));
-			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
+			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"&deg;", "motion", "moving");
 			break;
 			
 		case forward:

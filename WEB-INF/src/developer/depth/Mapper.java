@@ -7,7 +7,8 @@ import java.util.List;
 public class Mapper {
 
 //	public static List<List<Byte>> map = new ArrayList<List<Byte>>();
-	public static byte[][] map = new byte[0][0];
+	public static short[][] map = new short[0][0];
+	public static List<short[]> move =  new ArrayList<short[]>();
 	public static int startX = 0; // bot starting point within map
 	public static int startY = 0; 
 	private static int botX = 0; // position of bot within map
@@ -21,9 +22,11 @@ public class Mapper {
 	private static int dy; 
 	private static int cornerX =0; 
 	private static int cornerY =0;
+	private static final int maxProb = 220;
+	private static final double depthAccuracyPercent = 0.03;
 	
 	public static void clearMap() {
-		map = new byte[0][0];
+		map = new short[0][0];
 		startX = 0; // bot starting point within map
 		startY = 0; 
 		botX = 0; // position of bot within map
@@ -31,20 +34,25 @@ public class Mapper {
 		lastAngle = 0;
 	}
 	
-	
-	public static void addArcPath(final byte[][] cells, int distance, final double angle) {
+	/**
+	 * 
+	 * @param cells
+	 * @param distance
+	 * @param angle
+	 */
+	public static void addArcPath(final short[][] cells, int distance, final double angle) {
 //    	double arcPathX = Math.cos(Math.toRadians((180-angle)/2))*distance;
     	int arcPathY = (int) Math.round(Math.sin(Math.toRadians((180-angle)/2))*distance);
-    	byte[][] newcells = transFormMap(cells, arcPathY, 90-((180-angle)/2)); //arcpath distances, partial rotation
+    	short[][] newcells = transFormMap(cells, arcPathY, 90-((180-angle)/2)); //arcpath distances, partial rotation
     	newcells = transFormMap(cells, 0, angle-(90-((180-angle)/2)) ); // remaining rotation
     	
     	add(newcells);
 	}
 	
-	public static void add(byte[][] cells) {
+	public static void add(short[][] cells) {
 		// prep map for new entry
 		if (map.length == 0) { // 1st entry into map, distance must be 0
-			map = new byte[cw][ch];
+			map = new short[cw][ch];
 			botX = originX;
 			botY = originY;
 	    	for (int x=0; x<cw; x++) {
@@ -52,23 +60,40 @@ public class Mapper {
 					map[x][y] = cells[x][y];
 				}
 	    	}
-	    	map[originX][originY]=0b10; // TODO: testing only
+	    	map[originX][originY]=-1; // TODO: testing only
 	    	return;
 		}
 		
+		// all other entries
     	for (int x=0; x<cw; x++) {
 			for (int y=0; y<ch; y++) {
-				// write to map if contents are something, and don't overwrite wall or origins
-				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] != 0b10  && map[cornerX + x][cornerY + y] != 0b11) {   
+				// write to map if contents are something, and don't overwrite bot locations, higher probability locations
+				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] >= 0  && cells[x][y] > map[cornerX + x][cornerY + y]) {   
 					map[cornerX + x][cornerY + y] = cells[x][y];
+					
+					// now nuke nearby lower probability points (hopefully due to far distance scan error)
+					// 5 pixels = approx 5cm with 240 resolution and 3500 max
+//					for (int xx=-5; xx<=5; xx++) {
+//						for (int yy=-5; yy<=5; yy++) {
+//							if (cornerX + x + xx > 0 && cornerX + x + xx < map.length &&
+//									cornerY + y + yy > 0 && cornerY + y +yy <map[0].length) {
+//								if (map[cornerX + x + xx][cornerY + y + yy]>0 && 
+//										cells[x][y]-map[cornerX + x + xx][cornerY + y + yy] > Math.abs(xx)*1) {
+//									map[cornerX + x + xx][cornerY + y + yy] = 0;
+//								}
+//							}
+//						}
+//					}
+					
 				}
+				
 			}
     	}
-    	map[cornerX+originX][cornerY+originY]=0b10; // TODO: testing only
+    	map[cornerX+originX][cornerY+originY]=-1; // TODO: testing only
 
 	}
 	
-	public static byte[][] transFormMap(byte[][] cells, int distance, final double angle) {
+	public static short[][] transFormMap(short[][] cells, int distance, final double angle) {
 //		final int lastOriginX = originX;
 //		final int lastOriginY = originY;
 //		final int lastCW = cw;
@@ -92,10 +117,6 @@ public class Mapper {
 		
 		if (newangle > 180)  newangle = -360+newangle;
 		else if (newangle < -180 ) newangle = 360+newangle;
-		
-		// TODO: calculate arcpath drift on straight moves before rotate, add result to dx,dy
-		// arcpath drift: x = Math.cos(Math.toRadians((180-angle)/2))*distance;
-		// easiest initially: just run this thru as single rotate 1st, then do linear move
 		
 		if (newangle != 0)  {
 			if (newangle==90 || newangle==-90 || newangle==180 || newangle==-180) {
@@ -159,8 +180,8 @@ public class Mapper {
 		
 		// if map needs enlarging and maybe shifting:
 		if (mapWidth > map.length || mapHeight > map[0].length || shiftMapX > 0 || shiftMapY >0 ) { 
-			byte[][] temp = map;
-			map = new byte[mapWidth][mapHeight];
+			short[][] temp = map;
+			map = new short[mapWidth][mapHeight];
 	    	for (int x=0; x<temp.length; x++) {
 				for (int y=0; y<temp[0].length; y++) {
 //						System.out.println("mapsize: "+mapWidth+", "+mapHeight+
@@ -180,7 +201,7 @@ public class Mapper {
 		
 	}
 	
-	private static byte[][] rotate(byte[][] cells, double angle) {
+	private static short[][] rotate(short[][] cells, double angle) {
 		/* derived from
 		 * https://docs.google.com/drawings/d/10mfg_A__ToQV5cz6WLc6cfNmeWf6PxCBcmlSnrU8qm8
 		 */
@@ -192,9 +213,9 @@ public class Mapper {
     	int newW =  (int) Math.round( Math.cos(angle)*cwidth + Math.abs(Math.sin(angle))*cheight );
     	int newH = (int) Math.round( Math.cos(angle)*cheight + Math.abs(Math.sin(angle))*cwidth ) ;
 		
-    	byte[][] result = new byte[0][0];
+    	short[][] result = new short[0][0];
     	try {
-    		result = new byte[newW][newH];
+    		result = new short[newW][newH];
     	}
     	catch( Exception e) {  // trying to debug occasional NegativeArraySizeException
     		e.printStackTrace();
@@ -228,10 +249,6 @@ lastAngle: 38277.57166213958
     		 */
     		
     	}
-
-    	// TODO: remove, testing only 
-//    	for (int xx=0; xx<newW; xx++) { for (int yy=0; yy<newH; yy++) {
-//				result[xx][yy]=(byte) 0b01;  } }
 
     	int newX;
     	int newY;
@@ -273,10 +290,10 @@ lastAngle: 38277.57166213958
 		return result;
 	}
 	
-	private static byte[][] rotateRightAngle(byte[][] cells, int angle) {
-		byte[][] result = new byte[ch][cw]; // 90 or -90 deg 
+	private static short[][] rotateRightAngle(short[][] cells, int angle) {
+		short[][] result = new short[ch][cw]; // 90 or -90 deg 
 		if (angle == 180 || angle==-180) {
-			result = new byte[cw][ch];
+			result = new short[cw][ch];
 			for (int y=0; y<ch; y++) {
 				for (int x=0; x<cw; x++) {
 					result[cw-x-1][ch-y-1] = cells[x][y];
@@ -321,5 +338,59 @@ lastAngle: 38277.57166213958
 		return result;
 	}
 
+	public static void addMove(short[] frame, int distance, double angle) {
+		/*	List<short[]> move =  new ArrayList<short[]>();
+		 * format: {distance mm, angle, angle, framedata....} 
+		*/ 
+		short[] a = new short[frame.length + 3];
+		a[0] =(short) distance;
+    	int aint = (int) (angle * 1000); // 3 decimal precision
+    	a[1] = (short) ((aint & 0xffff00) >> 8);
+    	a[2] = (short) (aint & 0xff);
+    	System.arraycopy(frame, 0, a, 3, frame.length);
+		move.add(a);
+		
+		addArcPath(projectFrameHorizToTopView(frame), distance, angle);
+	}
+	
+	private static double moveAngle(short[] singleMove) {
+		int newint = (singleMove[1] << 8) + singleMove[2];
+		return (double) newint /1000;
+	}
 
+	
+	public static short[][] projectFrameHorizToTopView(short[] frame) {
+		final int h = 240; 
+		final int w = (int) (Math.sin(Math.toRadians(ScanUtils.camFOVx)/2) * h) * 2;
+		final double angle = Math.toRadians(ScanUtils.camFOVx/2);
+		
+		short[][] result = new short[w][h];
+
+		final int xdctr = w/2;
+		
+		int y = ScanUtils.height/2; 
+		for (int x=0; x<ScanUtils.width; x+=1) { // increment = simulate scan resolution
+
+			int d = frame[y*ScanUtils.width+x];
+//				if (d>ScanUtils.maxDepthFPTV) d=0;
+			int ry = (int) Math.round((double) d/ ScanUtils.maxDepthFPTV  * h);
+			double xdratio = (x*(double) w/ScanUtils.width - xdctr)/ (double) xdctr;
+			int rx = (w/2) - (int) Math.round(Math.tan(angle)*(double) ry * xdratio);
+			
+			if (ry<h && ry>0 && rx>=0 && rx<w) {
+				short n =(short) ((double) d/ScanUtils.maxDepthFPTV * maxProb);
+				if (d !=0) n=(short) (255-n);
+				result[rx][h-ry-1] = n;
+			}
+		}
+		
+		
+//		private static final int probabilityMax = 255;
+//		private static final double depthAccuracyPercent = 0.03;
+
+		
+		return result;
+	}
+	
+	
 }

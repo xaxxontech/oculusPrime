@@ -28,10 +28,9 @@ public class TestPanel extends JFrame {
 				try {
 					TestPanel frame = new TestPanel();
 					frame.setVisible(true);
-					
-					
-//			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
-	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
+		
+			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
+//	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
 //	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion408-2p37-1.raw"));
 //	    	    	short[] frameAfter = ScanUtils.getFrame(new File(leader+"xtion408-2p37-2.raw"));
 	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion400-1p99-1.raw"));
@@ -40,36 +39,26 @@ public class TestPanel extends JFrame {
 	    	    	int res =2;
 	    	    	int h = 320;
 	    	    	
-//	    	    	int[][] frameCells1 = ScanUtils.resampleAveragePixel(frameBefore, res, res);
-//			    	int[][] zork = ScanUtils.findFloorPlane(frameCells1);
-//			    	byte[][] fp = ScanUtils.floorPlaneAndHorizToPlanView(zork, frameBefore, h);
-			    	byte[][] fp = ScanUtils.projectFrameHorizToTopView(frameBefore, h);
-
-			    	Mapper.addArcPath(fp, 0, 0); // new map
-			    	BufferedImage img2 = ScanUtils.byteCellsToImage(fp);
+			    	Mapper.addMove(frameBefore, 0, 0); // new map
+			    	BufferedImage img2 = ScanUtils.cellsToImage(Mapper.map);
 			    	
 			    	lblNewLabel.setIcon(new ImageIcon(img2));
 			    	panel.setBounds(5,0,img2.getWidth(),img2.getHeight()+10);
 					panel.repaint();
 
 
-//	    	    	int[][] frameCells2 = ScanUtils.resampleAveragePixel(frameAfter, res, res);
-//			    	int[][] zork2 = ScanUtils.findFloorPlane(frameCells2);
-//			    	byte[][] fp2 = ScanUtils.floorPlaneAndHorizToPlanView(zork2, frameAfter, h);
-			    	byte[][] fp2 = ScanUtils.projectFrameHorizToTopView(frameAfter, h);
-			    	double angle = -1.99;
-			    	int d = ScanUtils.findDistanceTopView(frameBefore, frameAfter, angle, 400);
-			    	Mapper.addArcPath(fp2, d, angle);
-//			    	
-//			    	BufferedImage img1 = ScanUtils.byteCellsToImage(Mapper.map);
+//					byte[][] fp2 = ScanUtils.projectFrameHorizToTopView(frameAfter, h);
+//			    	double angle = -1.99;
+//			    	int d = ScanUtils.findDistanceTopView(frameBefore, frameAfter, angle, 400);
+			    	Mapper.addMove(frameAfter, 408, -2.37);
 
-			    	BufferedImage img1 = ScanUtils.byteCellsToImage(Mapper.map);
+			    	BufferedImage img1 = ScanUtils.cellsToImage(Mapper.map);
 
 			    	lblNewLabel_1.setIcon(new ImageIcon(img1));
 					panel_1.setBounds(340, 0, img1.getWidth(), img1.getHeight()+10);
 					panel_1.repaint();
 					
- 					System.out.println(ScanUtils.findDistanceTopView(frameBefore, frameAfter, angle, 400));
+// 					System.out.println(ScanUtils.findDistanceTopView(frameBefore, frameAfter, angle, 400));
  					
 					
 				} catch (Exception e) {
