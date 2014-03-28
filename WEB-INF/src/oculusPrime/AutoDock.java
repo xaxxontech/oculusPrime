@@ -46,7 +46,7 @@ public class AutoDock { // implements Observer {
 		this.comport = com;
 //		this.powerport = powercom;
 		// state.addObserver(this);
-		docktarget = settings.readSetting(GUISettings.docktarget);
+//		docktarget = settings.readSetting(GUISettings.docktarget);
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
 	}
@@ -75,10 +75,10 @@ public class AutoDock { // implements Observer {
 					public void run() {
 						try {
 
-							if (state.getInteger(State.values.spotlightbrightness) > 0 &&
-									state.getInteger(State.values.floodlightlevel) == 0) {
-								comport.setSpotLightBrightness(0);
-								comport.floodLight(39);
+							if (state.getInteger(State.values.spotlightbrightness) > 20 && 
+									!state.getBoolean(State.values.controlsinverted)) {
+								comport.setSpotLightBrightness(20);
+//								comport.floodLight(39);
 								Thread.sleep(500); 
 							} 
 							
@@ -140,6 +140,8 @@ public class AutoDock { // implements Observer {
 					
 					if (!state.getBoolean(State.values.controlsinverted)) { // need to face backwards
 			
+						comport.setSpotLightBrightness(0);
+						
 						app.message(null, "autodocklock", s);
 						state.set(State.values.autodocking, false);
 						comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
@@ -149,13 +151,13 @@ public class AutoDock { // implements Observer {
 								try {
 
 									Thread.sleep(allowforClickSteer); 
-									int pos = ArduinoPrime.CAM_MAX - 10;
-//									comport.camCommand(ArduinoPrime.cameramove.rearstop);
-									comport.cameraToPosition(pos);
+//									int pos = ArduinoPrime.CAM_MAX - 10;
+									comport.camCommand(ArduinoPrime.cameramove.reverse);
+//									comport.cameraToPosition(pos);
 									comport.rotate(ArduinoPrime.direction.left, 180);
-									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
-									state.block(oculusPrime.State.values.cameratilt, Integer.toString(pos), 10000); 
-									Thread.sleep(1500);
+//									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
+//									state.block(oculusPrime.State.values.cameratilt, Integer.toString(pos), 10000); 
+									Thread.sleep(2500);
 //									autoDock("go");
 									state.set(State.values.autodocking, true);
 									dockGrab("find", 0, 0);
@@ -373,10 +375,10 @@ public class AutoDock { // implements Observer {
 		float dockslope = new Float(s[8]);
 		float slopedeg = (float) ((180 / Math.PI) * Math.atan(slope));
 		float dockslopedeg = (float) ((180 / Math.PI) * Math.atan(dockslope));
-//		int s1 = dockw * dockh * 15 / 100 * w / h; // was 15/100 w/ taller marker
-		int s1 = dockw * dockh * 12 / 100 * w / h; // was 15/100 w/ taller marker
-		int s2 = (int) (dockw * dockh * 65.5 / 100 * w / h); // was 92/100 w/ taller marker
-//		int s2 = dockw * dockh * 45 / 100 * w / h; // was 92/100 w/ taller marker
+//		int s1 = dockw * dockh * 12 / 100 * w / h;  // (area) legacy, for non-mirrored cam
+//		int s2 = (int) (dockw * dockh * 65.5 / 100 * w / h); // (area) legacy, for non-mirrored cam
+		int s1 = (int) (dockw * dockh * 0.15  * w / h);  // (area) 
+		int s2 = (int) (dockw * dockh * 69.0 / 100 * w / h); // (area)
 
 		// optionally set breaking delay longer for fast bots
 		int bd = settings.getInteger(ManualSettings.stopdelay.toString());
@@ -721,7 +723,7 @@ public class AutoDock { // implements Observer {
 					else { Util.log("dockgrab failure", this); return; }
 						
 					imgwidth= img.getWidth();
-					Util.log("image width: "+imgwidth, this);
+					Util.debug("image width: "+imgwidth, this);
 					imgheight= img.getHeight();
 					rescomp = 640/imgwidth; // for clicksteer gui 640 window
 
@@ -733,15 +735,15 @@ public class AutoDock { // implements Observer {
 					
 					int[] argb = img.getRGB(0, 0, imgwidth, imgheight, null, 0, imgwidth);
 					
-					if (state.getBoolean(State.values.controlsinverted)) { 
-						for (int yy=0; yy<imgheight/2; yy++) {
-							for (int xx=0; xx<imgwidth; xx++) {
-								int temp = argb[xx+yy*imgwidth];
-								argb[xx+yy*imgwidth] = argb[xx+(imgheight-yy-1)*imgwidth];
-								argb[xx+(imgheight-yy-1)*imgwidth] = temp;
-							}
-						}
-					}
+//					if (state.getBoolean(State.values.controlsinverted)) { 
+//						for (int yy=0; yy<imgheight/2; yy++) {
+//							for (int xx=0; xx<imgwidth; xx++) {
+//								int temp = argb[xx+yy*imgwidth];
+//								argb[xx+yy*imgwidth] = argb[xx+(imgheight-yy-1)*imgwidth];
+//								argb[xx+(imgheight-yy-1)*imgwidth] = temp;
+//							}
+//						}
+//					}
 		
 					if (mode.equals("calibrate")) {
 						String[] results = oculusImage.findBlobStart(x, y, img.getWidth(), img.getHeight(), argb);

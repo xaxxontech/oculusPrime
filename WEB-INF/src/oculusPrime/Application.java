@@ -1992,29 +1992,28 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		// Util.debug("updated(): " + key, this);
 		
-		if(key.equals(State.values.cameratilt.name())){
-			if(state.getInteger(State.values.cameratilt) > 150 //(ArduinoPrime.CAM_MAX /2) 
-					&! state.getBoolean(State.values.controlsinverted)){
-				if (player!=null) {
-					IServiceCapableConnection sc = (IServiceCapableConnection) player;
-					sc.invoke("flipVideo", new Object[] { true });
-					
-					messageplayer("inverting video and controls", null,null);
-				}
-				state.set(State.values.controlsinverted, true);
-			}
-			if(state.getInteger(State.values.cameratilt) < (ArduinoPrime.CAM_MAX /2) && 
-					state.getBoolean(State.values.controlsinverted)){
-				if (player!=null) {
-					IServiceCapableConnection sc = (IServiceCapableConnection) player;
-					sc.invoke("flipVideo", new Object[] { false });
-					//state.set(State.values.controlsinverted, false);
-					
-					messageplayer("un-inverting video and controls", null,null);
-				}
-				state.delete(State.values.controlsinverted);
-			}
-		}
+//		if(key.equals(State.values.cameratilt.name())){
+//			if(state.getInteger(State.values.cameratilt) > 150 //(ArduinoPrime.CAM_MAX /2) 
+//					&! state.getBoolean(State.values.controlsinverted)){
+//				if (player!=null) {
+//					IServiceCapableConnection sc = (IServiceCapableConnection) player;
+//					sc.invoke("flipVideo", new Object[] { true });
+//					
+//					messageplayer("inverting video and controls", null,null);
+//				}
+//				state.set(State.values.controlsinverted, true);
+//			}
+//			if(state.getInteger(State.values.cameratilt) < (ArduinoPrime.CAM_MAX /2) && 
+//					state.getBoolean(State.values.controlsinverted)){
+//				if (player!=null) {
+//					IServiceCapableConnection sc = (IServiceCapableConnection) player;
+//					sc.invoke("flipVideo", new Object[] { false });
+//					
+//					messageplayer("un-inverting video and controls", null,null);
+//				}
+//				state.delete(State.values.controlsinverted);
+//			}
+//		}
 		
 	}
 }

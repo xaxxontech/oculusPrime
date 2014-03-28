@@ -61,7 +61,7 @@ public enum PlayerCommands {
 		autodockcalibrate("{INT} {INT}"),
 		speech("{STRING}"),
 		drivingsettingsupdate("[0-255] [0-255] {INT} {INT} {DOUBLE} {INT}"),
-		cameracommand("stop", "up", "down", "horiz", "downabit", "upabit", "frontstop", "rearstop"),
+		cameracommand("stop", "up", "down", "horiz", "downabit", "upabit", "rearstop", "reverse"),
 		speedset("slow", "med", "fast"), 
 		dock("dock", "undock"),
 		clicksteer("{INT} {INT}"), 
