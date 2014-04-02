@@ -2335,6 +2335,11 @@ function depthView(mode) {
 			w = 232;
 			h = 240;
 		}
+		else if (mode=="stereo") {
+			w = 640;
+			h = 339;
+		}
+		else if (mode=="stereotop") { w=360; h=320; }
 		var v = document.getElementById("video");
 		var xy = findpos(v);
 		var x = xy[0]+v.offsetWidth;

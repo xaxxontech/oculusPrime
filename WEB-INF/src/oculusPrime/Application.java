@@ -53,7 +53,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	public ArduinoGyro gyroport = null; // TODO: testing
 	public static TelnetServer commandServer = null;
 	public static developer.depth.OpenNIRead openNIRead = null;
-	public static developer.depth.ScanUtils scanUtils = null; 
+	public static developer.depth.ScanUtils scanUtils = null;
+	public static developer.depth.Stereo stereo = null;
 	public static Speech speech = new Speech();
 	public static byte[] framegrabimg  = null;
 	public static Boolean passengerOverride = false;
@@ -253,6 +254,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if (settings.getBoolean(ManualSettings.developer.name())) {			
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
+			stereo = new developer.depth.Stereo();
 		}
 	
 		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) commandServer = new TelnetServer(this);
@@ -619,6 +621,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			if(str.equals("on")) { openNIRead.startDepthCam(); }
 			else { openNIRead.stopDepthCam(); }			
 			messageplayer("openNI camera "+str, null, null);
+			break;
+			
+		case stereo:
+			if(str.equals("on")) { stereo.startCameras(); }
+			else { stereo.stopCameras(); }			
+			messageplayer("stereo cameras "+str, null, null);
 			break;
 			
 		case videosoundmode:

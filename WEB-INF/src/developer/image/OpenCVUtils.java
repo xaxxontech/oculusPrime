@@ -27,7 +27,7 @@ import org.opencv.objdetect.CascadeClassifier;
 public class OpenCVUtils {
 
 	public OpenCVUtils() {  	// constructor
-		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+//		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 	}
     
     public BufferedImage matToBufferedImage(Mat matrix) { // type_intRGB
@@ -60,27 +60,29 @@ public class OpenCVUtils {
 	}
     
     
-    public BufferedImage webcamCapture(int camnum) {
-    	BufferedImage img = null;
-    	Mat webcam_image=getWebCamImg(camnum); 
-    	if( webcam_image != null) {
-    		Imgproc.cvtColor(webcam_image, webcam_image, Imgproc.COLOR_BGR2GRAY);
-    		Imgproc.equalizeHist(webcam_image, webcam_image);
-    		Imgproc.blur(webcam_image, webcam_image, new Size(3,3));
-    		Imgproc.cvtColor(webcam_image, webcam_image, Imgproc.COLOR_GRAY2BGR);
-//    		Mat resizeimage = new Mat();
-//    		Size sz = new Size(320,240);
-//    		Imgproc.resize( blurimg, resizeimage, sz );
-    		img = matToBufferedImage(webcam_image);
-    	}
-    	else {
-    		System.out.println("no camera image available");
-    	}
-    	return img;
-    }
+//    public BufferedImage webcamCapture(int camnum) {
+//    	BufferedImage img = null;
+//    	Mat webcam_image=getWebCamImg(camnum); 
+//    	if( webcam_image != null) {
+//    		Imgproc.cvtColor(webcam_image, webcam_image, Imgproc.COLOR_BGR2GRAY);
+//    		Imgproc.equalizeHist(webcam_image, webcam_image);
+//    		Imgproc.blur(webcam_image, webcam_image, new Size(3,3));
+//    		Imgproc.cvtColor(webcam_image, webcam_image, Imgproc.COLOR_GRAY2BGR);
+////    		Mat resizeimage = new Mat();
+////    		Size sz = new Size(320,240);
+////    		Imgproc.resize( blurimg, resizeimage, sz );
+//    		img = matToBufferedImage(webcam_image);
+//    	}
+//    	else {
+//    		System.out.println("no camera image available");
+//    	}
+//    	return img;
+//    }
     
-    public Mat getWebCamImg(int camnum) {
-    	VideoCapture capture =new VideoCapture(camnum);  
+    public Mat getWebCamImg(VideoCapture capture) {
+//    	VideoCapture capture =new VideoCapture(camnum); 
+    	capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 320);
+    	capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 240);
     	Mat webcam_image=null;
     	if( capture.isOpened()) {
     		webcam_image=new Mat();
@@ -88,7 +90,7 @@ public class OpenCVUtils {
     		Util.delay(1000);
     		capture.read(webcam_image);
     	}
-    	capture.release();
+//    	capture.release();
     	return webcam_image;
     }
     

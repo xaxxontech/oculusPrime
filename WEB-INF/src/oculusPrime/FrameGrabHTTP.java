@@ -74,6 +74,14 @@ public class FrameGrabHTTP extends HttpServlet {
 //            	}
             	processedImg(req,res);
             }
+            else if (mode.equals("stereo") && Application.stereo.stereoCamerasOn) {
+            	Application.processedImage = Application.stereo.getImage();
+            	processedImg(req,res);
+            }
+            else if (mode.equals("stereotop")  && Application.stereo.stereoCamerasOn) {
+            	Application.processedImage = Application.stereo.getTopView();
+            	processedImg(req,res);
+            }
 
         }
 		else { frameGrab(req,res); }        

@@ -1,6 +1,5 @@
 package developer.depth;
 
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -904,6 +903,7 @@ public class ScanUtils {
 //				(int)Math.round(height*scale), Image.SCALE_DEFAULT);
 		return img;
 	}
+	
 	
 	public static BufferedImage cellsToImage(short[][] cells ) {
 

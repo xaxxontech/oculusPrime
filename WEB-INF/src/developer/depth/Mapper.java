@@ -338,6 +338,13 @@ lastAngle: 38277.57166213958
 		return result;
 	}
 
+	/**
+	 * 
+	 * @param frame
+	 * @param distance
+	 * @param angle
+	 * Add move to database of all cummulative moves, incl. distance, angle, depth data
+	 */
 	public static void addMove(short[] frame, int distance, double angle) {
 		/*	List<short[]> move =  new ArrayList<short[]>();
 		 * format: {distance mm, angle, angle, framedata....} 
@@ -357,7 +364,6 @@ lastAngle: 38277.57166213958
 		int newint = (singleMove[1] << 8) + singleMove[2];
 		return (double) newint /1000;
 	}
-
 	
 	public static short[][] projectFrameHorizToTopView(short[] frame) {
 		final int h = 240; 
