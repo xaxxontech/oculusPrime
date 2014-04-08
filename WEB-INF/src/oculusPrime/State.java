@@ -13,7 +13,7 @@ public class State {
 	public enum values{ 
 		motionenabled, moving, movingforward, motorport, // motors
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
-		floodlightlevel, spotlightbrightness, strobeflashon, // lights
+		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
 		boottime, localaddress, externaladdress, httpPort, // system
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video

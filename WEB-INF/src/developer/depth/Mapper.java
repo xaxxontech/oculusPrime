@@ -23,7 +23,7 @@ public class Mapper {
 	private static int cornerX =0; 
 	private static int cornerY =0;
 	private static final int maxProb = 220;
-	private static final double depthAccuracyPercent = 0.03;
+	public static final int mapSingleHeight = 240;
 	
 	public static void clearMap() {
 		map = new short[0][0];
@@ -345,7 +345,7 @@ lastAngle: 38277.57166213958
 	 * @param angle
 	 * Add move to database of all cummulative moves, incl. distance, angle, depth data
 	 */
-	public static void addMove(short[] frame, int distance, double angle) {
+	public static void addMove(short[] frame, int distance, double angle) { // TODO: convert move to object
 		/*	List<short[]> move =  new ArrayList<short[]>();
 		 * format: {distance mm, angle, angle, framedata....} 
 		*/ 
@@ -366,7 +366,7 @@ lastAngle: 38277.57166213958
 	}
 	
 	public static short[][] projectFrameHorizToTopView(short[] frame) {
-		final int h = 240; 
+		final int h = mapSingleHeight; 
 		final int w = (int) (Math.sin(Math.toRadians(ScanUtils.camFOVx)/2) * h) * 2;
 		final double angle = Math.toRadians(ScanUtils.camFOVx/2);
 		
@@ -397,6 +397,6 @@ lastAngle: 38277.57166213958
 		
 		return result;
 	}
-	
+
 	
 }

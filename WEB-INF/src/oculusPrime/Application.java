@@ -465,7 +465,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	
 		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
-		case cameratoposition: comport.cameraToPosition(Integer.parseInt(str));
+		case cameratoposition: comport.cameraToPosition(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
@@ -659,6 +659,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case floodlight: 
 			comport.floodLight(Integer.parseInt(str));  
 			messageplayer("floodLight brightness set to "+str+"%", "floodlight", str);
+			break;
+		case fwdflood:
+			comport.fwdflood(Integer.parseInt(str));  
+			messageplayer("forward floodLight brightness set to "+str+"%", "fwdflood", str);
 			break;
 			
 		case autodock:

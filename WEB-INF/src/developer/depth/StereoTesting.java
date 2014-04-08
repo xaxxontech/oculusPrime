@@ -20,11 +20,13 @@ import org.opencv.calib3d.StereoSGBM;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.photo.Photo;
 
 import oculusPrime.Application;
 import oculusPrime.OculusImage;
@@ -39,13 +41,12 @@ public class StereoTesting extends JFrame {
 	static JPanel panel_3 = new JPanel();
 	static final int yoffset = 21; // calibration said 27, but 25 seems a wee bit better
 	static final int xoffset = 0;
-	static final int xres = 640;
-	static final int yres = 360;
+//	static final int xres = 640;
+//	static final int yres = 360;
+//	static final int xres = 800; 
+//	static final int yres = 448; 
 	// camera metrics, degrees TODO: from gucview, NOT measured with openCV capture
 //	static final double camFOVx169 = 68.46;
-	static final double camFOVy169 = 41.71;
-	static final double camFOVx43 = 58.90;
-	static final double camFOVy43 = 45.90;
 //	final static int maxDepthTopView = 5500;
 //	final static double maxDispVal = 816;
 //	final static double mmPerDispVal = 2286.0/(maxDispVal-255);// mm/disparity value
@@ -61,12 +62,17 @@ public class StereoTesting extends JFrame {
 				try {
 					StereoTesting frame = new StereoTesting();
 					frame.setVisible(true);
-					
+
+                    System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+//                    System.load("C:\\stuff\\opencv248\\build\\java\\x86\\opencv_java248.dll");
+
 //					frame.grabDockInStereo();
 					
-					frame.sgbmTest();
-					
+//					frame.sgbmTest();
+//                    frame.saveImages();
+//                    frame.loadImages();
 //					frame.streamTwoCameras();
+					frame.distanceScanMatchTest();
 					
 					System.out.println("done!");
 					
@@ -78,38 +84,31 @@ public class StereoTesting extends JFrame {
 	}
 	
 	private void sgbmTest() {
-		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		developer.image.OpenCVUtils cv = new OpenCVUtils();
-		
-		Rect rect;
-		VideoCapture capture1 = new VideoCapture(1);
-		VideoCapture capture0 = new VideoCapture(0);
-		
-		capture1.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, xres);
-		capture1.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, yres);
-		capture0.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, xres);
-		capture0.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, yres);
-		
-		Util.delay(1000);
 
-		Mat left = new Mat();
-		capture1.grab();
-		capture1.read(left);
+//        Mat[] mats = captureImages();
+        Mat[] mats = loadImages();
+        Mat left = mats[0];
+        Mat right = mats[1];
 
-//		rect = new Rect(xoffset,yoffset,left.width()-xoffset,left.height()-yoffset);
-//		left = new Mat(left,rect);
-//		Imgproc.cvtColor(left, left, Imgproc.COLOR_BGR2GRAY);
-//		Imgproc.equalizeHist(left, left);
+        Rect rect = new Rect(Stereo.xoffset, Stereo.yoffset,left.width() -
+					Stereo.xoffset,left.height()-Stereo.yoffset);
+		left = new Mat(left,rect);
+		Mat leftc = new Mat();
+		left.copyTo(leftc);
+		Imgproc.cvtColor(left, left, Imgproc.COLOR_BGR2GRAY);
+		Imgproc.warpAffine(left, left, new Stereo().rotImage, left.size()); // rotate
+		Imgproc.equalizeHist(left, left);
+//		Photo.fastNlMeansDenoising(right, right);
 		
-		Mat right = new Mat();
-		capture0.grab();
-		capture0.read(right);
-//		rect = new Rect(0,0,right.width()-xoffset,right.height()-yoffset);
-//		right = new Mat(right,rect);
-//		Imgproc.cvtColor(right, right, Imgproc.COLOR_BGR2GRAY);
-//		Imgproc.equalizeHist(right, right);
+		rect = new Rect(0,0,right.width()-Stereo.xoffset,right.height()-Stereo.yoffset);
+		right = new Mat(right,rect);
+		Imgproc.cvtColor(right, right, Imgproc.COLOR_BGR2GRAY);
+		Imgproc.equalizeHist(right, right);
+//		Photo.fastNlMeansDenoising(right, right);
 		
 //		StereoSGBM sbm = new StereoSGBM();
+//		
 //        sbm.set_SADWindowSize(3); 
 //        sbm.set_numberOfDisparities(48);  
 //        sbm.set_preFilterCap(63); 
@@ -121,60 +120,41 @@ public class StereoTesting extends JFrame {
 //        sbm.set_fullDP(false);
 //        sbm.set_P1(216);
 //        sbm.set_P2(864);
-		
-		Stereo stereo = new Stereo();
-		Mat disparity = stereo.generateDisparity(left, right);
-		
-//        Mat disparity = new Mat();
-//        sbm.compute(left, right, disparity);
         
-        byte[][] topView  = Stereo.projectStereoHorizToTopView(disparity, 320);
-//		System.out.println("DISP: "+disparity.cols()+",  "+disparity.rows());
-//		System.out.println("elemSize:"+disparity.elemSize()+", elemSize1:"+disparity.elemSize1()+
-//					", type:"+disparity.type()+", depth:"+disparity.depth()+" channels:"+disparity.channels());
+		Stereo stereo = new Stereo();
 		
-//        int highest = -1;
-//        int lowest = 999999;
-//        int secondLowest = 999999; 
-//
-//        for (int x=0; x<disparity.width(); x++) {
-//			for (int y=0; y<disparity.height(); y++) {
-//			int n = (int) disparity.get(y,x)[0];
-//			
-//			if (n > highest) highest = n; 
-//			if (n < lowest) lowest = n; 
-//			if (n < secondLowest && n > lowest) secondLowest = n; 
-//			
-//			System.out.printf("%4d, ",n);
-//			}
-//		}
-//		System.out.println("\nlowest:"+lowest+", 2nd lowest: "+secondLowest+", highest:"+highest);
-		
-//		for (int x=0; x<disparity.width(); x++) {
-//			System.out.printf("%4d",(int) disparity.get(180,x)[0]);
-//		}
-//		System.out.println("");
-//		System.out.println(disparity.width());
+        Mat disparity = new Mat();
+
+		long start = System.currentTimeMillis();
+
+        stereo.sbm.compute(left, right, disparity);
+
+    	long duration = System.currentTimeMillis() - start;
+    	System.out.println("time: "+ String.valueOf(duration));
+    	
+    	int y = disparity.height()/2;
+    	for (int x = 0; x<disparity.width(); x++) {
+    		double d = disparity.get(y, x)[0];
+    		System.out.printf("%4d, ",(int) d);
+    	}
+    	System.out.println("");
+    	
+        
+        short[][] topView  = Stereo.projectStereoHorizToTopView(disparity, 320);
 		
         Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
-        
-//		for (int x=0; x<disparity.width(); x++) {
-//			int n = (int) disparity.get(y,x)[0];
-//			System.out.printf("%4d, ",n);
-//		}
-//		System.out.println("");
 		
 		JLabel pic0 = new JLabel(new ImageIcon(cv.matToBufferedImage(left)));
 		JLabel pic1 = new JLabel(new ImageIcon(cv.matToBufferedImage(right)));
 
 //		Imgproc.cvtColor(left, left,Imgproc.COLOR_BGR2GRAY);
-		Imgproc.resize(left, left, new Size(120, 68));
+		Imgproc.resize(leftc, leftc, new Size(120, 68));
 		Imgproc.cvtColor(disparity, disparity,Imgproc.COLOR_GRAY2BGR);
-		left.copyTo(new Mat(disparity, new Rect(0,0,120,68)));
+		leftc.copyTo(new Mat(disparity, new Rect(0,0,120,68)));
 		JLabel pic2 = new JLabel(new ImageIcon(cv.matToBufferedImage(disparity)));
 
-		Mat mtv = Stereo.convertByteToMat(topView);
-		left.copyTo(new Mat(mtv, new Rect(0,mtv.height()-68-1, 120,68)));
+		Mat mtv = Stereo.convertShortToMat(topView);
+		leftc.copyTo(new Mat(mtv, new Rect(0,mtv.height()-68-1, 120,68)));
 		JLabel pic3 = new JLabel(new ImageIcon(cv.matToBufferedImage(mtv)));
 
 		panel.add(pic0);
@@ -186,8 +166,110 @@ public class StereoTesting extends JFrame {
 		panel_1.repaint(); 
 		panel_2.repaint(); 
 		panel_3.repaint();
+		
+		System.out.println(disparity.width()+", "+disparity.height());
 	}
-	
+
+    private void saveImages() {
+
+        Mat[] mats = captureImages();
+        Mat left = mats[0];
+        Mat right = mats[1];
+
+        String folder = "/home/colin/temp/";
+        Highgui.imwrite(folder+"left.png", left);
+        Highgui.imwrite(folder+"right.png", right);
+    }
+
+    private Mat[] loadImages() {
+        String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
+//        String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
+        Mat left = Highgui.imread(folder+"left0.png");
+        Mat right = Highgui.imread(folder+"right0.png");
+//		Mat left = Highgui.imread(folder+"left500_1-12.png");
+//		Mat right = Highgui.imread(folder+"right500_1-12.png");
+        
+//		Mat left = Highgui.imread(folder+"left1.png");
+//		Mat right = Highgui.imread(folder+"right1.png");
+//		Mat left = Highgui.imread(folder+"left500_3-25.png");
+//		Mat right = Highgui.imread(folder+"right500_3-25.png");
+
+        return new Mat[] {left, right};
+    }
+    
+    private void distanceScanMatchTest() {
+    	int h = 320;
+    	Stereo stereo = new Stereo();
+    	developer.image.OpenCVUtils cv = new OpenCVUtils();
+    	
+        String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
+//    	String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
+//		Mat left = Highgui.imread(folder+"left1.png");
+//		Mat right = Highgui.imread(folder+"right1.png");
+		Mat left = Highgui.imread(folder+"left0.png");
+		Mat right = Highgui.imread(folder+"right0.png");
+
+		Mat disparity = stereo.generateDisparity(left, right);
+		short[][] topViewBefore = stereo.projectStereoHorizToTopView(disparity, h);
+		
+		Mat m = Stereo.convertShortToMat(topViewBefore);
+		panel.setBounds(5, 5, m.width(), m.height()+5);
+		JLabel pic0 = new JLabel(new ImageIcon(cv.matToBufferedImage(m)));
+		panel.add(pic0);
+		panel.repaint();
+		
+		
+//		left = Highgui.imread(folder+"left500_3-25.png");
+//		right = Highgui.imread(folder+"right500_3-25.png");
+		left = Highgui.imread(folder+"left500_1-12.png");
+		right = Highgui.imread(folder+"right500_1-12.png");
+
+		disparity = stereo.generateDisparity(left, right);
+		short[][] topViewAfter = Stereo.projectStereoHorizToTopView(disparity, h);
+		
+		m = Stereo.convertShortToMat(topViewAfter);
+		panel_1.setBounds(640, 5, m.width(), m.height()+5);
+		JLabel pic1 = new JLabel(new ImageIcon(cv.matToBufferedImage(m)));
+		panel_1.add(pic1);
+		panel_1.repaint();
+		
+		double angle = 1.12;
+		int d= Stereo.findDistanceTopView(topViewBefore, topViewAfter, angle, 500);
+		Mapper.addArcPath(topViewBefore, 0, 0);
+		Mapper.addArcPath(topViewAfter, d, angle);
+		BufferedImage img = ScanUtils.cellsToImage(Mapper.map);
+		JLabel pic2 = new JLabel(new ImageIcon(img));
+		panel_2.setBounds(5, 340, img.getWidth(), img.getHeight()+10);
+		panel_2.add(pic2);
+		panel_2.repaint();
+
+		System.out.println(d);
+		
+    }
+
+    private Mat[] captureImages() {
+        VideoCapture capture1 = new VideoCapture(1);
+        VideoCapture capture0 = new VideoCapture(0);
+
+        capture1.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, Stereo.xres);
+        capture1.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, Stereo.yres);
+        capture0.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, Stereo.xres);
+        capture0.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, Stereo.yres);
+
+        Util.delay(1000);
+
+        Mat left = new Mat();
+        capture1.grab(); // discard 1st frame
+        capture1.read(left);
+
+        Mat right = new Mat();
+        capture0.grab(); // discard 1st frame
+        capture0.read(right);
+
+        return new Mat[]{left, right};
+    }
+
+
 	private void streamTwoCameras() {
 		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		System.out.println(Core.NATIVE_LIBRARY_NAME);
@@ -198,15 +280,15 @@ public class StereoTesting extends JFrame {
 
 		final VideoCapture capture0 = new VideoCapture(0);
 		
-		capture1.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, xres);
-		capture1.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, yres);
-		capture0.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, xres);
-		capture0.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, yres);
+		capture1.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, Stereo.xres);
+		capture1.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, Stereo.yres);
+		capture0.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, Stereo.xres);
+		capture0.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, Stereo.yres);
 
-		capture1.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 800);
-		capture1.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 448);
-		capture0.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 800);
-		capture0.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 448);
+//		capture1.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 800);
+//		capture1.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 448);
+//		capture0.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 800);
+//		capture0.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 448);
 		
 		final JLabel pic0 = new JLabel();
 		panel.add(pic0);

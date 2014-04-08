@@ -51,6 +51,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	public static final byte FLOOD_LIGHT_LEVEL = 'o'; 
 	public static final byte SPOT_LIGHT_LEVEL = 'p';
+	public static final byte FWDFLOOD_LIGHT_LEVEL = 'q';
 		
 	public static final byte CAM = 'v';
 	public static final byte CAMRELEASE = 'w';
@@ -62,7 +63,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte[] ECHO_ON = { 'e', '1' };
 	public static final byte[] ECHO_OFF = { 'e', '0' };
 		
-	public static final int CAM_HORIZ = 75; // degrees (CAD measures 19)
+	public static final int CAM_HORIZ = 70; // degrees (CAD measures 19)
 	public static final int CAM_MAX = 130; // degrees (CAD measures 211)
 	public static final int CAM_MIN = 45; // degrees
 	public static final int CAM_NUDGE = 3; // degrees
@@ -225,6 +226,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		target = target * 255 / 100;
 		sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)target});
+	}
+	
+	public void fwdflood(int target) {
+		state.set(State.values.fwdfloodlevel, target);
+
+		Util.debug("forward floodlight: " + target, this);
+
+		target = target * 255 / 100;
+		application.gyroport.sendCommand(new byte[]{FWDFLOOD_LIGHT_LEVEL, (byte)target});
 	}
 	
 	public void setSpotLightBrightness(int target){
@@ -797,13 +807,20 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				double n = fullrotationdelay * degrees / 360;
 				
-				short[] depthFrameBefore = null;
-				if (Application.openNIRead.depthCamGenerating) {
-					depthFrameBefore = Application.openNIRead.readFullFrame();						
+				
+				if (Application.openNIRead.depthCamGenerating) { // openni
+					short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
 					if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
+					application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+					state.delete(State.values.angle);
 				}
-				application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
-				state.delete(State.values.angle);
+				
+				if (Application.stereo.stereoCamerasOn) {
+					short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+					if (Mapper.map.length==0)  Mapper.addArcPath(cells, 0, 0);
+					application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+					state.delete(State.values.angle);
+				}
 				
 				switch (dir) {
 					case right: turnRight(); break;
@@ -815,20 +832,26 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				stopGoing();
 				
 				String msg = "";
-				if (depthFrameBefore != null) { 
+				if (Application.openNIRead.depthCamGenerating) { // openni 
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
 
 					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
 					double angle = state.getDouble(State.values.angle.toString());
-//					angle *= 1.09; 
 					Mapper.addMove(depthFrameAfter, 0, angle);
 					msg += "angle moved via gyro: "+angle;
+				}
+				
+				if (Application.stereo.stereoCamerasOn) {
+					Util.delay(700); // allow extra 200ms for latest frame 	
+					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
+					double angle = state.getDouble(State.values.angle.toString());
+					msg += "angle moved via gyro: "+angle;
 					
-//					angle = ScanUtils.findAngleTopView(depthFrameBefore, depthFrameAfter, degrees);
-//					msg += "<br>angle moved via depthcam: "+angle;
-					
+					short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+					Mapper.addArcPath(cells, 0, angle);
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);
@@ -858,6 +881,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 							application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
 							state.delete(State.values.angle);
 						}
+                        if (Application.stereo.stereoCamerasOn) {
+                            application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+                            state.delete(State.values.angle);
+                        }
 						goForward(); 
 						break;
 					case backward: 
@@ -867,6 +894,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 							application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
 							state.delete(State.values.angle);
 						}
+                        if (Application.stereo.stereoCamerasOn) {
+                            application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+                            state.delete(State.values.angle);
+                        }
 						goBackward(); 
 				}
 				
@@ -876,7 +907,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				String msg = null;
 				
-				if (depthFrameBefore != null) { // went forward
+				if (depthFrameBefore != null) { // went forward, openni
 					Util.delay(750); // allow for slow to stop
 
 					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
@@ -890,7 +921,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					msg = "distance moved d: "+distance+", angle:"+angle;
 					Mapper.addMove(depthFrameAfter, distance, angle);
 				}
-				else if (depthFrameAfter != null) { // went backward
+				else if (depthFrameAfter != null) { // went backward, openni
 					Util.delay(750);
 					
 					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
@@ -904,6 +935,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					msg = "distance moved d: "+distance+", angle:"+angle;
 					Mapper.addMove(depthFrameBefore, distance, angle);
 				}
+
+                else if (Application.stereo.stereoCamerasOn) {
+                    Util.delay(750); // might need bit extra to get latest frame?
+                    application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+                    while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
+                    double angle = state.getDouble(State.values.angle.toString());
+                    msg = "angle moved via gyro: "+angle;
+
+                }
 				
 				state.put(State.values.motorspeed, tempspeed);
 				application.message(msg, "motion", "stopped");
