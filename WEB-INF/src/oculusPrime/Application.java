@@ -624,6 +624,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;
 			
 		case stereo:
+			if (!state.get(State.values.stream).equals("stop")) {
+				messageplayer("left camera in use", null, null);
+				break;
+			}
 			if(str.equals("on")) { stereo.startCameras(); }
 			else { stereo.stopCameras(); }			
 			messageplayer("stereo cameras "+str, null, null);

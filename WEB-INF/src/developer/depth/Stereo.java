@@ -36,16 +36,18 @@ public class Stereo {
 	public static final int yres = 360;
 
 	public Mat rotImage;
-	private boolean generating = false;	 
+	public boolean generating = false;	 
 	final static double camFOVx169 = 68.46;
 	static final double camFOVy169 = 41.71;
 	static final double camFOVx43 = 58.90;
 	static final double camFOVy43 = 45.90;
 	final static int maxDepthTopView = 3500;
 //	final double scaleMult = 275*2032; // disparity*mm (based on xoffset=2)!
-	final static double scaleMult = 380*1346; // disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
+	final static double scaleMult = 412*1350; // was 380 - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
+
+	// camera offsets negligible on linear moves
 	public static final int  cameraSetBack = -20; // is forward from rotation center
-	public static final int cameraOffset = 25; // to bot's left from rotation center
+	public static final int cameraOffsetLeft = 25; // to bot's left from rotation center
 
 	
 	public Stereo() {
@@ -68,14 +70,14 @@ public class Stereo {
         sbm.set_SADWindowSize(3); // 3-11. higher = more blobular 
         sbm.set_numberOfDisparities(48);  // 32-256 similar top view results, lower shortens time
         sbm.set_preFilterCap(63);  // lower seems to lessen noise
-        sbm.set_minDisparity(0); // no change between 4,0, higher = innacurate
-        sbm.set_uniquenessRatio(70); // % - higher = less noise, still not that accurate
+        sbm.set_minDisparity(4); // no change between 4,0, higher = innacurate
+        sbm.set_uniquenessRatio(10); // % - higher = less noise, still not that accurate
         sbm.set_speckleWindowSize(50);  // 0- disabled. 50-200 normal 
         sbm.set_speckleRange(32);  // 1-200, no diff. 0 = blank
         sbm.set_disp12MaxDiff(1); // -1-200 no diff
         sbm.set_fullDP(false); // true = longer time, very slight noise reduction
-        sbm.set_P1(1); // lower = messier looking but less assumptions
-        sbm.set_P2(250); // lower = messier looking but less assumptions
+        sbm.set_P1(216); // 1 lower = messier looking but less assumptions
+        sbm.set_P2(864); // 250 lower = messier looking but less assumptions
 		
 		Point center = new Point((xres-xoffset)/2, (yres-yoffset)/2);
 		rotImage = Imgproc.getRotationMatrix2D(center, leftRotation, 1.0);
@@ -212,7 +214,7 @@ public class Stereo {
 	}
 	
 	public BufferedImage leftCameraFeed() {
-        while (generating) {} // wait
+//        while (generating) {} // wait
 		Mat left = new Mat();
 		captureLeft.retrieve(left);
 		Imgproc.resize(left, left, new Size(xres/2, yres/2));
@@ -231,12 +233,12 @@ public class Stereo {
 		return m;
 	}
 	
-	static final int YrgbDiff = 10;
+//	final static int YrgbDiff = 50;
 	public static short[][] projectStereoHorizToTopView(Mat frame, int h) { 
 		final int w = (int) (Math.sin(Math.toRadians(camFOVx169)/2) * h) * 2;
 		final double angle = Math.toRadians(camFOVx169/2);
-		final int height = frame.height();
 		final int width = frame.width();
+		final int mid = frame.height()/2-10;
 		
 		short[][] result = new short[w][h];
 
@@ -249,7 +251,7 @@ public class Stereo {
 			/* unfiltered */
 			final int horizoffset = 0; 
 			for (int x=0; x<width; x++) {
-				for (int y = height/2-horizoffset; y<=height/2+horizoffset; y++) {
+				for (int y = mid-horizoffset; y<=mid+horizoffset; y++) {
 					double d = frame.get(y, x)[0];
 					d = scaleMult/d;
 					int ry = (int) Math.round(d/ maxDepthTopView  * h);
@@ -264,12 +266,12 @@ public class Stereo {
 		else {
 		
 			/* vertical noise filtering + averaging */
-			final int horizoffset = 3; // pixels
+			final int horizoffset = 7; // pixels
 			final int horizoffsetinc = 2;
-			final double YdepthRatioThreshold = 0.1; // percent
+			final double YdepthRatioThreshold = 0.05; // percent
 			final double XdepthRatioThreshold = 0.01; // percent
 //			final int[] level = new int[]{-3, -2, -1, 0, 1, 2, 3};
-			final int levels = 8; // *2+1
+			final int levels = 1; // *2+1
 			for (int lvl=-levels; lvl<=levels; lvl++) {
 				double[] dx = new double[width];
 				for (int x=0; x<width; x++) {
@@ -278,8 +280,8 @@ public class Stereo {
 					double[] d = new double[horizoffset*(2/horizoffsetinc)+1]; 
 					boolean add = true;
 					
-					for (int y = (height/2+lvl*(horizoffset*2+1))-horizoffset; 
-							y<=(height/2+lvl*(horizoffset*2+1))+horizoffset; y+=horizoffsetinc) {
+					for (int y = (mid+lvl*(horizoffset*2+1))-horizoffset; 
+							y<=(mid+lvl*(horizoffset*2+1))+horizoffset; y+=horizoffsetinc) {
 						d[i] = scaleMult/frame.get(y, x)[0];
 						if (d[i] >= maxDepthTopView ) add = false; // discard far away points
 						i++;
@@ -303,6 +305,7 @@ public class Stereo {
 
 				}
 				
+				// x filtering
 				for (int x=1; x<width-1; x++) {
 					if (dx[x]<maxDepthTopView) {
 						if (Math.abs(dx[x]-dx[x-1])/dx[x]<XdepthRatioThreshold && Math.abs(dx[x]-dx[x+1])/dx[x]<XdepthRatioThreshold ) {
@@ -310,7 +313,8 @@ public class Stereo {
 							int ry = (int) Math.round(dx[x]/ maxDepthTopView  * h);
 							double xdratio = (x*(double) w/width - xdctr)/ (double) xdctr;
 							int rx = (w/2) + (int) Math.round(Math.tan(angle)*(double) ry * xdratio);
-							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) (150+(YrgbDiff*lvl));
+//							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) (150+(YrgbDiff*lvl));
+							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) ((maxDepthTopView-dx[x])/maxDepthTopView*230+25);
 						}
 					}
 				}
@@ -320,6 +324,18 @@ public class Stereo {
 
 		}
 		
+		// eliminate orphan pixels
+		for (int x=1; x<w-1; x++) {
+			for (int y=1; y<h-1; y++) {
+				if (result[x][y] !=0) { 
+					if (result[x-1][y-1]==0 && result[x][y-1]==0 && result[x+1][y-1]==0 &&
+							result[x-1][y]==0 && result[x+1][y]==0 &&
+							result[x-1][y+1]==0 && result[x][y+1]==0 && result[x+1][y+1]==0) {
+						result[x][y] = 0;
+					}
+				}
+			}
+		}
 		
 		return result;
 	}
@@ -368,7 +384,7 @@ public class Stereo {
 						
 						if (xx>=0 && xx<w && yy>=0 && yy<h ) { 
 //							if (cellsAfter[xx][yy] == cellsBefore[x][y])   total ++;
-							if (Math.abs(cellsAfter[xx][yy] - cellsBefore[x][y]) <= YrgbDiff*2 ) total ++;
+							if (Math.abs(cellsAfter[xx][yy] - cellsBefore[x][y]) <= 20 ) total ++;
 						}
 						
 					}

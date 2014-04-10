@@ -68,11 +68,11 @@ public class StereoTesting extends JFrame {
 
 //					frame.grabDockInStereo();
 					
-//					frame.sgbmTest();
+					frame.sgbmTest();
 //                    frame.saveImages();
 //                    frame.loadImages();
 //					frame.streamTwoCameras();
-					frame.distanceScanMatchTest();
+//					frame.distanceScanMatchTest();
 					
 					System.out.println("done!");
 					
@@ -86,8 +86,8 @@ public class StereoTesting extends JFrame {
 	private void sgbmTest() {
 		developer.image.OpenCVUtils cv = new OpenCVUtils();
 
-//        Mat[] mats = captureImages();
-        Mat[] mats = loadImages();
+        Mat[] mats = captureImages();
+//        Mat[] mats = loadImages();
         Mat left = mats[0];
         Mat right = mats[1];
 

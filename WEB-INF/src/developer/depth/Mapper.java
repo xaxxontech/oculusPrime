@@ -37,8 +37,8 @@ public class Mapper {
 	/**
 	 * 
 	 * @param cells
-	 * @param distance
-	 * @param angle
+	 * @param distance in mm
+	 * @param angle in degrees
 	 */
 	public static void addArcPath(final short[][] cells, int distance, final double angle) {
 //    	double arcPathX = Math.cos(Math.toRadians((180-angle)/2))*distance;
