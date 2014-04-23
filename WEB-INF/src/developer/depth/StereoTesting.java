@@ -86,8 +86,8 @@ public class StereoTesting extends JFrame {
 	private void sgbmTest() {
 		developer.image.OpenCVUtils cv = new OpenCVUtils();
 
-        Mat[] mats = captureImages();
-//        Mat[] mats = loadImages();
+//        Mat[] mats = captureImages();
+        Mat[] mats = loadImages();
         Mat left = mats[0];
         Mat right = mats[1];
 
@@ -156,6 +156,7 @@ public class StereoTesting extends JFrame {
 		Mat mtv = Stereo.convertShortToMat(topView);
 		leftc.copyTo(new Mat(mtv, new Rect(0,mtv.height()-68-1, 120,68)));
 		JLabel pic3 = new JLabel(new ImageIcon(cv.matToBufferedImage(mtv)));
+		System.out.println("mtv width: "+mtv.width()+", height: "+mtv.height());
 
 		panel.add(pic0);
 		panel_1.add(pic1);
@@ -167,7 +168,7 @@ public class StereoTesting extends JFrame {
 		panel_2.repaint(); 
 		panel_3.repaint();
 		
-		System.out.println(disparity.width()+", "+disparity.height());
+//		System.out.println(disparity.width()+", "+disparity.height());
 	}
 
     private void saveImages() {
@@ -202,12 +203,14 @@ public class StereoTesting extends JFrame {
     	Stereo stereo = new Stereo();
     	developer.image.OpenCVUtils cv = new OpenCVUtils();
     	
-        String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
-//    	String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
-//		Mat left = Highgui.imread(folder+"left1.png");
-//		Mat right = Highgui.imread(folder+"right1.png");
-		Mat left = Highgui.imread(folder+"left0.png");
-		Mat right = Highgui.imread(folder+"right0.png");
+//        String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
+    	String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
+//		Mat left = Highgui.imread(folder+"left2.png");
+//		Mat right = Highgui.imread(folder+"right2.png");
+		Mat left = Highgui.imread(folder+"left1.png");
+		Mat right = Highgui.imread(folder+"right1.png");
+//		Mat left = Highgui.imread(folder+"left0.png");
+//		Mat right = Highgui.imread(folder+"right0.png");
 
 		Mat disparity = stereo.generateDisparity(left, right);
 		short[][] topViewBefore = stereo.projectStereoHorizToTopView(disparity, h);
@@ -218,11 +221,12 @@ public class StereoTesting extends JFrame {
 		panel.add(pic0);
 		panel.repaint();
 		
-		
-//		left = Highgui.imread(folder+"left500_3-25.png");
-//		right = Highgui.imread(folder+"right500_3-25.png");
-		left = Highgui.imread(folder+"left500_1-12.png");
-		right = Highgui.imread(folder+"right500_1-12.png");
+//		left = Highgui.imread(folder+"left2-415-0_6.png");
+//		right = Highgui.imread(folder+"right2-415-0_6.png");
+		left = Highgui.imread(folder+"left500_3-25.png");
+		right = Highgui.imread(folder+"right500_3-25.png");
+//		left = Highgui.imread(folder+"left500_1-12.png");
+//		right = Highgui.imread(folder+"right500_1-12.png");
 
 		disparity = stereo.generateDisparity(left, right);
 		short[][] topViewAfter = Stereo.projectStereoHorizToTopView(disparity, h);
@@ -233,8 +237,8 @@ public class StereoTesting extends JFrame {
 		panel_1.add(pic1);
 		panel_1.repaint();
 		
-		double angle = 1.12;
-		int d= Stereo.findDistanceTopView(topViewBefore, topViewAfter, angle, 500);
+		double angle = 3.25;
+		int d= Stereo.findDistanceTopView(topViewBefore, topViewAfter, angle, 500)[0];
 		Mapper.addArcPath(topViewBefore, 0, 0);
 		Mapper.addArcPath(topViewAfter, d, angle);
 		BufferedImage img = ScanUtils.cellsToImage(Mapper.map);
@@ -395,7 +399,7 @@ public class StereoTesting extends JFrame {
 		panel.setBounds(5, 0, 640, 365-Stereo.yoffset);
 		panel_1.setBounds(650, 0, 640, 365-Stereo.yoffset);
 		panel_2.setBounds(5, 375-Stereo.yoffset, 640, 365-Stereo.yoffset);
-		panel_3.setBounds(650, 375-Stereo.yoffset, 360, 325);
+		panel_3.setBounds(650, 375-Stereo.yoffset, 435, 325);
 		
 		contentPane.add(panel);
 		contentPane.add(panel_1);

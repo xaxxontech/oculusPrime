@@ -43,11 +43,15 @@ public class Stereo {
 	static final double camFOVy43 = 45.90;
 	final static int maxDepthTopView = 3500;
 //	final double scaleMult = 275*2032; // disparity*mm (based on xoffset=2)!
-	final static double scaleMult = 412*1350; // was 380 - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
+	final static double scaleMult = 440*1350; // 412 measured - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
+											  // 435 = trial and error, best map meshing
 
 	// camera offsets negligible on linear moves
-	public static final int  cameraSetBack = -20; // is forward from rotation center
+	public static final int  cameraSetBack = 0; // -20; // is forward from rotation center TODO: use this?
 	public static final int cameraOffsetLeft = 25; // to bot's left from rotation center
+	
+	static final int depthPixelIntensitySpread = 230;
+	static final int depthPixelIntensityOffset = 25;
 
 	
 	public Stereo() {
@@ -55,29 +59,34 @@ public class Stereo {
 		cv = new OpenCVUtils();
 
 		sbm = new StereoSGBM();
-//		sbm.set_SADWindowSize(3); 
-//        sbm.set_numberOfDisparities(48);  
-//        sbm.set_preFilterCap(63); 
-//        sbm.set_minDisparity(4); 
-//        sbm.set_uniquenessRatio(10); 
-//        sbm.set_speckleWindowSize(50); 
-//        sbm.set_speckleRange(32);
-//        sbm.set_disp12MaxDiff(1);
-//        sbm.set_fullDP(false);
-//        sbm.set_P1(216);
-//        sbm.set_P2(864);
 		
+		/* mode 1: cleanest depth image, though top view innacuracies
+		sbm.set_SADWindowSize(3); 
+        sbm.set_numberOfDisparities(48);  
+        sbm.set_preFilterCap(63); 
+        sbm.set_minDisparity(4); 
+        sbm.set_uniquenessRatio(10); 
+        sbm.set_speckleWindowSize(50); 
+        sbm.set_speckleRange(32);
+        sbm.set_disp12MaxDiff(1);
+        sbm.set_fullDP(false);
+        sbm.set_P1(216);
+        sbm.set_P2(864);
+//        */
+		
+//		/* mode 2: more accurate, way less info in depth image
         sbm.set_SADWindowSize(3); // 3-11. higher = more blobular 
         sbm.set_numberOfDisparities(48);  // 32-256 similar top view results, lower shortens time
         sbm.set_preFilterCap(63);  // lower seems to lessen noise
         sbm.set_minDisparity(4); // no change between 4,0, higher = innacurate
-        sbm.set_uniquenessRatio(10); // % - higher = less noise, still not that accurate
+        sbm.set_uniquenessRatio(40); // % - higher = less noise, still not that accurate
         sbm.set_speckleWindowSize(50);  // 0- disabled. 50-200 normal 
         sbm.set_speckleRange(32);  // 1-200, no diff. 0 = blank
         sbm.set_disp12MaxDiff(1); // -1-200 no diff
         sbm.set_fullDP(false); // true = longer time, very slight noise reduction
-        sbm.set_P1(216); // 1 lower = messier looking but less assumptions
-        sbm.set_P2(864); // 250 lower = messier looking but less assumptions
+        sbm.set_P1(1); // 1 lower = messier looking but less assumptions
+        sbm.set_P2(250); // 250 lower = messier looking but less assumptions
+//        */
 		
 		Point center = new Point((xres-xoffset)/2, (yres-yoffset)/2);
 		rotImage = Imgproc.getRotationMatrix2D(center, leftRotation, 1.0);
@@ -156,7 +165,7 @@ public class Stereo {
 		sbm.compute(L, R, disparity);
 
 		long duration = System.currentTimeMillis() - start;
-    	System.out.println("time: "+ String.valueOf(duration));
+//    	System.out.println("time: "+ String.valueOf(duration));
 
         
         return disparity;
@@ -235,11 +244,13 @@ public class Stereo {
 	
 //	final static int YrgbDiff = 50;
 	public static short[][] projectStereoHorizToTopView(Mat frame, int h) { 
-		final int w = (int) (Math.sin(Math.toRadians(camFOVx169)/2) * h) * 2;
+//		final int w = (int) (Math.cos(Math.toRadians(camFOVx169)/2) * h) * 2; // WRONG .. ?
+//		final int w = (int) (Math.tan(Math.toRadians(camFOVx169/2)) * h * 2); // WRONG .. ?
+		final int w = (int) (Math.sin(Math.toRadians(camFOVx169/2)) * h * 2); // WRONG .. ?
 		final double angle = Math.toRadians(camFOVx169/2);
 		final int width = frame.width();
-		final int mid = frame.height()/2-10;
-		
+		final int mid = frame.height()/2-10; // offset so not including floor plane points
+//		System.out.println("w: "+w+", h: "+h);
 		short[][] result = new short[w][h];
 
 		final int xdctr = w/2;
@@ -266,12 +277,17 @@ public class Stereo {
 		else {
 		
 			/* vertical noise filtering + averaging */
-			final int horizoffset = 7; // pixels
+
+//			final int horizoffset = 7; // mode 1 (pixels= *2+1)
+			final int horizoffset = 3; // mode 2 (pixels= *2+1)
 			final int horizoffsetinc = 2;
+
 			final double YdepthRatioThreshold = 0.05; // percent
 			final double XdepthRatioThreshold = 0.01; // percent
-//			final int[] level = new int[]{-3, -2, -1, 0, 1, 2, 3};
-			final int levels = 1; // *2+1
+
+//			final int levels = 1; // mode 1 (pixels= *2+1 * horizoffset*2+1)
+			final int levels = 3; // mode 1 (pixels= *2+1 * horizoffset*2+1)
+
 			for (int lvl=-levels; lvl<=levels; lvl++) {
 				double[] dx = new double[width];
 				for (int x=0; x<width; x++) {
@@ -305,16 +321,35 @@ public class Stereo {
 
 				}
 				
-				// x filtering
+				// x filtering & adding
 				for (int x=1; x<width-1; x++) {
 					if (dx[x]<maxDepthTopView) {
 						if (Math.abs(dx[x]-dx[x-1])/dx[x]<XdepthRatioThreshold && Math.abs(dx[x]-dx[x+1])/dx[x]<XdepthRatioThreshold ) {
 //						if (true) {
+							
+							/* original code:
 							int ry = (int) Math.round(dx[x]/ maxDepthTopView  * h);
 							double xdratio = (x*(double) w/width - xdctr)/ (double) xdctr;
 							int rx = (w/2) + (int) Math.round(Math.tan(angle)*(double) ry * xdratio);
+//							*/
+							
+//							/* new projection code:
+							// y = sqrt(dscaled^2 - x^2)
+							// x = xdctr - x*w/width
+							// dscaled = dx[x]*h/maxDepthTopView
+//							int ry = (int) Math.sqrt(Math.pow(dx[x]*h/(double) maxDepthTopView, 2) 
+//														- Math.pow(xdctr - x*w/(double) width, 2));
+							
+							double dscaled = dx[x]*h/(double) maxDepthTopView;
+							double a = Math.toRadians( camFOVx169 * (width/2-x) / width  ) ;
+							int rx = w/2 - (int) (dscaled * Math.sin(a));
+							int ry = (int) (dscaled * Math.cos(a));
+							
+//							*/
+							
 //							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) (150+(YrgbDiff*lvl));
-							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) ((maxDepthTopView-dx[x])/maxDepthTopView*230+25);
+							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) ( (maxDepthTopView-dx[x])/maxDepthTopView*
+									depthPixelIntensitySpread + depthPixelIntensityOffset); // TODO: try disabling this check!
 						}
 					}
 				}
@@ -354,22 +389,28 @@ public class Stereo {
     	return result;
 	}
 	
-	public static int findDistanceTopView(short[][] cellsBefore, short[][] cellsAfter, 
+	
+	/*
+	 * this is basically useless
+	 */
+	public static int[] findDistanceTopView(short[][] cellsBefore, short[][] cellsAfter, 
 				double angle, final int guessedDistance) { 
 		final int h = cellsBefore[0].length;
-		final int w = (int) (Math.sin(Math.toRadians(camFOVx169/2)) * h) * 2; // narrower for better resuts?
-		final double scaledCameraSetback = (double) cameraSetBack* h/maxDepthTopView; // pixels
+//		final int w = (int) (Math.sin(Math.toRadians(camFOVx169/2)) * h) * 2; // narrower for better resuts?
+		final int w = (int) (Math.tan(Math.toRadians(camFOVx169/2)) * h * 2);
+		final double scaledCameraSetback = (double) cameraSetBack* h/maxDepthTopView; // pixels, negligible
 		final int scaledGuessedDistance = guessedDistance * h/maxDepthTopView; // pixels
 		angle = -Math.toRadians(angle);
 
-		int winningTtl = 0; 
+		double winningTtl = 0; 
 		int winningDistance = 99999;
+		int[] result=new int[2];
 	
 		 
 		for (int d=scaledGuessedDistance-scaledGuessedDistance/2; d<scaledGuessedDistance+scaledGuessedDistance/2; d++) {
 //		for (int d=0; d<scaledGuessedDistance*2; d++) {
 
-			int total = 0;
+			double total = 0;
 
 			for (int x=0; x<w; x++ ) {
 				for (int y=0; y<h; y++) {
@@ -383,8 +424,18 @@ public class Stereo {
 						int yy = -(int) Math.round(hyp * Math.cos(anglexy+angle) -h+1+scaledCameraSetback) +d; // cos angleXY+angle = (h-1-yy)/hyp
 						
 						if (xx>=0 && xx<w && yy>=0 && yy<h ) { 
+//							if (cellsAfter[xx][yy] > 0 && cellsAfter[xx][yy] < maxDepthTopView)   total ++;
 //							if (cellsAfter[xx][yy] == cellsBefore[x][y])   total ++;
-							if (Math.abs(cellsAfter[xx][yy] - cellsBefore[x][y]) <= 20 ) total ++;
+//							if (Math.abs(cellsAfter[xx][yy] - cellsBefore[x][y]) <= 20 ) total ++;
+							if (cellsAfter[xx][yy] !=0 ) {
+	//							total ++;	
+								int distanceIntensityDiff = d/h*depthPixelIntensitySpread+depthPixelIntensityOffset;
+								int diff = Math.abs(cellsAfter[xx][yy]- cellsBefore[x][y]);
+								// diff - distanceIntensityDiff should be close to zero
+								int proximity = Math.abs(diff - distanceIntensityDiff);
+//								total += Math.abs(diff - distanceIntensityDiff)/(double) diff;
+								if (proximity<20) total += 20-proximity;
+							}
 						}
 						
 					}
@@ -399,8 +450,9 @@ public class Stereo {
 		
 		}
 		
+		System.out.println("winningTtl: "+winningTtl);
 		winningDistance = winningDistance * maxDepthTopView/h;
-		return winningDistance;
+		return new int[]{winningDistance, (int) winningTtl};
 	}
 
 }

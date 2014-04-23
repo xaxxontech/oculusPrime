@@ -60,7 +60,7 @@ public class Mapper {
 					map[x][y] = cells[x][y];
 				}
 	    	}
-	    	map[originX][originY]=-1; // TODO: testing only
+	    	map[originX][originY]=-1; // TODO: testing only, put red dots at bot locations
 	    	return;
 		}
 		
@@ -102,18 +102,26 @@ public class Mapper {
 		cw = cells.length;
 		ch = cells[0].length;
 		originX = cw/2;
-		final int scaledCameraSetback = (int) ((double)ScanUtils.cameraSetBack* ch/ScanUtils.maxDepthFPTV);
-		originY = ch-1-scaledCameraSetback; //+ (int) (ScanUtils.cameraSetBack * (double) ch/ScanUtils.maxDepthFPTV);
-		
+//		final int scaledCameraSetback = (int) ((double)ScanUtils.cameraSetBack* ch/ScanUtils.maxDepthFPTV);
+		final int scaledCameraSetback = (int) ((double)Stereo.cameraSetBack* ch/Stereo.maxDepthTopView);
+		originY = ch-1-scaledCameraSetback; 
 		if (map.length == 0) return cells;
 		
-		distance = (int) (distance * (double) ch/ScanUtils.maxDepthFPTV); // scaled
+//		distance = (int) (distance * (double) ch/ScanUtils.maxDepthFPTV); // scaled
+		distance = (int) (distance * (double) ch/Stereo.maxDepthTopView); // scaled
 		
 		dx=0;
 		dy=-distance;
 		
 		double newangle =angle + lastAngle;
+
+		if (newangle > 360) newangle -= 360;
+		else if (newangle < -360) newangle += 360;
+
 		lastAngle = newangle;
+//		if (lastAngle > 360) lastAngle -= 360;
+//		else if (lastAngle < 0) lastAngle = 360 - lastAngle;
+		
 		
 		if (newangle > 180)  newangle = -360+newangle;
 		else if (newangle < -180 ) newangle = 360+newangle;
@@ -246,6 +254,13 @@ newH: -35
 angle: 218.06965517241417
 lastAngle: 38277.57166213958
 
+cwidth: 240
+cheight: 326
+newW: -93
+newH: -205
+angle: -203.15
+lastAngle: -37422.738388969716
+
     		 */
     		
     	}
@@ -365,6 +380,7 @@ lastAngle: 38277.57166213958
 		return (double) newint /1000;
 	}
 	
+	// openni specific
 	public static short[][] projectFrameHorizToTopView(short[] frame) {
 		final int h = mapSingleHeight; 
 		final int w = (int) (Math.sin(Math.toRadians(ScanUtils.camFOVx)/2) * h) * 2;

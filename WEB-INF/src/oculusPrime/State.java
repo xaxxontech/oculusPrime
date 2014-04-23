@@ -21,8 +21,8 @@ public class State {
 		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers, // NEW! 
-		
-		gyroport, angle, // TODO: testing only 
+		gyroport, // TODO: testing only
+		angle, distance  
 		
 		;
 	};

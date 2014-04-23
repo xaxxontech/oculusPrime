@@ -33,8 +33,6 @@ public class ArduinoGyro implements SerialPortEventListener {
 	protected State state = State.getReference();
 	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
-	public static final byte ZERO_AND_START_RECORDING_ANGLE = 's'; 
-	public static final byte STOP_RECORDING_AND_REPORT_ANGLE = 'r';
 	public static final byte GET_PRODUCT = 'x';
 
 
@@ -159,8 +157,17 @@ public class ArduinoGyro implements SerialPortEventListener {
 		if (s[0].equals("angle")) {
 			state.set(State.values.angle, s[1]);
 		}
-		else if (s[0].equals("cliff")) {
-			application.message("cliff detected", null, null);
+//		else if (s[0].equals("cliff")) {
+//			application.message("cliff detected", null, null);
+//		}
+		else if (s[0].equals("revs")) {
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * ArduinoPrime.WHEEL_DIA_MM);
+			state.set(State.values.distance, d);
+		}
+		else if (s[0].equals("moved")) {
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * ArduinoPrime.WHEEL_DIA_MM);
+			state.set(State.values.distance, d);
+			state.set(State.values.angle, s[2]);
 		}
 	}
 	

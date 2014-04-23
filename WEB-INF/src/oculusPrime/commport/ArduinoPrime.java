@@ -9,6 +9,7 @@ import java.util.TooManyListenersException;
 
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
+import developer.depth.Stereo;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;
@@ -16,7 +17,6 @@ import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
-import oculusPrime.State.values;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
@@ -62,6 +62,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte GET_VERSION = 'y';
 	public static final byte[] ECHO_ON = { 'e', '1' };
 	public static final byte[] ECHO_OFF = { 'e', '0' };
+	public static final byte ZERO_AND_START_RECORDING_ANGLE = 'z'; 
+	public static final byte STOP_RECORDING_AND_REPORT_ANGLE = 'm';
+	public static final byte ENCODER_START = 'g'; 
+	public static final byte ENCODER_STOP_AND_REPORT = 'h';
+	public static final byte ODOMETRY_START = 'i';
+	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
 		
 	public static final int CAM_HORIZ = 70; // degrees (CAD measures 19)
 	public static final int CAM_MAX = 130; // degrees (CAD measures 211)
@@ -117,6 +123,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
     private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
 	public int turnspeed = 255;
+	public static final int WHEEL_DIA_MM = 115; // allow for tire compression
 		
 	public ArduinoPrime(Application app) {	
 		
@@ -163,8 +170,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		registerListeners();
 		setSpotLightBrightness(0);
 		floodLight(0);
-		application.gyroport.sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
-		state.set(State.values.cameratilt, CAM_HORIZ);
+
+//		application.gyroport.sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
+//		state.set(State.values.cameratilt, CAM_HORIZ);
+		cameraToPosition(CAM_HORIZ);
 		
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;		
@@ -476,7 +485,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if (speed==speedslow) {
 			speed = (int) voltsComp((double) speed);
 			if (speed > 255) { speed = 255; }
-			Util.debug("speed (slow) = "+speed, this);
 		}
 		
 		// no full speed when on dock voltage
@@ -812,14 +820,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (Application.openNIRead.depthCamGenerating) { // openni
 					short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
 					if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
-					application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+					application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
 					state.delete(State.values.angle);
 				}
 				
 				if (Application.stereo.stereoCamerasOn) {
-					short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-					if (Mapper.map.length==0)  Mapper.addArcPath(cells, 0, 0);
-					application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+					if (Mapper.map.length==0) {
+						short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+						Mapper.addArcPath(cells, 0, 0);
+					}
+					application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
 					state.delete(State.values.angle);
 				}
 				
@@ -837,7 +847,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
 
-					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
 					double angle = state.getDouble(State.values.angle.toString());
 					Mapper.addMove(depthFrameAfter, 0, angle);
@@ -846,7 +856,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				if (Application.stereo.stereoCamerasOn) {
 					Util.delay(700); // allow extra 200ms for latest frame 	
-					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
 					double angle = state.getDouble(State.values.angle.toString());
 					msg += "angle moved via gyro: "+angle;
@@ -886,15 +896,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						if (Application.openNIRead.depthCamGenerating) {   // openni
 							depthFrameBefore = Application.openNIRead.readFullFrame();	
 							if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
-							application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+							application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
 							state.delete(State.values.angle);
 						}
 						
                         if (Application.stereo.stereoCamerasOn) { // stereo
-                            cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-        					if (Mapper.map.length==0)  Mapper.addArcPath(cellsBefore, 0, 0);
-        					application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+        					if (Mapper.map.length==0) {
+                                cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+        						Mapper.addArcPath(cellsBefore, 0, 0);
+        					}
+        					application.gyroport.sendCommand(ODOMETRY_START);
         					state.delete(State.values.angle);
+        					state.delete(State.values.distance);
                         }
 
                         goForward(); 
@@ -904,16 +917,19 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						if (Application.openNIRead.depthCamGenerating) {  // openni
 							depthFrameAfter = Application.openNIRead.readFullFrame();						
 							if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
-							application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
+							application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
 							state.delete(State.values.angle);
 						}
 						
                         if (Application.stereo.stereoCamerasOn) { // stereo
-                            cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-        					if (Mapper.map.length==0)  Mapper.addArcPath(cellsAfter, 0, 0);
-                            application.gyroport.sendCommand(ArduinoGyro.ZERO_AND_START_RECORDING_ANGLE);
-                            state.delete(State.values.angle);
-                        }
+        					if (Mapper.map.length==0) {
+        						cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+        						Mapper.addArcPath(cellsAfter, 0, 0);
+        					}
+        					application.gyroport.sendCommand(ODOMETRY_START);
+        					state.delete(State.values.angle);
+        					state.delete(State.values.distance);
+    					}
                         
 						goBackward(); 
 				}
@@ -927,7 +943,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (depthFrameBefore != null) { // went forward, openni
 					Util.delay(750); // allow for slow to stop
 
-					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
 					double angle = state.getDouble(State.values.angle.toString());
 					
@@ -941,7 +957,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				else if (depthFrameAfter != null) { // went backward, openni
 					Util.delay(750);
 					
-					application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
 					double angle = state.getDouble(State.values.angle.toString());
 					
@@ -955,18 +971,26 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
                 else if (Application.stereo.stereoCamerasOn) {
                     Util.delay(750); // might need bit extra to get latest frame?
-                    application.gyroport.sendCommand(ArduinoGyro.STOP_RECORDING_AND_REPORT_ANGLE);
+
+                    application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
                     while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
                     double angle = state.getDouble(State.values.angle.toString());
-                    msg = "moved: "+meters+"m, "+angle+"deg";
+                    while (!state.exists(State.values.distance.toString())) { } //wait TODO: add timeout
+                    int distance = state.getInteger(State.values.distance.toString()); // millimeters
                     
-                    if (cellsBefore != null) { // went forward, stereo
+                    if (dir.equals(direction.forward)) { // went forward, stereo
                         cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-    					Mapper.addArcPath(cellsAfter, (int) (meters*1000), angle);
+//                        int[] distance = Stereo.findDistanceTopView(cellsBefore, cellsAfter, angle, d);
+//                        if (distance[1]>500) d = distance[0];
+    					Mapper.addArcPath(cellsAfter, distance, angle);
+    					msg = "moved forward: "+distance+"mm, "+angle+"deg";
                     }
-                    else if (cellsAfter !=null) { // went backward, stereo
+                    else { // went backward, stereo
                         cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-    					Mapper.addArcPath(cellsBefore, -(int) (meters*1000), -angle);
+//                        int[] distance = Stereo.findDistanceTopView(cellsAfter, cellsBefore, angle, d);
+//                        if (distance[1]>500) d = -distance[0];
+    					Mapper.addArcPath(cellsBefore, -distance, -angle);
+    					msg = "moved backward: -"+distance+"mm, -"+angle+"deg";
                     }
 
                 }
