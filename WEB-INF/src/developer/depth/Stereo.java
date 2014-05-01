@@ -27,7 +27,8 @@ public class Stereo {
 //	private Mat disparity = null;
 	private developer.image.OpenCVUtils cv;
 	public boolean stereoCamerasOn = false;
-	public StereoSGBM sbm;
+	public StereoSGBM sbmTopView;
+	public StereoSGBM sbmImage;
 	public static final int yoffset = 22; // 22 for 360, 25 for 480, 27 for 448
 	public static final int xoffset = 2; // 5 for 640x480
 	public static final double leftRotation = -0.7; 
@@ -58,34 +59,34 @@ public class Stereo {
 		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		cv = new OpenCVUtils();
 
-		sbm = new StereoSGBM();
-		
-		/* mode 1: cleanest depth image, though top view innacuracies
-		sbm.set_SADWindowSize(3); 
-        sbm.set_numberOfDisparities(48);  
-        sbm.set_preFilterCap(63); 
-        sbm.set_minDisparity(4); 
-        sbm.set_uniquenessRatio(10); 
-        sbm.set_speckleWindowSize(50); 
-        sbm.set_speckleRange(32);
-        sbm.set_disp12MaxDiff(1);
-        sbm.set_fullDP(false);
-        sbm.set_P1(216);
-        sbm.set_P2(864);
+		sbmImage = new StereoSGBM();
+//		/* mode 1: cleanest depth image, though top view innacuracies
+		sbmImage.set_SADWindowSize(3); 
+		sbmImage.set_numberOfDisparities(48);  
+		sbmImage.set_preFilterCap(63); 
+		sbmImage.set_minDisparity(4); 
+		sbmImage.set_uniquenessRatio(10); 
+		sbmImage.set_speckleWindowSize(50); 
+		sbmImage.set_speckleRange(32);
+		sbmImage.set_disp12MaxDiff(1);
+		sbmImage.set_fullDP(false);
+		sbmImage.set_P1(216);	
+		sbmImage.set_P2(864);
 //        */
 		
+		sbmTopView = new StereoSGBM();
 //		/* mode 2: more accurate, way less info in depth image
-        sbm.set_SADWindowSize(3); // 3-11. higher = more blobular 
-        sbm.set_numberOfDisparities(48);  // 32-256 similar top view results, lower shortens time
-        sbm.set_preFilterCap(63);  // lower seems to lessen noise
-        sbm.set_minDisparity(4); // no change between 4,0, higher = innacurate
-        sbm.set_uniquenessRatio(40); // % - higher = less noise, still not that accurate
-        sbm.set_speckleWindowSize(50);  // 0- disabled. 50-200 normal 
-        sbm.set_speckleRange(32);  // 1-200, no diff. 0 = blank
-        sbm.set_disp12MaxDiff(1); // -1-200 no diff
-        sbm.set_fullDP(false); // true = longer time, very slight noise reduction
-        sbm.set_P1(1); // 1 lower = messier looking but less assumptions
-        sbm.set_P2(250); // 250 lower = messier looking but less assumptions
+		sbmTopView.set_SADWindowSize(3); // 3-11. higher = more blobular 
+		sbmTopView.set_numberOfDisparities(48);  // 32-256 similar top view results, lower shortens time
+		sbmTopView.set_preFilterCap(63);  // lower seems to lessen noise
+		sbmTopView.set_minDisparity(4); // no change between 4,0, higher = innacurate
+		sbmTopView.set_uniquenessRatio(40); // % - higher = less noise, still not that accurate
+		sbmTopView.set_speckleWindowSize(50);  // 0- disabled. 50-200 normal 
+		sbmTopView.set_speckleRange(32);  // 1-200, no diff. 0 = blank
+		sbmTopView.set_disp12MaxDiff(1); // -1-200 no diff
+		sbmTopView.set_fullDP(false); // true = longer time, very slight noise reduction
+		sbmTopView.set_P1(1); // 1 lower = messier looking but less assumptions
+		sbmTopView.set_P2(250); // 250 lower = messier looking but less assumptions
 //        */
 		
 		Point center = new Point((xres-xoffset)/2, (yres-yoffset)/2);
@@ -142,7 +143,7 @@ public class Stereo {
 
 	}
 	
-	public Mat generateDisparity(Mat L, Mat R) {
+	public Mat generateDisparity(Mat L, Mat R, StereoSGBM sgbm) {
 		Rect rect;
 		
 		rect = new Rect(xoffset,yoffset,L.width()-xoffset,L.height()-yoffset);
@@ -162,11 +163,10 @@ public class Stereo {
 
         long start = System.currentTimeMillis();
 
-		sbm.compute(L, R, disparity);
+        sgbm.compute(L, R, disparity);
 
 		long duration = System.currentTimeMillis() - start;
 //    	System.out.println("time: "+ String.valueOf(duration));
-
         
         return disparity;
 	}
@@ -182,7 +182,7 @@ public class Stereo {
 		captureRight.retrieve(right);
 		captureLeft.retrieve(left);
 
-    	Mat disparity = generateDisparity(left,right);
+    	Mat disparity = generateDisparity(left,right, sbmImage);
 
         Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
         
@@ -210,7 +210,7 @@ public class Stereo {
 		captureRight.retrieve(right);
 		captureLeft.retrieve(left);
 
-    	Mat disparity = generateDisparity(left,right);
+    	Mat disparity = generateDisparity(left,right,sbmTopView);
     	short[][] topView = projectStereoHorizToTopView(disparity, 320);
     	
 		Imgproc.resize(left, left, new Size(120, 68));
@@ -279,14 +279,14 @@ public class Stereo {
 			/* vertical noise filtering + averaging */
 
 //			final int horizoffset = 7; // mode 1 (pixels= *2+1)
-			final int horizoffset = 3; // mode 2 (pixels= *2+1)
+			final int horizoffset = 5; //3 mode 2 (pixels= *2+1)
 			final int horizoffsetinc = 2;
 
 			final double YdepthRatioThreshold = 0.05; // percent
 			final double XdepthRatioThreshold = 0.01; // percent
 
 //			final int levels = 1; // mode 1 (pixels= *2+1 * horizoffset*2+1)
-			final int levels = 3; // mode 1 (pixels= *2+1 * horizoffset*2+1)
+			final int levels = 2; // mode 2 (pixels= *2+1 * horizoffset*2+1)
 
 			for (int lvl=-levels; lvl<=levels; lvl++) {
 				double[] dx = new double[width];
@@ -383,7 +383,7 @@ public class Stereo {
 		captureRight.retrieve(right);
 		captureLeft.retrieve(left);
 
-    	Mat disparity = generateDisparity(left,right);
+    	Mat disparity = generateDisparity(left,right,sbmTopView);
         short[][] result = projectStereoHorizToTopView(disparity, h);
         generating = false;
     	return result;

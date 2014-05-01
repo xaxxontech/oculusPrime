@@ -124,10 +124,12 @@ public class StereoTesting extends JFrame {
 		Stereo stereo = new Stereo();
 		
         Mat disparity = new Mat();
+        Mat disparityTopView = new Mat();
 
 		long start = System.currentTimeMillis();
 
-        stereo.sbm.compute(left, right, disparity);
+        stereo.sbmImage.compute(left, right, disparity);
+        stereo.sbmTopView.compute(left, right, disparityTopView);
 
     	long duration = System.currentTimeMillis() - start;
     	System.out.println("time: "+ String.valueOf(duration));
@@ -140,7 +142,8 @@ public class StereoTesting extends JFrame {
     	System.out.println("");
     	
         
-        short[][] topView  = Stereo.projectStereoHorizToTopView(disparity, 320);
+//        short[][] topView  = Stereo.projectStereoHorizToTopView(disparity, 320);
+        short[][] topView  = Stereo.projectStereoHorizToTopView(disparityTopView, 320);
 		
         Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
 		
@@ -212,8 +215,8 @@ public class StereoTesting extends JFrame {
 //		Mat left = Highgui.imread(folder+"left0.png");
 //		Mat right = Highgui.imread(folder+"right0.png");
 
-		Mat disparity = stereo.generateDisparity(left, right);
-		short[][] topViewBefore = stereo.projectStereoHorizToTopView(disparity, h);
+		Mat disparity = stereo.generateDisparity(left, right, stereo.sbmTopView);
+		short[][] topViewBefore = Stereo.projectStereoHorizToTopView(disparity, h);
 		
 		Mat m = Stereo.convertShortToMat(topViewBefore);
 		panel.setBounds(5, 5, m.width(), m.height()+5);
@@ -228,7 +231,7 @@ public class StereoTesting extends JFrame {
 //		left = Highgui.imread(folder+"left500_1-12.png");
 //		right = Highgui.imread(folder+"right500_1-12.png");
 
-		disparity = stereo.generateDisparity(left, right);
+		disparity = stereo.generateDisparity(left, right, stereo.sbmTopView);
 		short[][] topViewAfter = Stereo.projectStereoHorizToTopView(disparity, h);
 		
 		m = Stereo.convertShortToMat(topViewAfter);

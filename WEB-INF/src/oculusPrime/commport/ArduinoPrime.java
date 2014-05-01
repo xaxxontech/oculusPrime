@@ -9,7 +9,6 @@ import java.util.TooManyListenersException;
 
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
-import developer.depth.Stereo;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;

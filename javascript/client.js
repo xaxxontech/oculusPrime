@@ -67,6 +67,7 @@ var floodlightlevel = -1;
 var videoscale = 100;
 var pingcountertimer;
 var pushtotalk;
+var lastcommand; 
 
 function loaded() {
 	if (clicksteeron) { clicksteer("on"); }
@@ -513,6 +514,11 @@ function keyBoardPressed(event) {
 			} else {
 				publish("stop");
 			}
+		}
+		if (keycode == 67) { // C - command window
+			mainmenu('mainmenulink'); 
+			popupmenu('menu', 'show', null, null, document.getElementById("advanced_menu").innerHTML);
+			oculuscommanddivShow();
 		}
 		if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 		
@@ -1347,13 +1353,15 @@ function oculuscommanddivHide() {
 
 function oculuscommanddivShow() {
 	document.getElementById('oculuscommanddiv').style.display='';
-	document.getElementById('oculuscommand').value='';
+	if (!lastcommand) lastcommand = null;
 	document.getElementById('oculuscommand').focus();
 	popupmenu('menu','resize');
+	setTimeout("document.getElementById('oculuscommand').value=lastcommand;", 50);
 }
 
 function oculuscommandgo() {
 	var str = document.getElementById('oculuscommand').value;
+	lastcommand = str;
 	str = str.replace(/^\s+|\s+$/g, ''); // strip
 	var cmd = str.split(" ",1);
 	var val = str.substring(cmd[0].length+1);
