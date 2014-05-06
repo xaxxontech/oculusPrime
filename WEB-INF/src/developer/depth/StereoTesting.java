@@ -107,22 +107,7 @@ public class StereoTesting extends JFrame {
 		Imgproc.equalizeHist(right, right);
 //		Photo.fastNlMeansDenoising(right, right);
 		
-//		StereoSGBM sbm = new StereoSGBM();
-//		
-//        sbm.set_SADWindowSize(3); 
-//        sbm.set_numberOfDisparities(48);  
-//        sbm.set_preFilterCap(63); 
-//        sbm.set_minDisparity(4); 
-//        sbm.set_uniquenessRatio(10); 
-//        sbm.set_speckleWindowSize(50); 
-//        sbm.set_speckleRange(32);
-//        sbm.set_disp12MaxDiff(1);
-//        sbm.set_fullDP(false);
-//        sbm.set_P1(216);
-//        sbm.set_P2(864);
-        
 		Stereo stereo = new Stereo();
-		
         Mat disparity = new Mat();
         Mat disparityTopView = new Mat();
 
@@ -140,26 +125,33 @@ public class StereoTesting extends JFrame {
     		System.out.printf("%4d, ",(int) d);
     	}
     	System.out.println("");
-    	
         
 //        short[][] topView  = Stereo.projectStereoHorizToTopView(disparity, 320);
-        short[][] topView  = Stereo.projectStereoHorizToTopView(disparityTopView, 320);
-		
-        Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
+        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparityTopView, 320);
+        topView = Stereo.topViewProbabilityRendering(topView);
+
 		
 		JLabel pic0 = new JLabel(new ImageIcon(cv.matToBufferedImage(left)));
 		JLabel pic1 = new JLabel(new ImageIcon(cv.matToBufferedImage(right)));
 
+        Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
 //		Imgproc.cvtColor(left, left,Imgproc.COLOR_BGR2GRAY);
-		Imgproc.resize(leftc, leftc, new Size(120, 68));
-		Imgproc.cvtColor(disparity, disparity,Imgproc.COLOR_GRAY2BGR);
-		leftc.copyTo(new Mat(disparity, new Rect(0,0,120,68)));
+//		Imgproc.resize(leftc, leftc, new Size(120, 68));
+//		Imgproc.cvtColor(disparity, disparity,Imgproc.COLOR_GRAY2BGR);
+//		leftc.copyTo(new Mat(disparity, new Rect(0,0,120,68)));
 		JLabel pic2 = new JLabel(new ImageIcon(cv.matToBufferedImage(disparity)));
 
-		Mat mtv = Stereo.convertShortToMat(topView);
-		leftc.copyTo(new Mat(mtv, new Rect(0,mtv.height()-68-1, 120,68)));
-		JLabel pic3 = new JLabel(new ImageIcon(cv.matToBufferedImage(mtv)));
-		System.out.println("mtv width: "+mtv.width()+", height: "+mtv.height());
+		Mapper.addArcPath(topView, 0, 0);
+//		Mapper.addArcPath(topView, 500, -0.6);
+		Mapper.addArcPath(topView, 0, 45);
+//		Mapper.addArcPath(topViewAfter, d, angle);
+		BufferedImage img = ScanUtils.cellsToImage(Mapper.map);
+		JLabel pic3 = new JLabel(new ImageIcon(img));
+		
+//		Mat mtv = Stereo.convertShortToMat(topView);
+//		leftc.copyTo(new Mat(mtv, new Rect(0,mtv.height()-68-1, 120,68)));
+//		JLabel pic3 = new JLabel(new ImageIcon(cv.matToBufferedImage(mtv)));
+//		System.out.println("mtv width: "+mtv.width()+", height: "+mtv.height());
 
 		panel.add(pic0);
 		panel_1.add(pic1);
@@ -188,10 +180,10 @@ public class StereoTesting extends JFrame {
     private Mat[] loadImages() {
         String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
 //        String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
-        Mat left = Highgui.imread(folder+"left0.png");
-        Mat right = Highgui.imread(folder+"right0.png");
-//		Mat left = Highgui.imread(folder+"left500_1-12.png");
-//		Mat right = Highgui.imread(folder+"right500_1-12.png");
+//        Mat left = Highgui.imread(folder+"left0.png");
+//        Mat right = Highgui.imread(folder+"right0.png");
+		Mat left = Highgui.imread(folder+"left500_1-12.png");
+		Mat right = Highgui.imread(folder+"right500_1-12.png");
         
 //		Mat left = Highgui.imread(folder+"left1.png");
 //		Mat right = Highgui.imread(folder+"right1.png");
@@ -216,7 +208,7 @@ public class StereoTesting extends JFrame {
 //		Mat right = Highgui.imread(folder+"right0.png");
 
 		Mat disparity = stereo.generateDisparity(left, right, stereo.sbmTopView);
-		short[][] topViewBefore = Stereo.projectStereoHorizToTopView(disparity, h);
+		short[][] topViewBefore = Stereo.projectStereoHorizToTopViewFiltered(disparity, h);
 		
 		Mat m = Stereo.convertShortToMat(topViewBefore);
 		panel.setBounds(5, 5, m.width(), m.height()+5);
@@ -232,7 +224,7 @@ public class StereoTesting extends JFrame {
 //		right = Highgui.imread(folder+"right500_1-12.png");
 
 		disparity = stereo.generateDisparity(left, right, stereo.sbmTopView);
-		short[][] topViewAfter = Stereo.projectStereoHorizToTopView(disparity, h);
+		short[][] topViewAfter = Stereo.projectStereoHorizToTopViewFiltered(disparity, h);
 		
 		m = Stereo.convertShortToMat(topViewAfter);
 		panel_1.setBounds(640, 5, m.width(), m.height()+5);

@@ -917,8 +917,9 @@ public class ScanUtils {
 
 				int hue = cells[x][y];
 				int argb  = 0;
-				if (hue == -1) argb = 0xff0000; 
-				else argb =  hue<<8;
+				if (hue == -1) argb = 0xff0000; // bright red 
+				else if (hue > 0) argb =  hue<<8; // green
+				else if (hue <-1) argb = 255+hue; // blue
 
 				img.setRGB(x, y, argb);  
 

@@ -43,6 +43,7 @@ public class Stereo {
 	static final double camFOVx43 = 58.90;
 	static final double camFOVy43 = 45.90;
 	final static int maxDepthTopView = 3500;
+	final static int minDepthTopView = 500;
 //	final double scaleMult = 275*2032; // disparity*mm (based on xoffset=2)!
 	final static double scaleMult = 440*1350; // 412 measured - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
 											  // 435 = trial and error, best map meshing
@@ -51,8 +52,9 @@ public class Stereo {
 	public static final int  cameraSetBack = 0; // -20; // is forward from rotation center TODO: use this?
 	public static final int cameraOffsetLeft = 25; // to bot's left from rotation center
 	
-	static final int depthPixelIntensitySpread = 230;
-	static final int depthPixelIntensityOffset = 25;
+	static final int depthPixelIntensitySpread = 250;
+	static final int depthPixelIntensityOffset = 5;
+	public static short[][] tvr;
 
 	
 	public Stereo() {
@@ -211,7 +213,8 @@ public class Stereo {
 		captureLeft.retrieve(left);
 
     	Mat disparity = generateDisparity(left,right,sbmTopView);
-    	short[][] topView = projectStereoHorizToTopView(disparity, 320);
+    	short[][] topView = projectStereoHorizToTopViewFiltered(disparity, 320);
+    	topView = topViewProbabilityRendering(topView);
     	
 		Imgproc.resize(left, left, new Size(120, 68));
 		Mat mtv = Stereo.convertShortToMat(topView);
@@ -236,130 +239,87 @@ public class Stereo {
 		Mat m = new Mat(h, w, CvType.CV_8UC3);
 		for (int x = 0; x<w; x++) {
 			for (int y=0; y<h; y++) {
-				m.put(y, x, new byte[] {0,(byte) frame[x][y],0});
+//				m.put(y, x, new byte[] {(byte) 0,0,0});
+				if (frame[x][y] > 0) m.put(y, x, new byte[] {0,(byte) frame[x][y],0}); // green
+				else if (frame[x][y] < 0) m.put(y, x, new byte[] {(byte) frame[x][y], 0, 0} ); // blue
+				else  m.put(y, x, new byte[] {(byte) frame[x][y], 0, 0});
 			}
 		}
 		return m;
 	}
 	
-//	final static int YrgbDiff = 50;
-	public static short[][] projectStereoHorizToTopView(Mat frame, int h) { 
-//		final int w = (int) (Math.cos(Math.toRadians(camFOVx169)/2) * h) * 2; // WRONG .. ?
-//		final int w = (int) (Math.tan(Math.toRadians(camFOVx169/2)) * h * 2); // WRONG .. ?
+	public static short[][] projectStereoHorizToTopViewFiltered(Mat frame, int h) { 
 		final int w = (int) (Math.sin(Math.toRadians(camFOVx169/2)) * h * 2); // WRONG .. ?
 		final double angle = Math.toRadians(camFOVx169/2);
 		final int width = frame.width();
 		final int mid = frame.height()/2-10; // offset so not including floor plane points
-//		System.out.println("w: "+w+", h: "+h);
 		short[][] result = new short[w][h];
 
 		final int xdctr = w/2;
 		
-		boolean filtering = true;
+		final int horizoffset = 5; //3 mode 2 (pixels= *2+1)
+		final int horizoffsetinc = 2;
 
-		if (!filtering) {
-		
-			/* unfiltered */
-			final int horizoffset = 0; 
+		final double YdepthRatioThreshold = 0.05; // percent
+		final double XdepthRatioThreshold = 0.01; // percent
+
+		final int levels = 2; // mode 2 (pixels= *2+1 * horizoffset*2+1)
+
+		for (int lvl=-levels; lvl<=levels; lvl++) {
+			double[] dx = new double[width];
 			for (int x=0; x<width; x++) {
-				for (int y = mid-horizoffset; y<=mid+horizoffset; y++) {
-					double d = frame.get(y, x)[0];
-					d = scaleMult/d;
-					int ry = (int) Math.round(d/ maxDepthTopView  * h);
-					double xdratio = (x*(double) w/width - xdctr)/ (double) xdctr;
-					int rx = (w/2) + (int) Math.round(Math.tan(angle)*(double) ry * xdratio);
-					if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = 0xff; 
+	
+				int i = 0;
+				double[] d = new double[horizoffset*(2/horizoffsetinc)+1]; 
+				boolean add = true;
+				
+				for (int y = (mid+lvl*(horizoffset*2+1))-horizoffset; 
+						y<=(mid+lvl*(horizoffset*2+1))+horizoffset; y+=horizoffsetinc) {
+					d[i] = scaleMult/frame.get(y, x)[0];
+					if (d[i] >= maxDepthTopView ) add = false; // discard far away points
+					i++;
+				}
+				
+				dx[x] = maxDepthTopView;
+				double maxDiff = 0;
+	
+				if (add) {
+					for (i=1; i<d.length; i++) {
+						if (Math.abs(d[0]-d[i]) > maxDiff) maxDiff = Math.abs(d[0]-d[i]);
+						if (d[i] < dx[x]) dx[x] = d[i]; // closest
+					}
+				}
+	
+				if (!add || maxDiff/dx[x] > YdepthRatioThreshold) dx[x] = maxDepthTopView; // discard
+				
+
+			}
+			
+			// loop again, with x filtering & adding: 
+			for (int x=1; x<width-1; x++) {
+				if (dx[x]<maxDepthTopView && dx[x]>minDepthTopView) {
+					// x-filter test:
+					if (Math.abs(dx[x]-dx[x-1])/dx[x]<XdepthRatioThreshold && Math.abs(dx[x]-dx[x+1])/dx[x]<XdepthRatioThreshold ) {
+						//project:
+						double dscaled = dx[x]*h/(double) maxDepthTopView; // distance from bot, in pixels
+						double a = Math.toRadians( camFOVx169 * (width/2-x) / width  ) ; // angle from center, radians
+						int rx = w/2 - (int) (dscaled * Math.sin(a));
+						int ry = (int) (dscaled * Math.cos(a));
+
+						// add to results:
+//							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) (150+(YrgbDiff*lvl));
+//							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) ( (maxDepthTopView-dx[x])/maxDepthTopView*
+//									depthPixelIntensitySpread + depthPixelIntensityOffset); // TODO: try disabling this check!
+						result[rx][h-ry-1] = 255; 
+						
+					}
 				}
 			}
 			
-		}
-		
-		else {
-		
-			/* vertical noise filtering + averaging */
-
-//			final int horizoffset = 7; // mode 1 (pixels= *2+1)
-			final int horizoffset = 5; //3 mode 2 (pixels= *2+1)
-			final int horizoffsetinc = 2;
-
-			final double YdepthRatioThreshold = 0.05; // percent
-			final double XdepthRatioThreshold = 0.01; // percent
-
-//			final int levels = 1; // mode 1 (pixels= *2+1 * horizoffset*2+1)
-			final int levels = 2; // mode 2 (pixels= *2+1 * horizoffset*2+1)
-
-			for (int lvl=-levels; lvl<=levels; lvl++) {
-				double[] dx = new double[width];
-				for (int x=0; x<width; x++) {
-		
-					int i = 0;
-					double[] d = new double[horizoffset*(2/horizoffsetinc)+1]; 
-					boolean add = true;
-					
-					for (int y = (mid+lvl*(horizoffset*2+1))-horizoffset; 
-							y<=(mid+lvl*(horizoffset*2+1))+horizoffset; y+=horizoffsetinc) {
-						d[i] = scaleMult/frame.get(y, x)[0];
-						if (d[i] >= maxDepthTopView ) add = false; // discard far away points
-						i++;
-					}
-					
-		//			double dx = 0;
-					dx[x] = maxDepthTopView;
-					double maxDiff = 0;
-		
-					if (add) {
-						for (i=1; i<d.length; i++) {
-							if (Math.abs(d[0]-d[i]) > maxDiff) maxDiff = Math.abs(d[0]-d[i]);
-		//					dx += d[i];
-							if (d[i] < dx[x]) dx[x] = d[i]; // closest
-						}
-		//				dx = dx/d.length; // average
-					}
-		
-					if (!add || maxDiff/dx[x] > YdepthRatioThreshold) dx[x] = maxDepthTopView;
-					
-
-				}
-				
-				// x filtering & adding
-				for (int x=1; x<width-1; x++) {
-					if (dx[x]<maxDepthTopView) {
-						if (Math.abs(dx[x]-dx[x-1])/dx[x]<XdepthRatioThreshold && Math.abs(dx[x]-dx[x+1])/dx[x]<XdepthRatioThreshold ) {
-//						if (true) {
-							
-							/* original code:
-							int ry = (int) Math.round(dx[x]/ maxDepthTopView  * h);
-							double xdratio = (x*(double) w/width - xdctr)/ (double) xdctr;
-							int rx = (w/2) + (int) Math.round(Math.tan(angle)*(double) ry * xdratio);
-//							*/
-							
-//							/* new projection code:
-							// y = sqrt(dscaled^2 - x^2)
-							// x = xdctr - x*w/width
-							// dscaled = dx[x]*h/maxDepthTopView
-//							int ry = (int) Math.sqrt(Math.pow(dx[x]*h/(double) maxDepthTopView, 2) 
-//														- Math.pow(xdctr - x*w/(double) width, 2));
-							
-							double dscaled = dx[x]*h/(double) maxDepthTopView;
-							double a = Math.toRadians( camFOVx169 * (width/2-x) / width  ) ;
-							int rx = w/2 - (int) (dscaled * Math.sin(a));
-							int ry = (int) (dscaled * Math.cos(a));
-							
-//							*/
-							
-//							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) (150+(YrgbDiff*lvl));
-							if (ry<h && ry>0 && rx>=0 && rx<w)   result[rx][h-ry-1] = (short) ( (maxDepthTopView-dx[x])/maxDepthTopView*
-									depthPixelIntensitySpread + depthPixelIntensityOffset); // TODO: try disabling this check!
-						}
-					}
-				}
-				
-	
-			}
 
 		}
 		
-		// eliminate orphan pixels
+//		 loop again, eliminate orphan pixels:
 		for (int x=1; x<w-1; x++) {
 			for (int y=1; y<h-1; y++) {
 				if (result[x][y] !=0) { 
@@ -375,6 +335,84 @@ public class Stereo {
 		return result;
 	}
 	
+	public static short[][] topViewProbabilityRendering(short[][] tv) {
+		int w  = tv.length;
+		int h = tv[0].length;
+		tvr = new short[w][h];
+		final double xaconst = 4/320.0*h;
+		final double yaconst  = 4/320.0*h;
+		for (int y=0; y<h; y++) {
+			for (int x=0; x<w; x++) {
+				double d = Math.sqrt(Math.pow(w/2-x, 2)+Math.pow(h-y,2));
+				double a = Math.asin((w/2-x)/d);
+				short i = (short) (depthPixelIntensityOffset + depthPixelIntensitySpread-depthPixelIntensitySpread*d/h);
+				
+				// render baseline if pixel empty
+				if (Math.abs(a) <= Math.toRadians(camFOVx169/2) && d < h && tvr[x][y] == 0 && d > (double)h/maxDepthTopView*minDepthTopView)  
+						tvr[x][y]=(short) -(depthPixelIntensityOffset+ depthPixelIntensitySpread-i);
+
+				if (tv[x][y] != 0) { // object!
+					double mult = (5-Math.abs(a))/5; 
+					int xa = (int) Math.round(d/h*xaconst*mult);
+					int ya = (int) Math.round(Math.pow(d/h*yaconst/mult, 2));
+					double incr = (x-w/2) / (double) (h-y);
+					
+					// set single pixel at ctr since very short ellipses don't always render? (solved with math.round)
+//					int e =  tvr[(int) x][y];
+//					if (i >0) {
+//						if (e>0 && e<255 && i > 0) 	i += e/5;
+//						if (i > 255) i = 255;
+//						tvr[(int) x][y] = (short) i;
+//					}
+					
+					ellipse(x,y,i,xa,ya, incr, w, h);					
+//					tvr[x][y]=255; // TODO: testing
+				}
+
+			}
+		}	
+		return tvr;
+	}
+	
+	private static void ellipse(int ctrx, int ctry, short i, int xa, int ya, double incr, int w, int h) {
+		line((int) Math.round(ctrx-incr*ya), ctry+ya, ya*2, w, h, incr, i);
+		short bg = 0; // (short) (-(depthPixelIntensityOffset+ depthPixelIntensitySpread)+i);
+		line(ctrx, ctry, h, w, h, incr, bg);
+
+		for (double x=1-Math.abs(incr); x<=xa; x+= 1-Math.abs(incr)) {
+			int yl = (int) Math.round(ya - (ya*Math.pow(x/(double) xa, 3)));
+
+			line((int) Math.round(ctrx+x), ctry, h, w, h, incr, bg);
+			line((int) Math.round(ctrx-x), ctry, h, w, h, incr, bg);
+			line((int) Math.round(ctrx+x-incr*yl), (int) Math.round(ctry+x*incr)+yl, yl*2, w, h, incr, i);
+			line((int) Math.round(ctrx-x-incr*yl), (int) Math.round(ctry+x*incr)+yl, yl*2, w, h, incr, i);
+		}
+	}
+	
+	private static void line(int startx, int starty, int length, int w, int h, double incr, short intensity) {
+		double x = startx;
+		int y = starty;
+		int endy = y-length;
+		while (true) {
+			x += incr;
+			y --;
+			if ( x < 0 || x >= w || y<endy || y<0)  break;
+			int e =  tvr[(int) x][y];
+			double i=intensity;
+			if (intensity >0) {
+				if (e>0 && e<255 && intensity > 0) 	i += e/5;
+				if (i > 255) i = 255;
+				tvr[(int) x][y] = (short) i;
+			}
+			if (intensity <= 0 && e <=0) {
+				tvr[(int) x][y] = (short) i;
+			}
+			
+			
+			
+		}
+	}
+	
 	public short[][] captureTopViewShort(int h) {
 		if (!stereoCamerasOn) return null;
         generating = true;
@@ -384,7 +422,8 @@ public class Stereo {
 		captureLeft.retrieve(left);
 
     	Mat disparity = generateDisparity(left,right,sbmTopView);
-        short[][] result = projectStereoHorizToTopView(disparity, h);
+        short[][] result = projectStereoHorizToTopViewFiltered(disparity, h);
+        result = topViewProbabilityRendering(result);
         generating = false;
     	return result;
 	}

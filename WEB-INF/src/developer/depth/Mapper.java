@@ -42,9 +42,13 @@ public class Mapper {
 	 */
 	public static void addArcPath(final short[][] cells, int distance, final double angle) {
 //    	double arcPathX = Math.cos(Math.toRadians((180-angle)/2))*distance;
-    	int arcPathY = (int) Math.round(Math.sin(Math.toRadians((180-angle)/2))*distance);
-    	short[][] newcells = transFormMap(cells, arcPathY, 90-((180-angle)/2)); //arcpath distances, partial rotation
-    	newcells = transFormMap(cells, 0, angle-(90-((180-angle)/2)) ); // remaining rotation
+		short[][] newcells;
+		if (distance != 0) {
+	    	int arcPathY = (int) Math.round(Math.sin(Math.toRadians((180-angle)/2))*distance);
+	    	newcells = transFormMap(cells, arcPathY, 90-((180-angle)/2)); // arcpath distances, partial rotation
+	    	newcells = transFormMap(cells, 0, angle-(90-((180-angle)/2)) ); // remaining rotation
+		}
+		else newcells = transFormMap(cells, 0, angle);
     	
     	add(newcells);
 	}
@@ -60,17 +64,38 @@ public class Mapper {
 					map[x][y] = cells[x][y];
 				}
 	    	}
-	    	map[originX][originY]=-1; // TODO: testing only, put red dots at bot locations
+	    	map[originX][originY]=-1; // TODO: testing only, highlight bot location
 	    	return;
 		}
 		
+		System.out.println("map: "+map.length+", "+map[0].length);
+		System.out.println("c: "+cw+", "+ch);
 		// all other entries
     	for (int x=0; x<cw; x++) {
 			for (int y=0; y<ch; y++) {
-				// write to map if contents are something, and don't overwrite bot locations, higher probability locations
-				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] >= 0  && cells[x][y] > map[cornerX + x][cornerY + y]) {   
-					map[cornerX + x][cornerY + y] = cells[x][y];
-					
+
+//				 write to map if contents are something, and don't overwrite bot locations, higher probability locations
+//				if (cells[x][y] != 0 && map[cornerX + x][cornerY + y] >= 0  && cells[x][y] > map[cornerX + x][cornerY + y]) {   
+//				map[cornerX + x][cornerY + y] = cells[x][y]; }
+
+
+//				short entry = cells[x][y];
+//				short existing = map[cornerX + x][cornerY + y]; // barfs for some reason
+//				if ( (entry > 0 && entry > existing && existing != -1) || (entry < -1 && (entry > existing || existing ==0) && existing != -1)
+//						|| entry == -1) {
+//					map[cornerX + x][cornerY + y] = entry;
+//				}
+				
+
+				short entry = cells[x][y];
+				if ( (entry > 0 && entry > map[cornerX + x][cornerY + y] && 
+						map[cornerX + x][cornerY + y] != -1) || 
+						(entry < -1 && (entry > map[cornerX + x][cornerY + y] || map[cornerX + x][cornerY + y] ==0) &&
+								map[cornerX + x][cornerY + y] != -1)
+						|| entry == -1) {
+					map[cornerX + x][cornerY + y] = entry;
+				}
+
 					// now nuke nearby lower probability points (hopefully due to far distance scan error)
 					// 5 pixels = approx 5cm with 240 resolution and 3500 max
 //					for (int xx=-5; xx<=5; xx++) {
@@ -85,11 +110,11 @@ public class Mapper {
 //						}
 //					}
 					
-				}
+//				}
 				
 			}
     	}
-    	map[cornerX+originX][cornerY+originY]=-1; // TODO: testing only
+    	map[cornerX+originX][cornerY+originY]=-1; // TODO: testing only, highlight bot location
 
 	}
 	
@@ -121,7 +146,6 @@ public class Mapper {
 		lastAngle = newangle;
 //		if (lastAngle > 360) lastAngle -= 360;
 //		else if (lastAngle < 0) lastAngle = 360 - lastAngle;
-		
 		
 		if (newangle > 180)  newangle = -360+newangle;
 		else if (newangle < -180 ) newangle = 360+newangle;
