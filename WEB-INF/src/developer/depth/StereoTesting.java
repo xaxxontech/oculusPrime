@@ -126,8 +126,8 @@ public class StereoTesting extends JFrame {
     	}
     	System.out.println("");
         
-//        short[][] topView  = Stereo.projectStereoHorizToTopView(disparity, 320);
-        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparityTopView, 320);
+        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparity, 240);
+//        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparityTopView, 320);
         topView = Stereo.topViewProbabilityRendering(topView);
 
 		
@@ -142,9 +142,8 @@ public class StereoTesting extends JFrame {
 		JLabel pic2 = new JLabel(new ImageIcon(cv.matToBufferedImage(disparity)));
 
 		Mapper.addArcPath(topView, 0, 0);
-//		Mapper.addArcPath(topView, 500, -0.6);
-		Mapper.addArcPath(topView, 0, 45);
-//		Mapper.addArcPath(topViewAfter, d, angle);
+//		Mapper.addArcPath(topView, 10, -0.6);
+//		Mapper.addArcPath(topView, 0, 45);
 		BufferedImage img = ScanUtils.cellsToImage(Mapper.map);
 		JLabel pic3 = new JLabel(new ImageIcon(img));
 		
@@ -180,10 +179,10 @@ public class StereoTesting extends JFrame {
     private Mat[] loadImages() {
         String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
 //        String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
-//        Mat left = Highgui.imread(folder+"left0.png");
-//        Mat right = Highgui.imread(folder+"right0.png");
-		Mat left = Highgui.imread(folder+"left500_1-12.png");
-		Mat right = Highgui.imread(folder+"right500_1-12.png");
+        Mat left = Highgui.imread(folder+"left0.png");
+        Mat right = Highgui.imread(folder+"right0.png");
+//		Mat left = Highgui.imread(folder+"left500_1-12.png");
+//		Mat right = Highgui.imread(folder+"right500_1-12.png");
         
 //		Mat left = Highgui.imread(folder+"left1.png");
 //		Mat right = Highgui.imread(folder+"right1.png");
@@ -198,14 +197,14 @@ public class StereoTesting extends JFrame {
     	Stereo stereo = new Stereo();
     	developer.image.OpenCVUtils cv = new OpenCVUtils();
     	
-//        String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
-    	String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
+        String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
+//    	String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
 //		Mat left = Highgui.imread(folder+"left2.png");
 //		Mat right = Highgui.imread(folder+"right2.png");
-		Mat left = Highgui.imread(folder+"left1.png");
-		Mat right = Highgui.imread(folder+"right1.png");
-//		Mat left = Highgui.imread(folder+"left0.png");
-//		Mat right = Highgui.imread(folder+"right0.png");
+//		Mat left = Highgui.imread(folder+"left1.png");
+//		Mat right = Highgui.imread(folder+"right1.png");
+		Mat left = Highgui.imread(folder+"left0.png");
+		Mat right = Highgui.imread(folder+"right0.png");
 
 		Mat disparity = stereo.generateDisparity(left, right, stereo.sbmTopView);
 		short[][] topViewBefore = Stereo.projectStereoHorizToTopViewFiltered(disparity, h);

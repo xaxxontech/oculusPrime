@@ -11,7 +11,7 @@ import oculusPrime.PlayerCommands.AdminCommands;
 public class State {
 	
 	public enum values{ 
-		motionenabled, moving, movingforward, motorport, // motors
+		motionenabled, moving, movingforward, motorport, odometryrecording, // motors
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
 		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users

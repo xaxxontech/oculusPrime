@@ -958,7 +958,7 @@ function tilttest() {
 }
 
 function speedset(str) {
-	callServer("speedset", str);
+	callServer("speed", str);
 	message("sending speedset: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }

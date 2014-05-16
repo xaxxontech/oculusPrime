@@ -31,7 +31,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	public enum direction { stop, right, left, forward, backward };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
-	public enum speeds { slow, med, fast }; // better motors, maybe add speeds? 
+	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
 	public static final long DEAD_TIME_OUT = 30000;
@@ -47,6 +47,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte LEFT = 'l';
 	public static final byte RIGHT = 'r';
 	public static final byte ECHO = 'e';
+	public static final byte[] ECHO_ON = { 'e', '1' };
+	public static final byte[] ECHO_OFF = { 'e', '0' };
 	
 	public static final byte FLOOD_LIGHT_LEVEL = 'o'; 
 	public static final byte SPOT_LIGHT_LEVEL = 'p';
@@ -59,14 +61,13 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte HOME_TILT_REAR = 'z';
 	public static final byte GET_PRODUCT = 'x';
 	public static final byte GET_VERSION = 'y';
-	public static final byte[] ECHO_ON = { 'e', '1' };
-	public static final byte[] ECHO_OFF = { 'e', '0' };
 	public static final byte ZERO_AND_START_RECORDING_ANGLE = 'z'; 
 	public static final byte STOP_RECORDING_AND_REPORT_ANGLE = 'm';
 	public static final byte ENCODER_START = 'g'; 
 	public static final byte ENCODER_STOP_AND_REPORT = 'h';
 	public static final byte ODOMETRY_START = 'i';
 	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
+	public static final byte ODOMETRY_REPORT = 'k';
 		
 	public static final int CAM_HORIZ = 70; // degrees (CAD measures 19)
 	public static final int CAM_MAX = 130; // degrees (CAD measures 211)
@@ -753,15 +754,21 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}).start();
 	}
 
-	public void speedset(final speeds update) {
+	public void speedset(String str) { // final speeds update
 		
-		Util.debug("speedset(): " + update, this);
-		
-		switch (update) {
-		case slow: state.put(State.values.motorspeed, speedslow); break;
-		case med: state.put(State.values.motorspeed, speedmed); break;
-		case fast: state.put(State.values.motorspeed, speedfast); break;
-		}
+	    try { // check for integer
+	        Integer.parseInt(str); 
+	        state.put(State.values.motorspeed, Integer.parseInt(str));
+	    } catch(NumberFormatException e) {  // not integer
+			final speeds update = speeds.valueOf(str);
+			
+			switch (update) {
+				case slow: state.put(State.values.motorspeed, speedslow); break;
+				case med: state.put(State.values.motorspeed, speedmed); break;
+				case fast: state.put(State.values.motorspeed, speedfast); break;
+			}
+	    }
+		Util.debug("speedset(): " + str, this);
 	}
 
 	public void nudge(final direction dir) {
@@ -1158,6 +1165,21 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		else { steeringcomp = Integer.parseInt(str.replaceAll("\\D", "")); }
 		steeringcomp = (int) ((double) steeringcomp * 255/100);
 	}
+	
+	public void odometryStart() {
+		application.gyroport.sendCommand(ODOMETRY_START);
+		state.delete(State.values.angle);
+		state.delete(State.values.distance);
+		state.set(State.values.odometryrecording, true);
+	}
+	public void odometryStop() {
+		application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
+		state.set(State.values.odometryrecording, false);
+	}
+	public void odometryReport() {
+		application.gyroport.sendCommand(ODOMETRY_REPORT);
+	}
+
 
 }
 

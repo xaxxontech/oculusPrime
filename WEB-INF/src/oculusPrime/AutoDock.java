@@ -252,7 +252,7 @@ public class AutoDock { // implements Observer {
 		app.message("docking initiated", "multiple", "speed slow motion moving dock docking");
 		state.set(State.values.docking, true);
 		state.set(State.values.dockstatus, DOCKING);
-		comport.speedset(ArduinoPrime.speeds.slow);
+		comport.speedset(ArduinoPrime.speeds.slow.toString());
 		state.set(State.values.movingforward, false);
 //		powerport.prepareBatteryToDock();
 		
@@ -275,7 +275,7 @@ public class AutoDock { // implements Observer {
 					state.set(State.values.docking, false);
 					state.set(State.values.motionenabled, false);
 					state.set(State.values.dockstatus, DOCKED);
-					comport.speedset(ArduinoPrime.speeds.fast);
+					comport.speedset(ArduinoPrime.speeds.fast.toString());
 
 					String str = "";
 					
@@ -306,7 +306,7 @@ public class AutoDock { // implements Observer {
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
 							// back up and retry
 							dockattempts ++;
-							comport.speedset(ArduinoPrime.speeds.fast);
+							comport.speedset(ArduinoPrime.speeds.fast.toString());
 							comport.goBackward();
 							try {
 //								Thread.sleep(400);
@@ -404,7 +404,7 @@ public class AutoDock { // implements Observer {
 						try {
 //							Thread.sleep(allowforClickSteer); // was 1500 w/ dockgrab following
 							comport.delayWithVoltsComp(allowforClickSteer);
-							comport.speedset(ArduinoPrime.speeds.fast);
+							comport.speedset(ArduinoPrime.speeds.fast.toString());
 							comport.goForward();
 //							Thread.sleep(s1FWDmilliseconds);
 							comport.delayWithVoltsComp(s1FWDmilliseconds);
@@ -421,7 +421,7 @@ public class AutoDock { // implements Observer {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-							comport.speedset(ArduinoPrime.speeds.fast);
+							comport.speedset(ArduinoPrime.speeds.fast.toString());
 							comport.goForward();
 //							Thread.sleep(s1FWDmilliseconds);
 							comport.delayWithVoltsComp(s1FWDmilliseconds);
@@ -457,7 +457,7 @@ public class AutoDock { // implements Observer {
 						public void run() {
 							try {
 								comport.delayWithVoltsComp(allowforClickSteer);
-								comport.speedset(ArduinoPrime.speeds.fast);
+								comport.speedset(ArduinoPrime.speeds.fast.toString());
 								comport.goForward();
 //								Thread.sleep(s2FWDmilliseconds);
 								comport.delayWithVoltsComp(s2FWDmilliseconds);
@@ -473,7 +473,7 @@ public class AutoDock { // implements Observer {
 					new Thread(new Runnable() {
 						public void run() {
 							try {
-								comport.speedset(ArduinoPrime.speeds.fast);
+								comport.speedset(ArduinoPrime.speeds.fast.toString());
 								comport.goForward();
 //								Thread.sleep(s2FWDmilliseconds);
 								comport.delayWithVoltsComp(s2FWDmilliseconds);
@@ -547,7 +547,7 @@ public class AutoDock { // implements Observer {
 						public void run() {
 							try {
 								comport.delayWithVoltsComp(allowforClickSteer);
-								comport.speedset(ArduinoPrime.speeds.fast);
+								comport.speedset(ArduinoPrime.speeds.fast.toString());
 								comport.goBackward();
 //								Thread.sleep(s1FWDmilliseconds);
 								comport.delayWithVoltsComp(s1FWDmilliseconds);

@@ -528,8 +528,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			settings.writeFile();
 			break;
 
-		case speedset:
-			comport.speedset(ArduinoPrime.speeds.valueOf(str));
+		case speed:
+//			comport.speedset(ArduinoPrime.speeds.valueOf(str));
+			comport.speedset(str);
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
 
@@ -577,6 +578,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			comport.movedistance(ArduinoPrime.direction.valueOf(fn.toString()),Double.parseDouble(str));
 			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
 			break;
+			
+		case odometrystart:	 	comport.odometryStart(); break;
+		case odometryreport: 	comport.odometryReport(); break;
+		case odometrystop: 		comport.odometryStop(); break;
 			
 		case systemcall:
 			Util.log("received: " + str);

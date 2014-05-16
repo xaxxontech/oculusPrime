@@ -88,13 +88,51 @@ public class Mapper {
 				
 
 				short entry = cells[x][y];
-				if ( (entry > 0 && entry > map[cornerX + x][cornerY + y] && 
-						map[cornerX + x][cornerY + y] != -1) || 
-						(entry < -1 && (entry > map[cornerX + x][cornerY + y] || map[cornerX + x][cornerY + y] ==0) &&
-								map[cornerX + x][cornerY + y] != -1)
-						|| entry == -1) {
-					map[cornerX + x][cornerY + y] = entry;
+
+//				short existing = 0;
+				if (cornerX+x < map.length-1 && cornerY+y < map[0].length)  {
+					short existing = map[cornerX + x][cornerY + y];
+					boolean oktoadd = false;
+					if (existing == 0 || entry == -1) oktoadd = true;
+					else if (entry > Stereo.objectMin && entry < Stereo.objectMax) { // object
+						if (existing > Stereo.objectMin && existing < Stereo.objectMax) { // object over object
+							if (entry > existing) oktoadd = true;
+						}
+						else if (existing > Stereo.nonObjectMin && existing < Stereo.nonObjectMax) { // object over non object
+							if (entry-Stereo.objectMin > existing-Stereo.nonObjectMin) oktoadd = true;
+						}
+						else if (existing >= Stereo.fovMin && existing <= Stereo.fovMax) oktoadd = true; // non object over fov
+					}
+					else if (entry > Stereo.nonObjectMin && entry < Stereo.nonObjectMax) { // non object
+						if (existing > Stereo.objectMin && existing < Stereo.objectMax) { // non object over object
+							if (entry-Stereo.nonObjectMin > existing - Stereo.objectMin + 0) oktoadd = true; 
+						}
+						else if (existing > Stereo.nonObjectMin && existing < Stereo.nonObjectMax) { //non object over non object
+							if (entry > existing ) oktoadd = true;
+						}
+						else if (existing >= Stereo.fovMin && existing <= Stereo.fovMax) oktoadd = true; // non object over fov
+					}
+					else if (entry >= Stereo.fovMin && entry <= Stereo.fovMax) { // fov cone 
+						if (existing >= Stereo.fovMin && existing <= Stereo.fovMax) { // fov cone over fov cone 
+							if (entry > existing ) oktoadd = true; 
+						}
+						else if (existing > Stereo.objectMin && existing < Stereo.objectMax) { // fov cone over object
+							if (entry - Stereo.fovMin > existing - Stereo.objectMin + 100 && Stereo.objectMin + 100 < Stereo.objectMax) oktoadd=true; // blank space overwrite far away object
+						}
+						else if (existing > Stereo.nonObjectMin && existing < Stereo.nonObjectMax) { // fov cone over object
+							if (entry - Stereo.fovMin > existing - Stereo.nonObjectMin + 100 && Stereo.nonObjectMin +100<Stereo.nonObjectMax) oktoadd=true; // blank space overwrite far away object
+						}
+					}
+					if (oktoadd) map[cornerX + x][cornerY + y] = entry;
 				}
+				
+//				if ( (entry > 0 && entry > map[cornerX + x][cornerY + y] && 
+//						map[cornerX + x][cornerY + y] != -1) || 
+//						(entry < -1 && (entry > map[cornerX + x][cornerY + y] || map[cornerX + x][cornerY + y] ==0) &&
+//								map[cornerX + x][cornerY + y] != -1)
+//						|| entry == -1) {
+//					map[cornerX + x][cornerY + y] = entry;
+//				}
 
 					// now nuke nearby lower probability points (hopefully due to far distance scan error)
 					// 5 pixels = approx 5cm with 240 resolution and 3500 max
@@ -144,9 +182,10 @@ public class Mapper {
 		else if (newangle < -360) newangle += 360;
 
 		lastAngle = newangle;
+
+		// hopefully solves negativearraysize error in rotate():
 //		if (lastAngle > 360) lastAngle -= 360;
 //		else if (lastAngle < 0) lastAngle = 360 - lastAngle;
-		
 		if (newangle > 180)  newangle = -360+newangle;
 		else if (newangle < -180 ) newangle = 360+newangle;
 		

@@ -154,13 +154,13 @@ public class ArduinoGyro implements SerialPortEventListener {
 	
 		String[] s = response.split(" ");
 
-		if (s[0].equals("angle")) {
+		if (s[0].equals("angle")) { //TODO: nuke this, use 'moved' always instead?
 			state.set(State.values.angle, s[1]);
 		}
 //		else if (s[0].equals("cliff")) {
 //			application.message("cliff detected", null, null);
 //		}
-		else if (s[0].equals("revs")) {
+		else if (s[0].equals("revs")) { //TODO: nuke this, use 'moved' always instead?
 			int d = (int) (Double.parseDouble(s[1]) * Math.PI * ArduinoPrime.WHEEL_DIA_MM);
 			state.set(State.values.distance, d);
 		}

@@ -8,21 +8,45 @@ import java.util.Vector;
 /**
  * JUnit tests will validate the sub-sets player commands and the sub-sets. 
  */
-public enum PlayerCommands {
+public enum PlayerCommands { // all valid commands
 	
-	// all valid commands
-	publish, floodlight, move, nudge, slide, dockgrab, battstats, docklineposupdate, autodock,  autodockcalibrate, 
-	speech, getdrivingsettings, drivingsettingsupdate,  cameracommand, cameratoposition, 
-	speedset, dock, relaunchgrabber, clicksteer, chat, statuscheck, systemcall, streamsettingsset, 
-	streamsettingscustom, motionenabletoggle, playerexit, playerbroadcast, password_update, 
-	new_user_add, user_list, delete_user, extrauser_password_update, username_update, 
-	disconnectotherconnections, showlog, assumecontrol, softwareupdate,
-	arduinoecho, motorsreset, setsystemvolume, beapassenger, muterovmiconmovetoggle, spotlight, 
-	spotlightsetbrightness, writesetting, holdservo, opennisensor, videosoundmode, pushtotalktoggle, restart, shutdown,
-    setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
-    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssadd, 
-    getlightlevel, strobeflash, powerreset, block, unblock, powershutdown, reboot, systemshutdown, 
-    forward, backward, left, right, clearmap, stereo, fwdflood;
+	// uncategorized 
+	speech, getdrivingsettings, drivingsettingsupdate,   
+	relaunchgrabber, statuscheck,   
+	writesetting, opennisensor, pushtotalktoggle, 
+    email, state, help, framegrabtofile,   
+    settings, rssadd, 
+    getlightlevel, block, unblock,  
+    clearmap, stereo, 
+    
+    // server
+    uptime, restart, shutdown, showlog, softwareupdate,
+    
+    // system
+    reboot, systemshutdown, memory, systemcall, setsystemvolume, 
+    
+    //user, accounts
+    who, chat, password_update, beapassenger, disconnectotherconnections, playerexit, 
+    new_user_add, user_list, delete_user, extrauser_password_update, username_update,
+    assumecontrol, loginrecords, messageclients, 
+    
+    //docking
+    dockgrabtest, dock, dockgrab, docklineposupdate, autodock,  autodockcalibrate,
+    
+    // video/audio (flash)
+    streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
+    muterovmiconmovetoggle, streamsettingsset,
+    
+    // power board
+    battstats, powerreset, powershutdown, 
+    
+    // malg board 
+    analogwrite, digitalread, arduinoecho, motorsreset, cameracommand, cameratoposition, holdservo, 
+    // wheels
+    clicksteer, motionenabletoggle, speed, move, nudge, slide, forward, backward, left, right, 
+    odometrystart, odometryreport, odometrystop,
+    // lights
+    strobeflash, spotlight, spotlightsetbrightness, floodlight, fwdflood;
 	
 	enum autodockargs { go, cancel, framegrab };
 	
@@ -62,7 +86,7 @@ public enum PlayerCommands {
 		speech("{STRING}"),
 		drivingsettingsupdate("[0-255] [0-255] {INT} {INT} {DOUBLE} {INT}"),
 		cameracommand("stop", "up", "down", "horiz", "downabit", "upabit", "rearstop", "reverse"),
-		speedset("slow", "med", "fast"), 
+		speed("slow", "med", "fast", "[0-255]"), 
 		dock("dock", "undock"),
 		clicksteer("{INT} {INT}"), 
 		chat("{STRING}"), 

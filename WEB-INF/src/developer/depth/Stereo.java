@@ -43,17 +43,22 @@ public class Stereo {
 	static final double camFOVx43 = 58.90;
 	static final double camFOVy43 = 45.90;
 	final static int maxDepthTopView = 3500;
-	final static int minDepthTopView = 500;
+	final static int minDepthTopView = 750;
 //	final double scaleMult = 275*2032; // disparity*mm (based on xoffset=2)!
-	final static double scaleMult = 440*1350; // 412 measured - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
+	final static double scaleMult = 430*1350; // mode 2 -- 412 measured - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
 											  // 435 = trial and error, best map meshing
+//	final static double scaleMult = 420*1350; // mode 1  420 xoffset=2
 
 	// camera offsets negligible on linear moves
 	public static final int  cameraSetBack = 0; // -20; // is forward from rotation center TODO: use this?
 	public static final int cameraOffsetLeft = 25; // to bot's left from rotation center
 	
-	static final int depthPixelIntensitySpread = 250;
-	static final int depthPixelIntensityOffset = 5;
+	static final int objectMax = 255;
+	static final int objectMin = 0;
+	static final int nonObjectMax = 511;
+	static final int nonObjectMin = 256; 
+	static final int fovMin = 512;
+	static final int fovMax = 767;
 	public static short[][] tvr;
 
 	
@@ -67,13 +72,13 @@ public class Stereo {
 		sbmImage.set_numberOfDisparities(48);  
 		sbmImage.set_preFilterCap(63); 
 		sbmImage.set_minDisparity(4); 
-		sbmImage.set_uniquenessRatio(10); 
+		sbmImage.set_uniquenessRatio(10);  // 10
 		sbmImage.set_speckleWindowSize(50); 
 		sbmImage.set_speckleRange(32);
 		sbmImage.set_disp12MaxDiff(1);
 		sbmImage.set_fullDP(false);
-		sbmImage.set_P1(216);	
-		sbmImage.set_P2(864);
+		sbmImage.set_P1(216);	// 216
+		sbmImage.set_P2(864);   // 864
 //        */
 		
 		sbmTopView = new StereoSGBM();
@@ -173,7 +178,7 @@ public class Stereo {
         return disparity;
 	}
 	
-	public BufferedImage getDepthImage() {
+	public BufferedImage getDepthImage(String mode) {
 		if (!stereoCamerasOn || generating) return null;
 		
 		generating = true;
@@ -184,7 +189,9 @@ public class Stereo {
 		captureRight.retrieve(right);
 		captureLeft.retrieve(left);
 
-    	Mat disparity = generateDisparity(left,right, sbmImage);
+		Mat disparity;
+		if (mode.equals("mode2")) disparity = generateDisparity(left,right, sbmTopView);
+		else disparity = generateDisparity(left,right, sbmImage);
 
         Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
         
@@ -240,8 +247,9 @@ public class Stereo {
 		for (int x = 0; x<w; x++) {
 			for (int y=0; y<h; y++) {
 //				m.put(y, x, new byte[] {(byte) 0,0,0});
-				if (frame[x][y] > 0) m.put(y, x, new byte[] {0,(byte) frame[x][y],0}); // green
-				else if (frame[x][y] < 0) m.put(y, x, new byte[] {(byte) frame[x][y], 0, 0} ); // blue
+				if (frame[x][y] > objectMin && frame[x][y] <= objectMax) m.put(y, x, new byte[] {0,(byte) frame[x][y],0}); // green
+				else if (frame[x][y] >= nonObjectMin && frame[x][y] <= nonObjectMin) m.put(y, x, new byte[] {(byte) frame[x][y], 0, 0} ); // blue
+				else if (frame[x][y] >= fovMin && frame[x][y] <= fovMax) m.put(y, x, new byte[] {(byte) frame[x][y],(byte) frame[x][y], (byte) frame[x][y]} ); // white
 				else  m.put(y, x, new byte[] {(byte) frame[x][y], 0, 0});
 			}
 		}
@@ -250,19 +258,20 @@ public class Stereo {
 	
 	public static short[][] projectStereoHorizToTopViewFiltered(Mat frame, int h) { 
 		final int w = (int) (Math.sin(Math.toRadians(camFOVx169/2)) * h * 2); // WRONG .. ?
-		final double angle = Math.toRadians(camFOVx169/2);
 		final int width = frame.width();
 		final int mid = frame.height()/2-10; // offset so not including floor plane points
 		short[][] result = new short[w][h];
 
-		final int xdctr = w/2;
-		
-		final int horizoffset = 5; //3 mode 2 (pixels= *2+1)
+//		final int horizoffset = 4; // mode 1 (pixels= *2+1)
+		final int horizoffset = 3; // mode 2 (pixels= *2+1)
 		final int horizoffsetinc = 2;
 
-		final double YdepthRatioThreshold = 0.05; // percent
+//		final double YdepthRatioThreshold = 0.02; // mode 1 percent
+		final double YdepthRatioThreshold = 0.05; // mode 2 percent
+
 		final double XdepthRatioThreshold = 0.01; // percent
 
+//		final int levels = 2; // mode 1 (pixels= *2+1 * horizoffset*2+1)
 		final int levels = 2; // mode 2 (pixels= *2+1 * horizoffset*2+1)
 
 		for (int lvl=-levels; lvl<=levels; lvl++) {
@@ -340,21 +349,22 @@ public class Stereo {
 		int h = tv[0].length;
 		tvr = new short[w][h];
 		final double xaconst = 4/320.0*h;
-		final double yaconst  = 4/320.0*h;
+		final double yaconst  = 2/320.0*h;
 		for (int y=0; y<h; y++) {
 			for (int x=0; x<w; x++) {
 				double d = Math.sqrt(Math.pow(w/2-x, 2)+Math.pow(h-y,2));
 				double a = Math.asin((w/2-x)/d);
-				short i = (short) (depthPixelIntensityOffset + depthPixelIntensitySpread-depthPixelIntensitySpread*d/h);
-				
+//				short i = (short) (depthPixelIntensityOffset + depthPixelIntensitySpread-depthPixelIntensitySpread*d/h);
+				short i = (short) (objectMin+objectMax-(objectMax-objectMin)*d/h);
+
 				// render baseline if pixel empty
-				if (Math.abs(a) <= Math.toRadians(camFOVx169/2) && d < h && tvr[x][y] == 0 && d > (double)h/maxDepthTopView*minDepthTopView)  
-						tvr[x][y]=(short) -(depthPixelIntensityOffset+ depthPixelIntensitySpread-i);
+				if (Math.abs(a) <= Math.toRadians(camFOVx169/2) && d < h && tvr[x][y] == 0) // && d > (double)h/maxDepthTopView*minDepthTopView)  
+						tvr[x][y]=(short) (fovMin + 10+(i/255.0*80));
 
 				if (tv[x][y] != 0) { // object!
 					double mult = (5-Math.abs(a))/5; 
 					int xa = (int) Math.round(d/h*xaconst*mult);
-					int ya = (int) Math.round(Math.pow(d/h*yaconst/mult, 2));
+					int ya = (int) Math.round(Math.pow(d/h*yaconst/mult, 3.5)+0.5); // added 0.5 so always 1 or higher
 					double incr = (x-w/2) / (double) (h-y);
 					
 					// set single pixel at ctr since very short ellipses don't always render? (solved with math.round)
@@ -375,21 +385,26 @@ public class Stereo {
 	}
 	
 	private static void ellipse(int ctrx, int ctry, short i, int xa, int ya, double incr, int w, int h) {
-		line((int) Math.round(ctrx-incr*ya), ctry+ya, ya*2, w, h, incr, i);
-		short bg = 0; // (short) (-(depthPixelIntensityOffset+ depthPixelIntensitySpread)+i);
-		line(ctrx, ctry, h, w, h, incr, bg);
+		lineaway((int) Math.round(ctrx-incr*ya), ctry+ya, ya*2, w, h, incr, i);
+//		short bg = (short) (-(depthPixelIntensityOffset+ depthPixelIntensitySpread)+i);
+		short bg = (short) (nonObjectMin+i);
+//		line(ctrx, ctry, h, w, h, incr, bg);
 
 		for (double x=1-Math.abs(incr); x<=xa; x+= 1-Math.abs(incr)) {
 			int yl = (int) Math.round(ya - (ya*Math.pow(x/(double) xa, 3)));
 
-			line((int) Math.round(ctrx+x), ctry, h, w, h, incr, bg);
-			line((int) Math.round(ctrx-x), ctry, h, w, h, incr, bg);
-			line((int) Math.round(ctrx+x-incr*yl), (int) Math.round(ctry+x*incr)+yl, yl*2, w, h, incr, i);
-			line((int) Math.round(ctrx-x-incr*yl), (int) Math.round(ctry+x*incr)+yl, yl*2, w, h, incr, i);
+			lineaway((int) Math.round(ctrx+x), ctry, h, w, h, incr, (short) 0);
+			lineaway((int) Math.round(ctrx-x), ctry, h, w, h, incr, (short) 0);
+
+			linetoward((int) Math.round(ctrx+x), ctry, h-ctry, w, h, incr, bg);
+			linetoward((int) Math.round(ctrx-x), ctry, h-ctry, w, h, incr, bg);
+
+			lineaway((int) Math.round(ctrx+x-incr*yl), (int) Math.round(ctry+x*incr)+yl, yl*2, w, h, incr, i);
+			lineaway((int) Math.round(ctrx-x-incr*yl), (int) Math.round(ctry+x*incr)+yl, yl*2, w, h, incr, i);
 		}
 	}
 	
-	private static void line(int startx, int starty, int length, int w, int h, double incr, short intensity) {
+	private static void lineaway(int startx, int starty, int length, int w, int h, double incr, short intensity) {
 		double x = startx;
 		int y = starty;
 		int endy = y-length;
@@ -399,16 +414,26 @@ public class Stereo {
 			if ( x < 0 || x >= w || y<endy || y<0)  break;
 			int e =  tvr[(int) x][y];
 			double i=intensity;
-			if (intensity >0) {
-				if (e>0 && e<255 && intensity > 0) 	i += e/5;
-				if (i > 255) i = 255;
-				tvr[(int) x][y] = (short) i;
-			}
-			if (intensity <= 0 && e <=0) {
-				tvr[(int) x][y] = (short) i;
-			}
+
+			if (e>objectMin && e<=objectMax && i!=0) i += e/5;
+			if (!(i==0 && (e<fovMin || e>fovMax)))
+					tvr[(int) x][y] = (short) i;
+		}
+	}
+	
+	private static void linetoward(int startx, int starty, int length, int w, int h, double incr, short intensity) {
+		double x = startx;
+		int y = starty;
+		int endy = y+length;
+		while (true) {
+			x -= incr;
+			y ++;
+			if (y>endy || y>=h)  break;
+			int e =  tvr[(int) x][y]; // existing pixel
 			
-			
+			if (e==0 || e>=nonObjectMin) {
+				tvr[(int) x][y] = (short) intensity;
+			}
 			
 		}
 	}
@@ -422,6 +447,7 @@ public class Stereo {
 		captureLeft.retrieve(left);
 
     	Mat disparity = generateDisparity(left,right,sbmTopView);
+//    	Mat disparity = generateDisparity(left,right,sbmImage);
         short[][] result = projectStereoHorizToTopViewFiltered(disparity, h);
         result = topViewProbabilityRendering(result);
         generating = false;
@@ -468,7 +494,7 @@ public class Stereo {
 //							if (Math.abs(cellsAfter[xx][yy] - cellsBefore[x][y]) <= 20 ) total ++;
 							if (cellsAfter[xx][yy] !=0 ) {
 	//							total ++;	
-								int distanceIntensityDiff = d/h*depthPixelIntensitySpread+depthPixelIntensityOffset;
+								int distanceIntensityDiff = 99999999 ; // d/h*depthPixelIntensitySpread+depthPixelIntensityOffset;
 								int diff = Math.abs(cellsAfter[xx][yy]- cellsBefore[x][y]);
 								// diff - distanceIntensityDiff should be close to zero
 								int proximity = Math.abs(diff - distanceIntensityDiff);

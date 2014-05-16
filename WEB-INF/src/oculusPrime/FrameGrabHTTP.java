@@ -75,7 +75,9 @@ public class FrameGrabHTTP extends HttpServlet {
             	processedImg(req,res);
             }
             else if (mode.equals("stereo") && Application.stereo.stereoCamerasOn) {
-            	Application.processedImage = Application.stereo.getDepthImage();
+            	String type ="";
+            	if (req.getParameter("type")!=null) type=req.getParameter("type").toString();
+            	Application.processedImage = Application.stereo.getDepthImage(type);
             	processedImg(req,res);
             }
             else if (mode.equals("stereotop")  && Application.stereo.stereoCamerasOn) {
@@ -135,8 +137,10 @@ public class FrameGrabHTTP extends HttpServlet {
 		
 		// send image
 		res.setContentType("image/gif");
+//		res.setContentType("image/jpg");
 		OutputStream out = res.getOutputStream();
 		ImageIO.write(Application.processedImage, "GIF", out);
+//		ImageIO.write(Application.processedImage, "JPG", out);
 //		out.close();
 	}
 	

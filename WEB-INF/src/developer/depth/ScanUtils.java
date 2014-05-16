@@ -918,8 +918,9 @@ public class ScanUtils {
 				int hue = cells[x][y];
 				int argb  = 0;
 				if (hue == -1) argb = 0xff0000; // bright red 
-				else if (hue > 0) argb =  hue<<8; // green
-				else if (hue <-1) argb = 255+hue; // blue
+				else if (hue > Stereo.objectMin && hue < Stereo.objectMax) argb =  hue<<8; // green
+				else if (hue > Stereo.nonObjectMin && hue < Stereo.nonObjectMax) argb = 256+hue; // blue
+				else if (hue > Stereo.fovMin && hue < Stereo.fovMax) argb = hue<<16 | hue<<8 | hue;
 
 				img.setRGB(x, y, argb);  
 
