@@ -13,7 +13,7 @@ public enum PlayerCommands { // all valid commands
 	// uncategorized 
 	speech, getdrivingsettings, drivingsettingsupdate,   
 	relaunchgrabber, statuscheck,   
-	writesetting, opennisensor, pushtotalktoggle, 
+	writesetting, readsetting, opennisensor, pushtotalktoggle, 
     email, state, help, framegrabtofile,   
     settings, rssadd, 
     getlightlevel, block, unblock,  
@@ -86,7 +86,7 @@ public enum PlayerCommands { // all valid commands
 		speech("{STRING}"),
 		drivingsettingsupdate("[0-255] [0-255] {INT} {INT} {DOUBLE} {INT}"),
 		cameracommand("stop", "up", "down", "horiz", "downabit", "upabit", "rearstop", "reverse"),
-		speed("slow", "med", "fast", "[0-255]"), 
+//		speed("slow", "med", "fast", "[0-255]"), 
 		dock("dock", "undock"),
 		clicksteer("{INT} {INT}"), 
 		chat("{STRING}"), 

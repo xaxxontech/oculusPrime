@@ -9,7 +9,7 @@ public enum ManualSettings {
 	
 	lastboot, attempts, motorport, powerport, developer, debugenabled, telnetport, commandport,  
 	stopdelay, vself, email_smtp_server, email_smtp_port, email_username, email_password, 
-	email_from_address, ; 
+	email_from_address, wheeldiameter ; 
 	
 	 // new counter to see if constantly searching
 
@@ -32,6 +32,7 @@ public enum ManualSettings {
 		config.setProperty(lastboot.name(), "0");
 		config.setProperty(lastboot.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
+		config.setProperty(wheeldiameter.name(), "110");
 		return config;
 	}
 	

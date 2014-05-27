@@ -35,8 +35,8 @@ public enum GUISettings {
 		config.setProperty(loginnotify.name() , "false");
 		config.setProperty(reboot.name() , "false");
 		config.setProperty(pushtotalk.name() , "false");
-		config.setProperty(fullrotationdelay.name(), "2000");
-		config.setProperty(onemeterdelay.name(), "1200");
+		config.setProperty(fullrotationdelay.name(), "2700");
+		config.setProperty(onemeterdelay.name(), "2400");
 		config.setProperty(steeringcomp.name(), "0");
 		
 		return config;

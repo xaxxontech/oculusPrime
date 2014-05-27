@@ -161,13 +161,14 @@ public class ArduinoGyro implements SerialPortEventListener {
 //			application.message("cliff detected", null, null);
 //		}
 		else if (s[0].equals("revs")) { //TODO: nuke this, use 'moved' always instead?
-			int d = (int) (Double.parseDouble(s[1]) * Math.PI * ArduinoPrime.WHEEL_DIA_MM);
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
 			state.set(State.values.distance, d);
 		}
 		else if (s[0].equals("moved")) {
-			int d = (int) (Double.parseDouble(s[1]) * Math.PI * ArduinoPrime.WHEEL_DIA_MM);
-			state.set(State.values.distance, d);
-			state.set(State.values.angle, s[2]);
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
+//			state.set(State.values.distance, d);
+//			state.set(State.values.angle, s[2]);
+			state.set(State.values.lastmove, d +" "+s[2]);
 		}
 	}
 	

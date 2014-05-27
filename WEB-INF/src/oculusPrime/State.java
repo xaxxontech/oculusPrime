@@ -22,7 +22,8 @@ public class State {
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers, // NEW! 
 		gyroport, // TODO: testing only
-		angle, distance  
+		angle, distance, // TODO: << nuke these 2, now combined in lastmove
+		wheeldiamm, lastmove,
 		
 		;
 	};

@@ -448,9 +448,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if(str!=null) cmd = str.split(" ");
 
 		switch (fn) {
-		case chat: chat(str) ;return;
-		case beapassenger: beAPassenger(str);return;
-		case assumecontrol: assumeControl(str); return;
+			case chat: chat(str) ;return;
+			case beapassenger: beAPassenger(str);return;
+			case assumecontrol: assumeControl(str); return;
 		}
 		
 		// must be driver/non-passenger for all commands below 
@@ -517,7 +517,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case nudge: nudge(str); break;
 		
 		case writesetting:
-			Util.log("setting: " + str);
+			Util.debug("write setting: " + str, this);
 			if (settings.readSetting(cmd[0]) == null) {
 				settings.newSetting(cmd[0], cmd[1]);
 				messageplayer("new setting: " + cmd[1], null, null);
@@ -526,6 +526,11 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				messageplayer(cmd[0] + " " + cmd[1], null, null);
 			}
 			settings.writeFile();
+			break;
+			
+		case readsetting:
+			Util.debug("read setting: " + cmd[0], this);
+			messageplayer("setting "+cmd[0]+" "+settings.readSetting(cmd[0]),null,null);
 			break;
 
 		case speed:

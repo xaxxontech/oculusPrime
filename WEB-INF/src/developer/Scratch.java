@@ -7,9 +7,9 @@ import java.util.List;
 public class Scratch {
 
         public static void main(String[] args) {
-    		int[] i = {1,2,3};
-    		String z = "fuck yeah";
-    		if (9 > i[4]) z = "holy shit";
+    		int n = 4;
+    		String f = "zork";
+    		String z = n+" "+f;
     		System.out.println(z);
         }
 }

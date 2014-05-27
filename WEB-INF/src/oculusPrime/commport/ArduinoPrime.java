@@ -123,7 +123,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
     private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
 	public int turnspeed = 255;
-	public static final int WHEEL_DIA_MM = 115; // allow for tire compression
 		
 	public ArduinoPrime(Application app) {	
 		
@@ -140,7 +139,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
 		state.put(State.values.motorport, portname);
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
-		
+		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
+
 		if(motorsReady()){
 			
 			Util.log("attempting to connect to port"+portname, this);
@@ -494,6 +494,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		// send un-comped forward command to get wheels moving
 		sendCommand(new byte[] { FORWARD, (byte) speed, (byte) speed});
+		application.gyroport.sendCommand(FORWARD);
+		
 
 		final int spd = speed;
 		
@@ -516,7 +518,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						else if (steeringcomp > 0) L -= comp; // left motor reduced
 					}
 					
-					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});					}
+					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
+					application.gyroport.sendCommand(FORWARD);
+					}
+					
 			}).start();
 		
 		}
@@ -541,6 +546,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}
 
 		sendCommand(new byte[] { BACKWARD, (byte) speed, (byte) speed });
+		application.gyroport.sendCommand(BACKWARD);
 		
 		final int spd = speed;
 		
@@ -563,7 +569,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						else if (steeringcomp > 0) R -= comp; // right motor reduced
 					}	
 					
-					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});		
+					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});	
+					application.gyroport.sendCommand(BACKWARD);
 				}
 			}).start();
 		
@@ -588,6 +595,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			tmpspeed = speed + boost;
 		
 		sendCommand(new byte[] { RIGHT,  (byte) tmpspeed, (byte) tmpspeed });
+		application.gyroport.sendCommand(RIGHT);
 		state.put(State.values.moving, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
@@ -605,6 +613,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			tmpspeed = speed + boost;
 		
 		sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
+		application.gyroport.sendCommand(LEFT);
 		state.put(State.values.moving, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
@@ -1131,6 +1140,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	public void stopGoing() {
 		sendCommand(STOP);
+		application.gyroport.sendCommand(STOP);
 		state.put(State.values.moving, false);
 		state.put(State.values.movingforward, false);
 		if (state.getBoolean(State.values.muteOnROVmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
