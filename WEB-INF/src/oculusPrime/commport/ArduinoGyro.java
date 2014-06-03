@@ -15,6 +15,8 @@ import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.State;
 import oculusPrime.Util;
+import oculusPrime.State.values;
+import oculusPrime.commport.ArduinoPrime.direction;
 
 public class ArduinoGyro implements SerialPortEventListener {
 
@@ -154,22 +156,31 @@ public class ArduinoGyro implements SerialPortEventListener {
 	
 		String[] s = response.split(" ");
 
-		if (s[0].equals("angle")) { //TODO: nuke this, use 'moved' always instead?
-			state.set(State.values.angle, s[1]);
-		}
-//		else if (s[0].equals("cliff")) {
-//			application.message("cliff detected", null, null);
-//		}
-		else if (s[0].equals("revs")) { //TODO: nuke this, use 'moved' always instead?
-			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
-			state.set(State.values.distance, d);
-		}
-		else if (s[0].equals("moved")) {
+		if (s[0].equals("moved")) {
 			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
 //			state.set(State.values.distance, d);
 //			state.set(State.values.angle, s[2]);
-			state.set(State.values.lastmove, d +" "+s[2]);
+			double a = Double.parseDouble(s[2]);
+			if (state.getBoolean(State.values.controlsinverted)) {
+				d*=-1;
+				a*=-1;
+			}
+			state.set(State.values.distanceangle, d +" "+a);
+			// TODO: testing only ----------------
+			if (!state.exists(State.values.distanceanglettl.toString())) {
+				state.set(State.values.distanceanglettl, "0 0");
+			}
+			int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+			double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+			dttl += d;
+			attl += a;
+			String dattl = dttl+" "+attl;
+			state.set(State.values.distanceanglettl,dattl);
+			
+			// end of testing only ----------------
 		}
+		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
+		else if (s[0].equals("stopdetectfail")) application.message("FIRMWARE STOP DETECT FAIL", null, null);
 	}
 	
 	/**

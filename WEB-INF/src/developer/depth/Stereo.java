@@ -367,16 +367,8 @@ public class Stereo {
 					int ya = (int) Math.round(Math.pow(d/h*yaconst/mult, 3.5)+0.5); // added 0.5 so always 1 or higher
 					double incr = (x-w/2) / (double) (h-y);
 					
-					// set single pixel at ctr since very short ellipses don't always render? (solved with math.round)
-//					int e =  tvr[(int) x][y];
-//					if (i >0) {
-//						if (e>0 && e<255 && i > 0) 	i += e/5;
-//						if (i > 255) i = 255;
-//						tvr[(int) x][y] = (short) i;
-//					}
-					
-					ellipse(x,y,i,xa,ya, incr, w, h);					
-//					tvr[x][y]=255; // TODO: testing
+//					ellipse(x,y,i,xa,ya, incr, w, h);					
+					tvr[x][y]=254; // TODO: testing (note: 255 comes up blank, 254 is bright green)
 				}
 
 			}

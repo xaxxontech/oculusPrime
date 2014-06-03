@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TooManyListenersException;
+import java.util.UUID;
 
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
@@ -29,7 +30,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	// toggle to see bytes sent in log 
 	public static final boolean DEBUGGING = true;
 	
-	public enum direction { stop, right, left, forward, backward };
+	public enum direction { stop, right, left, forward, backward, unknown };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
@@ -40,6 +41,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final long DOCKING_DELAY = 1000;
 	public static final int SETUP = 4000;
 	public static final int BAUD = 115200;
+	
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
@@ -64,7 +66,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte ZERO_AND_START_RECORDING_ANGLE = 'z'; 
 	public static final byte STOP_RECORDING_AND_REPORT_ANGLE = 'm';
 	public static final byte ENCODER_START = 'g'; 
-	public static final byte ENCODER_STOP_AND_REPORT = 'h';
+	public static final byte HARD_STOP = 'h';
 	public static final byte ODOMETRY_START = 'i';
 	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
 	public static final byte ODOMETRY_REPORT = 'k';
@@ -80,6 +82,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final String FIRMWARE_ID = "oculusPrime";
 
 	private static final long STROBEFLASH_MAX = 5000; //strobe timeout
+	private static final int ACCEL_DELAY = 75;
+	private static final int COMP_DELAY = 500;
 
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
@@ -101,6 +105,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	// thread safety 
 	protected volatile boolean isconnected = false;
 	public volatile boolean sliding = false;
+	protected volatile UUID currentMoveID;
 	
 //	private boolean invertswap = false;
 	
@@ -140,7 +145,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.motorport, portname);
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
 		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
-
+		state.put(State.values.direction, direction.stop.toString());
+		
 		if(motorsReady()){
 			
 			Util.log("attempting to connect to port"+portname, this);
@@ -479,114 +485,225 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	public void goForward() {
 		
-		int speed= state.getInteger(State.values.motorspeed);
+		final UUID moveID = UUID.randomUUID(); 
+		currentMoveID = moveID;
 		
-		//comp for voltage on slow speed 
-		if (speed==speedslow) {
-			speed = (int) voltsComp((double) speed);
-			if (speed > 255) { speed = 255; }
-		}
-		
-		// no full speed when on dock voltage
-		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed==speedfast) {
-			speed = speedmed;
-		}
-		
-		// send un-comped forward command to get wheels moving
-		sendCommand(new byte[] { FORWARD, (byte) speed, (byte) speed});
-		application.gyroport.sendCommand(FORWARD);
-		
-
-		final int spd = speed;
-		
-		if (steeringcomp != 0) {
-			new Thread(new Runnable() {
-				public void run() {
-					Util.delay(95); // needs to be less than docking moves
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+				
+			if ( !state.get(State.values.direction).equals(direction.stop.toString()) ) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+				
+				new Thread(new Runnable() {public void run() {
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) {} // wait
+					if (currentMoveID.equals(moveID))  goForward();
 					
-					int L = spd;
-					int R = spd;
-					
-					int comp = (int) ((double) steeringcomp * Math.pow((double) spd/(double) speedfast, 2.0));
-					
-					if (state.getBoolean(State.values.controlsinverted)) {
-						if (steeringcomp < 0) L += comp; // left motor reduced
-						else if (steeringcomp > 0) R -= comp; // right motor reduced
-					}
-					else {
-						if (steeringcomp < 0) R += comp; // right motor reduced
-						else if (steeringcomp > 0) L -= comp; // left motor reduced
-					}
-					
-					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
-					application.gyroport.sendCommand(FORWARD);
-					}
-					
-			}).start();
-		
+				} }).start();
+				
+				return;
+			}
 		}
 
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+		
+		int speed1 = (int) voltsComp((double) speedslow);
+		if (speed1 > 255) { speed1 = 255; }
+		
+		int speed2= state.getInteger(State.values.motorspeed);
+	
+		if (speed2<speed1) { 		// voltcomp on slow speed only
+			speed2 = (int) voltsComp((double) speed2);
+			if (speed2 > 255) { speed2 = 255; }
+		}
+		
+		// no full speed when on dock voltage
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed2==speedfast) {
+			speed2 = speedmed;
+		}
+		
+		application.gyroport.sendCommand(FORWARD);
+
+		if (state.get(State.values.direction).equals(direction.forward.toString()) || // pypass accel if already going forward, speed change only 
+				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
+			sendCommand(new byte[] { FORWARD, (byte) speed2, (byte) speed2});
+			return;
+		}
+		
+		// slow, un-comped 
+		sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
+
+		final int spd = speed2;
+		
+		if (speed2 > speed1) { 
+			new Thread(new Runnable() {
+				public void run() {
+					
+					Util.delay(ACCEL_DELAY);
+					
+					if (!currentMoveID.equals(moveID))  return;
+
+					// actual speed, un-comped
+					sendCommand(new byte[] { FORWARD, (byte) spd, (byte) spd});
+
+				} 
+			}).start();
+		}
+		
+		if (steeringcomp != 0) {  
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(COMP_DELAY); 
+
+					if (!currentMoveID.equals(moveID))  return;
+					
+					int[] comp = applyComp(spd); // actual speed, comped
+					int L = comp[0];
+					int R = comp[1];
+					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
+					
+				} 
+			}).start();
+		}
+		
+		state.set(State.values.direction, direction.forward.toString());
+	}
+	
+	private int[] applyComp(int spd) {
+		int A = spd;
+		int B = spd;
+		int comp = (int) ((double) steeringcomp * Math.pow((double) spd/(double) speedfast, 2.0));
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			if (steeringcomp < 0) A += comp; // left motor reduced
+			else if (steeringcomp > 0) B -= comp; // right motor reduced
+		}
+		else {
+			if (steeringcomp < 0) B += comp; // right motor reduced
+			else if (steeringcomp > 0) A -= comp; // left motor reduced
+		}
+		return new int[] {A, B};  // reverse L&R for backwards
 	}
 
 	public void goBackward() {
-
-//		if (state.getBoolean(State.values.controlsinverted) &! invertswap) 
-//			{ invertswap = true; goForward(); }
-//		invertswap = false;
 	
-		int speed= state.getInteger(State.values.motorspeed);
+		final UUID moveID = UUID.randomUUID(); 
+		currentMoveID = moveID;
 
-		//comp for voltage on slow speed 
-		if (speed==speedslow) {
-			speed = (int) voltsComp((double) speed);
-			if (speed > 255) { speed = 255; }
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+			
+			if ( !state.get(State.values.direction).equals(direction.stop.toString())  ) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+				
+				new Thread(new Runnable() {public void run() {
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) {} // wait
+					if (currentMoveID.equals(moveID))  goBackward();
+					
+				} }).start();
+				
+				return;
+			}
 		}
 
-		sendCommand(new byte[] { BACKWARD, (byte) speed, (byte) speed });
-		application.gyroport.sendCommand(BACKWARD);
-		
-		final int spd = speed;
-		
-		if (steeringcomp != 0) {
-			new Thread(new Runnable() {
-				public void run() {
-					Util.delay(95); //needs to be less than docking moves
-					
-					int L = spd;
-					int R = spd;
-					
-					int comp = (int) ((double) steeringcomp * Math.pow((double) spd/(double) speedfast, 2.0));
-					
-					if (state.getBoolean(State.values.controlsinverted)) {
-						if (steeringcomp < 0) R += comp; // right motor reduced
-						else if (steeringcomp > 0) L -= comp; // left motor reduced
-					}
-					else {
-						if (steeringcomp < 0) L += comp; // left motor reduced
-						else if (steeringcomp > 0) R -= comp; // right motor reduced
-					}	
-					
-					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});	
-					application.gyroport.sendCommand(BACKWARD);
-				}
-			}).start();
-		
-		}
-
-		
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, false);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+		
+		
+		int speed1 = (int) voltsComp((double) speedslow);
+		if (speed1 > 255) { speed1 = 255; }
+		
+		int speed2= state.getInteger(State.values.motorspeed);
+	
+		if (speed2<speed1) { 		// voltcomp on slow speed only
+			speed2 = (int) voltsComp((double) speed2);
+			if (speed2 > 255) { speed2 = 255; }
+		}
+		
+		// no full speed when on dock voltage
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed2==speedfast) {
+			speed2 = speedmed;
+		}
+		
+		application.gyroport.sendCommand(BACKWARD);
+
+		if (state.get(State.values.direction).equals(direction.backward.toString()) || // pypass accel if already going forward, speed change only 
+				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
+			sendCommand(new byte[] { BACKWARD, (byte) speed2, (byte) speed2});
+			return;
+		}
+		
+		// send un-comped forward command to get wheels moving, helps drive straighter
+		sendCommand(new byte[] { BACKWARD, (byte) speed1, (byte) speed1});
+		final int spd = speed2;
+
+		if (speed2 > speed1) { 
+			new Thread(new Runnable() {
+				public void run() {
+					
+					Util.delay(ACCEL_DELAY);
+					
+					if (!currentMoveID.equals(moveID))  return;
+
+					// actual speed, un-comped
+					sendCommand(new byte[] { BACKWARD, (byte) spd, (byte) spd});
+
+				} 
+			}).start();
+		}
+		
+		if (steeringcomp != 0) {  
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(COMP_DELAY); 
+
+					if (!currentMoveID.equals(moveID))  return;
+					
+					int[] comp = applyComp(spd); // apply comp now that up to speed
+					int L = comp[1];
+					int R = comp[0];
+					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});
+					
+				} 
+			}).start();
+		}
+		state.set(State.values.direction, direction.backward.toString()); // now go
 	}
 
 	public void turnRight() {
+		final UUID moveID = UUID.randomUUID(); 
+		currentMoveID = moveID;
 
-//		if (state.getBoolean(State.values.controlsinverted) && !invertswap) 
-//			{ invertswap = true; turnLeft(); }
-//		invertswap = false;
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+			
+			if ( !(state.get(State.values.direction).equals(direction.right.toString()) ||
+				state.get(State.values.direction).equals(direction.stop.toString()) ) ) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+
+				new Thread(new Runnable() {public void run() {
+					
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) {} // wait
+					if (currentMoveID.equals(moveID))  turnRight();
+					
+				} }).start();
+				
+				return;
+			}
+		}
+
+		state.set(State.values.direction, direction.right.toString()); // now go
 		
 		int tmpspeed = turnspeed;
 		int boost = TURNBOOST;
@@ -601,11 +718,32 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void turnLeft() {
+		final UUID moveID = UUID.randomUUID(); 
+		currentMoveID = moveID;
 		
-//		if (state.getBoolean(State.values.controlsinverted) && !invertswap) 
-//			{ invertswap = true; turnRight(); }
-//		invertswap = false;		
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+			
+			if ( !(state.get(State.values.direction).equals(direction.left.toString()) ||
+				state.get(State.values.direction).equals(direction.stop.toString()) ) ) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+
+				new Thread(new Runnable() {public void run() {
+					
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) {} // wait
+					if (currentMoveID.equals(moveID))  turnLeft();
+					
+				} }).start();
+				
+				return;
+			}
+		}	
 		
+		state.set(State.values.direction, direction.left.toString()); // now go
+
 		int tmpspeed = turnspeed;
 		int boost = TURNBOOST;
 		int speed = state.getInteger(State.values.motorspeed);
@@ -835,8 +973,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (Application.openNIRead.depthCamGenerating) { // openni
 					short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
 					if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
-					application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
-					state.delete(State.values.angle);
+					if (!state.getBoolean(State.values.odometry)) odometryStart();
+					state.delete(State.values.distanceanglettl);
 				}
 				
 				if (Application.stereo.stereoCamerasOn) {
@@ -844,8 +982,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
 						Mapper.addArcPath(cells, 0, 0);
 					}
-					application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
-					state.delete(State.values.angle);
+					if (!state.getBoolean(State.values.odometry)) odometryStart();
+					state.delete(State.values.distanceanglettl);
 				}
 				
 				switch (dir) {
@@ -863,17 +1001,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
 
 					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
-					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
-					double angle = state.getDouble(State.values.angle.toString());
+					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					Mapper.addMove(depthFrameAfter, 0, angle);
 					msg += "angle moved via gyro: "+angle;
 				}
 				
 				if (Application.stereo.stereoCamerasOn) {
 					Util.delay(700); // allow extra 200ms for latest frame 	
-					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
-					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
-					double angle = state.getDouble(State.values.angle.toString());
+//					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
+					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					msg += "angle moved via gyro: "+angle;
 					
 					short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
@@ -911,8 +1049,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						if (Application.openNIRead.depthCamGenerating) {   // openni
 							depthFrameBefore = Application.openNIRead.readFullFrame();	
 							if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
-							application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
-							state.delete(State.values.angle);
+        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+        					state.delete(State.values.distanceanglettl);
 						}
 						
                         if (Application.stereo.stereoCamerasOn) { // stereo
@@ -920,9 +1058,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
                                 cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
         						Mapper.addArcPath(cellsBefore, 0, 0);
         					}
-        					application.gyroport.sendCommand(ODOMETRY_START);
-        					state.delete(State.values.angle);
-        					state.delete(State.values.distance);
+        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+        					state.delete(State.values.distanceanglettl);
                         }
 
                         goForward(); 
@@ -932,8 +1069,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						if (Application.openNIRead.depthCamGenerating) {  // openni
 							depthFrameAfter = Application.openNIRead.readFullFrame();						
 							if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
-							application.gyroport.sendCommand(ZERO_AND_START_RECORDING_ANGLE);
-							state.delete(State.values.angle);
+        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+        					state.delete(State.values.distanceanglettl);
 						}
 						
                         if (Application.stereo.stereoCamerasOn) { // stereo
@@ -941,9 +1078,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
         						cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
         						Mapper.addArcPath(cellsAfter, 0, 0);
         					}
-        					application.gyroport.sendCommand(ODOMETRY_START);
-        					state.delete(State.values.angle);
-        					state.delete(State.values.distance);
+        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+        					state.delete(State.values.distanceanglettl);
     					}
                         
 						goBackward(); 
@@ -959,8 +1095,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.delay(750); // allow for slow to stop
 
 					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
-					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
-					double angle = state.getDouble(State.values.angle.toString());
+					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					
 					depthFrameAfter = Application.openNIRead.readFullFrame();
 					
@@ -972,13 +1108,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				else if (depthFrameAfter != null) { // went backward, openni
 					Util.delay(750);
 					
-					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
-					while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timer
-					double angle = state.getDouble(State.values.angle.toString());
+//					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
+					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					
 					depthFrameBefore = Application.openNIRead.readFullFrame();
 					
-//					int distance = -ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000), -angle);
 					int distance = -ScanUtils.findDistanceTopView(depthFrameBefore, depthFrameAfter, -angle, (int)(meters*1000));
 					msg = "distance moved d: "+distance+", angle:"+angle;
 					Mapper.addMove(depthFrameBefore, distance, angle);
@@ -987,23 +1122,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
                 else if (Application.stereo.stereoCamerasOn) {
                     Util.delay(750); // might need bit extra to get latest frame?
 
-                    application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
-                    while (!state.exists(State.values.angle.toString())) { } //wait TODO: add timeout
-                    double angle = state.getDouble(State.values.angle.toString());
-                    while (!state.exists(State.values.distance.toString())) { } //wait TODO: add timeout
-                    int distance = state.getInteger(State.values.distance.toString()); // millimeters
+//                    application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
+					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
                     
                     if (dir.equals(direction.forward)) { // went forward, stereo
                         cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-//                        int[] distance = Stereo.findDistanceTopView(cellsBefore, cellsAfter, angle, d);
-//                        if (distance[1]>500) d = distance[0];
     					Mapper.addArcPath(cellsAfter, distance, angle);
     					msg = "moved forward: "+distance+"mm, "+angle+"deg";
                     }
                     else { // went backward, stereo
                         cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-//                        int[] distance = Stereo.findDistanceTopView(cellsAfter, cellsBefore, angle, d);
-//                        if (distance[1]>500) d = -distance[0];
     					Mapper.addArcPath(cellsBefore, -distance, -angle);
     					msg = "moved backward: -"+distance+"mm, -"+angle+"deg";
                     }
@@ -1138,12 +1268,31 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}).start();
 	
 	}
+	
 	public void stopGoing() {
-		sendCommand(STOP);
-		application.gyroport.sendCommand(STOP);
+		final UUID moveID = UUID.randomUUID();
+		currentMoveID = moveID;
+
 		state.put(State.values.moving, false);
 		state.put(State.values.movingforward, false);
 		if (state.getBoolean(State.values.muteOnROVmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
+
+		application.gyroport.sendCommand(STOP);
+		sendCommand(STOP);
+		
+		if (!state.getBoolean(State.values.stopbetweenmoves)) { // firmware can call stop when odometry running
+			state.set(State.values.direction, direction.stop.toString());
+		}
+		else {
+			state.set(State.values.direction, direction.unknown.toString()); // TODO: try omitting
+			new Thread(new Runnable() {public void run() {
+				Util.delay(1000);
+				if (currentMoveID.equals(moveID))  {
+					state.set(State.values.direction, direction.stop.toString());
+				}
+				
+			} }).start();
+		}
 	}
 	
 	private void clickCam(final Integer y) {
@@ -1178,13 +1327,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	public void odometryStart() {
 		application.gyroport.sendCommand(ODOMETRY_START);
-		state.delete(State.values.angle);
-		state.delete(State.values.distance);
-		state.set(State.values.odometryrecording, true);
+		state.delete(State.values.distanceangle);
+		state.set(State.values.odometry, true);
 	}
 	public void odometryStop() {
 		application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
-		state.set(State.values.odometryrecording, false);
+		state.set(State.values.odometry, false);
 	}
 	public void odometryReport() {
 		application.gyroport.sendCommand(ODOMETRY_REPORT);

@@ -11,7 +11,7 @@ import oculusPrime.PlayerCommands.AdminCommands;
 public class State {
 	
 	public enum values{ 
-		motionenabled, moving, movingforward, motorport, odometryrecording, // motors
+		motionenabled, moving, movingforward, motorport,  // motors
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
 		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
@@ -20,17 +20,18 @@ public class State {
 		muteOnROVmove, volume, framegrabbusy, //audio video
 		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
 		
-		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers, // NEW! 
-		gyroport, // TODO: testing only
-		angle, distance, // TODO: << nuke these 2, now combined in lastmove
-		wheeldiamm, lastmove,
+		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
+		gyroport, // TODO: << to be merged
+		wheeldiamm, distanceangle, direction, odometry,
+		distanceanglettl, stopbetweenmoves, // TODO: << testing only 
 		
 		;
 	};
 	
 	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
 	public enum booleanValues{ moving, movingforward, autodocking, docking, batterycharging, framegrabbusy, dockgrabbusy, motionenabled, 
-		floodlighton, driverstream, muteOnROVmove, controlsinverted, strobeflashon; };
+		floodlighton, driverstream, muteOnROVmove, controlsinverted, strobeflashon,
+		odometry, stopbetweenmoves, };
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batteryinfo; };	

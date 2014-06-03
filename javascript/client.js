@@ -522,11 +522,15 @@ function keyBoardPressed(event) {
 		}
 		if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 		
-		if (keycode == 84 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // T
+		if (keycode == 89 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // Y
 			getFlashMovie("oculusPrime_player").unmutePlayerMic();
 			broadcastmicon = true;
 			setstatus("selfstream","mic ON");
 			//message("unmute player mic", "orange");
+		}
+		if (keycode == 80 && streammode != "stop") { // P
+			autodock('start');
+			autodock('go');
 		}
 	}
 }
@@ -1478,17 +1482,18 @@ function videoOverlayMouseOver() {
 		crosshairs("on");
 		var a=document.getElementById("videocursor_ctr"); // <canvas>
 		a.style.display = "";
-		try {
-
-			var ctx = a.getContext("2d");
-			ctx.strokeStyle = "#34ae2b"; // "#45F239";
-			ctx.beginPath();
-			ctx.arc(25,25,24,0,Math.PI*2,true);
-			ctx.stroke();
-		}
-		catch(err) { 
-			html5=false;
-		} // some non html5 browsers
+//		try {
+//
+//			var ctx = a.getContext("2d");
+//			ctx.strokeStyle = "#34ae2b"; // "#45F239";
+//			ctx.beginPath();
+//			ctx.arc(25,25,24,0,Math.PI*2,true);
+//			ctx.stroke();
+//		}
+//		catch(err) { 
+//			html5=false;
+//		} // some non html5 browsers
+		html5=false;
 		if (html5==false) {
 			a.style.display = "none";
 			a=document.getElementById("videocursor_ctr_html4");
