@@ -42,12 +42,12 @@ public class Stereo {
 	static final double camFOVy169 = 41.71;
 	static final double camFOVx43 = 58.90;
 	static final double camFOVy43 = 45.90;
-	final static int maxDepthTopView = 3500;
+	final static int maxDepthTopView = 3500; // 3500;
 	final static int minDepthTopView = 750;
 //	final double scaleMult = 275*2032; // disparity*mm (based on xoffset=2)!
-	final static double scaleMult = 430*1350; // mode 2 -- 412 measured - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
+//	final static double scaleMult = 430*1350; // mode 2 -- 412 measured - disparity*mm (based on xoffset=2)! (1346mm = from docked to corner of TV stand)
 											  // 435 = trial and error, best map meshing
-//	final static double scaleMult = 420*1350; // mode 1  420 xoffset=2
+	final static double scaleMult = 415*1350; // mode 1  xoffset=2
 
 	// camera offsets negligible on linear moves
 	public static final int  cameraSetBack = 0; // -20; // is forward from rotation center TODO: use this?
@@ -83,11 +83,11 @@ public class Stereo {
 		
 		sbmTopView = new StereoSGBM();
 //		/* mode 2: more accurate, way less info in depth image
-		sbmTopView.set_SADWindowSize(3); // 3-11. higher = more blobular 
+		sbmTopView.set_SADWindowSize(9); // 3-11. higher = more blobular 
 		sbmTopView.set_numberOfDisparities(48);  // 32-256 similar top view results, lower shortens time
 		sbmTopView.set_preFilterCap(63);  // lower seems to lessen noise
 		sbmTopView.set_minDisparity(4); // no change between 4,0, higher = innacurate
-		sbmTopView.set_uniquenessRatio(40); // % - higher = less noise, still not that accurate
+		sbmTopView.set_uniquenessRatio(80); // % - higher = less noise, still not that accurate
 		sbmTopView.set_speckleWindowSize(50);  // 0- disabled. 50-200 normal 
 		sbmTopView.set_speckleRange(32);  // 1-200, no diff. 0 = blank
 		sbmTopView.set_disp12MaxDiff(1); // -1-200 no diff
@@ -344,6 +344,46 @@ public class Stereo {
 		return result;
 	}
 	
+	public static short[][] projectStereoHorizToTopViewFilteredLess(Mat frame, int h) { 
+		final int w = (int) (Math.sin(Math.toRadians(camFOVx169/2)) * h * 2); // WRONG .. ?
+		final int width = frame.width();
+		final int mid = frame.height()/2-10; // offset so not including floor plane points
+		short[][] result = new short[w][h];
+
+		for (int y = mid-20; y<=mid+20; y+=5) {
+//		for (int y = mid-10; y<=mid+10; y+=3) {
+			
+			for (int x=1; x<width-1; x++) {
+				double d = scaleMult/frame.get(y, x)[0];
+				if (d<maxDepthTopView && d>minDepthTopView) {
+					
+						//project:
+						double dscaled = d*h/(double) maxDepthTopView; // distance from bot, in pixels
+						double a = Math.toRadians( camFOVx169 * (width/2-x) / width  ) ; // angle from center, radians
+						int rx = w/2 - (int) (dscaled * Math.sin(a));
+						int ry = (int) (dscaled * Math.cos(a));
+						result[rx][h-ry-1] = 254; 
+					
+				}
+			}
+		}
+		
+//		loop again, eliminate orphan pixels:
+		for (int x=1; x<w-1; x++) {
+			for (int y=1; y<h-1; y++) {
+				if (result[x][y] !=0) { 
+					if (result[x-1][y-1]==0 && result[x][y-1]==0 && result[x+1][y-1]==0 &&
+							result[x-1][y]==0 && result[x+1][y]==0 &&
+							result[x-1][y+1]==0 && result[x][y+1]==0 && result[x+1][y+1]==0) {
+						result[x][y] = 0;
+					}
+				}
+			}
+		}
+		
+		return result;
+	}
+	
 	public static short[][] topViewProbabilityRendering(short[][] tv) {
 		int w  = tv.length;
 		int h = tv[0].length;
@@ -438,9 +478,10 @@ public class Stereo {
 		captureRight.retrieve(right);
 		captureLeft.retrieve(left);
 
-    	Mat disparity = generateDisparity(left,right,sbmTopView);
-//    	Mat disparity = generateDisparity(left,right,sbmImage);
-        short[][] result = projectStereoHorizToTopViewFiltered(disparity, h);
+    	Mat disparity = generateDisparity(left,right,sbmTopView); // accurate
+//    	Mat disparity = generateDisparity(left,right,sbmImage);  // looks nicer
+//        short[][] result = projectStereoHorizToTopViewFiltered(disparity, h);
+        short[][] result = projectStereoHorizToTopViewFilteredLess(disparity, h);
         result = topViewProbabilityRendering(result);
         generating = false;
     	return result;

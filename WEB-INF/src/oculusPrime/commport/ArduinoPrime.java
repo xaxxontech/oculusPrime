@@ -439,14 +439,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		if (!isconnected) return;
 		
-		if(DEBUGGING) {
-			String text = "sendCommand(): " + (char)cmd[0] + " ";
-			for(int i = 1 ; i < cmd.length ; i++) 
-				text += (byte)cmd[i] + " ";
-			
-			Util.debug(text, this);
-		}
-		
 		if (state.getBoolean(State.values.controlsinverted)) {
 			switch (cmd[0]) {
 			case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
@@ -454,6 +446,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			case ArduinoPrime.LEFT: cmd[0]=ArduinoPrime.RIGHT; break;
 			case ArduinoPrime.RIGHT: cmd[0]=ArduinoPrime.LEFT; 
 			}
+		}
+		
+		if(DEBUGGING) {
+			String text = "sendCommand(): " + (char)cmd[0] + " ";
+			for(int i = 1 ; i < cmd.length ; i++) 
+				text += (byte)cmd[i] + " ";
+			
+			Util.debug(text, this);
 		}
 		
 		final byte[] command = cmd;
@@ -1134,8 +1134,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
                     }
                     else { // went backward, stereo
                         cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-    					Mapper.addArcPath(cellsBefore, -distance, -angle);
-    					msg = "moved backward: -"+distance+"mm, -"+angle+"deg";
+    					Mapper.addArcPath(cellsBefore, distance, -angle);
+    					msg = "moved backward: "+distance+"mm, -"+angle+"deg";
                     }
 
                 }

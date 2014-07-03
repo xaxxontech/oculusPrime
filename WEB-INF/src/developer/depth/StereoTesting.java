@@ -113,7 +113,8 @@ public class StereoTesting extends JFrame {
 
 		long start = System.currentTimeMillis();
 
-        stereo.sbmImage.compute(left, right, disparity);
+//        stereo.sbmImage.compute(left, right, disparity);
+        stereo.sbmTopView.compute(left, right, disparity);
         stereo.sbmTopView.compute(left, right, disparityTopView);
 
     	long duration = System.currentTimeMillis() - start;
@@ -126,8 +127,9 @@ public class StereoTesting extends JFrame {
     	}
     	System.out.println("");
         
-        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparity, 240);
+//        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparity, 240);
 //        short[][] topView  = Stereo.projectStereoHorizToTopViewFiltered(disparityTopView, 320);
+        short[][] topView  = Stereo.projectStereoHorizToTopViewFilteredLess(disparity, 240);
         topView = Stereo.topViewProbabilityRendering(topView);
 
 		

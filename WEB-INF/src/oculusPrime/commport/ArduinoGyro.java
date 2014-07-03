@@ -158,18 +158,20 @@ public class ArduinoGyro implements SerialPortEventListener {
 
 		if (s[0].equals("moved")) {
 			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
-//			state.set(State.values.distance, d);
-//			state.set(State.values.angle, s[2]);
 			double a = Double.parseDouble(s[2]);
-			if (state.getBoolean(State.values.controlsinverted)) {
-				d*=-1;
-				a*=-1;
-			}
+			
+//			if (state.getBoolean(State.values.controlsinverted)) {
+//				d*=-1;
+//				a*=-1;
+//			}
+			
 			state.set(State.values.distanceangle, d +" "+a);
+			
 			// TODO: testing only ----------------
 			if (!state.exists(State.values.distanceanglettl.toString())) {
 				state.set(State.values.distanceanglettl, "0 0");
 			}
+			
 			int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
 			double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
 			dttl += d;
@@ -192,6 +194,15 @@ public class ArduinoGyro implements SerialPortEventListener {
 	public void sendCommand(byte[] cmd) {
 
 		if (!isconnected) return;
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			switch (cmd[0]) {
+			case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
+			case ArduinoPrime.BACKWARD: cmd[0]=ArduinoPrime.FORWARD; break;
+			case ArduinoPrime.LEFT: cmd[0]=ArduinoPrime.RIGHT; break;
+			case ArduinoPrime.RIGHT: cmd[0]=ArduinoPrime.LEFT; 
+			}
+		}
 		
 		String text = "sendCommand(): " + (char)cmd[0] + " ";
 		for(int i = 1 ; i < cmd.length ; i++) 

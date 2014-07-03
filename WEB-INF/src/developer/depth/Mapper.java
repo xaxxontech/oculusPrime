@@ -94,20 +94,20 @@ public class Mapper {
 					short existing = map[cornerX + x][cornerY + y];
 					boolean oktoadd = false;
 					if (existing == 0 || entry == -1) oktoadd = true;
-					else if (entry > Stereo.objectMin && entry < Stereo.objectMax) { // object
-						if (existing > Stereo.objectMin && existing < Stereo.objectMax) { // object over object
+					else if (entry > Stereo.objectMin && entry <= Stereo.objectMax) { // object
+						if (existing > Stereo.objectMin && existing <= Stereo.objectMax) { // object over object
 							if (entry > existing) oktoadd = true;
 						}
-						else if (existing > Stereo.nonObjectMin && existing < Stereo.nonObjectMax) { // object over non object
+						else if (existing >= Stereo.nonObjectMin && existing <= Stereo.nonObjectMax) { // object over non object
 							if (entry-Stereo.objectMin > existing-Stereo.nonObjectMin) oktoadd = true;
 						}
 						else if (existing >= Stereo.fovMin && existing <= Stereo.fovMax) oktoadd = true; // non object over fov
 					}
-					else if (entry > Stereo.nonObjectMin && entry < Stereo.nonObjectMax) { // non object
-						if (existing > Stereo.objectMin && existing < Stereo.objectMax) { // non object over object
+					else if (entry >= Stereo.nonObjectMin && entry <= Stereo.nonObjectMax) { // non object
+						if (existing > Stereo.objectMin && existing <= Stereo.objectMax) { // non object over object
 							if (entry-Stereo.nonObjectMin > existing - Stereo.objectMin + 0) oktoadd = true; 
 						}
-						else if (existing > Stereo.nonObjectMin && existing < Stereo.nonObjectMax) { //non object over non object
+						else if (existing >= Stereo.nonObjectMin && existing <= Stereo.nonObjectMax) { //non object over non object
 							if (entry > existing ) oktoadd = true;
 						}
 						else if (existing >= Stereo.fovMin && existing <= Stereo.fovMax) oktoadd = true; // non object over fov
@@ -116,10 +116,10 @@ public class Mapper {
 						if (existing >= Stereo.fovMin && existing <= Stereo.fovMax) { // fov cone over fov cone 
 							if (entry > existing ) oktoadd = true; 
 						}
-						else if (existing > Stereo.objectMin && existing < Stereo.objectMax) { // fov cone over object
+						else if (existing > Stereo.objectMin && existing <= Stereo.objectMax) { // fov cone over object
 							if (entry - Stereo.fovMin > existing - Stereo.objectMin + 100 && Stereo.objectMin + 100 < Stereo.objectMax) oktoadd=true; // blank space overwrite far away object
 						}
-						else if (existing > Stereo.nonObjectMin && existing < Stereo.nonObjectMax) { // fov cone over object
+						else if (existing >= Stereo.nonObjectMin && existing <= Stereo.nonObjectMax) { // fov cone over object
 							if (entry - Stereo.fovMin > existing - Stereo.nonObjectMin + 100 && Stereo.nonObjectMin +100<Stereo.nonObjectMax) oktoadd=true; // blank space overwrite far away object
 						}
 					}
