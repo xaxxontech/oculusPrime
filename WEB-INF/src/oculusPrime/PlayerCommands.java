@@ -41,7 +41,7 @@ public enum PlayerCommands { // all valid commands
     battstats, powerreset, powershutdown, 
     
     // malg board 
-    analogwrite, digitalread, arduinoecho, motorsreset, cameracommand, cameratoposition, holdservo, 
+    analogwrite, digitalread, motorsreset, cameracommand, cameratoposition, holdservo, 
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, slide, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop,
@@ -64,7 +64,7 @@ public enum PlayerCommands { // all valid commands
 		systemcall, 
 		new_user_add, user_list, delete_user, extrauser_password_update, username_update, 
 		disconnectotherconnections, showlog, softwareupdate,
-		arduinoecho, arduinoreset, muterovmiconmovetoggle, 
+		arduinoreset, muterovmiconmovetoggle, 
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
 	    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssaddb, block, 
@@ -100,7 +100,6 @@ public enum PlayerCommands { // all valid commands
 		username_update("{STRING} {STRING}"), 
 		assumecontrol("{STRING}"), 
 		softwareupdate("check", "download","versiononly"),
-		arduinoecho("{BOOLEAN}"),
 		setsystemvolume("[0-100]"), 
 		beapassenger("{STRING}"), 
 		spotlight("0","10","20","30","40","50","60","70","80","90","100"), 
@@ -323,7 +322,6 @@ public enum PlayerCommands { // all valid commands
 		showlog("Returns partial jvm.stdout"),
 		assumecontrol("Assume control from current drive, specify new driver 'username'"), 
 		softwareupdate("Robot server software update control"),
-		arduinoecho("Set ArduinOculus microcontroller to echo all commands"),
 		arduinoreset("Reset ArduinOculus microcontroller"),
 		setsystemvolume("Set robot operating system audio volume 0-100"), 
 		beapassenger("Be passenger of current driver, specify passenger 'username'"), 

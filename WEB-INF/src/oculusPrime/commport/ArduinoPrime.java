@@ -48,9 +48,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte BACKWARD = 'b';
 	public static final byte LEFT = 'l';
 	public static final byte RIGHT = 'r';
-	public static final byte ECHO = 'e';
-	public static final byte[] ECHO_ON = { 'e', '1' };
-	public static final byte[] ECHO_OFF = { 'e', '0' };
+	public static final byte HARD_STOP = 'h';
 	
 	public static final byte FLOOD_LIGHT_LEVEL = 'o'; 
 	public static final byte SPOT_LIGHT_LEVEL = 'p';
@@ -58,28 +56,21 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 	public static final byte CAM = 'v';
 	public static final byte CAMRELEASE = 'w';
-	public static final byte FIND_HOME_TILT = 'm';
-	public static final byte HOME_TILT_FRONT = 't';
-	public static final byte HOME_TILT_REAR = 'z';
 	public static final byte GET_PRODUCT = 'x';
 	public static final byte GET_VERSION = 'y';
-	public static final byte ZERO_AND_START_RECORDING_ANGLE = 'z'; 
-	public static final byte STOP_RECORDING_AND_REPORT_ANGLE = 'm';
-	public static final byte ENCODER_START = 'g'; 
-	public static final byte HARD_STOP = 'h';
 	public static final byte ODOMETRY_START = 'i';
 	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
 	public static final byte ODOMETRY_REPORT = 'k';
 		
-	public static final int CAM_HORIZ = 70; // degrees (CAD measures 19)
-	public static final int CAM_MAX = 130; // degrees (CAD measures 211)
-	public static final int CAM_MIN = 45; // degrees
+	public static final int CAM_HORIZ = 70; 
+	public static final int CAM_MAX = 30; 
+	public static final int CAM_MIN = 100;
+	public static final int CAM_REVERSE = 160;
 	public static final int CAM_NUDGE = 3; // degrees
-	public static final long CAM_NUDGE_DELAY = 100;
+	public static final long CAM_SMOOTH_DELAY = 50;
 	public static final long CAM_RELEASE_DELAY = 500;
 //	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
-	public static final int CAM_REVERSE = 9;
-	public static final String FIRMWARE_ID = "oculusPrime";
+	public static final String FIRMWARE_ID = "malg";
 
 	private static final long STROBEFLASH_MAX = 5000; //strobe timeout
 	private static final int ACCEL_DELAY = 75;
@@ -106,6 +97,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected volatile boolean isconnected = false;
 	public volatile boolean sliding = false;
 	protected volatile UUID currentMoveID;
+	protected volatile UUID currentCamMoveID;
 	
 //	private boolean invertswap = false;
 	
@@ -128,6 +120,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
     private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
 	public int turnspeed = 255;
+	private static final double GYROCOMP = 1.09;
 		
 	public ArduinoPrime(Application app) {	
 		
@@ -146,6 +139,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
 		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
 		state.put(State.values.direction, direction.stop.toString());
+		state.put(State.values.gyrocomp, GYROCOMP);
 		
 		if(motorsReady()){
 			
@@ -249,7 +243,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		Util.debug("forward floodlight: " + target, this);
 
 		target = target * 255 / 100;
-		application.gyroport.sendCommand(new byte[]{FWDFLOOD_LIGHT_LEVEL, (byte)target});
+		sendCommand(new byte[]{FWDFLOOD_LIGHT_LEVEL, (byte)target});
 	}
 	
 	public void setSpotLightBrightness(int target){
@@ -309,12 +303,32 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			application.message(this.getClass().getName() + " version: " + version, null, null);		
 		} 
 	
-		
-//		if(response.startsWith("tiltpos")) {
-//			String position = response.split(" ")[1];
-//			state.set(State.values.cameratilt, position);
-//			application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
-//		}
+		String[] s = response.split(" ");
+
+		if (s[0].equals("moved")) {
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
+			double a = Double.parseDouble(s[2]);
+			a *= state.getDouble(State.values.gyrocomp.toString()); // apply comp
+			
+			state.set(State.values.distanceangle, d +" "+a);
+			
+			// TODO: testing only ----------------
+			if (!state.exists(State.values.distanceanglettl.toString())) {
+				state.set(State.values.distanceanglettl, "0 0");
+			}
+			
+			int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+			double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+			dttl += d;
+			attl += a;
+			String dattl = dttl+" "+attl;
+			state.set(State.values.distanceanglettl,dattl);
+			
+			// end of testing only ----------------
+		}
+		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
+		else if (s[0].equals("stopdetectfail")) application.message("FIRMWARE STOP DETECT FAIL", null, null);		
+
 	}
 
 	private void connect() {
@@ -397,10 +411,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	
-	public void setEcho(boolean update) {
-		if (update) sendCommand(ECHO_ON);
-		else sendCommand(ECHO_OFF);
-	}
+//	public void setEcho(boolean update) {
+//		if (update) sendCommand(ECHO_ON);
+//		else sendCommand(ECHO_OFF);
+//	}
 
 	
 	public void reset() {
@@ -526,7 +540,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			speed2 = speedmed;
 		}
 		
-		application.gyroport.sendCommand(FORWARD);
+//		application.gyroport.sendCommand(FORWARD);
 
 		if (state.get(State.values.direction).equals(direction.forward.toString()) || // pypass accel if already going forward, speed change only 
 				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
@@ -633,7 +647,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			speed2 = speedmed;
 		}
 		
-		application.gyroport.sendCommand(BACKWARD);
+//		application.gyroport.sendCommand(BACKWARD);
 
 		if (state.get(State.values.direction).equals(direction.backward.toString()) || // pypass accel if already going forward, speed change only 
 				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
@@ -712,7 +726,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			tmpspeed = speed + boost;
 		
 		sendCommand(new byte[] { RIGHT,  (byte) tmpspeed, (byte) tmpspeed });
-		application.gyroport.sendCommand(RIGHT);
+//		application.gyroport.sendCommand(RIGHT);
 		state.put(State.values.moving, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
@@ -751,7 +765,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			tmpspeed = speed + boost;
 		
 		sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
-		application.gyroport.sendCommand(LEFT);
+//		application.gyroport.sendCommand(LEFT);
 		state.put(State.values.moving, true);
 		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
 	}
@@ -760,16 +774,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		@Override
 		public void run(){
 			
-			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) + CAM_NUDGE);
+			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - CAM_NUDGE);
 			
-			if (state.getInteger(State.values.cameratilt) >= CAM_MAX) {
+			if (state.getInteger(State.values.cameratilt) <= CAM_MAX) {
 				cameraTimer.cancel();
 //				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
 				state.set(State.values.cameratilt, CAM_MAX);
 				return;
 			}
 		
-			application.gyroport.sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
+			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
 		}
 	}
 	
@@ -777,16 +791,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		@Override
 		public void run(){
 			
-			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - CAM_NUDGE);
+			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) + CAM_NUDGE);
 			
-			if (state.getInteger(State.values.cameratilt) <= CAM_MIN) {
+			if (state.getInteger(State.values.cameratilt) >= CAM_MIN) {
 				cameraTimer.cancel();
 //				application.gyroport.sendCommand(new byte[] { HOME_TILT_FRONT }); // calibrate
 				state.set(State.values.cameratilt, CAM_MIN);
 				return;
 			}
 	
-			application.gyroport.sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
+			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
 		}
 	}
 	
@@ -806,27 +820,31 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		int position;
 		
+		UUID camMoveID = UUID.randomUUID(); 
+		
 		switch (move) {
 		
 			case stop: 
 				if(cameraTimer != null) cameraTimer.cancel();
-				camRelease();
+				currentCamMoveID = camMoveID;
+				camRelease(camMoveID);
 				cameraTimer = null;
 				return;
 				
 			case up:  
 				cameraTimer = new java.util.Timer();  
-				cameraTimer.scheduleAtFixedRate(new cameraUpTask(), 0, CAM_NUDGE_DELAY);
+				cameraTimer.scheduleAtFixedRate(new cameraUpTask(), 0, CAM_SMOOTH_DELAY);
 				return;
 			
 			case down:  
 				cameraTimer = new java.util.Timer();  
-				cameraTimer.scheduleAtFixedRate(new cameraDownTask(), 0, CAM_NUDGE_DELAY);
+				cameraTimer.scheduleAtFixedRate(new cameraDownTask(), 0, CAM_SMOOTH_DELAY);
 				return;
 			
 			case horiz: 
-				application.gyroport.sendCommand(new byte[] { CAM, (byte) CAM_HORIZ });
-				camRelease();
+				sendCommand(new byte[] { CAM, (byte) CAM_HORIZ });
+				currentCamMoveID = camMoveID;
+				camRelease(camMoveID);
 				state.set(State.values.cameratilt, CAM_HORIZ);
 				if (state.getBoolean(State.values.controlsinverted)) {
 					state.set(State.values.controlsinverted, false);
@@ -834,25 +852,26 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				return;
 			
 			case downabit: 
-				position= state.getInteger(State.values.cameratilt) - CAM_NUDGE*3;
-				if (position <= CAM_MIN) { 
+				position= state.getInteger(State.values.cameratilt) + CAM_NUDGE*3;
+				if (position >= CAM_MIN) { 
 					position = CAM_MIN;
 //					sendCommand(new byte[] { HOME_TILT_FRONT }); //calibrate 
 				}
-				application.gyroport.sendCommand(new byte[] { CAM, (byte) position }); 
-				camRelease();
-				 
+				sendCommand(new byte[] { CAM, (byte) position }); 
+				currentCamMoveID = camMoveID;
+				camRelease(camMoveID);				 
 				state.set(State.values.cameratilt, position);
 				return; 
 			
 			case upabit: 
-				position = state.getInteger(State.values.cameratilt) + CAM_NUDGE*3;
-				if (position >= CAM_MAX) { 
+				position = state.getInteger(State.values.cameratilt) - CAM_NUDGE*3;
+				if (position <= CAM_MAX) { 
 					position = CAM_MAX;
 //					sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
 				}
-				application.gyroport.sendCommand(new byte[] { CAM, (byte) position }); 
-				camRelease();
+				sendCommand(new byte[] { CAM, (byte) position }); 
+				currentCamMoveID = camMoveID;
+				camRelease(camMoveID);
 				
 				state.set(State.values.cameratilt, position);
 				return;
@@ -863,17 +882,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 //				return;
 //				
 			case rearstop:   // legacy compatibility, same as reverse
-//				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX });
-//				state.set(State.values.cameratilt, CAM_MAX);
-//				return;
-//			
-//			case frontstopblocking:
-//				sendCommand(FIND_HOME_TILT); 
-//				return;
 				
 			case reverse:
-				application.gyroport.sendCommand(new byte[] { CAM, (byte) CAM_REVERSE });
-				camRelease();
+				sendCommand(new byte[] { CAM, (byte) CAM_REVERSE });
+				currentCamMoveID = camMoveID;
+				camRelease(camMoveID);
 				state.set(State.values.cameratilt, CAM_REVERSE);
 				state.set(State.values.controlsinverted, true);
 				return;
@@ -882,22 +895,24 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	
 	public void cameraToPosition(int position) {
-//		if (position < CAM_MIN) { position = CAM_MIN; }
-//		else if (position > CAM_MAX) { position = CAM_MAX; } 
-//		if (position == 13) { position = 12; } // can't send 13, firmware will be seen as end of command
-		application.gyroport.sendCommand(new byte[] { CAM, (byte) position} );
-		camRelease();
+		sendCommand(new byte[] { CAM, (byte) position} );
+		UUID camMoveID = UUID.randomUUID(); 
+		currentCamMoveID = camMoveID;
+		camRelease(camMoveID);
 		state.set(State.values.cameratilt, position);
 		return;
 	}
 	
-	private void camRelease() {
+	private void camRelease(final UUID camMoveID) {
 		new Thread(new Runnable() {
 			public void run() {				
 				Util.delay(CAM_RELEASE_DELAY);
-				application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
-				application.gyroport.sendCommand(CAMRELEASE);  // TODO: add check that this doesn't negate subsequent command			
+				if (camMoveID.equals(currentCamMoveID)) {
+					application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+					sendCommand(CAMRELEASE);  
+				}
 			}
+				
 		}).start();
 	}
 
@@ -1000,7 +1015,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.delay(500); // allow for slow to stop
 					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
 
-					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
 					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					Mapper.addMove(depthFrameAfter, 0, angle);
@@ -1009,7 +1023,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				if (Application.stereo.stereoCamerasOn) {
 					Util.delay(700); // allow extra 200ms for latest frame 	
-//					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
+
 					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
 					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					msg += "angle moved via gyro: "+angle;
@@ -1094,27 +1108,24 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (depthFrameBefore != null) { // went forward, openni
 					Util.delay(750); // allow for slow to stop
 
-					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
 					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					
 					depthFrameAfter = Application.openNIRead.readFullFrame();
 					
-//					int distance = ScanUtils.findDepth(depthFrameBefore, depthFrameAfter, (int)(meters*1000), angle);
-					int distance = ScanUtils.findDistanceTopView(depthFrameBefore, depthFrameAfter, angle, (int)(meters*1000));
+                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
 					msg = "distance moved d: "+distance+", angle:"+angle;
 					Mapper.addMove(depthFrameAfter, distance, angle);
 				}
 				else if (depthFrameAfter != null) { // went backward, openni
 					Util.delay(750);
 					
-//					application.gyroport.sendCommand(STOP_RECORDING_AND_REPORT_ANGLE);
 					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
 					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 					
 					depthFrameBefore = Application.openNIRead.readFullFrame();
 					
-					int distance = -ScanUtils.findDistanceTopView(depthFrameBefore, depthFrameAfter, -angle, (int)(meters*1000));
+                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
 					msg = "distance moved d: "+distance+", angle:"+angle;
 					Mapper.addMove(depthFrameBefore, distance, angle);
 				}
@@ -1122,7 +1133,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
                 else if (Application.stereo.stereoCamerasOn) {
                     Util.delay(750); // might need bit extra to get latest frame?
 
-//                    application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
 					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
 					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
                     int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
@@ -1277,7 +1287,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.movingforward, false);
 		if (state.getBoolean(State.values.muteOnROVmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
 
-		application.gyroport.sendCommand(STOP);
+//		application.gyroport.sendCommand(STOP);
 		sendCommand(STOP);
 		
 		if (!state.getBoolean(State.values.stopbetweenmoves)) { // firmware can call stop when odometry running
@@ -1301,19 +1311,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 //		Util.debug("___clickCam(): " + "y: " + y, this);
 		
 		int n = maxclickcam * y / 240;
-		n = state.getInteger(State.values.cameratilt) -n;
-//		state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - n);
-		
-		// range check 
-//		if (state.getInteger(State.values.cameratilt) < CAM_MIN) state.set(State.values.cameratilt, CAM_MIN);
-//		if (state.getInteger(State.values.cameratilt) > CAM_MAX) state.set(State.values.cameratilt, CAM_MAX);
-		if (n < CAM_MIN) { n= CAM_MIN; }
-		if (n > CAM_MAX) { n= CAM_MAX; }
+		n = state.getInteger(State.values.cameratilt) +n;
+
+		if (n > CAM_MIN) { n= CAM_MIN; }
+		if (n < CAM_MAX) { n= CAM_MAX; }
 		if (n == 13 || n== 10) { n=12; }
-		application.gyroport.sendCommand(new byte[] { CAM, (byte) n });	
-		camRelease();
+		sendCommand(new byte[] { CAM, (byte) n });
+		UUID camMoveID = UUID.randomUUID(); 
+		currentCamMoveID = camMoveID;
+		camRelease(camMoveID);
 		state.set(State.values.cameratilt, n);
-//		application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
 
 	}
 	
@@ -1326,16 +1333,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 	
 	public void odometryStart() {
-		application.gyroport.sendCommand(ODOMETRY_START);
+		sendCommand(ODOMETRY_START);
 		state.delete(State.values.distanceangle);
 		state.set(State.values.odometry, true);
 	}
 	public void odometryStop() {
-		application.gyroport.sendCommand(ODOMETRY_STOP_AND_REPORT);
+		sendCommand(ODOMETRY_STOP_AND_REPORT);
 		state.set(State.values.odometry, false);
 	}
 	public void odometryReport() {
-		application.gyroport.sendCommand(ODOMETRY_REPORT);
+		sendCommand(ODOMETRY_REPORT);
 	}
 
 

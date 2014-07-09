@@ -29,8 +29,8 @@ public class TestPanel extends JFrame {
 					TestPanel frame = new TestPanel();
 					frame.setVisible(true);
 		
-			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
-//	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
+//			    	String leader = "Z:\\xaxxon\\oculusPrime\\software\\"; // windows
+	    	    	String leader = "/mnt/skyzorg/xaxxon/oculusPrime/software/"; // linux 
 //	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion408-2p37-1.raw"));
 //	    	    	short[] frameAfter = ScanUtils.getFrame(new File(leader+"xtion408-2p37-2.raw"));
 	    	    	short[] frameBefore = ScanUtils.getFrame(new File(leader+"xtion400-1p99-1.raw"));

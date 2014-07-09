@@ -25,6 +25,7 @@ public class Util {
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
+	public static final long ONE_HOUR = 3600000;
 	
 	/**
 	 * Delays program execution for the specified delay.

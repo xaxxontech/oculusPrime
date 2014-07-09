@@ -74,14 +74,13 @@ public class Discovery {
 		} 
 
 		
-		if(application.gyroport.portname.equals(params.discovery.name())){	
-			searchDevices.add(ArduinoGyro.FIRMWARE_ID);
-			
-		} else { // port explicitly identified in settings		
-			Util.debug("skipping discovery, gyro specified on: " + application.gyroport.portname, this);
-		} 
-		
-		
+//		if(application.gyroport.portname.equals(params.discovery.name())){	
+//			searchDevices.add(ArduinoGyro.FIRMWARE_ID);
+//			
+//		} else { // port explicitly identified in settings		
+//			Util.debug("skipping discovery, gyro specified on: " + application.gyroport.portname, this);
+//		} 
+
 		
 		if (!searchDevices.isEmpty())  searchDevice(); 
 		
@@ -225,16 +224,16 @@ public class Discovery {
 						break;
 					}
 					
-					else if (id.equalsIgnoreCase(ArduinoGyro.FIRMWARE_ID)) {
-						state.set(State.values.gyroport, getPortName());
-						application.gyroport.serialPort = serialPort;
-						application.gyroport.in = inputStream;
-						application.gyroport.out = outputStream;
-						application.gyroport.isconnected = true;
-						application.gyroport.portname = getPortName();
-						application.gyroport.initialize();
-						break;
-					}
+//					else if (id.equalsIgnoreCase(ArduinoGyro.FIRMWARE_ID)) {
+//						state.set(State.values.gyroport, getPortName());
+//						application.gyroport.serialPort = serialPort;
+//						application.gyroport.in = inputStream;
+//						application.gyroport.out = outputStream;
+//						application.gyroport.isconnected = true;
+//						application.gyroport.portname = getPortName();
+//						application.gyroport.initialize();
+//						break;
+//					}
 					
 					
 					else { close(); }

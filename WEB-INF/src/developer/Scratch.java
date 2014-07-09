@@ -11,13 +11,11 @@ public class Scratch {
 
         public static void main(String[] args) {
 
-        	System.out.println("asdfasdf");
-			new Thread(new Runnable() {public void run() {
-				long stopwaiting = System.currentTimeMillis()+1000;
-				while(System.currentTimeMillis() < stopwaiting) {} // wait
-				System.out.println("asdf");
-				
-			} }).start();
+        	long r;
+        	double d = 1.01;
+        	r = (long) d;
+        	System.out.println(r);
+
     		
 
         }

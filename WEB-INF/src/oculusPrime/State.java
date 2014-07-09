@@ -22,7 +22,7 @@ public class State {
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
 		gyroport, // TODO: << to be merged
-		wheeldiamm, distanceangle, direction, odometry,
+		wheeldiamm, distanceangle, direction, odometry, gyrocomp,
 		distanceanglettl, stopbetweenmoves, // TODO: << testing only 
 		
 		;
@@ -374,6 +374,10 @@ public class State {
 	}
 
 	public void put(values value, long b) {
+		put(value, String.valueOf(b));
+	}
+	
+	public void put(values value, double b) {
 		put(value, String.valueOf(b));
 	}
 

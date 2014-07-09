@@ -26,7 +26,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int SETUP = 4000;
 	public static final int DEAD_TIME_OUT = 10000;
 	public static final int WATCHDOG_DELAY = 5000;
-	public static final int RESET_DELAY = 3600000;
+	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
 	public static final int BAUD = 115200;
 	public static final String FIRMWARE_ID = "oculusPower";
 //	public static final byte BATTERYPLUSPFETOFF = 'm';
@@ -142,16 +142,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 					reset();
 				}
 				
-				/*
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null &&
 						state.getInteger(oculusPrime.State.values.telnetusers) == 0) {
 					// check for autodocking = false; driver = false; telnet = false;
-					// application.message("battery board periodic reset", "battery", "resetting");
+					application.message("battery board periodic reset", "battery", "resetting");
 					Util.log("battery board periodic reset", this);
 					reset();
 				}
-				*/
 				
 				Util.delay(WATCHDOG_DELAY);
 			}		
