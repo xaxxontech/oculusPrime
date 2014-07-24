@@ -62,10 +62,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
 	public static final byte ODOMETRY_REPORT = 'k';
 		
-	public static final int CAM_HORIZ = 70; 
-	public static final int CAM_MAX = 30; 
-	public static final int CAM_MIN = 100;
-	public static final int CAM_REVERSE = 160;
 	public static final int CAM_NUDGE = 3; // degrees
 	public static final long CAM_SMOOTH_DELAY = 50;
 	public static final long CAM_RELEASE_DELAY = 500;
@@ -114,6 +110,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
 	public int onemeterdelay = settings.getInteger(GUISettings.onemeterdelay);
 	public int steeringcomp = 0;
+	public static int CAM_HORIZ = settings.getInteger(GUISettings.camhoriz); //70; 
+	public static int CAM_MAX; 
+	public static int CAM_MIN;
+	public static int CAM_REVERSE;
+
 	
 	public String portname = settings.readSetting(ManualSettings.motorport);
 	
@@ -140,6 +141,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
 		state.put(State.values.direction, direction.stop.toString());
 		state.put(State.values.gyrocomp, GYROCOMP);
+		
+		setCameraStops();
 		
 		if(motorsReady()){
 			
@@ -508,7 +511,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			
 				stopGoing();
 				currentMoveID = moveID;
-				
+
 				new Thread(new Runnable() {public void run() {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
@@ -936,16 +939,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public void nudge(final direction dir) {
 		
 		Util.debug("nudge(): " + dir, this);
-
-		if (Application.openNIRead.depthCamGenerating || Application.stereo.stereoCamerasOn ) {
-			if (Application.stereo.generating) return; // (assuming wont be using openni in this case)
-			switch (dir) {
-			case right:
-			case left:  rotate(dir, 15); break;
-			case forward: 
-			case backward: movedistance(dir, 0.4); break;
+		
+		if (settings.getBoolean(ManualSettings.developer.name())) {
+			if (Application.openNIRead.depthCamGenerating || Application.stereo.stereoCamerasOn ) {
+				if (Application.stereo.generating) return; // (assuming wont be using openni in this case)
+				switch (dir) {
+				case right:
+				case left:  rotate(dir, 15); break;
+				case forward: 
+				case backward: movedistance(dir, 0.4); break;
+				}
+				return;
 			}
-			return;
 		}
 		
 		new Thread(new Runnable() {
@@ -984,21 +989,22 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				double n = fullrotationdelay * degrees / 360;
 				
-				
-				if (Application.openNIRead.depthCamGenerating) { // openni
-					short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
-					if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
-					if (!state.getBoolean(State.values.odometry)) odometryStart();
-					state.delete(State.values.distanceanglettl);
-				}
-				
-				if (Application.stereo.stereoCamerasOn) {
-					if (Mapper.map.length==0) {
-						short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-						Mapper.addArcPath(cells, 0, 0);
+				if (settings.getBoolean(ManualSettings.developer.name())) {
+					if (Application.openNIRead.depthCamGenerating) { // openni
+						short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
+						if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
+						if (!state.getBoolean(State.values.odometry)) odometryStart();
+						state.delete(State.values.distanceanglettl);
 					}
-					if (!state.getBoolean(State.values.odometry)) odometryStart();
-					state.delete(State.values.distanceanglettl);
+					
+					if (Application.stereo.stereoCamerasOn) {
+						if (Mapper.map.length==0) {
+							short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+							Mapper.addArcPath(cells, 0, 0);
+						}
+						if (!state.getBoolean(State.values.odometry)) odometryStart();
+						state.delete(State.values.distanceanglettl);
+					}
 				}
 				
 				switch (dir) {
@@ -1011,25 +1017,28 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				stopGoing();
 				
 				String msg = "";
-				if (Application.openNIRead.depthCamGenerating) { // openni 
-					Util.delay(500); // allow for slow to stop
-					short[] depthFrameAfter = Application.openNIRead.readFullFrame();
+				if (settings.getBoolean(ManualSettings.developer.name())) {
 
-					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
-					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-					Mapper.addMove(depthFrameAfter, 0, angle);
-					msg += "angle moved via gyro: "+angle;
-				}
-				
-				if (Application.stereo.stereoCamerasOn) {
-					Util.delay(700); // allow extra 200ms for latest frame 	
-
-					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
-					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-					msg += "angle moved via gyro: "+angle;
+					if (Application.openNIRead.depthCamGenerating) { // openni 
+						Util.delay(500); // allow for slow to stop
+						short[] depthFrameAfter = Application.openNIRead.readFullFrame();
+	
+						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						Mapper.addMove(depthFrameAfter, 0, angle);
+						msg += "angle moved via gyro: "+angle;
+					}
 					
-					short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-					Mapper.addArcPath(cells, 0, angle);
+					if (Application.stereo.stereoCamerasOn) {
+						Util.delay(700); // allow extra 200ms for latest frame 	
+	
+						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						msg += "angle moved via gyro: "+angle;
+						
+						short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+						Mapper.addArcPath(cells, 0, angle);
+					}
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);
@@ -1060,41 +1069,45 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				switch (dir) {
 					case forward:
 						
-						if (Application.openNIRead.depthCamGenerating) {   // openni
-							depthFrameBefore = Application.openNIRead.readFullFrame();	
-							if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
-        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-        					state.delete(State.values.distanceanglettl);
+						if (settings.getBoolean(ManualSettings.developer.name())) {
+							if (Application.openNIRead.depthCamGenerating) {   // openni
+								depthFrameBefore = Application.openNIRead.readFullFrame();	
+								if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
+	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+	        					state.delete(State.values.distanceanglettl);
+							}
+							
+	                        if (Application.stereo.stereoCamerasOn) { // stereo
+	        					if (Mapper.map.length==0) {
+	                                cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+	        						Mapper.addArcPath(cellsBefore, 0, 0);
+	        					}
+	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+	        					state.delete(State.values.distanceanglettl);
+	                        }
 						}
-						
-                        if (Application.stereo.stereoCamerasOn) { // stereo
-        					if (Mapper.map.length==0) {
-                                cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-        						Mapper.addArcPath(cellsBefore, 0, 0);
-        					}
-        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-        					state.delete(State.values.distanceanglettl);
-                        }
 
                         goForward(); 
 						break;
 						
 					case backward: 
-						if (Application.openNIRead.depthCamGenerating) {  // openni
-							depthFrameAfter = Application.openNIRead.readFullFrame();						
-							if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
-        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-        					state.delete(State.values.distanceanglettl);
+						if (settings.getBoolean(ManualSettings.developer.name())) {
+							if (Application.openNIRead.depthCamGenerating) {  // openni
+								depthFrameAfter = Application.openNIRead.readFullFrame();						
+								if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
+	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+	        					state.delete(State.values.distanceanglettl);
+							}
+							
+	                        if (Application.stereo.stereoCamerasOn) { // stereo
+	        					if (Mapper.map.length==0) {
+	        						cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+	        						Mapper.addArcPath(cellsAfter, 0, 0);
+	        					}
+	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+	        					state.delete(State.values.distanceanglettl);
+	    					}
 						}
-						
-                        if (Application.stereo.stereoCamerasOn) { // stereo
-        					if (Mapper.map.length==0) {
-        						cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-        						Mapper.addArcPath(cellsAfter, 0, 0);
-        					}
-        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-        					state.delete(State.values.distanceanglettl);
-    					}
                         
 						goBackward(); 
 				}
@@ -1105,50 +1118,53 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				String msg = null;
 				
-				if (depthFrameBefore != null) { // went forward, openni
-					Util.delay(750); // allow for slow to stop
+				if (settings.getBoolean(ManualSettings.developer.name())) {
 
-					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
-					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-					
-					depthFrameAfter = Application.openNIRead.readFullFrame();
-					
-                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-					msg = "distance moved d: "+distance+", angle:"+angle;
-					Mapper.addMove(depthFrameAfter, distance, angle);
+					if (depthFrameBefore != null) { // went forward, openni
+						Util.delay(750); // allow for slow to stop
+	
+						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						
+						depthFrameAfter = Application.openNIRead.readFullFrame();
+						
+	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+						msg = "distance moved d: "+distance+", angle:"+angle;
+						Mapper.addMove(depthFrameAfter, distance, angle);
+					}
+					else if (depthFrameAfter != null) { // went backward, openni
+						Util.delay(750);
+						
+						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						
+						depthFrameBefore = Application.openNIRead.readFullFrame();
+						
+	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+						msg = "distance moved d: "+distance+", angle:"+angle;
+						Mapper.addMove(depthFrameBefore, distance, angle);
+					}
+	
+	                else if (Application.stereo.stereoCamerasOn) {
+	                    Util.delay(750); // might need bit extra to get latest frame?
+	
+						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+	                    
+	                    if (dir.equals(direction.forward)) { // went forward, stereo
+	                        cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+	    					Mapper.addArcPath(cellsAfter, distance, angle);
+	    					msg = "moved forward: "+distance+"mm, "+angle+"deg";
+	                    }
+	                    else { // went backward, stereo
+	                        cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
+	    					Mapper.addArcPath(cellsBefore, distance, -angle);
+	    					msg = "moved backward: "+distance+"mm, -"+angle+"deg";
+	                    }
+	
+	                }
 				}
-				else if (depthFrameAfter != null) { // went backward, openni
-					Util.delay(750);
-					
-					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
-					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-					
-					depthFrameBefore = Application.openNIRead.readFullFrame();
-					
-                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-					msg = "distance moved d: "+distance+", angle:"+angle;
-					Mapper.addMove(depthFrameBefore, distance, angle);
-				}
-
-                else if (Application.stereo.stereoCamerasOn) {
-                    Util.delay(750); // might need bit extra to get latest frame?
-
-					while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
-					double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-                    
-                    if (dir.equals(direction.forward)) { // went forward, stereo
-                        cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-    					Mapper.addArcPath(cellsAfter, distance, angle);
-    					msg = "moved forward: "+distance+"mm, "+angle+"deg";
-                    }
-                    else { // went backward, stereo
-                        cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-    					Mapper.addArcPath(cellsBefore, distance, -angle);
-    					msg = "moved backward: "+distance+"mm, -"+angle+"deg";
-                    }
-
-                }
 				
 				state.put(State.values.motorspeed, tempspeed);
 				application.message(msg, "motion", "stopped");
@@ -1294,7 +1310,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			state.set(State.values.direction, direction.stop.toString());
 		}
 		else {
-			state.set(State.values.direction, direction.unknown.toString()); // TODO: try omitting
+//			state.set(State.values.direction, direction.unknown.toString()); // TODO: try omitting
 			new Thread(new Runnable() {public void run() {
 				Util.delay(1000);
 				if (currentMoveID.equals(moveID))  {
@@ -1345,6 +1361,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		sendCommand(ODOMETRY_REPORT);
 	}
 
+	public void setCameraStops() {
+		CAM_MAX = CAM_HORIZ - 50; // 20; 
+		CAM_MIN = CAM_HORIZ + 30; // 100;
+		CAM_REVERSE = CAM_HORIZ + 82; // 152;
+	}
+	
 
 }
 

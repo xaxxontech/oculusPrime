@@ -1097,7 +1097,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
 					+ " " + comport.clicknudgemomentummult+ " " + comport.maxclickcam
 					+ " " + comport.fullrotationdelay + " " + comport.onemeterdelay + " " 
-					+ settings.readSetting(GUISettings.steeringcomp.name());
+					+ settings.readSetting(GUISettings.steeringcomp.name()) + " "
+					+ ArduinoPrime.CAM_HORIZ;
 			sendplayerfunction("drivingsettingsdisplay", str);
 		}
 	}
@@ -1131,12 +1132,17 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			
 			comport.setSteeringComp(comps[8]);
 			settings.writeSettings(GUISettings.steeringcomp.name(), comps[8]);
+			
+			ArduinoPrime.CAM_HORIZ = Integer.parseInt(comps[9]);
+			comport.setCameraStops();
+			settings.writeSettings(GUISettings.camhoriz.name(), comps[9]);
 
 			String s = comport.speedslow + " " + comport.speedmed + " " 
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
 					+ " " + comport.clicknudgemomentummult +  " "  + comport.maxclickcam
 					+ " " + comport.fullrotationdelay 
-					+ " " + comport.onemeterdelay +  " "  + comport.steeringcomp;
+					+ " " + comport.onemeterdelay +  " "  + comport.steeringcomp + " "
+					+ ArduinoPrime.CAM_HORIZ;
 			
 			messageplayer("driving settings set to: " + s, null, null);
 		}

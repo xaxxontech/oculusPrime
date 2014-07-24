@@ -62,7 +62,8 @@ public class Stereo {
 	public static short[][] tvr;
 
 	
-	public Stereo() {
+	public void DeleteThis() {
+//	public void Stereo() {
 		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		cv = new OpenCVUtils();
 

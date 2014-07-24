@@ -896,6 +896,7 @@ function drivingsettingsdisplay(str) { // called by server via flashplayer
 	document.getElementById('fullrotationdelay').value = splitstr[6];
 	document.getElementById('onemeterdelay').value = splitstr[7];
 	document.getElementById('steeringcomp').value = splitstr[8];
+	document.getElementById('camhorizpos').value = splitstr[9];
 }
 
 function drivingsettingssend() {
@@ -907,7 +908,8 @@ function drivingsettingssend() {
 			+ document.getElementById('maxclickcam').value + " "
 			+ document.getElementById('fullrotationdelay').value + " "
 			+ document.getElementById('onemeterdelay').value + " "
-			+ document.getElementById('steeringcomp').value;	
+			+ document.getElementById('steeringcomp').value + " "	
+			+ document.getElementById('camhorizpos').value;
 	callServer("drivingsettingsupdate", str);
 	message("sending driving settings values: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
