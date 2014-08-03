@@ -56,6 +56,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 	public static final byte CAM = 'v';
 	public static final byte CAMRELEASE = 'w';
+	public static final byte CAMHORIZSET = 'm';
 	public static final byte GET_PRODUCT = 'x';
 	public static final byte GET_VERSION = 'y';
 	public static final byte ODOMETRY_START = 'i';
@@ -110,7 +111,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
 	public int onemeterdelay = settings.getInteger(GUISettings.onemeterdelay);
 	public int steeringcomp = 0;
-	public static int CAM_HORIZ = settings.getInteger(GUISettings.camhoriz); //70; 
+	public static int CAM_HORIZ = settings.getInteger(GUISettings.camhoriz); 
 	public static int CAM_MAX; 
 	public static int CAM_MIN;
 	public static int CAM_REVERSE;
@@ -142,7 +143,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.direction, direction.stop.toString());
 		state.put(State.values.gyrocomp, GYROCOMP);
 		
-		setCameraStops();
+		setCameraStops(CAM_HORIZ);
 		
 		if(motorsReady()){
 			
@@ -1361,10 +1362,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		sendCommand(ODOMETRY_REPORT);
 	}
 
-	public void setCameraStops() {
+	public void setCameraStops(int h) {
+		if (h != CAM_HORIZ) {
+			settings.writeSettings(GUISettings.camhoriz.name(), h);
+			sendCommand(new byte[] { CAMHORIZSET,  (byte) h });
+			CAM_HORIZ = h;
+		}
 		CAM_MAX = CAM_HORIZ - 50; // 20; 
 		CAM_MIN = CAM_HORIZ + 30; // 100;
-		CAM_REVERSE = CAM_HORIZ + 82; // 152;
+		CAM_REVERSE = CAM_HORIZ + 68; // 152;
 	}
 	
 

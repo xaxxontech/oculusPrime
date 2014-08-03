@@ -1133,9 +1133,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			comport.setSteeringComp(comps[8]);
 			settings.writeSettings(GUISettings.steeringcomp.name(), comps[8]);
 			
-			ArduinoPrime.CAM_HORIZ = Integer.parseInt(comps[9]);
-			comport.setCameraStops();
-			settings.writeSettings(GUISettings.camhoriz.name(), comps[9]);
+//			ArduinoPrime.CAM_HORIZ = Integer.parseInt(comps[9]);
+			comport.setCameraStops(Integer.parseInt(comps[9]));
+//			settings.writeSettings(GUISettings.camhoriz.name(), comps[9]);
 
 			String s = comport.speedslow + " " + comport.speedmed + " " 
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
