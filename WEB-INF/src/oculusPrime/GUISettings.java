@@ -8,7 +8,7 @@ public enum GUISettings {
 	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay, onemeterdelay,
 	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
 	clicknudgemomentummult, maxclickcam, muteonrovmove, 
-	videoscale, volume, loginnotify, reboot, pushtotalk, camhoriz; 
+	videoscale, volume, reboot, pushtotalk, camhoriz; 
 	
 	/** get basic settings */
 	public static Properties createDeaults() {
@@ -32,7 +32,6 @@ public enum GUISettings {
 		config.setProperty(volume.name() , "20");
 		config.setProperty(muteonrovmove.name() , "true"); 
 		config.setProperty(videoscale.name() , "100");
-		config.setProperty(loginnotify.name() , "false");
 		config.setProperty(reboot.name() , "false");
 		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2700");

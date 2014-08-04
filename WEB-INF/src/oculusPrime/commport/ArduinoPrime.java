@@ -121,7 +121,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
     private static final int TURNBOOST = 25; 
 	public int speedfast = 255;
 	public int turnspeed = 255;
-	private static final double GYROCOMP = 1.09;
+//	private static final double GYROCOMP = 1.09;
 		
 	public ArduinoPrime(Application app) {	
 		
@@ -138,9 +138,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
 		state.put(State.values.motorport, portname);
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
-		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
+//		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
 		state.put(State.values.direction, direction.stop.toString());
-		state.put(State.values.gyrocomp, GYROCOMP);
+//		state.put(State.values.gyrocomp, GYROCOMP);
 		
 		setCameraStops(CAM_HORIZ);
 		
@@ -309,9 +309,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		String[] s = response.split(" ");
 
 		if (s[0].equals("moved")) {
-			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * settings.getInteger(ManualSettings.wheeldiameter));
 			double a = Double.parseDouble(s[2]);
-			a *= state.getDouble(State.values.gyrocomp.toString()); // apply comp
+//			a *= state.getDouble(State.values.gyrocomp.toString()); // apply comp
+			a *= settings.getDouble(ManualSettings.gyrocomp.toString());
 			
 			state.set(State.values.distanceangle, d +" "+a);
 			
@@ -526,7 +527,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, true);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
 		int speed1 = (int) voltsComp((double) speedslow);
 		if (speed1 > 255) { speed1 = 255; }
@@ -632,7 +633,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, false);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
 		
 		int speed1 = (int) voltsComp((double) speedslow);
@@ -731,7 +732,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		sendCommand(new byte[] { RIGHT,  (byte) tmpspeed, (byte) tmpspeed });
 //		application.gyroport.sendCommand(RIGHT);
 		state.put(State.values.moving, true);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 	}
 
 	public void turnLeft() {
@@ -770,7 +771,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
 //		application.gyroport.sendCommand(LEFT);
 		state.put(State.values.moving, true);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 	}
 	
 	private class cameraUpTask extends TimerTask {
@@ -1301,7 +1302,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		state.put(State.values.moving, false);
 		state.put(State.values.movingforward, false);
-		if (state.getBoolean(State.values.muteOnROVmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
+		if (settings.getBoolean(GUISettings.muteonrovmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
 
 //		application.gyroport.sendCommand(STOP);
 		sendCommand(STOP);
@@ -1369,7 +1370,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}
 		CAM_MAX = CAM_HORIZ - 50; // 20; 
 		CAM_MIN = CAM_HORIZ + 30; // 100;
-		CAM_REVERSE = CAM_HORIZ + 68; // 152;
+		CAM_REVERSE = CAM_HORIZ + 68; // + 82 for bradz bot!
 	}
 	
 

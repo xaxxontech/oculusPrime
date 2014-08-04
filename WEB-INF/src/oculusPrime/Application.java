@@ -247,7 +247,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		new Discovery(this);
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
-		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
+//		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
 		
@@ -376,7 +376,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			Util.log("playersignin(), " + str, this);
 			loginRecords.beDriver();
 			
-			if (settings.getBoolean(GUISettings.loginnotify)) {
+			if (settings.getBoolean(ManualSettings.loginnotify)) {
 				saySpeech("lawg inn " + state.get(State.values.driver));
 			}
 			
@@ -907,13 +907,13 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	}
 
 	private void muteROVMicOnMoveToggle() {
-		if (state.getBoolean(State.values.muteOnROVmove)) {
-			state.set(State.values.muteOnROVmove, false);
-			settings.writeSettings("muteonrovmove", "false");
+		if (settings.getBoolean(GUISettings.muteonrovmove)) {
+//			state.set(State.values.muteOnROVmove, false);
+			settings.writeSettings(GUISettings.muteonrovmove.toString(), "false");
 			messageplayer("mute ROV onmove off", null, null);
 		} else {
-			state.set(State.values.muteOnROVmove, true);
-			settings.writeSettings("muteonrovmove", "true");
+//			state.set(State.values.muteOnROVmove, true);
+			settings.writeSettings(GUISettings.muteonrovmove.toString(), "true");
 			messageplayer("mute ROV onmove on", null, null);
 		}
 	}
@@ -1480,7 +1480,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		pendingplayerisnull = true;
 		loginRecords.beDriver();
 		
-		if (settings.getBoolean(GUISettings.loginnotify)) {
+		if (settings.getBoolean(ManualSettings.loginnotify)) {
 			saySpeech("lawg inn " + state.get(State.values.driver));
 		}
 	}
@@ -1506,7 +1506,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 		loginRecords.bePassenger(user);
 		
-		if (settings.getBoolean(GUISettings.loginnotify)) {
+		if (settings.getBoolean(ManualSettings.loginnotify)) {
 			saySpeech("passenger lawg inn " + user);
 		}
 	}

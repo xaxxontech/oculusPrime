@@ -122,7 +122,7 @@ public class TelnetServer implements Observer {
 		@Override
 		public void run() {
 			
-			if(settings.getBoolean(GUISettings.loginnotify)) app.saySpeech("lawg inn telnet");
+			if(settings.getBoolean(ManualSettings.loginnotify)) app.saySpeech("lawg inn telnet");
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
 			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
@@ -463,7 +463,7 @@ public class TelnetServer implements Observer {
 		@Override
 		public void run() {
 			
-			if(settings.getBoolean(GUISettings.loginnotify)) app.saySpeech("lawg inn telnet");
+			if(settings.getBoolean(ManualSettings.loginnotify)) app.saySpeech("lawg inn telnet");
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
 			
 			// loop on input from the client

@@ -17,13 +17,12 @@ public class State {
 		driver, logintime, pendinguserconnected,  // rtmp users
 		boottime, localaddress, externaladdress, httpPort, // system
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
-		muteOnROVmove, volume, framegrabbusy, //audio video
+		volume, framegrabbusy, //audio video
 		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
 		gyroport, // TODO: << to be merged
-		wheeldiamm, distanceangle, direction, odometry, gyrocomp,
-		distanceanglettl, stopbetweenmoves, // TODO: << testing only 
+		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves,   
 		
 		;
 	};

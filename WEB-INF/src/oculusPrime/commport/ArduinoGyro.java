@@ -13,6 +13,7 @@ import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
+import oculusPrime.ManualSettings;
 import oculusPrime.State;
 import oculusPrime.Util;
 import oculusPrime.State.values;
@@ -157,7 +158,7 @@ public class ArduinoGyro implements SerialPortEventListener {
 		String[] s = response.split(" ");
 
 		if (s[0].equals("moved")) {
-			int d = (int) (Double.parseDouble(s[1]) * Math.PI * state.getInteger(State.values.wheeldiamm));
+			int d = (int) (Double.parseDouble(s[1]) * Math.PI * 110); // TODO: 110 should be taken from settings
 			double a = Double.parseDouble(s[2]);
 			
 //			if (state.getBoolean(State.values.controlsinverted)) {
