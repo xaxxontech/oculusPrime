@@ -115,7 +115,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static int CAM_MAX; 
 	public static int CAM_MIN;
 	public static int CAM_REVERSE;
-
 	
 	public String portname = settings.readSetting(ManualSettings.motorport);
 	
@@ -546,8 +545,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 //		application.gyroport.sendCommand(FORWARD);
 
-		if (state.get(State.values.direction).equals(direction.forward.toString()) || // pypass accel if already going forward, speed change only 
-				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
+		if (state.get(State.values.direction).equals(direction.forward.toString()) ) { // || // pypass accel if already going forward, speed change only 
+//				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
 			sendCommand(new byte[] { FORWARD, (byte) speed2, (byte) speed2});
 			return;
 		}
@@ -653,8 +652,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 //		application.gyroport.sendCommand(BACKWARD);
 
-		if (state.get(State.values.direction).equals(direction.backward.toString()) || // pypass accel if already going forward, speed change only 
-				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
+		if (state.get(State.values.direction).equals(direction.backward.toString()) ) { // || // pypass accel if already going forward, speed change only 
+//				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
 			sendCommand(new byte[] { BACKWARD, (byte) speed2, (byte) speed2});
 			return;
 		}

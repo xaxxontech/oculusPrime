@@ -384,8 +384,8 @@ public class AutoDock { // implements Observer {
 		int bd = settings.getInteger(ManualSettings.stopdelay.toString());
 		if (bd == Settings.ERROR) bd = 500;
 		final int stopdelay = bd;
-		final int s1FWDmilliseconds = 400;
-		final int s2FWDmilliseconds = 100;
+		final int s1FWDmilliseconds = 700; // 400
+		final int s2FWDmilliseconds = 250; // 100
 		
 		if (w * h < s1) { // mode: quite far away yet, approach only
 			Util.debug("autodock stage 1", this);
