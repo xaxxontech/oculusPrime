@@ -21,7 +21,7 @@ public class State {
 		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
 		
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
-		gyroport, // TODO: << to be merged
+		gyroport, // TODO: << merged, nuke
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves,   
 		
 		;

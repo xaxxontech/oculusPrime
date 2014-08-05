@@ -70,13 +70,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		initialize();
 		state.addObserver(this);
 		
-		
-		// TODO: take action 
-		long last = settings.getLong(ManualSettings.lastboot);
-		Util.log("last booted: " + ((System.currentTimeMillis() - last)/1000), this);
-		
-		//TODO: now alive, write it to file 
-		settings.writeSettings(ManualSettings.lastboot.name(), String.valueOf(System.currentTimeMillis()));
 	}
 
 	@Override

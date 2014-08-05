@@ -7,7 +7,7 @@ import oculusPrime.commport.Discovery;
 /** place extensions to settings here */
 public enum ManualSettings {
 	
-	lastboot, attempts, motorport, powerport, developer, debugenabled, telnetport, commandport,  
+	motorport, powerport, developer, debugenabled, telnetport, commandport,  
 	stopdelay, vself, email_smtp_server, email_smtp_port, email_username, email_password, 
 	email_from_address, wheeldiameter, loginnotify, gyrocomp ; 
 	
@@ -28,9 +28,6 @@ public enum ManualSettings {
 		config.setProperty(email_password.name(), Settings.DISABLED);
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
 		config.setProperty(commandport.name(), Settings.DISABLED);
-		config.setProperty(attempts.name(), "0");
-		config.setProperty(lastboot.name(), "0");
-		config.setProperty(lastboot.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "110");
 		config.setProperty(loginnotify.name() , "false");
