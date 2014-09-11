@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.Vector;
 
 import oculusPrime.PlayerCommands.RequiresArguments;
+import oculusPrime.State.values;
 
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 
@@ -23,7 +24,7 @@ public class TelnetServer implements Observer {
 	public Vector<PrintWriter> printers = new Vector<PrintWriter>();
 	
 	private oculusPrime.State state = oculusPrime.State.getReference();
-	private oculusPrime.Settings settings =Settings.getReference();
+	private oculusPrime.Settings settings = Settings.getReference();
 	private BanList banlist = BanList.getRefrence();
 	
 	private static ServerSocket serverSocket = null;  	
@@ -40,20 +41,17 @@ public class TelnetServer implements Observer {
 		
 		public ConnectionHandler(Socket socket) {
 		
-			clientSocket = socket; // check if banned 
-			final String ip = socket.getInetAddress().toString().substring(1);
+			clientSocket = socket;  
 			
-			if (banlist.isBanned(ip)){
-			
-				try {
-					socket.close();
-				} catch (IOException e) {
-					Util.log("banned IP error: " + e.getLocalizedMessage(), this);
+			// check if banned
+			if (banlist.isBanned(clientSocket)){ 
+				try { socket.close(); } catch (Exception e) {
+					Util.log("ConnectionHandler(), banned IP error", e, this);
 				}		
-				
 				return;
 			}
 			
+			// connect 
 			try {
 			
 				in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -61,32 +59,45 @@ public class TelnetServer implements Observer {
 			
 			} catch (IOException e) {	
 				shutDown("fail aquire tcp streams: " + e.getMessage(), out, in, clientSocket);
-				banlist.failed(ip); 
 				return;
 			}
-	
-			// send banner to terminal
-			sendToSocket("Welcome to Oculus build " + new Updater().getCurrentVersion(), out); 
-			sendToSocket("LOGIN with admin user:password OR user:encrypted_password", out);
-			
-			try {
 				
-				// first thing better be user:pass
+			// send banner to terminal
+			if(settings.getBoolean(ManualSettings.diagnostic)){
+				state.set(values.driver, ManualSettings.diagnostic.name());
+				user = ManualSettings.diagnostic.name();
+			} else {
+				sendToSocket("Welcome to Oculus build " + new Updater().getCurrentVersion(), out); 
+				sendToSocket("LOGIN with admin user:password OR user:encrypted_password", out);
+				if( ! authenticate(socket)) return; // failure 
+			}
+			
+			printers.add(out);	
+			sendToSocket(user + " connected via socket", out);
+			Util.log(user+" connected via socket", this);
+			this.start();
+		}
+		
+		private boolean authenticate(Socket socket){
+			try {	
+				
 				final String inputstr = in.readLine();
 				if(inputstr.indexOf(':')<=0) {
-					banlist.failed(ip);
+					banlist.failed(socket); // first thing better be user:pass
 					shutDown("login failure, formatting incorrect", out, in, clientSocket);
-					return;
+					return false;
 				}
 				
 				user = inputstr.substring(0, inputstr.indexOf(':')).trim();
 				pass = inputstr.substring(inputstr.indexOf(':')+1, inputstr.length()).trim();
-								
-				if(ADMIN_ONLY) if( ! user.equals(settings.readSetting("user0"))) {
-					banlist.failed(ip);
-					shutDown("must be ADMIN user for telnet", out, in, clientSocket);
+						
+				if(ADMIN_ONLY) {
+					if( ! user.equals(settings.readSetting("user0"))) {
+						banlist.failed(socket);
+						shutDown("must be ADMIN user for telnet", out, in, clientSocket);
+					}
 				}
-							
+				
 				// try salted 
 				if(app.logintest(user, pass)==null){
 				
@@ -98,24 +109,17 @@ public class TelnetServer implements Observer {
 					
 					// try plain text 
 					if(app.logintest(user, encryptedPassword)==null){
-	
-						banlist.failed(ip); 
+						banlist.failed(socket); 
 						shutDown("this is a banned IP address: " + socket.getInetAddress().toString(), out, in, clientSocket);
-						return;
+						return false;
 					}
-				
-				}
+				}		
 			} catch (Exception ex) {
-				banlist.failed(ip); 
 				shutDown("command server connection fail: " + ex.getMessage(), out, in, clientSocket);
-				return;
+				return false;
 			}
 	
-			// keep track of all other user sockets output streams			
-			printers.add(out);	
-			sendToSocket(user + " connected via socket", out);
-			Util.log(user+" connected via socket", this);
-			this.start();
+			return true;
 		}
 		
 		/** do the client thread */
@@ -159,10 +163,7 @@ public class TelnetServer implements Observer {
 			// close up, must have a closed socket  
 			shutDown("user disconnected", out, in, clientSocket);
 		}	
-
 	} // end inner class
-
-	
 	
 	// close resources
 	private void shutDown(final String reason, PrintWriter out, BufferedReader in, Socket clientSocket) {
@@ -280,9 +281,7 @@ public class TelnetServer implements Observer {
 			String args = new String(); 		
 			for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
 			if(args.length()>1)
-				app.playerCallServer(PlayerCommands.chat, 
-						/*"<i>" + user.toUpperCase() + "</i>:" + */ 
-						args);
+				app.playerCallServer(PlayerCommands.chat, args);
 			return true;
 		
 		case bye: 

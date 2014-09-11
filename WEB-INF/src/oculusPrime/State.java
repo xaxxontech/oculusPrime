@@ -6,8 +6,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
-import oculusPrime.PlayerCommands.AdminCommands;
-
 public class State {
 	
 	public enum values{ 
@@ -15,14 +13,16 @@ public class State {
 		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
 		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
-		boottime, localaddress, externaladdress, httpPort, // system
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
 		volume, framegrabbusy, //audio video
 		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
-		
+		boottime, httpPort, // system
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
-		gyroport, // TODO: << merged, nuke
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves,   
+		
+		localaddress, externaladdress, // network things 
+		signalnoise, signalstrength, singlalquality, signalSpeed, ssid, gateway,
+		// TODO: brad just added 
 		
 		;
 	};
@@ -30,10 +30,10 @@ public class State {
 	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
 	public enum booleanValues{ moving, movingforward, autodocking, docking, batterycharging, framegrabbusy, dockgrabbusy, motionenabled, 
 		floodlighton, driverstream, muteOnROVmove, controlsinverted, strobeflashon,
-		odometry, stopbetweenmoves, };
+		odometry, stopbetweenmoves, diagnosticmode};
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
-	public enum nonTelnetBroadcast { batteryinfo; };	
+	public enum nonTelnetBroadcast { batterycharging, batterylife, sysvolts, batteryinfo; };	
 		
 	public static final int ERROR = -1;
 
@@ -52,22 +52,9 @@ public class State {
 
 	/** private constructor for this singleton class */
 	private State() {
-		props.put(values.boottime.name(), String.valueOf(System.currentTimeMillis()));
-		props.put(values.localaddress.name(), Util.getLocalAddress());
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				String ip = null; 
-				while(ip==null){
-					ip = Util.getExternalIPAddress();
-					if(ip!=null)
-						State.getReference().set(values.externaladdress.name(), ip);
-					else Util.delay(500); // TODO: is this dangerous, cause a hang if fails??  
-				}
-			}
-		}).start();
+		props.put(values.boottime.name(), String.valueOf(System.currentTimeMillis()));	
 	}
-	 
+	
 	
 	public Properties getProperties(){
 		return (Properties) props.clone();

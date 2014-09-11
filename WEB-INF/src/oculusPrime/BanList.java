@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -73,6 +74,11 @@ public class BanList {
 		}	
 	}
 	
+	public synchronized boolean isBanned(Socket socket) {
+		final String address = socket.getInetAddress().toString().substring(1);
+		return isBanned(address);
+	}
+	
 	public synchronized boolean isBanned(String address) {
 	
 		if(list.isEmpty()) return false;
@@ -114,6 +120,12 @@ public class BanList {
 				}
 			}		
 		}
+	}
+	
+
+	public void failed(Socket socket) {
+		final String address = socket.getInetAddress().toString().substring(1);
+		failed(address);
 	}
 
 	public synchronized void failed(String remoteAddress) {

@@ -64,7 +64,7 @@ public class LoginRecords {
 
 	}
 	
-	/** @return the number of users waiting in line */
+	/** @return the number of users waiting in line 
 	private int getNumPassengers() {
 		int passengers = 0;
 		for (int i = 0; i < list.size(); i++){
@@ -74,7 +74,7 @@ public class LoginRecords {
 		}
 
 		return passengers;
-	}
+	}*/
 
 	/** @return the number of users */
 	public int getActive() {
@@ -159,10 +159,6 @@ public class LoginRecords {
 		Record(String usr, String role){
 			this.user = usr;
 			this.role = role;
-		}
-
-		public String getUser() {
-			return user;
 		}
 		
 		public String getRole() {

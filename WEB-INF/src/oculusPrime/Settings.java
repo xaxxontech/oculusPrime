@@ -22,9 +22,7 @@ public class Settings {
 	/** reference to this singleton class */
 	private static Settings singleton = null;
 	public static Settings getReference() {
-		if (singleton == null) {
-			singleton = new Settings();
-		}
+		if (singleton == null) singleton = new Settings();
 		return singleton;
 	}
 	
@@ -133,7 +131,7 @@ public class Settings {
 					if ((items[0].toUpperCase()).equals(str.toUpperCase())) {
 						result = items[1];
 					}
-				} else throw new Exception("can NOT readSetting("+str+")");
+				} // else throw new Exception("can NOT readSetting("+str+")");
 			}
 			reader.close();
 			filein.close();

@@ -50,6 +50,8 @@ public class Discovery {
 		
 		application = app;
 		
+		if(settings.getBoolean(ManualSettings.diagnostic)) return;
+		
 		getAvailableSerialPorts();
 		
 		if(ports.size() == 0){

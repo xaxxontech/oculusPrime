@@ -222,7 +222,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		Util.debug("serial in: " + response, this);
+		// TODO: brad ... removed... for resting... 
+		// Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);

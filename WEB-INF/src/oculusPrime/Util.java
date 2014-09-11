@@ -9,11 +9,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.Vector;
 
@@ -57,10 +54,6 @@ public class Util {
 		}
 	}
 
-
-	/*
-	 * 
-	 */
 	public static String getTime() {
         Date date = new Date();
 		return date.toString();
@@ -130,7 +123,7 @@ public class Util {
 	 * <p/>
 	 * ie: formatFloat(1.1666, 1) -> 1.2 ie: formatFloat(3.1666, 2) -> 3.17 ie:
 	 * formatFloat(3.1666, 3) -> 3.167
-	 */
+	
 	public static String formatString(String number, int precision) {
 
 		String text = number;
@@ -153,7 +146,7 @@ public class Util {
 		}
 
 		return text;
-	}
+	} */
 
 	public static boolean copyfile(String srFile, String dtFile) {
 		try {
@@ -196,10 +189,11 @@ public class Util {
 			BufferedReader procReader = new BufferedReader(
 					new InputStreamReader(proc.getInputStream()));
 
-			// String line = null;
+			String line = null;
 			System.out.println(proc.hashCode() + "OCULUS: exec():  " + args);
-			while (/*(line = */procReader.readLine() != null)
-				// System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
+			while ((line = procReader.readLine()) != null)
+				System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
+			
 			proc.waitFor(); // required for linux else throws process hasn't terminated error
 			System.out.println("OCULUS: process exit value = " + proc.exitValue());
 			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
@@ -241,7 +235,7 @@ public class Util {
 
 	/**
 	 * @return this device's external IP address is via http lookup, or null if fails 
-	 */ 
+	
 	public static String getExternalIPAddress(){
 
 		String address = null;
@@ -271,18 +265,18 @@ public class Util {
 		
 		// all good 
 		return address;
-	}
+	} */ 
 
     /**
      * @return the local host's IP, null on error
-     */
+     
     public static String getLocalAddress(){
             try {
                     return (InetAddress.getLocalHost()).getHostAddress();
             } catch (UnknownHostException e) {
                     return null;
             }
-    }
+    }*/
 	
 	
 //	/** @return a list of ip's for this local network */ 
@@ -344,13 +338,13 @@ public class Util {
 	 * 
 	 * @param str
 	 * 				is the phrase to turn from text to speech 
-	 */
+	 
 	public static void beep() {
 		if(Settings.os.equals("windows")){
 			systemCall("nircmdc.exe beep 500 1000");
 		}else log("need linux beep"); 
 		// TODO: linux beep
-	}
+	}*/
 	
 	public static String tail(int lines) {
 		Vector<String> alllines = new Vector<String>();
@@ -395,6 +389,10 @@ public class Util {
         }
     }
 	
+	public static void log(String method, Exception e, Object c) {
+		log(method + ": " + e.getLocalizedMessage(), c);
+	}
+
 	public static void log(String str, Object c) {
 		System.out.println("OCULUS: " + getTime() + ", " + c.getClass().getName() + ", " +str);
 	}
