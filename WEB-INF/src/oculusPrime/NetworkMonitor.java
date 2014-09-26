@@ -14,9 +14,9 @@ public class NetworkMonitor implements Observer {
 	/// protected static final long FAST_POLL_DELAY_MS = 500;
 	
 	protected static final long HTTP_REFRESH_DELAY_SECONDS = 5;
-	protected static final long WAN_POLL_DELAY_MS = 5000; // Util.ONE_DAY;
+	protected static final long WAN_POLL_DELAY_MS = 90000; // Util.ONE_DAY;
 	// protected static final long WIFI_CONNECT_TIMEOUT_MS = 60000;
-	protected static final long WIFI_POLL_DELAY_MS = 3000;
+	protected static final long WIFI_POLL_DELAY_MS = 9000;
 
 	protected static final String WLAN = "wlan0";
 	protected static final String ETH = "eth0";
@@ -236,23 +236,15 @@ public class NetworkMonitor implements Observer {
 				
 			if(line.contains("State: ")){
 				if(line.contains("unavailable")){
-				
-					Util.debug("\n .. parseETH: NOT available", this);
-					
 					if(state.contains(values.ethernetaddress)){
-						Util.debug("... parseETH:.... del from state ..... ", this);
+						Util.debug("\n .. parseETH: NOT available", this);
 						state.delete(values.ethernetaddress);
 					}
 					
-					if(state.contains(values.externaladdress)){
-						Util.debug("... parseETH:.... has an exteral address ", this);
-						// state.delete(values.externaladdress);
-					}
-					
-					if(state.contains(values.ssid)){
-						Util.debug("... parseETH:.... has an ssid address ", this);
-						// state.delete(values.externaladdress);
-					}
+					// if(state.contains(values.externaladdress)){
+					//	Util.debug("... parseETH:.... has an exteral address ", this);
+					// state.delete(values.externaladdress);
+					// }
 					
 					return;
 				}
@@ -420,7 +412,7 @@ public class NetworkMonitor implements Observer {
 
 			Util.debug("validateNetwork: " + state.get(values.externaladdress), this);
 
-			Process proc = Runtime.getRuntime().exec(new String[]{"ping", "-c", "10", state.get(values.externaladdress)});
+			Process proc = Runtime.getRuntime().exec(new String[]{"ping", "-c", "1", state.get(values.externaladdress)});
 			BufferedReader procReader = new BufferedReader(
 				new InputStreamReader(proc.getInputStream()));
 						

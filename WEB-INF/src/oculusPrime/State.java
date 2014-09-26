@@ -390,17 +390,21 @@ public class State {
 
 	public boolean contains(values arg) {
 		
-		if(props.containsKey(arg))
-			Util.debug("contains: " + arg.toString(), this);
-		else 			
-			Util.debug("contains: not: " + arg.toString(), this);
+		boolean exist = false;
+		if(get(arg) != null) exist = true;
+		
+		// if(exist) Util.debug("-..contains: " + arg.name() + " props: " + get(arg), this);
+		// else Util.debug("-..contains: not: " + arg.name() + " props: " + get(arg), this);
 
-			
+		return exist;
+		
+		/* doesn't work... crazy dangerous bad ... invetigate 
+		if(props.containsKey(arg)) Util.debug("contains: " + arg.name() + " props: " + props.get(arg), this);
+		else Util.debug("contains: not: " + arg.name() + " props: " + props.get(arg), this);
 		return props.containsKey(arg);
+		*/
+		
 	}
 
-	//public boolean exists(values key) {
-	//	return exists(key.name());
-	//}
 	
 }
