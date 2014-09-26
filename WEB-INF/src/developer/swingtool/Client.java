@@ -48,7 +48,7 @@ public class Client {
 			ip = "127.0.0.1";
 			user = settings.readSetting("user0");
 			pass = settings.readSetting("pass0");
-			port = settings.getInteger(ManualSettings.commandport); 
+			port = settings.getInteger(ManualSettings.telnetport); 
 		
 		}
 		

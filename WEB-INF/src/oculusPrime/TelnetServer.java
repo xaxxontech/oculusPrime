@@ -28,7 +28,7 @@ public class TelnetServer implements Observer {
 	private BanList banlist = BanList.getRefrence();
 	
 	private static ServerSocket serverSocket = null;  	
-	private static ServerSocket telnetSocket = null;  	
+	// private static ServerSocket telnetSocket = null;  	
 	private static Application app = null;
 	
 	/** Threaded client handler */
@@ -44,11 +44,13 @@ public class TelnetServer implements Observer {
 			clientSocket = socket;  
 			
 			// check if banned
-			if (banlist.isBanned(clientSocket)){ 
-				try { socket.close(); } catch (Exception e) {
-					Util.log("ConnectionHandler(), banned IP error", e, this);
-				}		
-				return;
+			if(! settings.getBoolean(ManualSettings.diagnostic)){
+				if (banlist.isBanned(clientSocket)){ 
+					try { socket.close(); } catch (Exception e) {
+						Util.log("ConnectionHandler(), banned IP error", e, this);
+					}		
+					return;
+				}
 			}
 			
 			// connect 
@@ -63,9 +65,10 @@ public class TelnetServer implements Observer {
 			}
 				
 			// send banner to terminal
-			if(settings.getBoolean(ManualSettings.diagnostic)){
+			if(settings.getBoolean(ManualSettings.diagnostic)){	
 				state.set(values.driver, ManualSettings.diagnostic.name());
 				user = ManualSettings.diagnostic.name();
+				state.delete(values.motionenabled);			
 			} else {
 				sendToSocket("Welcome to Oculus build " + new Updater().getCurrentVersion(), out); 
 				sendToSocket("LOGIN with admin user:password OR user:encrypted_password", out);
@@ -374,20 +377,18 @@ public class TelnetServer implements Observer {
 			}
 		}).start();
 		
-		/** local connections */
+		/** local connections 
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
 				while(! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) 
 					startLocalListener();
 			}
-		}).start();
+		}).start();*/
 	}
 	
-	/** do forever */ 
+	/** do forever 
 	private void startLocalListener(){
-
-		/**/
 		final Integer port = settings.getInteger(ManualSettings.telnetport);
 		try {
 			telnetSocket = new ServerSocket(port);
@@ -414,7 +415,7 @@ public class TelnetServer implements Observer {
 				return;	
 			}
 		}
-	}
+	}*/
 	
 	/** Threaded client handler {*/ 
 	class LocalConnectionHandler extends Thread {
@@ -505,7 +506,7 @@ public class TelnetServer implements Observer {
 	private void startCommandListener(){
 		
 		try {
-			serverSocket = new ServerSocket(settings.getInteger(ManualSettings.commandport));
+			serverSocket = new ServerSocket(settings.getInteger(ManualSettings.telnetport));
 		} catch (Exception e) {
 			Util.log("server sock error: " + e.getMessage(), this);
 			return;

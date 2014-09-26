@@ -21,7 +21,7 @@ public class State {
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves,   
 		
 		localaddress, externaladdress, // network things 
-		signalnoise, signalstrength, singlalquality, signalSpeed, ssid, gateway,
+		signalnoise, signalstrength, singlalquality, signalspeed, ssid, gateway, ethernetaddress,
 		// TODO: brad just added 
 		
 		;
@@ -285,12 +285,12 @@ public class State {
 	
 	/** @return the ms since last boot */
 	public long getUpTime(){
-		return System.currentTimeMillis() - getLong(values.boottime.name());
+		return System.currentTimeMillis() - getLong(values.boottime);
 	}
 	
 	/** @return the ms since last user log in */
 	public long getLoginSince(){
-		return System.currentTimeMillis() - getLong(values.logintime.name());
+		return System.currentTimeMillis() - getLong(values.logintime);
 	}
 
 	/** */
@@ -387,5 +387,20 @@ public class State {
 		
 		return true; 
 	}
+
+	public boolean contains(values arg) {
+		
+		if(props.containsKey(arg))
+			Util.debug("contains: " + arg.toString(), this);
+		else 			
+			Util.debug("contains: not: " + arg.toString(), this);
+
+			
+		return props.containsKey(arg);
+	}
+
+	//public boolean exists(values key) {
+	//	return exists(key.name());
+	//}
 	
 }

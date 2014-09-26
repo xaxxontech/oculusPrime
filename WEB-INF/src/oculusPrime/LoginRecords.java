@@ -183,8 +183,8 @@ public class LoginRecords {
 		public void logout() {
 			if(timeout==0){
 				timeout = System.currentTimeMillis();
-				Util.debug("logged out : " + toString(), this);
-			} else Util.log("error: trying to logout twice", this);	
+				Util.debug(toString(), this);
+			} // else Util.log("error: trying to logout twice", this);	
 		}
 	}
 }

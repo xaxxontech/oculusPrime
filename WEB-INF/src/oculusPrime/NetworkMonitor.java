@@ -9,18 +9,23 @@ import java.util.Vector;
 
 import oculusPrime.State.values;
 
-public class NetworkMonitor {
+public class NetworkMonitor implements Observer {
 
 	/// protected static final long FAST_POLL_DELAY_MS = 500;
-	protected static final long WAN_POLL_DELAY_MS = Util.ONE_DAY;
-	protected static final long WIFI_POLL_DELAY_MS = 17000;
-	protected static final long WIFI_CONNECT_TIMEOUT_MS = 60000;
+	
 	protected static final long HTTP_REFRESH_DELAY_SECONDS = 5;
-	protected static final String WLAN = "wlan0";
-	// protected static final String ETH = "eth0";
+	protected static final long WAN_POLL_DELAY_MS = 5000; // Util.ONE_DAY;
+	// protected static final long WIFI_CONNECT_TIMEOUT_MS = 60000;
+	protected static final long WIFI_POLL_DELAY_MS = 3000;
 
-	private Vector<String> wlanData = new Vector<String>();
+	protected static final String WLAN = "wlan0";
+	protected static final String ETH = "eth0";
+	
 	private static Vector<String> accesspoints = new Vector<String>();
+	private Vector<String> networkData = new Vector<String>();
+	private Vector<String> wlanData = new Vector<String>();
+	private Vector<String> ethData = new Vector<String>();
+
 	public static State state = State.getReference();
 	private static NetworkMonitor singleton = null;
 
@@ -31,9 +36,14 @@ public class NetworkMonitor {
 
 	private NetworkMonitor(){
 		// getSSID();
-		startWLAN();
-		getSignalQuality();
-		pollExternalAddress();
+		
+		startNetworkTool();
+		//getSignalQuality();
+				
+		pollExternalAddress();	
+		
+		state.addObserver(this);
+
 	}
 	
 	public void getSSID(){
@@ -125,7 +135,7 @@ public class NetworkMonitor {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {		
-				while(true){
+				while(true){				
 					updateExternalIPAddress();	
 					Util.delay(WAN_POLL_DELAY_MS);									
 				}
@@ -134,69 +144,199 @@ public class NetworkMonitor {
 	}
 	
 	public static boolean isSSID(final String line){
-		return line.contains("Strength");
+		return line.contains("Strength") && line.contains("Freq");
 	}
 	
 	public static boolean isCurrentSSID(String line){
 		if( ! isSSID(line)) return false;
-		return line.trim().startsWith("*");
+	
+		//if( ! state.contains(values.ssid)) return false;
+		
+		line = line.trim();
+		if(line.startsWith("*")) return line.contains(state.get(values.ssid));
+	
+		return line.startsWith("*");
 	}
 	
-	private void updateWLAN(){
+	private void readWAN(){
+		for(int i = 0 ; i < networkData.size() ; i++){		
+			String line = networkData.get(i);
+			if(line.startsWith("- Device: " + WLAN)){	
+				try { // fails on [xxxxx] if disconnected 
+					String ss = line.substring((line.indexOf('[')+1), line.indexOf(']'));
+					if( ! state.equals(values.ssid, ss)) state.set(values.ssid, ss);
+				} catch (Exception e) {
+					disconnecteddWAN();
+				}
+								
+				wlanData.clear();
+				for(int j = i+1 ; j < networkData.size() ; j++){
+					if(networkData.get(j).contains("- Device")) return;
+					else wlanData.add(networkData.get(j));
+				}
+			}	
+		}
+	}
+	
+	private void readETH() { 
+		for(int i = 0 ; i < networkData.size() ; i++){		
+			String line = networkData.get(i);
+			if(line.startsWith("- Device: " + ETH)) {				
+				ethData.clear();
+				for(int j = i+1 ; j < networkData.size() ; j++){
+					if(networkData.get(j).contains("- Device")) return;
+					else ethData.add(networkData.get(j));
+				}
+			}
+		}
+			
+		// Util.debug("readETH: " + ethData.size(), this);
+		// for(int i = 0 ; i < ethData.size() ; i++) Util.debug("readETH: " + i + " " + ethData.get(i), this);
+	}
+	
+	private void callNetworkTool(){
 		try {
 								
 			Process proc = Runtime.getRuntime().exec(new String[]{"nm-tool"});
 			BufferedReader procReader = new BufferedReader(
 				new InputStreamReader(proc.getInputStream()));
 						
-			wlanData.clear();
+			networkData.clear();
+			
 			String line = null;
 			while ((line = procReader.readLine()) != null){
-				if(line.startsWith("- Device: " + WLAN)){	
-					
-					state.set(values.ssid, line.substring((line.indexOf('[')+1), line.indexOf(']')));
-				
-					while(true){
-						line = procReader.readLine();
-						if(line == null) break;
-						if(line.startsWith("- Device:")) break;
-						
-						line = line.trim();
-						if(line.length()>0) 
-							if( ! wlanData.contains(line))
-								wlanData.add(line);
-					}
-				}
+				line = line.trim();
+				if(line.length()>0) 
+					if( ! networkData.contains(line))
+						if(line.contains(":"))
+							networkData.add(line);
 			}
-			
+		
 			proc.waitFor();
 			
 		} catch (Exception e) {
-			System.out.println("getWIFI: " + e.getLocalizedMessage());
+			System.out.println("callNetworkTool: " + e.getLocalizedMessage());
 		}		
+		
+		// Util.debug("callNetworkTool: lines copied: " + networkData.size(), this);
 	}
 	
-	private void parseWLAN(){
-		for(int i = 0 ; i < wlanData.size() ; i++){
-			
-			if(isCurrentSSID(wlanData.get(i))) wlanData.remove(i);			
-			
-			if(wlanData.get(i).contains("Speed: "))
-				state.set(values.signalSpeed, wlanData.get(i).substring(wlanData.indexOf("Speed: ")+7).trim());
-							
-			if(isSSID(wlanData.get(i))) 
-				if( ! accesspoints.contains(wlanData.get(i))) //TODO:.substring(0, 5)))??
-					accesspoints.add(wlanData.get(i));
-			
-			if(wlanData.get(i).startsWith("Address: "))
-				state.set(values.localaddress, wlanData.get(i).substring(wlanData.get(i).indexOf("Address: ")+9).trim());
+	private void disconnecteddWAN(){	
+		state.delete(values.ssid);
+		state.delete(values.localaddress);
+		state.delete(values.signalnoise);
+		state.delete(values.signalspeed);
+		state.delete(values.signalstrength);
+	}
+
+	private void parseETH(){
+		for(int i = 0 ; i < ethData.size() ; i++){
 		
-			if(wlanData.get(i).startsWith("Gateway: "))
-				state.set(values.gateway, wlanData.get(i).substring(wlanData.get(i).indexOf("Gateway: ")+9).trim());
-		
-		}
+			String line = ethData.get(i);
 				
-		getAccessPoints();
+			if(line.contains("State: ")){
+				if(line.contains("unavailable")){
+				
+					Util.debug("\n .. parseETH: NOT available", this);
+					
+					if(state.contains(values.ethernetaddress)){
+						Util.debug("... parseETH:.... del from state ..... ", this);
+						state.delete(values.ethernetaddress);
+					}
+					
+					if(state.contains(values.externaladdress)){
+						Util.debug("... parseETH:.... has an exteral address ", this);
+						// state.delete(values.externaladdress);
+					}
+					
+					if(state.contains(values.ssid)){
+						Util.debug("... parseETH:.... has an ssid address ", this);
+						// state.delete(values.externaladdress);
+					}
+					
+					return;
+				}
+			}
+			
+			if(line.contains("Address: ") && !line.startsWith("HW")){
+				String addr = line.substring(line.indexOf("Address: ")+9).trim();
+				// Util.debug("parseETH: address: " + addr, this);
+				if( ! state.equals(values.ethernetaddress, addr))
+					state.set(values.ethernetaddress, addr); 			
+			}
+
+			/*
+			if(line.contains("Type: ")){
+				String type = line.substring(line.indexOf("Type: ")+5).trim();
+				Util.debug("parseETH: type: " + type, this);			
+			}
+			*/
+			/*
+			if(line.contains("HW Address: ")){
+				String speed = line.substring(line.indexOf("HW Address: ")+12).trim();
+				Util.debug("parseETH: mac: " + speed, this);
+			}
+			*/
+		}
+	}
+
+	private void parseWLAN(){
+		
+		// Util.debug("parseWLAN: " + wlanData.size(), this);
+		
+		for(int i = 0 ; i < wlanData.size() ; i++){
+		
+			String line = wlanData.get(i);
+			
+			if(isCurrentSSID(line)) 
+				if( ! accesspoints.contains(line)) 
+					accesspoints.add(line.substring(1));
+			
+			if(isSSID(line) && !isCurrentSSID(line)) 
+				if( ! accesspoints.contains(line)) 
+					accesspoints.add(line);
+			
+			if(line.contains("Speed: ")){
+				String speed = line.substring(line.indexOf("Speed: ")+7).trim();
+				// Util.debug("parseWLAN: speed: " + speed, this);
+				if( ! state.equals(values.signalspeed, speed))
+					state.set(values.signalspeed, speed); 			
+			}
+			
+			if(wlanData.get(i).startsWith("Address: ")){
+				String addr = line.substring(line.indexOf("Address: ")+9).trim();
+				// Util.debug("parseWLAN: addr: " + addr, this);
+				if( ! state.equals(values.localaddress, addr))
+					state.set(values.localaddress, addr);
+			}
+			
+			if(line.startsWith("Gateway: ")){
+				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
+				// Util.debug("parseWLAN: gate: " + gate, this);
+				if(state.contains(values.gateway)) 
+					if( ! state.get(values.gateway).equals(gate))
+						state.set(values.gateway, gate);
+			}
+			
+			
+			/*	
+			if(line.startsWith("State:")){
+				
+				// Util.debug(".... parseWLAN: found wireless state: " + line, this);
+
+				if(line.contains("disconnected")){
+				
+					// state.delete(values.ssid);
+					disconnecteddWAN();
+					Util.debug(".......... parseWLAN: ssid is disconected, delete...", this);
+					
+				}
+			}
+			*/
+			
+		}			
+		
+		// getAccessPoints();
 	}
 	
 	public String[] getAccessPoints(){
@@ -211,25 +351,32 @@ public class NetworkMonitor {
 		String[] result = new String[aps.size()];
 		for(int j = 0 ; j < aps.size() ; j++) 
 			result[r++] = aps.get(j);
-		
-		for(int i = 0; i < result.length ; i++)
-			System.out.println(r + "\t" + result[--r]);
+				
+		Util.debug("getAccessPoints: found [" + result.length + "] wifi routers", this);
+		// for(int i = 0; i < result.length ; i++) Util.debug((i + "\t" + result[i]), this);
 		
 		return result;
 	}
 	
-	public void startWLAN(){
+	public void startNetworkTool(){
 		new Thread(new Runnable() {
 			@Override
 			public void run() {	
 				while(true){
 					try {
-						// Util.delay(WIFI_POLL_DELAY_MS);
-						updateWLAN();
+						
+						callNetworkTool();
+						
+						readWAN();
 						parseWLAN();
+						
+						readETH();
+						parseETH();
+						
 						Util.delay(WIFI_POLL_DELAY_MS);
+						
 					} catch (Exception e) {
-						Util.log("startWLAN()", e, this);
+						Util.log("startNetworkTool()", e, this);
 					}
 				}
 			}
@@ -239,11 +386,11 @@ public class NetworkMonitor {
 	public void updateExternalIPAddress(){
 		try {
 			
-			String address = "";
 			URLConnection connection = (URLConnection) new URL("http://checkip.dyndns.org/").openConnection();
 			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 
-			int i;
+			int i;			
+			String address = "";
 			while ((i = in.read()) != -1) address += (char)i;
 			in.close();
 
@@ -253,11 +400,73 @@ public class NetworkMonitor {
 			
 			// TODO: Page could disappear, or change format ... should test valid IP  
 			state.put(values.externaladdress, address);
+			
+			validateNetwork();
 		
 		} catch (Exception e) {
 			Util.log("updateExternalIPAddress()", e, this);
+			state.delete(values.externaladdress);
 		}
 	}
 	
-	// public static void main(String[] args) { new NetworkMonitor(); }
+	private void validateNetwork(){
+		
+		if( ! state.contains(values.externaladdress)) {
+			Util.debug("validateNetwork: manage this situation...." , this);
+			return;
+		}
+		
+		try {
+
+			Util.debug("validateNetwork: " + state.get(values.externaladdress), this);
+
+			Process proc = Runtime.getRuntime().exec(new String[]{"ping", "-c", "10", state.get(values.externaladdress)});
+			BufferedReader procReader = new BufferedReader(
+				new InputStreamReader(proc.getInputStream()));
+						
+			String line = null;
+			while ((line = procReader.readLine()) != null){
+				
+				Util.debug(" -- "+line, this);
+				
+				if(line.contains("Netork is unreachable"))
+					Util.debug("validateNetwork: ............... very dangerous", this);
+			
+			}
+			
+			proc.waitFor();
+			
+		} catch (Exception e) {
+			System.out.println("validateNetwork: " + e.getLocalizedMessage());
+		}		
+	}
+
+	@Override
+	public void updated(String key) {
+		
+		Util.debug("---- state updated: " + key, this);
+
+		if (key.equals(values.ethernetaddress.name())) {
+
+			Util.debug("eth updated: " + key + " = "+ state.get(key) , this);
+			
+			
+		}
+		
+		
+		if (key.equals(values.ssid.name())) {
+			
+			// Util.debug("updated: " + key, this);
+			
+			if( ! state.contains(State.values.ssid)) {
+				Util.debug(".......... contains ssid: " + state.get(key), this);
+			}
+		}
+		
+	}
+	
+	public static void main(String[] args) {
+		System.out.println("...... starting up.....");
+		new NetworkMonitor(); 
+	}
 }

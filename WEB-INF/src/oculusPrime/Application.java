@@ -249,8 +249,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			stereo = new developer.depth.Stereo();
 		}
 	
-		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) commandServer = new TelnetServer(this);
-			
+		if ( ! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) {
+			commandServer = new TelnetServer(this);
+			Util.debug("............ cmd server started.....", this);
+		}
+		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
