@@ -44,7 +44,7 @@ public enum PlayerCommands { // all valid commands
     analogwrite, digitalread, motorsreset, cameracommand, cameratoposition, holdservo, 
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, slide, forward, backward, left, right, 
-    odometrystart, odometryreport, odometrystop,
+    odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
     // lights
     strobeflash, spotlight, spotlightsetbrightness, floodlight, fwdflood;
 	

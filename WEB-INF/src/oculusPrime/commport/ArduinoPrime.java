@@ -35,7 +35,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
-	public static final long DEAD_TIME_OUT = 30000;
+	public static final long DEAD_TIME_OUT = 60000;
 	public static final int WATCHDOG_DELAY = 5000;	
 	public static final long RESET_DELAY = 14400000; // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
@@ -48,7 +48,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte BACKWARD = 'b';
 	public static final byte LEFT = 'l';
 	public static final byte RIGHT = 'r';
-	public static final byte HARD_STOP = 'h';
+	public static final byte LEFTTIMED = 'z';
+	public static final byte RIGHTTIMED = 'e';
+	public static final byte HARD_STOP = 'h'; // TODO: unused
 	
 	public static final byte FLOOD_LIGHT_LEVEL = 'o'; 
 	public static final byte SPOT_LIGHT_LEVEL = 'p';
@@ -199,12 +201,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				long now = System.currentTimeMillis();
 				
 //				if (isconnected) Util.debug("watchdog",this);
-				if (now - lastReset > RESET_DELAY && isconnected) Util.debug("past reset delay", this); 
-
-//				if (now - lastRead > DEAD_TIME_OUT) {
-//					application.message("motors PCB timeout, attempting reset", null, null);
-//					reset();
-//				}
+				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" past reset delay", this);
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
@@ -215,6 +212,16 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					// application.message("battery board periodic reset", "battery", "resetting");
 					Util.log("motors board periodic reset", this);
 					reset();
+				}
+
+				if (now - lastSent > DEAD_TIME_OUT && isconnected) {
+					sendCommand(GET_PRODUCT); // ping
+					long delay = 10L;
+					Util.delay(delay);
+					if (now + delay - lastRead > delay && isconnected) { // no response!
+						application.message("motors PCB timeout, attempting reset", null, null);
+						reset();
+					}
 				}
 								
 				Util.delay(WATCHDOG_DELAY);
@@ -317,21 +324,27 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			state.set(State.values.distanceangle, d +" "+a);
 			
 			// TODO: testing only ----------------
-			if (!state.exists(State.values.distanceanglettl.toString())) {
-				state.set(State.values.distanceanglettl, "0 0");
+			if (Application.openNIRead.depthCamGenerating) {
+				if (!state.exists(State.values.distanceanglettl.toString())) {
+					state.set(State.values.distanceanglettl, "0 0");
+				}
+				
+				int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+				double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+				dttl += d;
+				attl += a;
+				String dattl = dttl+" "+attl;
+				state.set(State.values.distanceanglettl,dattl);
 			}
-			
-			int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-			double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
-			dttl += d;
-			attl += a;
-			String dattl = dttl+" "+attl;
-			state.set(State.values.distanceanglettl,dattl);
-			
 			// end of testing only ----------------
 		}
-		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
-		else if (s[0].equals("stopdetectfail")) application.message("FIRMWARE STOP DETECT FAIL", null, null);		
+		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) 
+			state.set(State.values.direction, direction.stop.toString());
+		else if (s[0].equals("stopdetectfail")) {
+			application.message("FIRMWARE STOP DETECT FAIL", null, null);
+			if (state.getBoolean(State.values.stopbetweenmoves)) 
+				state.set(State.values.direction, direction.stop.toString());
+		}
 
 	}
 
@@ -422,16 +435,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	
 	public void reset() {
-		if (isconnected) {
+//		if (isconnected) {
 			new Thread(new Runnable() {
 				public void run() {
+					Util.log("resetting MALG board", this);
 					disconnect();
 					connect();
 					Util.delay(SETUP);
 					initialize();
 				}
 			}).start();
-		}
+//		}
 	}
 
 	/** shutdown serial port */
@@ -546,9 +560,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 //		application.gyroport.sendCommand(FORWARD);
 
-		if (state.get(State.values.direction).equals(direction.forward.toString()) ) { // || // pypass accel if already going forward, speed change only 
-//				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
-			sendCommand(new byte[] { FORWARD, (byte) speed2, (byte) speed2});
+		if (state.get(State.values.direction).equals(direction.forward.toString()) ) {
+			int[] comp = applyComp(speed2); 
+			int L, R;
+//			if (!state.getBoolean(State.values.controlsinverted)) {
+				L = comp[0];
+				R = comp[1];
+//			}
+//			else {
+//				R = comp[1];
+//				L = comp[0];
+//			}
+			sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 			return;
 		}
 		
@@ -580,8 +603,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					if (!currentMoveID.equals(moveID))  return;
 					
 					int[] comp = applyComp(spd); // actual speed, comped
-					int L = comp[0];
-					int R = comp[1];
+					int L,R;
+//					if (!state.getBoolean(State.values.controlsinverted)) {
+						L = comp[0];
+						R = comp[1];
+//					}
+//					else {
+//						R = comp[1];
+//						L = comp[0];
+//					}
 					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 					
 				} 
@@ -653,9 +683,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 //		application.gyroport.sendCommand(BACKWARD);
 
-		if (state.get(State.values.direction).equals(direction.backward.toString()) ) { // || // pypass accel if already going forward, speed change only 
-//				state.getBoolean(State.values.autodocking)) { // autodocking bypass accel stuff for now, fix l8r
-			sendCommand(new byte[] { BACKWARD, (byte) speed2, (byte) speed2});
+		if (state.get(State.values.direction).equals(direction.backward.toString()) ) { 
+			int[] comp = applyComp(speed2); // apply comp now that up to speed
+			int L = comp[1];
+			int R = comp[0];
+			sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});
 			return;
 		}
 		
@@ -697,6 +729,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	}
 
 	public void turnRight() {
+		turnRight(0);
+	}
+	
+	public void turnRight(int delay) {
 		final UUID moveID = UUID.randomUUID(); 
 		currentMoveID = moveID;
 
@@ -729,13 +765,23 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if (speed < turnspeed && (speed + boost) < speedfast)
 			tmpspeed = speed + boost;
 		
-		sendCommand(new byte[] { RIGHT,  (byte) tmpspeed, (byte) tmpspeed });
-//		application.gyroport.sendCommand(RIGHT);
-		state.put(State.values.moving, true);
-		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+		if (delay==0) {
+			sendCommand(new byte[] { RIGHT, (byte) tmpspeed, (byte) tmpspeed });
+			state.put(State.values.moving, true);
+			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+		}
+		else {
+        	byte d1 = (byte) ((delay >> 8) & 0xff);
+			byte d2 = (byte) (delay & 0xff);
+			sendCommand(new byte[] { RIGHTTIMED, (byte) tmpspeed, (byte) tmpspeed, (byte) d1, (byte) d2});
+		}
 	}
 
 	public void turnLeft() {
+		turnLeft(0);
+	}
+	
+	public void turnLeft(int delay) {
 		final UUID moveID = UUID.randomUUID(); 
 		currentMoveID = moveID;
 		
@@ -768,10 +814,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if (speed < turnspeed && (speed + boost) < speedfast)
 			tmpspeed = speed + boost;
 		
-		sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
-//		application.gyroport.sendCommand(LEFT);
-		state.put(State.values.moving, true);
-		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+		if (delay==0) {
+			sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
+			state.put(State.values.moving, true);
+			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+		}
+		else {
+        	byte d1 = (byte) ((delay >> 8) & 0xff);
+			byte d2 = (byte) (delay & 0xff);
+			sendCommand(new byte[] { LEFTTIMED, (byte) tmpspeed, (byte) tmpspeed, (byte) d1, (byte) d2});
+		}
+
 	}
 	
 	private class cameraUpTask extends TimerTask {

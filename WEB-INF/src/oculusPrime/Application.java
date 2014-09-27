@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+
 //import oculusPrime.commport.ArduinoGyro;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -581,6 +582,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case odometryreport: 	comport.odometryReport(); break;
 		case odometrystop: 		comport.odometryStop(); break;
 			
+		case lefttimed: comport.turnLeft(Integer.parseInt(str)); break;
+		case righttimed: comport.turnRight(Integer.parseInt(str)); break;
+		
 		case systemcall:
 			Util.log("received: " + str);
 			messageplayer("system command received", null, null);
@@ -605,7 +609,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 		case motorsreset:
 			comport.reset();
-			messageplayer("resetting arduinoculus", null, null);
+			messageplayer("resetting malg board", null, null);
 			break;
 
 		case speech:
@@ -621,8 +625,14 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;		
 			
 		case opennisensor:
-			if(str.equals("on")) { openNIRead.startDepthCam(); }
-			else { openNIRead.stopDepthCam(); }			
+			if(str.equals("on")) { 
+				openNIRead.startDepthCam(); 
+				if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
+			}
+			else { 
+				openNIRead.stopDepthCam(); 
+				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
+			}			
 			messageplayer("openNI camera "+str, null, null);
 			break;
 			

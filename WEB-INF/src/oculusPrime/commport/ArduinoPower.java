@@ -136,6 +136,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				
 				long now = System.currentTimeMillis();
 
+				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" past reset delay", this); 
+				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
 					application.message("battery PCB timeout", "battery", "timeout");
@@ -264,7 +266,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			Util.shutdown();
 		}
 		
-		String battinfo = response.split(" ")[1];
+		String battinfo = response.split(" ")[1]; // TODO: sometimes throws arrayindexoutofbounds due to verbose garbage coming from firmware -- fix in firmware
 		battinfo = battinfo.replaceFirst("\\.\\d*", "");
 		if (!state.get(State.values.batterylife).equals(battinfo)) {
 			state.put(State.values.batterylife, battinfo);

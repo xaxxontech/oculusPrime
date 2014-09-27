@@ -10,12 +10,9 @@ import oculusPrime.commport.ArduinoPrime.direction;
 public class Scratch {
 
         public static void main(String[] args) {
-
-        	long r;
-        	double d = 1.01;
-        	r = (long) d;
-        	System.out.println(r);
-
+        	// gyroZ[n] = zb[i]<<8 | zb[i+1];
+        	long c = 5L;
+        	System.out.println((int) c);
     		
 
         }
