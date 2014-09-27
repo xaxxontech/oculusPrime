@@ -35,7 +35,7 @@ public class LiveSettingsTest {
 					fail("no settings file found");
 			
 		try {
-			socket = new Socket("127.0.0.1", settings.getInteger(ManualSettings.commandport));
+			socket = new Socket("127.0.0.1", settings.getInteger(ManualSettings.telnetport));
 		} catch (IOException e) {
 			fail("can NOT connect");
 		}

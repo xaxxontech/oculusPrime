@@ -7,19 +7,19 @@ import oculusPrime.commport.Discovery;
 /** place extensions to settings here */
 public enum ManualSettings {
 	
-	motorport, powerport, developer, debugenabled, telnetport, commandport,  
-	stopdelay, vself, email_smtp_server, email_smtp_port, email_username, email_password, 
-	email_from_address, wheeldiameter, loginnotify, gyrocomp ; 
+	motorport, powerport, developer, debugenabled, diagnostic, telnetport, stopdelay, vself, wheeldiameter, loginnotify, gyrocomp, 
+	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address; 
 	
 	 // new counter to see if constantly searching
 
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
-		config.setProperty(developer.toString(), "false");
-		config.setProperty(debugenabled.toString(), "false");
-		config.setProperty(stopdelay.toString(), "500");
-		config.setProperty(vself.toString(), "320_240_8_85");
+		config.setProperty(diagnostic.name(), "false");
+		config.setProperty(developer.name(), "false");
+		config.setProperty(debugenabled.name(), "false");
+		config.setProperty(stopdelay.name(), "500");
+		config.setProperty(vself.name(), "320_240_8_85");
 		config.setProperty(motorport.name(), Discovery.params.discovery.name());
 		config.setProperty(powerport.name(), Discovery.params.discovery.name());
 		config.setProperty(email_smtp_server.name(), Settings.DISABLED);
@@ -27,7 +27,7 @@ public enum ManualSettings {
 		config.setProperty(email_username.name(), Settings.DISABLED);
 		config.setProperty(email_password.name(), Settings.DISABLED);
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
-		config.setProperty(commandport.name(), Settings.DISABLED);
+		// config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "110");
 		config.setProperty(loginnotify.name() , "false");

@@ -10,8 +10,6 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
-
-//import oculusPrime.commport.ArduinoGyro;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.Discovery;
@@ -26,11 +24,9 @@ import org.red5.io.amf3.ByteArray;
 import developer.SendMail;
 import developer.UpdateFTP;
 import developer.depth.Mapper;
-import developer.depth.ScanUtils;
-
 
 /** red5 application */
-public class Application extends MultiThreadedApplicationAdapter implements Observer {
+public class Application extends MultiThreadedApplicationAdapter {
 
 	private static final int STREAM_CONNECT_DELAY = 2000;
 	
@@ -41,18 +37,22 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private IConnection player = null;
 	private boolean pendingplayerisnull = true;
 	private boolean initialstatuscalled = false; 
-	private ScriptRunner scriptRunner = new ScriptRunner();
+
+	//	private ScriptRunner scriptRunner = new ScriptRunner();	
+	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
+	// TODO: added to jet is started, could be anywhere, not refrenced in this file yet though.
+	
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
-	private State state = State.getReference();
 	private BanList banlist = BanList.getRefrence();
+	private State state = State.getReference();
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
 	
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
-//	public ArduinoGyro gyroport = null; // TODO: testing
-	public static TelnetServer commandServer = null;
+	public TelnetServer commandServer = null;
+	
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
 	public static developer.depth.Stereo stereo = null;
@@ -69,8 +69,6 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		RtmpPortRequest.setApp(this);
 		AuthGrab.setApp(this);
 		initialize();
-		state.addObserver(this);
-		
 	}
 
 	@Override
@@ -251,14 +249,15 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			stereo = new developer.depth.Stereo();
 		}
 	
-		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED)) commandServer = new TelnetServer(this);
-			
+		if ( ! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) {
+			commandServer = new TelnetServer(this);
+			Util.debug("............ cmd server started.....", this);
+		}
+		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
-
-//		scriptRunner.runScripts();
 		
 		grabberInitialize();
 				
@@ -2022,8 +2021,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 	}
 
-	@Override
-	public void updated(String key) {
+//	@Override
+//	public void updated(String key) {
 		
 		// Util.debug("updated(): " + key, this);
 		
@@ -2050,7 +2049,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 //			}
 //		}
 		
-	}
+//	}
 }
 
 

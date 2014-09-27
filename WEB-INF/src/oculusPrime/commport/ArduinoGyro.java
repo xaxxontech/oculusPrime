@@ -83,7 +83,8 @@ public class ArduinoGyro implements SerialPortEventListener {
 	}
 
 	private boolean gyroReady(){
-		final String gyro = state.get(State.values.gyroport); 
+		// TODO: hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh killed? 
+		final String gyro = "ffff";//// state.get(State.values.gyroport); 
 		if(gyro == null) return false; 
 		if(gyro.equals(Discovery.params.disabled.name())) return false;
 		if(gyro.equals(Discovery.params.discovery.name())) return false;
