@@ -224,22 +224,22 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		// TODO: brad ... removed... for resting... 
 		Util.debug("serial in: " + response, this);
+
+		String s[] = response.split(" ");
 		
-		if(response.equals("reset")) {
+		if(s[0].equals("reset")) {
 			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);
 		} 
-	
-		String s = response.split(" ")[0];
-		if (s.equals("timeout")) {
+
+		else if (s[0].equals("timeout")) {
 			state.put(State.values.dockstatus, AutoDock.UNKNOWN);
-			state.put(State.values.batterylife, s);
-			application.message(null, "battery", s);
+			state.put(State.values.batterylife, s[0]);
+			application.message(null, "battery", s[0]);
 			return;
 		}
 		
-		if (s.equals("docked")) {
+		else if (s[0].equals("docked")) {
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "dock", AutoDock.DOCKED);
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
@@ -249,7 +249,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.set(State.values.motionenabled, false); }
 		}
 		
-		if (s.equals("undocked")) {
+		else if (s[0].equals("undocked")) {
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					!state.getBoolean(State.values.autodocking)) {
 				state.put(State.values.dockstatus, AutoDock.UNDOCKED);
@@ -261,37 +261,39 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.set(State.values.motionenabled, true); }
 		}
 		
-		if (s.equals("shutdown")) {
+		else if (s[0].equals("shutdown")) {
 			sendCommand(CONFIRMSHUTDOWN);
 			Util.log("POWER BOARD CALLED SYSTEM SHUTDOWN");
 			Util.shutdown();
 		}
 		
-		String battinfo = response.split(" ")[1]; // TODO: sometimes throws arrayindexoutofbounds due to verbose garbage coming from firmware -- fix in firmware
-		battinfo = battinfo.replaceFirst("\\.\\d*", "");
-		if (!state.get(State.values.batterylife).equals(battinfo)) {
-			state.put(State.values.batterylife, battinfo);
-		
-		}
-
-		String extinfo = response.split(" ")[2];
-		if (!state.exists(State.values.batteryinfo.toString()) || 
-					!state.get(State.values.batteryinfo).equals(extinfo)) {
-
-			state.put(State.values.batteryinfo, extinfo);
-
-			// extract sysvolts '_sV:'
-		    Pattern pat = Pattern.compile("_sV:\\d+\\.\\d+");
-		    Matcher mat = pat.matcher(extinfo);
-		    while (mat.find()) {
-		    	String sysvolts = mat.group().replaceFirst("_sV:", "");
-		    	if (!state.exists(State.values.sysvolts.toString()) || 
-						!state.get(State.values.sysvolts).equals(sysvolts)) {
-		    		state.put(State.values.sysvolts, sysvolts);
-		    	}
-		    	break;
-		    }
-		    
+		if (s.length>2) {
+			String battinfo = s[1]; 
+			battinfo = battinfo.replaceFirst("\\.\\d*", "");
+			if (!state.get(State.values.batterylife).equals(battinfo)) {
+				state.put(State.values.batterylife, battinfo);
+			
+			}
+	
+			String extinfo = s[2];
+			if (!state.exists(State.values.batteryinfo.toString()) || 
+						!state.get(State.values.batteryinfo).equals(extinfo)) {
+	
+				state.put(State.values.batteryinfo, extinfo);
+	
+				// extract sysvolts '_sV:'
+			    Pattern pat = Pattern.compile("_sV:\\d+\\.\\d+");
+			    Matcher mat = pat.matcher(extinfo);
+			    while (mat.find()) {
+			    	String sysvolts = mat.group().replaceFirst("_sV:", "");
+			    	if (!state.exists(State.values.sysvolts.toString()) || 
+							!state.get(State.values.sysvolts).equals(sysvolts)) {
+			    		state.put(State.values.sysvolts, sysvolts);
+			    	}
+			    	break;
+			    }
+			    
+			}
 		}
 			
 		

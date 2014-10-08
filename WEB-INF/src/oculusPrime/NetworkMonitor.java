@@ -436,7 +436,7 @@ public class NetworkMonitor implements Observer {
 	@Override
 	public void updated(String key) {
 		
-		Util.debug("---- state updated: " + key, this);
+//		Util.debug("---- state updated: " + key, this);
 
 		if (key.equals(values.ethernetaddress.name())) {
 
@@ -458,7 +458,7 @@ public class NetworkMonitor implements Observer {
 	}
 	
 	public static void main(String[] args) {
-		System.out.println("...... starting up.....");
+//		System.out.println("...... starting up.....");
 		new NetworkMonitor(); 
 	}
 }
