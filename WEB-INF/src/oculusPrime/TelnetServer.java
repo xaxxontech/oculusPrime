@@ -164,7 +164,7 @@ public class TelnetServer implements Observer {
 			}
 		
 			// close up, must have a closed socket  
-			shutDown("user disconnected", out, in, clientSocket);
+			if (printers.contains(out))  shutDown("user disconnected", out, in, clientSocket);
 		}	
 	} // end inner class
 	
@@ -172,9 +172,8 @@ public class TelnetServer implements Observer {
 	private void shutDown(final String reason, PrintWriter out, BufferedReader in, Socket clientSocket) {
 
 		// log to console, and notify other users of leaving
-		sendToSocket("shutting down "+reason, out);
+		sendToSocket("shutting down, "+reason, out);
 		Util.debug("closing socket [" + clientSocket + "] " + reason, this);
-		sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
 		
 		try {
 
@@ -187,6 +186,9 @@ public class TelnetServer implements Observer {
 		} catch (Exception e) {
 			Util.log("shutdown: " + e.getMessage(), this);
 		}
+		
+		sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
+		state.set(oculusPrime.State.values.telnetusers, printers.size());
 	}
 		
 	
