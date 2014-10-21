@@ -234,19 +234,7 @@ function getFlashMovie(movieName) {
 }
 
 function publish(str) {
-	if (str=="broadcast_camandmic") {
-		callServer("playerbroadcast","camandmic");
-		broadcasting = "camandmic";
-		message ("sending: playerbroadcast camandmic",sentcmdcolor);
-		clicksteer("off");
-	}
-	else if (str=="broadcast_camera") {
-		callServer("playerbroadcast","camera");
-		broadcasting = "camera";
-		message ("sending: playerbroadcast camonly",sentcmdcolor);
-		clicksteer("off");
-	}
-	else if (str=="broadcast_mic") {
+	if (str=="broadcast_mic") {
 		callServer("playerbroadcast","mic");
 		broadcasting = "mic";
 		message ("sending: playerbroadcast miconly",sentcmdcolor);
@@ -594,12 +582,6 @@ function nudge(direction) {
 	lagtimer = new Date().getTime();
 }
 
-function slide(direction) {
-	message("sending command: slide " + direction, sentcmdcolor);
-	callServer("slide", direction);
-	lagtimer = new Date().getTime();	
-}
-
 function docklinetoggle(str) {
 	var a = document.getElementById("dockline");
 	var b = document.getElementById("docklineleft");
@@ -622,12 +604,14 @@ function docklinetoggle(str) {
 		docklineposition();
 		
 		var str = "<table><tr><td style='height: 5px'></td></tr></table>";
-		str += "Manual dock <table><tr><td style='height: 7px'></td></tr></table>";
-		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
-		str += "<table><tr><td style='height: 7px'></td></tr></table>";
-		str += "&nbsp; <a href='javascript: dock(&quot;dock&quot;);'><span class='cancelbox'>&radic;</span> GO</a>";
+				str += "<img src='images/dockline.png'"; 
+		str += " border='0' height='22' style='vertical-align: middle'> ";
+		str += "Manual dock <table><tr><td style='height: 20px'></td></tr></table>";
+		str += "&nbsp; <a href='javascript: dock(&quot;dock&quot;);'><span class='cancelbox'>&#x2714;</span> GO</a>";
 		str += "&nbsp; <a href='javascript: docklinetoggle(&quot;off&quot;); move(&quot;stop&quot;);'><span "; 
-		str += "class='cancelbox'>X</span> CANCEL</a>";
+		str += "class='cancelbox'><b>X</b></span> CANCEL</a>";
+		str += "<table><tr><td style='height: 20px'></td></tr></table>";
+		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
 		
 	    var link = document.getElementById("docklink");
 	    var xy = findpos(link);
@@ -692,22 +676,22 @@ function mainmenu(id) {
 }
 
 function rovvolumepopulate() {
-	var str = "<table><tr><td><span style='font-variant: small-caps;'>rov</span> speaker volume: &nbsp;</td>";
+	var str = "<table><tr>";
 	for (var i=0; i<=10; i++) {
 		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
 		str+="<td  id='rvoltd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
 		" border: 1px solid transparent; cursor: pointer;' onmouseover='rovvolumeover(&quot;"+i+"&quot;)'" +
 		" onmouseout='rovvolumeout(&quot;"+i+"&quot;)' onclick='rovvolumeclick(&quot;"+i+"&quot;)'>" +
-				"<span style='color: #4c56fe; font-size: "+fsz+"px' id='rvolspan"+i+"'" +
+				"<span style='color: #eeeeee; font-size: "+fsz+"px' id='rvolspan"+i+"'" +
 				" >|</span></td>";
 	}
 	str += "</tr></table>";
 	document.getElementById("rovvolumecontrol").innerHTML = str;
 	var b=document.getElementById("rvoltd"+parseInt(rovvolume/10));
-	b.style.borderColor = "#4c56fe";
+	b.style.borderColor = "#eeeeee";
 	b.style.backgroundColor = "#222222";
 	if (rovvolume > 0) { 
-		document.getElementById("rvoltd"+parseInt((rovvolume/10)-1)).style.borderRightColor = "#4c56fe";
+		document.getElementById("rvoltd"+parseInt((rovvolume/10)-1)).style.borderRightColor = "#eeeeee";
 	}
 }
 
@@ -721,7 +705,7 @@ function rovvolumeover(i) {
 
 function rovvolumeout(i) {
 	var a = document.getElementById("rvolspan"+i);
-	a.style.color = "#4c56fe";
+	a.style.color = "#eeeeee";
 //	a.style.fontSize = "15px";
 	var b = document.getElementById("rvoltd"+i);
 	if (i*10 != rovvolume) {
@@ -739,10 +723,10 @@ function rovvolumeclick(vol) {
 	}
 	
 	var a = document.getElementById("rvoltd"+vol);
-	a.style.borderColor = "#4c56fe";
+	a.style.borderColor = "#eeeeee";
 	a.style.backgroundColor = "#222222";
 	if (vol > 0) { 
-		document.getElementById("rvoltd"+parseInt(vol-1)).style.borderRightColor = "#4c56fe";
+		document.getElementById("rvoltd"+parseInt(vol-1)).style.borderRightColor = "#eeeeee";
 	}
 	message("sending system volume: "+ parseInt(vol*10)+"%", sentcmdcolor);
 	callServer("setsystemvolume", parseInt(vol*10));
@@ -751,30 +735,48 @@ function rovvolumeclick(vol) {
 }
 
 function lightpopulate() {
-	var a = document.getElementById("lightcontrol");
-	if (spotlightlevel != -1) {
-		var str = "<table><tr><td>spotlight brightness: &nbsp;</td>";
-		for (var i=0; i<=10; i++) {
-			if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
-			str+="<td  id='lighttd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
-			" border: 1px solid transparent; cursor: pointer;' onmouseover='lightover(&quot;"+i+"&quot;)'" +
-			" onmouseout='lightout(&quot;"+i+"&quot;)'  onclick='lightclick(&quot;"+i+"&quot;)'>" +
-					"<span style='color: #4c56fe; font-size: "+fsz+"px' id='lightspan"+i+"'" +
-					">|</span></td>";
-		}
-		str += "</tr></table>";
-		str += "floodlight <a class='blackbg' href ='javascript: floodlight(&quot;on&quot;)'";
-		str += ">on</a> / <a class='blackbg' href ='javascript: javascript: floodlight(&quot;off&quot;)'>off</a>";
-		a.style.display = "";
-		a.innerHTML = str;
-		var b=document.getElementById("lighttd"+parseInt(spotlightlevel/10));
-		b.style.borderColor = "#4c56fe";
-		b.style.backgroundColor = "#222222";
-		if (spotlightlevel > 0) { 
-			document.getElementById("lighttd"+parseInt((spotlightlevel/10)-1)).style.borderRightColor = "#4c56fe";
-		}
+	// spotlight:
+	var a = document.getElementById("spotlightcontrol");
+	var str = "<table><tr>";
+	for (var i=0; i<=10; i++) {
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
+		str+="<td  id='lighttd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
+		" border: 1px solid transparent; cursor: pointer;' onmouseover='lightover(&quot;"+i+"&quot;)'" +
+		" onmouseout='lightout(&quot;"+i+"&quot;)'  onclick='lightclick(&quot;"+i+"&quot;)'>" +
+				"<span style='color: #eeeeee; font-size: "+fsz+"px' id='lightspan"+i+"'" +
+				">|</span></td>";
 	}
-	else { a.style.display = "none"; }
+	str += "</tr></table>";
+	a.style.display = "";
+	a.innerHTML = str;
+	var b=document.getElementById("lighttd"+parseInt(spotlightlevel/10));
+	b.style.borderColor = "#eeeeee";
+	b.style.backgroundColor = "#222222";
+	if (spotlightlevel > 0) { 
+		document.getElementById("lighttd"+parseInt((spotlightlevel/10)-1)).style.borderRightColor = "#eeeeee";
+	}
+	
+	// floodlight:
+	var c = document.getElementById("floodlightcontrol");
+	var str = "<table><tr>";
+	for (var i=0; i<=10; i++) {
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
+		str+="<td  id='floodlighttd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
+		" border: 1px solid transparent; cursor: pointer;' onmouseover='floodlightover(&quot;"+i+"&quot;)'" +
+		" onmouseout='floodlightout(&quot;"+i+"&quot;)'  onclick='floodlightclick(&quot;"+i+"&quot;)'>" +
+				"<span style='color: #eeeeee; font-size: "+fsz+"px' id='floodlightspan"+i+"'" +
+				">|</span></td>";
+	}
+	str += "</tr></table>";
+	c.style.display = "";
+	c.innerHTML = str;
+	var d=document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
+	d.style.borderColor = "#eeeeee";
+	d.style.backgroundColor = "#222222";
+	if (floodlightlevel > 0) { 
+		document.getElementById("floodlighttd"+parseInt((floodlightlevel/10)-1)).style.borderRightColor = "#eeeeee";
+	}
+	
 }
 
 function lightover(i) {
@@ -786,7 +788,7 @@ function lightover(i) {
 
 function lightout(i) {
 	var a = document.getElementById("lightspan"+i);
-	a.style.color = "#4c56fe";
+	a.style.color = "#eeeeee";
 	var b = document.getElementById("lighttd"+i);
 	if (i*10 != spotlightlevel) {
 		b.style.backgroundColor = "transparent";
@@ -803,24 +805,50 @@ function lightclick(level) {
 	}
 	
 	var a = document.getElementById("lighttd"+level);
-	a.style.borderColor = "#4c56fe";
+	a.style.borderColor = "#eeeeee";
 	a.style.backgroundColor = "#222222";
 	if (level > 0) { 
-		document.getElementById("lighttd"+parseInt(level-1)).style.borderRightColor = "#4c56fe";
+		document.getElementById("lighttd"+parseInt(level-1)).style.borderRightColor = "#eeeeee";
 	}
 	message("sending spotlight brightness: "+ parseInt(level*10)+"%", sentcmdcolor);
-	callServer("spotlightsetbrightness", parseInt(level*10)); // parseInt(level*255/10));
+	callServer("spotlightsetbrightness", parseInt(level*10));
 	lagtimer = new Date().getTime();
-	//spotlightlevel = level*10; // allow to be set by server message instead
 }
 
-function floodlight(str) {
-	if (str=="on") { str="100"; }
-	else { str="0"; }
-	message("sending floodlight: "+ str, sentcmdcolor);
-	callServer("floodlight", str);
-	lagtimer = new Date().getTime();
+function floodlightover(i) {
+	var a = document.getElementById("floodlightspan"+i);
+	a.style.color = "#ffffff";
+	var b = document.getElementById("floodlighttd"+i);
+	b.style.backgroundColor = "#555555";
+}
 
+function floodlightout(i) {
+	var a = document.getElementById("floodlightspan"+i);
+	a.style.color = "#eeeeee";
+	var b = document.getElementById("floodlighttd"+i);
+	if (i*10 != floodlightlevel) {
+		b.style.backgroundColor = "transparent";
+	}
+	else { 	b.style.backgroundColor = "#222222"; }
+}
+
+function floodlightclick(level) {
+	var b = document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
+	b.style.borderColor = "transparent";
+	b.style.backgroundColor = "transparent";
+	if (floodlightlevel > 0) { 
+		document.getElementById("floodlighttd"+parseInt((floodlightlevel/10)-1)).style.borderRightColor = "transparent";
+	}
+	
+	var a = document.getElementById("floodlighttd"+level);
+	a.style.borderColor = "#eeeeee";
+	a.style.backgroundColor = "#222222";
+	if (level > 0) { 
+		document.getElementById("floodlighttd"+parseInt(level-1)).style.borderRightColor = "#eeeeee";
+	}
+	message("sending floodlight: "+ parseInt(level*10)+"%", sentcmdcolor);
+	callServer("floodlight", parseInt(level*10));
+	lagtimer = new Date().getTime();
 }
 
 function streamdetailspopulate() {
@@ -983,16 +1011,19 @@ function autodock(str) {
 //		document.getElementById("video").style.zIndex = "0";
 		clicksteer("off");
 		
-	    var str = "Dock with charger: <table><tr><td style='height: 7px'></td></tr></table>";
-	    str+="Get the dock in view, within 2 meters"
-    	str+="<table><tr><td style='height: 11px'></td></tr></table>";
+	    var str = "<img src='images/charge.png'"; 
+		str += " border='0' height='26' style='vertical-align: middle'> " +
+	    		"Dock with charger <table><tr><td style='height: 7px'></td></tr></table>";
+	    str+="Get the dock in view, within 3 meters"
+    	str+="<table><tr><td style='height: 20px'></td></tr></table>";
 	    
 	    str+="<a href='javascript: autodock(&quot;go&quot;);'>";
-	    str+= "<span class='cancelbox'>&radic;</span> GO</a> &nbsp; &nbsp;";
+	    str+= "<span class='cancelbox'>&#x2714;</span> GO</a> &nbsp; &nbsp;";
 	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>";
-	    str+= "<span class='cancelbox'>X</span> CANCEL</a><br><br>";
-		str += "<a href='javascript: docklinetoggle(&quot;on&quot;);'><img src='images/dockline.gif'"; 
-		str += " border=0' style='vertical-align: bottom'> manual dock</a>";
+	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a>";
+	    str+="<table><tr><td style='height: 20px'></td></tr></table>";
+		str += "<a href='javascript: docklinetoggle(&quot;on&quot;);'><img src='images/dockline.png'"; 
+		str += " border='0' height='22' style='vertical-align: middle'> manual dock</a>";
 
 	    var link = document.getElementById("docklink");
 	    var xy = findpos(link);
@@ -1020,7 +1051,7 @@ function autodock(str) {
 	    str+="Place Oculus square and centered in charging dock, then click within white area of target"
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";
 	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
-	    str+= "<span class='cancelbox'>X</span> CANCEL</a><br>"
+	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
 	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, 160, 1, 0);
@@ -1034,7 +1065,7 @@ function autodock(str) {
 	    str+="in progress... stand by"
 		str+="<table><tr><td style='height: 11px'></td></tr></table>";
 	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
-	    str+= "<span class='cancelbox'>X</span> CANCEL</a><br>"
+	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
     	popupmenu("context","show",null,null,str);
 	}
 }
@@ -1059,7 +1090,7 @@ function autodockclick(ev) { // TODO: unused if autodock("go") used above, inste
     str+="in progress... stand by"
 	str+="<table><tr><td style='height: 11px'></td></tr></table>";
     str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
-    str+= "<span class='cancelbox'>X</span> CANCEL</a><br>"
+    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
     b.innerHTML = str;
 	
 	callServer("autodockgo", x+" "+y);
@@ -1375,6 +1406,19 @@ function oculuscommandgo() {
 	callServer(cmd[0], val);
 	message("sending: "+cmd[0]+" "+val,"orange");
 	lagtimer = new Date().getTime(); // has to be *after* message()
+}
+
+
+function chatdivHide() {
+	document.getElementById('chatdiv').style.display='none';
+	popupmenu('menu','resize');
+}
+
+function chatdivShow() {
+	document.getElementById('chatdiv').style.display='';
+	document.getElementById('chatbox_input').value='';
+	document.getElementById('chatbox_input').focus();
+	popupmenu('menu','resize');
 }
 
 function arduinoReset() {
@@ -1715,7 +1759,7 @@ function steeringmouseover(id, str) {
 		var highlitebox = document.getElementById("mousecontrolshighlitebox");
 		highlitebox.style.left = xy[0]+"px";
 		highlitebox.style.top = xy[1]+"px";
-		highlitebox.style.backgroundColor = "#444444";
+		highlitebox.style.backgroundColor = "#333333";
 		highlitebox.style.display = "";
 	}
 	document.getElementById("steering_textbox").innerHTML = id.toUpperCase();
@@ -1774,8 +1818,6 @@ function steeringmousedown(id) {
 	if (id == "backward") { move("backward"); }
 	if (id == "rotate right") { move("right"); }
 	if (id == "rotate left") { move("left"); }
-	if (id == "slide right") { slide("right"); }
-	if (id == "slide left") { slide("left"); }
 	if (id == "nudge right") { nudge("right"); id = null; }
 	if (id == "nudge left") { nudge("left"); id = null; }
 	if (id == "nudge forward") { nudge("forward"); }
@@ -1856,9 +1898,9 @@ function docklinecalibrate(str) {
 	    str += " with dock spire.";
 	    str += "<table><tr><td style='height: 7px'></td></tr></table>";
 	    str += "<a href='javascript: docklinecalibrate(&quot;save&quot;);'>";
-	    str += "<span class='cancelbox'>&radic;</span> save</a> &nbsp; &nbsp; ";
+	    str += "<span class='cancelbox'>&#x2714;</span> SAVE</a> &nbsp; &nbsp; ";
 	    str += "<a href='javascript: docklinecalibrate(&quot;cancel&quot;);'>";
-	    str += "<span class='cancelbox'>X</span> CANCEL</a><br>";
+	    str += "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>";
 	    
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
@@ -2026,9 +2068,9 @@ function userlistpopulate(list) {
 					str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
 					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'><br/>";
 					str += "<a class='blackbg' href='javascript: updateextrapass(&quot;"+users[i]+"&quot;);'>";
-					str += "<span class='cancelbox'>&radic;</span> update</a> &nbsp;";
+					str += "<span class='cancelbox'>&#x2714;</span> update</a> &nbsp;";
 					str += "<a class='blackbg' href='javascript: closebox(&quot;passfield_"+users[i]+"&quot;);'>";
-					str += "<span class='cancelbox'>X</span> <span style='font-size: 11px'>CANCEL</span></a>";
+					str += "<span class='cancelbox'><b>X</b></span> <span style='font-size: 11px'>CANCEL</span></a>";
 					str += "</div>";
 				}
 			}
@@ -2091,26 +2133,27 @@ function disconnectOtherConnections() {
 function speakchat(command,id) {
 	var links = document.getElementById("speakchatlinks");
 	var over = document.getElementById(id);
-	var under = document.getElementById("popoutbox_under");
+	// var under = document.getElementById("popoutbox_under");
 	var linksinput = document.getElementById(id+"_input");
 	if (command=='show') {
 		var xy = findpos(links);
 		over.style.display = "";
-		over.style.left = (xy[0] - 60) + "px";
-		over.style.top = xy[1] + "px";
-		under.style.display = "";
-		under.style.left = (xy[0] - 65) + "px";
-		under.style.top = (xy[1] -5) + "px";
-		under.style.width = (over.offsetWidth + 12) + "px";
-		under.style.height = (over.offsetHeight + 10) + "px";
+		over.style.left = (xy[0] + 20) + "px";
+		over.style.top = (xy[1] + 22) + "px";
+		// under.style.display = "";
+		// under.style.left = (xy[0] - 65) + "px";
+		// under.style.top = (xy[1] -5) + "px";
+		// under.style.width = (over.offsetWidth + 12) + "px";
+		// under.style.height = (over.offsetHeight + 10) + "px";
 		linksinput.focus();
 		keyboard('disable');
 	}
 	else {
 		over.style.display = "none";
-		under.style.display = "none";
+		// under.style.display = "none";
 		keyboard('enable');
 	}
+	resized();
 }
 
 function findpos(obj) { // derived from http://bytes.com/groups/javascript/148568-css-javascript-find-absolute-position-element
@@ -2176,14 +2219,16 @@ function showserverlog(str) {
 
 function camiconbutton(str,id) {
 	var a=document.getElementById(id);
-	if (str == "over") { a.style.color = "#ffffff"; }
-	if (str == "out") { a.style.color = "#484fcd"; }
-	if (str == "click") {
+	if (str == "over") { a.style.color = "#ffffff"; a.style.backgroundColor = "#333333"; }
+	else if (str == "out") { a.style.color = "#cccccc"; a.style.backgroundColor = "transparent"; }
+	else if (str == "click") {
 		if (id=="pubstop") { id="stop"; } // stop already in use?
 		publish(id); 
 	}
+	else if (str== "down") { a.style.backgroundColor = "#999999"; }
+	else if (str== "up")  { a.style.backgroundColor = "transparent"; }
 	
-	if (id=="camera") {
+	if (id=="camera" || id=="pubstop") {
 		if (str=="over") {
 			document.getElementById("steering_textbox").innerHTML = "CAMERA ON/OFF".toUpperCase();
 			document.getElementById("steeringkeytextbox").innerHTML = "I";
@@ -2193,6 +2238,27 @@ function camiconbutton(str,id) {
 			document.getElementById("steeringkeytextbox").innerHTML = "";
 		}
 	}
+	else if (id=="docklink") {
+		if (str=="over") {
+			document.getElementById("steering_textbox").innerHTML = "DOCK".toUpperCase();
+			document.getElementById("steeringkeytextbox").innerHTML = "P";
+		}
+		else {
+			document.getElementById("steering_textbox").innerHTML = "";
+			document.getElementById("steeringkeytextbox").innerHTML = "";
+		}
+	}
+	else if (id=="mainmenulink") {
+		if (str=="over") {
+			document.getElementById("steering_textbox").innerHTML = "MENU".toUpperCase();
+			document.getElementById("steeringkeytextbox").innerHTML = "M";
+		}
+		else {
+			document.getElementById("steering_textbox").innerHTML = "";
+			document.getElementById("steeringkeytextbox").innerHTML = "";
+		}
+	}
+	
 }
 
 function streamset(str) {

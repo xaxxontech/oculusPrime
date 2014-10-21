@@ -94,7 +94,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	// thread safety 
 	protected volatile boolean isconnected = false;
-	public volatile boolean sliding = false;
+//	public volatile boolean sliding = false;
 	protected volatile UUID currentMoveID;
 	protected volatile UUID currentCamMoveID;
 	
@@ -310,7 +310,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		if(response.startsWith("version:")) {
 			version = response.substring(response.indexOf("version:") + 8, response.length());
-			application.message(this.getClass().getName() + " version: " + version, null, null);		
+			application.message("malg board firmware version: " + version, null, null);		
 		} 
 	
 		String[] s = response.split(" ");
@@ -1241,66 +1241,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		int delay = (int) voltsComp((double) n);
 		Util.debug("delay = "+delay, this);
 		Util.delay(delay);
-	}
-	
-	public void slide(final direction dir){
-		
-		Util.debug("slide(): " + dir, this);
-		
-		if (sliding == false) {
-			sliding = true;
-			
-			new Thread(new Runnable() {
-				public void run() {
-					try {	
-						
-						final int tempspeed = state.getInteger(State.values.motorspeed);
-						final int distance = 300;
-						final int turntime = 500;
-						
-						state.put(State.values.motorspeed, speedfast);
-						
-						switch (dir) {
-						case right: turnLeft(); break;
-						case left: turnRight(); break;
-						}
-				
-						Thread.sleep(turntime);
-						
-						if (sliding == true) {
-							goBackward();
-							Thread.sleep(distance);
-							
-							if (sliding == true) {
-								
-								switch (dir) {
-								case right: turnRight();
-								case left: turnLeft();
-								}	
-									
-								Thread.sleep(turntime);
-							 
-								if (sliding == true) {
-									goForward();
-									Thread.sleep(distance);
-									if (sliding == true) {
-										stopGoing();
-										sliding = false;
-										state.put(State.values.motorspeed, tempspeed);
-									}
-								}
-							}
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			}).start();
-		}
-	}
-
-	public void slidecancel() {
-		if (sliding == true) sliding = false;
 	}
 
 	public void clickSteer(final int x, int y) {

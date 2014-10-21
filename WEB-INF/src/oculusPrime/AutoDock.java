@@ -153,7 +153,7 @@ public class AutoDock { // implements Observer {
 									Thread.sleep(allowforClickSteer); 
 //									int pos = ArduinoPrime.CAM_MAX - 10;
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
-//									comport.cameraToPosition(pos);
+									Thread.sleep(50); // sometimes above command being ignore, maybe this will help
 									comport.rotate(ArduinoPrime.direction.left, 180);
 //									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
 //									state.block(oculusPrime.State.values.cameratilt, Integer.toString(pos), 10000); 

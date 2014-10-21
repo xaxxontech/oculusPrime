@@ -532,20 +532,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
 
-		case slide:
-			if (!state.getBoolean(State.values.motionenabled.name())) {
-				messageplayer("motion disabled", "motion", "disabled");
-				break;
-			}
-			if (state.getBoolean(State.values.autodocking.name())) {
-				messageplayer("command dropped, autodocking", null, null);
-				break;
-			}
-			moveMacroCancel();
-			comport.slide(ArduinoPrime.direction.valueOf(str));
-			messageplayer("command received: " + fn + str, null, null);
-			break;
-			
 		case left:
 		case right:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
@@ -698,6 +684,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case powerreset:
+			messageplayer("resetting power board", null, null);
 			powerport.reset();
 			break;
 			
@@ -1166,9 +1153,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			powerport.manualSetBatteryUnDocked();
 		}
 		
-		// if (state.getBoolean(State.values.sliding) 
-		// TODO: just call it, let port class check it's local 		
-		comport.slidecancel();
 	}
 
 	private void statusCheck(String s) {

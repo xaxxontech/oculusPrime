@@ -43,7 +43,7 @@ public enum PlayerCommands { // all valid commands
     // malg board 
     analogwrite, digitalread, motorsreset, cameracommand, cameratoposition, holdservo, 
     // wheels
-    clicksteer, motionenabletoggle, speed, move, nudge, slide, forward, backward, left, right, 
+    clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
     // lights
     strobeflash, spotlight, spotlightsetbrightness, floodlight, fwdflood;
@@ -79,7 +79,6 @@ public enum PlayerCommands { // all valid commands
 		floodlight("{INT}"), 
 		move("left", "right", "forward", "backward", "stop"),
 		nudge("left", "right", "forward", "backward"),
-		slide("left", "right"), 
 		docklineposupdate("{INT}"),
 		autodock("cancel", "go", "dockgrabbed", "dockgrabbed {STRING}", "calibrate", "getdocktarget"),
 		autodockcalibrate("{INT} {INT}"),
@@ -290,7 +289,6 @@ public enum PlayerCommands { // all valid commands
 		floodlight("Controls wide angle light"), 
 		move("Wheel motors, continuous movement"),
 		nudge("Move for amount of milliseconds specified by 'nudgedelay' setting, then stop"),
-		slide("Rearward triangular movement macro, that positions robot slightly to the left or right of starting spot"), 
 		dockgrab("Find dock target within robots camera view, returns target metrics. Robot camera must be running"),
 		battstats("Returns battery charging state and charge remaining"),
 		docklineposupdate("Set manual dock line position within camera FOV in +/- pixels offset from center"),

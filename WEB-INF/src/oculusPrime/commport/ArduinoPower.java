@@ -33,6 +33,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 //	public static final byte BATTERYPLUSPFETON= 'n';
 	public static final byte INITIATESHUTDOWN= 'p';
 	public static final byte CONFIRMSHUTDOWN= 'w'; 
+	public static final byte GET_VERSION = '7';
 	
 	protected Application application = null;
 	protected State state = State.getReference();
@@ -48,7 +49,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected int buffSize = 0;
 	protected static Settings settings = Settings.getReference();
 	protected String portname = settings.readSetting(ManualSettings.powerport);
-
+	protected String version = null;
 	
 	public ArduinoPower(Application app) {
 		application = app;	
@@ -229,7 +230,16 @@ public class ArduinoPower implements SerialPortEventListener  {
 		String s[] = response.split(" ");
 		
 		if(s[0].equals("reset")) {
-			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);
+//			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);
+			version = null;
+			sendCommand(GET_VERSION); 
+			return;
+		} 
+	
+		if(s[0].equals("version")) {
+			version = s[1];
+			application.message("power board firmware version: " + version, null, null);
+			return;
 		} 
 
 		else if (s[0].equals("timeout")) {
