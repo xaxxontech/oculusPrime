@@ -38,6 +38,8 @@ public class AutoDock { // implements Observer {
 	private int imgheight;
 	public boolean lowres = true;
 //	private ArduinoPower powerport = null;
+	private final int FLHIGH = 25;
+	private final int FLLOW = 7;
 	
 	
 	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com, ArduinoPower powercom) {
@@ -78,11 +80,10 @@ public class AutoDock { // implements Observer {
 							if (state.getInteger(State.values.spotlightbrightness) > 20 && 
 									!state.getBoolean(State.values.controlsinverted)) {
 								comport.setSpotLightBrightness(20);
-//								comport.floodLight(39);
 								Thread.sleep(500); 
 							} 
 							
-							if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(39); 
+							if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
 							
 							dockGrab("start", 0, 0);
 							state.set(State.values.autodocking, true);
@@ -392,10 +393,10 @@ public class AutoDock { // implements Observer {
 
 			if (state.getInteger(State.values.spotlightbrightness) > 0) {
 				comport.setSpotLightBrightness(0);
-				comport.floodLight(55);
+//				comport.floodLight(FLHIGH);
 			} 
 			
-			if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(39);
+			if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
 			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
 				comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
 				new Thread(new Runnable() {
@@ -437,7 +438,7 @@ public class AutoDock { // implements Observer {
 		} // end of S1 check
 		if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
 			int fl = state.getInteger(State.values.floodlightlevel);
-			if (fl > 0 && fl != 15) comport.floodLight(15); 
+			if (fl > 0 && fl != 15) comport.floodLight(FLLOW); 
 			
 			if (autodockingcamctr) { // if cam centered do check and comps below
 				autodockingcamctr = false;

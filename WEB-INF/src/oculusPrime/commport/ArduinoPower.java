@@ -254,9 +254,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				application.message(null, "dock", AutoDock.DOCKED);
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
 				state.set(State.values.batterycharging, true);
+				state.set(State.values.motionenabled, false); 
 			}
-			if (state.getBoolean(State.values.motionenabled)) {
-				state.set(State.values.motionenabled, false); }
 		}
 		
 		else if (s[0].equals("undocked")) {
@@ -266,9 +265,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.put(State.values.batterylife, "draining");
 				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" battery draining");
 				state.set(State.values.batterycharging, false);
+				state.set(State.values.motionenabled, true); 
 			}
-			if (!state.getBoolean(State.values.motionenabled)) { 
-				state.set(State.values.motionenabled, true); }
+
 		}
 		
 		else if (s[0].equals("shutdown")) {

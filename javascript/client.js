@@ -678,56 +678,41 @@ function mainmenu(id) {
 function rovvolumepopulate() {
 	var str = "<table><tr>";
 	for (var i=0; i<=10; i++) {
-		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
-		str+="<td  id='rvoltd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
-		" border: 1px solid transparent; cursor: pointer;' onmouseover='rovvolumeover(&quot;"+i+"&quot;)'" +
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 8; fsz=15; }
+		str+="<td  id='rvoltd"+i+"' class='slider' style='width: "+wpx+"px;'" +
+		" onmouseover='rovvolumeover(&quot;"+i+"&quot;)'" +
 		" onmouseout='rovvolumeout(&quot;"+i+"&quot;)' onclick='rovvolumeclick(&quot;"+i+"&quot;)'>" +
-				"<span style='color: #eeeeee; font-size: "+fsz+"px' id='rvolspan"+i+"'" +
+				"<span style='font-size: "+fsz+"px'" +
 				" >|</span></td>";
 	}
 	str += "</tr></table>";
 	document.getElementById("rovvolumecontrol").innerHTML = str;
 	var b=document.getElementById("rvoltd"+parseInt(rovvolume/10));
-	b.style.borderColor = "#eeeeee";
-	b.style.backgroundColor = "#222222";
-	if (rovvolume > 0) { 
-		document.getElementById("rvoltd"+parseInt((rovvolume/10)-1)).style.borderRightColor = "#eeeeee";
-	}
+	b.style.backgroundColor = "#aaaaaa";
+	b.style.color = "#111111";
 }
 
 function rovvolumeover(i) {
-	var a = document.getElementById("rvolspan"+i);
-	a.style.color = "#ffffff";
-//	a.style.fontSize = "20px";
-	var b = document.getElementById("rvoltd"+i);
-	b.style.backgroundColor = "#555555";
+	if (i*10 == rovvolume) return;
+	document.getElementById("rvoltd"+i).style.backgroundColor = "#555555";
 }
 
 function rovvolumeout(i) {
-	var a = document.getElementById("rvolspan"+i);
-	a.style.color = "#eeeeee";
-//	a.style.fontSize = "15px";
-	var b = document.getElementById("rvoltd"+i);
-	if (i*10 != rovvolume) {
-		b.style.backgroundColor = "transparent";
-	}
-	else { 	b.style.backgroundColor = "#222222"; }
+	if (i*10 == rovvolume) return;
+	document.getElementById("rvoltd"+i).style.backgroundColor = "#111111"; 
 }
 
 function rovvolumeclick(vol) {
+	// unset old
 	var b = document.getElementById("rvoltd"+parseInt(rovvolume/10));
-	b.style.borderColor = "transparent";
-	b.style.backgroundColor = "transparent";
-	if (rovvolume > 0) { 
-		document.getElementById("rvoltd"+parseInt((rovvolume/10)-1)).style.borderRightColor = "transparent";
-	}
+	b.style.color = "#cccccc";
+	b.style.backgroundColor = "#111111";
 	
+	// set new
 	var a = document.getElementById("rvoltd"+vol);
-	a.style.borderColor = "#eeeeee";
-	a.style.backgroundColor = "#222222";
-	if (vol > 0) { 
-		document.getElementById("rvoltd"+parseInt(vol-1)).style.borderRightColor = "#eeeeee";
-	}
+	a.style.color = "#111111";
+	a.style.backgroundColor = "#aaaaaa";
+
 	message("sending system volume: "+ parseInt(vol*10)+"%", sentcmdcolor);
 	callServer("setsystemvolume", parseInt(vol*10));
 	lagtimer = new Date().getTime();
@@ -735,117 +720,89 @@ function rovvolumeclick(vol) {
 }
 
 function lightpopulate() {
-	// spotlight:
 	var a = document.getElementById("spotlightcontrol");
 	var str = "<table><tr>";
 	for (var i=0; i<=10; i++) {
-		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
-		str+="<td  id='lighttd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
-		" border: 1px solid transparent; cursor: pointer;' onmouseover='lightover(&quot;"+i+"&quot;)'" +
-		" onmouseout='lightout(&quot;"+i+"&quot;)'  onclick='lightclick(&quot;"+i+"&quot;)'>" +
-				"<span style='color: #eeeeee; font-size: "+fsz+"px' id='lightspan"+i+"'" +
-				">|</span></td>";
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 8; fsz=15; }
+		str+="<td  id='lighttd"+i+"' class='slider' style='width: "+wpx+"px;'" +
+		" onmouseover='lightover(&quot;"+i+"&quot;)'" +
+		" onmouseout='lightout(&quot;"+i+"&quot;)' onclick='lightclick(&quot;"+i+"&quot;)'>" +
+				"<span style='font-size: "+fsz+"px'" +
+				" >|</span></td>";
 	}
 	str += "</tr></table>";
 	a.style.display = "";
 	a.innerHTML = str;
 	var b=document.getElementById("lighttd"+parseInt(spotlightlevel/10));
-	b.style.borderColor = "#eeeeee";
-	b.style.backgroundColor = "#222222";
-	if (spotlightlevel > 0) { 
-		document.getElementById("lighttd"+parseInt((spotlightlevel/10)-1)).style.borderRightColor = "#eeeeee";
-	}
+	b.style.backgroundColor = "#aaaaaa";
+	b.style.color = "#111111";
 	
 	// floodlight:
 	var c = document.getElementById("floodlightcontrol");
 	var str = "<table><tr>";
 	for (var i=0; i<=10; i++) {
-		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 6; fsz=15; }
-		str+="<td  id='floodlighttd"+i+"' style='height: 26px; width: "+wpx+"px; text-align: center;" +
-		" border: 1px solid transparent; cursor: pointer;' onmouseover='floodlightover(&quot;"+i+"&quot;)'" +
-		" onmouseout='floodlightout(&quot;"+i+"&quot;)'  onclick='floodlightclick(&quot;"+i+"&quot;)'>" +
-				"<span style='color: #eeeeee; font-size: "+fsz+"px' id='floodlightspan"+i+"'" +
-				">|</span></td>";
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 8; fsz=15; }
+		str+="<td  id='floodlighttd"+i+"' class='slider' style='width: "+wpx+"px;'" +
+		" onmouseover='floodlightover(&quot;"+i+"&quot;)'" +
+		" onmouseout='floodlightout(&quot;"+i+"&quot;)' onclick='floodlightclick(&quot;"+i+"&quot;)'>" +
+				"<span style='font-size: "+fsz+"px'" +
+				" >|</span></td>";
 	}
 	str += "</tr></table>";
 	c.style.display = "";
 	c.innerHTML = str;
 	var d=document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
-	d.style.borderColor = "#eeeeee";
-	d.style.backgroundColor = "#222222";
-	if (floodlightlevel > 0) { 
-		document.getElementById("floodlighttd"+parseInt((floodlightlevel/10)-1)).style.borderRightColor = "#eeeeee";
-	}
-	
+	d.style.backgroundColor = "#aaaaaa";
+	d.style.color = "#111111";
 }
 
 function lightover(i) {
-	var a = document.getElementById("lightspan"+i);
-	a.style.color = "#ffffff";
-	var b = document.getElementById("lighttd"+i);
-	b.style.backgroundColor = "#555555";
+	if (i*10 == spotlightlevel) return;
+	document.getElementById("lighttd"+i).style.backgroundColor = "#555555";
 }
 
 function lightout(i) {
-	var a = document.getElementById("lightspan"+i);
-	a.style.color = "#eeeeee";
-	var b = document.getElementById("lighttd"+i);
-	if (i*10 != spotlightlevel) {
-		b.style.backgroundColor = "transparent";
-	}
-	else { 	b.style.backgroundColor = "#222222"; }
+	if (i*10 == spotlightlevel) return;
+	document.getElementById("lighttd"+i).style.backgroundColor = "#111111";
 }
 
 function lightclick(level) {
+	// unset old
 	var b = document.getElementById("lighttd"+parseInt(spotlightlevel/10));
-	b.style.borderColor = "transparent";
-	b.style.backgroundColor = "transparent";
-	if (spotlightlevel > 0) { 
-		document.getElementById("lighttd"+parseInt((spotlightlevel/10)-1)).style.borderRightColor = "transparent";
-	}
+	b.style.color = "#cccccc";
+	b.style.backgroundColor = "#111111";
 	
+	// set new
 	var a = document.getElementById("lighttd"+level);
-	a.style.borderColor = "#eeeeee";
-	a.style.backgroundColor = "#222222";
-	if (level > 0) { 
-		document.getElementById("lighttd"+parseInt(level-1)).style.borderRightColor = "#eeeeee";
-	}
+	a.style.color = "#111111";
+	a.style.backgroundColor = "#aaaaaa";
+	
 	message("sending spotlight brightness: "+ parseInt(level*10)+"%", sentcmdcolor);
 	callServer("spotlightsetbrightness", parseInt(level*10));
 	lagtimer = new Date().getTime();
 }
 
 function floodlightover(i) {
-	var a = document.getElementById("floodlightspan"+i);
-	a.style.color = "#ffffff";
-	var b = document.getElementById("floodlighttd"+i);
-	b.style.backgroundColor = "#555555";
+	if (i*10 == floodlightlevel) return;
+	document.getElementById("floodlighttd"+i).style.backgroundColor = "#555555";
 }
 
 function floodlightout(i) {
-	var a = document.getElementById("floodlightspan"+i);
-	a.style.color = "#eeeeee";
-	var b = document.getElementById("floodlighttd"+i);
-	if (i*10 != floodlightlevel) {
-		b.style.backgroundColor = "transparent";
-	}
-	else { 	b.style.backgroundColor = "#222222"; }
+	if (i*10 == floodlightlevel) return;
+	document.getElementById("floodlighttd"+i).style.backgroundColor = "#111111";
 }
 
 function floodlightclick(level) {
+	// unset old
 	var b = document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
-	b.style.borderColor = "transparent";
-	b.style.backgroundColor = "transparent";
-	if (floodlightlevel > 0) { 
-		document.getElementById("floodlighttd"+parseInt((floodlightlevel/10)-1)).style.borderRightColor = "transparent";
-	}
+	b.style.color = "#cccccc";
+	b.style.backgroundColor = "#111111";
 	
+	// set new
 	var a = document.getElementById("floodlighttd"+level);
-	a.style.borderColor = "#eeeeee";
-	a.style.backgroundColor = "#222222";
-	if (level > 0) { 
-		document.getElementById("floodlighttd"+parseInt(level-1)).style.borderRightColor = "#eeeeee";
-	}
+	a.style.color = "#111111";
+	a.style.backgroundColor = "#aaaaaa";
+	
 	message("sending floodlight: "+ parseInt(level*10)+"%", sentcmdcolor);
 	callServer("floodlight", parseInt(level*10));
 	lagtimer = new Date().getTime();
