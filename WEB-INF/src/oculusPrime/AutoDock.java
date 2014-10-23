@@ -40,6 +40,7 @@ public class AutoDock { // implements Observer {
 //	private ArduinoPower powerport = null;
 	private final int FLHIGH = 25;
 	private final int FLLOW = 7;
+	private final int FLCALIBRATE = 2;
 	
 	
 	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com, ArduinoPower powercom) {
@@ -77,14 +78,12 @@ public class AutoDock { // implements Observer {
 					public void run() {
 						try {
 
-							if (state.getInteger(State.values.spotlightbrightness) > 20 && 
-									!state.getBoolean(State.values.controlsinverted)) {
-								comport.setSpotLightBrightness(20);
-								Thread.sleep(500); 
-							} 
-							
-							if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
-							
+//							if (state.getInteger(State.values.spotlightbrightness) > 20 && 
+//									!state.getBoolean(State.values.controlsinverted)) {
+//								comport.setSpotLightBrightness(20);
+//								Thread.sleep(500); 
+//							} 
+														
 							dockGrab("start", 0, 0);
 							state.set(State.values.autodocking, true);
 							autodockingcamctr = false;
@@ -151,13 +150,15 @@ public class AutoDock { // implements Observer {
 							public void run() {
 								try {
 
-									Thread.sleep(allowforClickSteer); 
+									comport.delayWithVoltsComp(allowforClickSteer); 
 //									int pos = ArduinoPrime.CAM_MAX - 10;
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
-									Thread.sleep(50); // sometimes above command being ignore, maybe this will help
+									Thread.sleep(100); // sometimes above command being ignored, maybe this will help
 									comport.rotate(ArduinoPrime.direction.left, 180);
 //									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
 //									state.block(oculusPrime.State.values.cameratilt, Integer.toString(pos), 10000); 
+									Thread.sleep(100); // sometimes above command being ignored, maybe this will help
+									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
 									Thread.sleep(2500);
 //									autoDock("go");
 									state.set(State.values.autodocking, true);
@@ -192,10 +193,24 @@ public class AutoDock { // implements Observer {
 			}
 		}
 		if (cmd[0].equals("calibrate")) {
-			int x = Integer.parseInt(cmd[1]) / 2; // assuming 320x240
-			int y = Integer.parseInt(cmd[2]) / 2; // assuming 320x240
+			final int x = Integer.parseInt(cmd[1]) / 2; // assuming 320x240
+			final int y = Integer.parseInt(cmd[2]) / 2; // assuming 320x240
 			lowres = true;
-			dockGrab("calibrate", x, y);
+			comport.floodLight(FLCALIBRATE); 
+
+			new Thread(new Runnable() {
+				public void run() {
+					try {
+
+						Thread.sleep(2000); // allow light to adjust
+						dockGrab("calibrate", x, y);
+						
+					} catch (Exception e) { e.printStackTrace(); }
+				}
+			}).start();
+			
+			
+
 		}	
 	}
 	
@@ -311,7 +326,7 @@ public class AutoDock { // implements Observer {
 							comport.goBackward();
 							try {
 //								Thread.sleep(400);
-								comport.delayWithVoltsComp(400);
+								comport.delayWithVoltsComp(800);
 								comport.stopGoing();
 								Thread.sleep(settings.getInteger(ManualSettings.stopdelay)); // let deaccelerate							
 							} catch (InterruptedException e) { e.printStackTrace(); }
@@ -366,26 +381,30 @@ public class AutoDock { // implements Observer {
 		x = x + (w / 2); // convert to center from upper left
 		y = y + (h / 2); // convert to center from upper left
 		String s[] = docktarget.split("_");
-		// s[] = 0 lastBlobRatio,1 lastTopRatio,2 lastMidRatio,3
-		// lastBottomRatio,4 x,5 y,6 width,7 height,8 slope
-		// 0.71053_0.27940_0.16028_0.31579_123_93_81_114_0.014493
-		// neg slope = approaching from left
+
 		int dockw = (int) (Integer.parseInt(s[6])/(rescomp/2f));
 		int dockh = (int) (Integer.parseInt(s[7])/(rescomp/2f));
 		int dockx = (int) (Integer.parseInt(s[4])/(rescomp/2f)) + dockw / 2;
 		float dockslope = new Float(s[8]);
 		float slopedeg = (float) ((180 / Math.PI) * Math.atan(slope));
 		float dockslopedeg = (float) ((180 / Math.PI) * Math.atan(dockslope));
-//		int s1 = dockw * dockh * 12 / 100 * w / h;  // (area) legacy, for non-mirrored cam
-//		int s2 = (int) (dockw * dockh * 65.5 / 100 * w / h); // (area) legacy, for non-mirrored cam
-		int s1 = (int) (dockw * dockh * 0.15  * w / h);  // (area) 
-		int s2 = (int) (dockw * dockh * 69.0 / 100 * w / h); // (area)
-
+		
+		// relative-to-calibration target sizes for modes, constants
+		// 6 in calibration:
+//		final int s1 = (int) (dockw * dockh * 0.12  * w / h);  // (area) medium range start
+//		final int s2 = (int) (dockw * dockh * 0.55 * w / h); // (area) close range start
+//		final double slopetolerance = 0.8; // +/-
+		// 2 in calibration:
+		final int s1 = (int) (dockw * dockh * 0.07  * w / h);  // (area) medium range start
+		final int s2 = (int) (dockw * dockh * 0.40 * w / h); // (area) close range start
+		final double s2slopetolerance = 1.2; // +/-
+		final double s1slopetolerance = 1.4; // +/-
+		
 		// optionally set breaking delay longer for fast bots
 		int bd = settings.getInteger(ManualSettings.stopdelay.toString());
 		if (bd == Settings.ERROR) bd = 500;
 		final int stopdelay = bd;
-		final int s1FWDmilliseconds = 700; // 400
+		final int s1FWDmilliseconds = 600; // 400
 		final int s2FWDmilliseconds = 250; // 100
 		
 		if (w * h < s1) { // mode: quite far away yet, approach only
@@ -443,7 +462,7 @@ public class AutoDock { // implements Observer {
 			if (autodockingcamctr) { // if cam centered do check and comps below
 				autodockingcamctr = false;
 				int autodockcompdir = 0;
-				if (Math.abs(slopedeg - dockslopedeg) > 1.7) {
+				if (Math.abs(slopedeg - dockslopedeg) > s1slopetolerance) {
 					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*0.0625) - Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
 				}
 				if (slope > dockslope) {
@@ -533,7 +552,7 @@ public class AutoDock { // implements Observer {
 					}
 				}).start();
 			} else {
-				if (Math.abs(slopedeg - dockslopedeg) > 1.6
+				if (Math.abs(slopedeg - dockslopedeg) > s2slopetolerance
 						|| autodockctrattempts > 10) { // rotate a bit, then backup and try again
 					// System.out.println("backup "+dockslopedeg+" "+slopedeg+" ctrattempts:"+autodockctrattempts);
 					autodockctrattempts = 0;

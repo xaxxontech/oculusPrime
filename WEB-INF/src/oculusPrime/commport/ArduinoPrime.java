@@ -121,8 +121,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public String portname = settings.readSetting(ManualSettings.motorport);
 	
     private static final int TURNBOOST = 25; 
-	public int speedfast = 255;
-	public int turnspeed = 255;
+	public static final int speedfast = 255;
+//	public static final int turnspeed = 255;
 //	private static final double GYROCOMP = 1.09;
 		
 	public ArduinoPrime(Application app) {	
@@ -483,7 +483,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if(DEBUGGING) {
 			String text = "sendCommand(): " + (char)cmd[0] + " ";
 			for(int i = 1 ; i < cmd.length ; i++) 
-				text += (byte)cmd[i] + " ";
+				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
 			
 			Util.debug(text, this);
 		}
@@ -759,11 +759,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		state.set(State.values.direction, direction.right.toString()); // now go
 		
-		int tmpspeed = turnspeed;
-		int boost = TURNBOOST;
-		int speed = state.getInteger(State.values.motorspeed);
-		if (speed < turnspeed && (speed + boost) < speedfast)
-			tmpspeed = speed + boost;
+//		int tmpspeed = turnspeed;
+//		int boost = TURNBOOST;
+//		int speed = state.getInteger(State.values.motorspeed);
+//		if (speed < turnspeed && (speed + boost) < speedfast)
+//			tmpspeed = speed + boost;
+		
+		int tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
+		if (tmpspeed > 255) tmpspeed = 255;
 		
 		if (delay==0) {
 			sendCommand(new byte[] { RIGHT, (byte) tmpspeed, (byte) tmpspeed });
@@ -808,11 +811,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		state.set(State.values.direction, direction.left.toString()); // now go
 
-		int tmpspeed = turnspeed;
-		int boost = TURNBOOST;
-		int speed = state.getInteger(State.values.motorspeed);
-		if (speed < turnspeed && (speed + boost) < speedfast)
-			tmpspeed = speed + boost;
+//		int tmpspeed = turnspeed;
+//		int boost = TURNBOOST;
+//		int speed = state.getInteger(State.values.motorspeed);
+//		if (speed < turnspeed && (speed + boost) < speedfast)
+//			tmpspeed = speed + boost;
+		
+		int tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
+		if (tmpspeed > 255) tmpspeed = 255;
 		
 		if (delay==0) {
 			sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });

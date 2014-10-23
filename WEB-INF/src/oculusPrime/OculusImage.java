@@ -308,7 +308,7 @@ public class OculusImage {
 					if (minx<r[0] && maxx>r[1] && miny<r[2] && maxy>r[3] && r[4] > 10 && r[4]<winRect[4]*0.5 && r[4]>winRect[4]*0.2 ) { // ctrblob completely within blob
 						float[] sl = getBottomSlope(blobs.get(winner),minx,maxx,miny,maxy);
 						slope = sl[0];
-						if (sl[1]<=minx || sl[2]>=maxx) { // bottom slope is widest on at least one side
+						if (sl[1]<=minx*0.9 || sl[2]>=maxx*0.9) { // bottom slope is widest on at least one side
 							break;
 						} // else { Util.debug("failed slope test",this); sendToImage(blobs.get(winner));  }
 					}
