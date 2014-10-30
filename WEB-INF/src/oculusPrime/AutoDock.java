@@ -139,17 +139,16 @@ public class AutoDock { // implements Observer {
 					String s = guix + " " + guiy + " " + guiw + " " + guih + " " + cmd[6];
 					
 					if (!state.getBoolean(State.values.controlsinverted)) { // need to face backwards
-			
-						comport.setSpotLightBrightness(0);
-						
+									
 						app.message(null, "autodocklock", s);
 						state.set(State.values.autodocking, false);
-						comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
+						comport.clickSteer((x - imgwidth/2) * rescomp, 0);
 						
 						new Thread(new Runnable() {
 							public void run() {
 								try {
-
+									Util.delay(50);
+									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
 //									int pos = ArduinoPrime.CAM_MAX - 10;
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
@@ -404,15 +403,13 @@ public class AutoDock { // implements Observer {
 		int bd = settings.getInteger(ManualSettings.stopdelay.toString());
 		if (bd == Settings.ERROR) bd = 500;
 		final int stopdelay = bd;
-		final int s1FWDmilliseconds = 600; // 400
+		final int s1FWDmilliseconds = 500; // 400
 		final int s2FWDmilliseconds = 250; // 100
 		
 		if (w * h < s1) { // mode: quite far away yet, approach only
-			Util.debug("autodock stage 1", this);
 
 			if (state.getInteger(State.values.spotlightbrightness) > 0) {
 				comport.setSpotLightBrightness(0);
-//				comport.floodLight(FLHIGH);
 			} 
 			
 			if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
@@ -463,14 +460,14 @@ public class AutoDock { // implements Observer {
 				autodockingcamctr = false;
 				int autodockcompdir = 0;
 				if (Math.abs(slopedeg - dockslopedeg) > s1slopetolerance) {
-					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*0.0625) - Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
+					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*0.09) - Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
 				}
 				if (slope > dockslope) {
 					autodockcompdir *= -1;
 				} // approaching from left
 				autodockcompdir += x + (dockx - imgwidth/2);
 				// System.out.println("comp: "+autodockcompdir);
-				if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.125)) { // steer and go
+				if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125)) { // steer and go
 					comport.clickSteer((autodockcompdir - dockx) * rescomp,
 							(y - imgheight/2) * rescomp);
 					new Thread(new Runnable() {
@@ -508,9 +505,8 @@ public class AutoDock { // implements Observer {
 				}
 			} else { // !autodockingcamctr
 				autodockingcamctr = true;
-				if (Math.abs(x - dockx) > (int) (0.03125*imgwidth) || Math.abs(y - imgheight/2) > (int) (0.0625*imgheight)) { // (y
-																			// was
-																			// >30)
+				if (Math.abs(x - dockx) > (int) (0.03125*imgwidth) ) { 
+
 					comport.clickSteer((x - dockx) * rescomp, (y - imgheight/2)
 							* rescomp);
 					new Thread(new Runnable() {
@@ -529,7 +525,7 @@ public class AutoDock { // implements Observer {
 			}
 		} 
 		if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
-			if ((Math.abs(x - dockx) > 5) && autodockctrattempts <= 10) {
+			if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
 				autodockctrattempts++;
 
 //				comport.clickSteer((x - dockx) * rescomp, (y - 120) * rescomp);

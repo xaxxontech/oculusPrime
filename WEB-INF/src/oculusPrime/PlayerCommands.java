@@ -41,7 +41,7 @@ public enum PlayerCommands { // all valid commands
     battstats, powerreset, powershutdown, 
     
     // malg board 
-    analogwrite, digitalread, motorsreset, cameracommand, cameratoposition, holdservo, 
+    analogwrite, digitalread, motorsreset, cameracommand, camtilt, holdservo, 
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,

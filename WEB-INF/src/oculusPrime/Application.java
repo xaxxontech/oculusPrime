@@ -251,7 +251,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		if ( ! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) {
 			commandServer = new TelnetServer(this);
-			Util.debug("............ cmd server started.....", this);
+			Util.debug("telnet server started", this);
 		}
 		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
@@ -262,6 +262,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		grabberInitialize();
 				
 		new SystemWatchdog(); // reboots OS every 2 days
+		
+		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 80); 
+		
 		Util.debug("initialize done", this);
 
 	}
@@ -458,7 +461,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
-		case cameratoposition: comport.cameraToPosition(Integer.parseInt(str)); break;
+		case camtilt: comport.cameraToPosition(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
@@ -679,7 +682,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if(str.equals("dock")) docker.dock();
 			break;
 		case strobeflash:
-			comport.strobeflash(str);
+			comport.strobeflash(str,0,0);
 			messageplayer("strobeflash "+str, null, null);
 			break;
 
@@ -1084,10 +1087,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (loginRecords.isAdmin()) {
 			String str = comport.speedslow + " " + comport.speedmed + " "
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
-					+ " " + comport.clicknudgemomentummult+ " " + comport.maxclickcam
+					+ " " + comport.maxclickcam
 					+ " " + comport.fullrotationdelay + " " + comport.onemeterdelay + " " 
 					+ settings.readSetting(GUISettings.steeringcomp.name()) + " "
-					+ ArduinoPrime.CAM_HORIZ;
+					+ ArduinoPrime.CAM_HORIZ + " " + ArduinoPrime.CAM_REVERSE;
 			sendplayerfunction("drivingsettingsdisplay", str);
 		}
 	}
@@ -1107,31 +1110,26 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.maxclicknudgedelay = Integer.parseInt(comps[3]);
 			settings.writeSettings("maxclicknudgedelay", Integer.toString(comport.maxclicknudgedelay));
 			
-			comport.clicknudgemomentummult = Double.parseDouble(comps[4]);
-			settings.writeSettings("clicknudgemomentummult", Double.toString(comport.clicknudgemomentummult));
-			
-			comport.maxclickcam = Integer.parseInt(comps[5]);
+			comport.maxclickcam = Integer.parseInt(comps[4]);
 			settings.writeSettings("maxclickcam",Integer.toString(comport.maxclickcam));
 			
-			comport.fullrotationdelay = Integer.parseInt(comps[6]);
+			comport.fullrotationdelay = Integer.parseInt(comps[5]);
 			settings.writeSettings(GUISettings.fullrotationdelay.name(), Integer.toString(comport.fullrotationdelay));
 
-			comport.onemeterdelay = Integer.parseInt(comps[7]);
+			comport.onemeterdelay = Integer.parseInt(comps[6]);
 			settings.writeSettings(GUISettings.onemeterdelay.name(), Integer.toString(comport.onemeterdelay));
 			
-			comport.setSteeringComp(comps[8]);
-			settings.writeSettings(GUISettings.steeringcomp.name(), comps[8]);
+			comport.setSteeringComp(comps[7]);
+			settings.writeSettings(GUISettings.steeringcomp.name(), comps[7]);
 			
-//			ArduinoPrime.CAM_HORIZ = Integer.parseInt(comps[9]);
-			comport.setCameraStops(Integer.parseInt(comps[9]));
-//			settings.writeSettings(GUISettings.camhoriz.name(), comps[9]);
+			comport.setCameraStops(Integer.parseInt(comps[8]), Integer.parseInt(comps[9]));
 
 			String s = comport.speedslow + " " + comport.speedmed + " " 
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
-					+ " " + comport.clicknudgemomentummult +  " "  + comport.maxclickcam
+					+ " " + comport.maxclickcam
 					+ " " + comport.fullrotationdelay 
 					+ " " + comport.onemeterdelay +  " "  + comport.steeringcomp + " "
-					+ ArduinoPrime.CAM_HORIZ;
+					+ ArduinoPrime.CAM_HORIZ + " " + ArduinoPrime.CAM_REVERSE;
 			
 			messageplayer("driving settings set to: " + s, null, null);
 		}

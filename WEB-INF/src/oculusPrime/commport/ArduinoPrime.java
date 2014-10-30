@@ -104,7 +104,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	private static Timer cameraTimer = null;
 	
 	// take from settings 
-	public double clicknudgemomentummult = settings.getDouble(GUISettings.clicknudgemomentummult);	
+	private static final double clicknudgemomentummult = 0.25;	
 	public int maxclicknudgedelay = settings.getInteger(GUISettings.maxclicknudgedelay);
 	public int speedslow = settings.getInteger(GUISettings.speedslow);
 	public int speedmed = settings.getInteger(GUISettings.speedmed);
@@ -113,10 +113,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
 	public int onemeterdelay = settings.getInteger(GUISettings.onemeterdelay);
 	public int steeringcomp = 0;
+	
 	public static int CAM_HORIZ = settings.getInteger(GUISettings.camhoriz); 
+	public static int CAM_REVERSE = settings.getInteger(GUISettings.camreverse);;
 	public static int CAM_MAX; 
 	public static int CAM_MIN;
-	public static int CAM_REVERSE;
 	
 	public String portname = settings.readSetting(ManualSettings.motorport);
 	
@@ -144,7 +145,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.direction, direction.stop.toString());
 //		state.put(State.values.gyrocomp, GYROCOMP);
 		
-		setCameraStops(CAM_HORIZ);
+		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 		
 		if(motorsReady()){
 			
@@ -265,7 +266,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	}
 	
-	public void strobeflash(String mode) {
+	public void strobeflash(String mode, long d, int i) {
+		if (d==0) d=STROBEFLASH_MAX;
+		final long duration = d;
+		if (i==0) i=255;
+		final int intensity = i;
 		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString())) {
 			state.set(State.values.strobeflashon, true);
 			final long strobestarted = System.currentTimeMillis();
@@ -273,13 +278,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				public void run() {
 					try {
 						while (state.getBoolean(State.values.strobeflashon)) {
-							if (System.currentTimeMillis() - strobestarted > STROBEFLASH_MAX) {
+							if (System.currentTimeMillis() - strobestarted > STROBEFLASH_MAX || 
+									System.currentTimeMillis() - strobestarted > duration) {
 								state.set(State.values.strobeflashon, false);
 							}
 							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)0});
-							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)255});
+							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)intensity});
 							Thread.sleep(50);
-							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)255});
+							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)intensity});
 							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)0});
 							Thread.sleep(50);
 							
@@ -1233,6 +1239,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}).start();
 	}
 	
+	/**
+	 * compensates timer for drooping system voltage
+	 * @param n original milliseconds
+	 * @return modified (typically extended) milliseconds
+	 */
 	private double voltsComp(double n) {
 		double sysvolts = 12.0;
 		if (state.exists(State.values.sysvolts.toString())) {
@@ -1361,15 +1372,24 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		sendCommand(ODOMETRY_REPORT);
 	}
 
-	public void setCameraStops(int h) {
+	public void setCameraStops(int h, int r) {
 		if (h != CAM_HORIZ) {
 			settings.writeSettings(GUISettings.camhoriz.name(), h);
-			sendCommand(new byte[] { CAMHORIZSET,  (byte) h });
+			sendCommand(new byte[] { CAMHORIZSET,  (byte) h }); // writes to eeprom for horiz-on-reset
 			CAM_HORIZ = h;
 		}
-		CAM_MAX = CAM_HORIZ - 50; // 20; 
-		CAM_MIN = CAM_HORIZ + 30; // 100;
-		CAM_REVERSE = CAM_HORIZ + 68; // + 82 for bradz bot!
+		if (r != CAM_REVERSE) {
+			settings.writeSettings(GUISettings.camreverse.name(), r);
+			CAM_REVERSE = r;
+		}
+		
+//		CAM_MAX = CAM_HORIZ - 50; // 20; 
+//		CAM_MIN = CAM_HORIZ + 30; // 100;
+//		CAM_REVERSE = CAM_HORIZ + 68; // + 82 for bradz bot!
+		
+		double servoResolutionComp =  (CAM_REVERSE - CAM_HORIZ)/68.0;
+		CAM_MAX = (int) (CAM_HORIZ - 45 * servoResolutionComp); 
+		CAM_MIN = (int) (CAM_HORIZ + 25 * servoResolutionComp); // 100;
 	}
 	
 

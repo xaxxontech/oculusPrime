@@ -295,8 +295,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 			    Matcher mat = pat.matcher(extinfo);
 			    while (mat.find()) {
 			    	String sysvolts = mat.group().replaceFirst("_sV:", "");
-			    	if (!state.exists(State.values.sysvolts.toString()) || 
-							!state.get(State.values.sysvolts).equals(sysvolts)) {
+			    	if ((!state.exists(State.values.sysvolts.toString()) || 
+							!state.get(State.values.sysvolts).equals(sysvolts)) && !state.getBoolean(State.values.moving)) {
 			    		state.put(State.values.sysvolts, sysvolts);
 			    	}
 			    	break;

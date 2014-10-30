@@ -876,12 +876,12 @@ function drivingsettingsdisplay(str) { // called by server via flashplayer
 	document.getElementById('medoffset').value = splitstr[1];
 	document.getElementById('nudgedelay').value = splitstr[2];
 	document.getElementById('maxclicknudgedelay').value = splitstr[3];
-	document.getElementById('clicknudgemomentummult').value = splitstr[4];
-	document.getElementById('maxclickcam').value = splitstr[5];
-	document.getElementById('fullrotationdelay').value = splitstr[6];
-	document.getElementById('onemeterdelay').value = splitstr[7];
-	document.getElementById('steeringcomp').value = splitstr[8];
-	document.getElementById('camhorizpos').value = splitstr[9];
+	document.getElementById('maxclickcam').value = splitstr[4];
+	document.getElementById('fullrotationdelay').value = splitstr[5];
+	document.getElementById('onemeterdelay').value = splitstr[6];
+	document.getElementById('steeringcomp').value = splitstr[7];
+	document.getElementById('camhorizpos').value = splitstr[8];
+	document.getElementById('camreversepos').value = splitstr[9];
 }
 
 function drivingsettingssend() {
@@ -889,12 +889,12 @@ function drivingsettingssend() {
 			+ document.getElementById('medoffset').value + " "
 			+ document.getElementById('nudgedelay').value + " "
 			+ document.getElementById('maxclicknudgedelay').value + " "
-			+ document.getElementById('clicknudgemomentummult').value + " "
 			+ document.getElementById('maxclickcam').value + " "
 			+ document.getElementById('fullrotationdelay').value + " "
 			+ document.getElementById('onemeterdelay').value + " "
 			+ document.getElementById('steeringcomp').value + " "	
-			+ document.getElementById('camhorizpos').value;
+			+ document.getElementById('camhorizpos').value+ " "
+			+ document.getElementById('camreversepos').value;
 	callServer("drivingsettingsupdate", str);
 	message("sending driving settings values: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
