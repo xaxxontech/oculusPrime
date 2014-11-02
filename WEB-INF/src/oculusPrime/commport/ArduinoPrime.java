@@ -202,7 +202,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				long now = System.currentTimeMillis();
 				
 //				if (isconnected) Util.debug("watchdog",this);
-				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" past reset delay", this);
+				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" PCB past reset delay", this);
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
@@ -220,7 +220,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					long delay = 10L;
 					Util.delay(delay);
 					if (now + delay - lastRead > delay && isconnected) { // no response!
-						application.message("motors PCB timeout, attempting reset", null, null);
+						application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
 						reset();
 					}
 				}
@@ -270,7 +270,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if (d==0) d=STROBEFLASH_MAX;
 		final long duration = d;
 		if (i==0) i=255;
-		final int intensity = i;
+		final int intensity = i * 255 / 100;
 		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString())) {
 			state.set(State.values.strobeflashon, true);
 			final long strobestarted = System.currentTimeMillis();
@@ -1250,7 +1250,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			sysvolts= Double.parseDouble(state.get(State.values.sysvolts));
 		}
 		
-		n = n * Math.pow(nominalsysvolts/sysvolts, 2.5);
+		n = n * Math.pow(nominalsysvolts/sysvolts, 2.3);
 		return n;
 	}
 	

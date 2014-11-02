@@ -285,6 +285,11 @@ public class AutoDock { // implements Observer {
 					inchforward ++;
 				}
 				
+				if(state.getBoolean(State.values.batterycharging)) { // dock maybe successful
+					comport.strobeflash("on", 120, 20);
+					Util.delay(3000); // wait to see if came-undocked immediately (fairly commmon) 
+				}
+				
 				if(state.getBoolean(State.values.batterycharging)) { // dock successful
 					
 					state.set(State.values.docking, false);
@@ -302,7 +307,6 @@ public class AutoDock { // implements Observer {
 						}
 						
 						comport.floodLight(0);	
-						comport.setSpotLightBrightness(0);
 						comport.camCommand(ArduinoPrime.cameramove.horiz);
 					}
 					

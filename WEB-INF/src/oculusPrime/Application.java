@@ -263,7 +263,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 		new SystemWatchdog(); // reboots OS every 2 days
 		
-		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 80); 
+		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); 
 		
 		Util.debug("initialize done", this);
 
