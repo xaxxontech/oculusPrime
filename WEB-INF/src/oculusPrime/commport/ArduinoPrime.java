@@ -27,9 +27,6 @@ import gnu.io.SerialPortEventListener;
  */
 public class ArduinoPrime  implements SerialPortEventListener {
 
-	// toggle to see bytes sent in log 
-	public static final boolean DEBUGGING = true;
-	
 	public enum direction { stop, right, left, forward, backward, unknown };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
 	public enum speeds { slow, med, fast };  
@@ -81,7 +78,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected static State state = State.getReference();
 	protected Application application = null;
 	protected static SerialPort serialPort = null;	
-	protected static OutputStream out = null;
+	protected static OutputStream out = null; 
 	protected static InputStream in = null;
 	protected String version = null;
 	
@@ -242,8 +239,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public void floodLight(int target) {
 		state.set(State.values.floodlightlevel, target);
 
-		Util.debug("floodlight: " + target, this);
-
 		target = target * 255 / 100;
 		sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)target});
 	}
@@ -251,15 +246,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public void fwdflood(int target) {
 		state.set(State.values.fwdfloodlevel, target);
 
-		Util.debug("forward floodlight: " + target, this);
-
 		target = target * 255 / 100;
 		sendCommand(new byte[]{FWDFLOOD_LIGHT_LEVEL, (byte)target});
 	}
 	
 	public void setSpotLightBrightness(int target){
 		state.set(State.values.spotlightbrightness, target);
-		Util.debug("setSpotLightBrightness: " + target, this);
 		
 		target = target * 255 / 100;
 		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
@@ -307,7 +299,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		Util.debug("serial in: " + response, this);
+//		Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			version = null;
@@ -486,13 +478,13 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			}
 		}
 		
-		if(DEBUGGING) {
-			String text = "sendCommand(): " + (char)cmd[0] + " ";
-			for(int i = 1 ; i < cmd.length ; i++) 
-				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
-			
-			Util.debug(text, this);
-		}
+//		if(DEBUGGING) {
+//			String text = "sendCommand(): " + (char)cmd[0] + " ";
+//			for(int i = 1 ; i < cmd.length ; i++) 
+//				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
+//			
+//			Util.debug(text, this);
+//		}
 		
 		final byte[] command = cmd;
 		new Thread(new Runnable() {
@@ -875,8 +867,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	public void camCommand(cameramove move){ 
 
-		Util.debug("camCommand(): " + move, this);
-		
 		if (state.getBoolean(State.values.autodocking)) {
 			application.messageplayer("command dropped, autodocking", null, null);
 			return;
@@ -999,12 +989,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				case fast: state.put(State.values.motorspeed, speedfast); break;
 			}
 	    }
-		Util.debug("speedset(): " + str, this);
+
 	}
 
 	public void nudge(final direction dir) {
-		
-		Util.debug("nudge(): " + dir, this);
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			if (Application.openNIRead.depthCamGenerating || Application.stereo.stereoCamerasOn ) {
@@ -1256,17 +1244,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	public void delayWithVoltsComp(int n) {
 		int delay = (int) voltsComp((double) n);
-		Util.debug("delay = "+delay, this);
 		Util.delay(delay);
 	}
 
 	public void clickSteer(final int x, int y) {
-		
-		Util.debug("__clickSteer(): " + x, this);
-		
-//		if (state.getBoolean(State.values.controlsinverted)) {
-//			y=-y;
-//		}
 		
 		clickCam(y);
 		clickNudge(x);
@@ -1274,13 +1255,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	private void clickNudge(final Integer x) {
 		
-		Util.debug("__clickNudge(): " + "x: " + x, this);
-		
-		//TODO:  unsure of this 
 		final double mult = Math.pow(((320.0 - (Math.abs(x))) / 320.0), 3)* clicknudgemomentummult + 1.0;
 		final int clicknudgedelay = (int) ((maxclicknudgedelay * (Math.abs(x)) / 320) * mult);
-		
-		Util.debug("__clickNudge() n: "+clicknudgemomentummult+" mult: "+mult+" clicknudgedelay-after: "+clicknudgedelay, this);
 		
 		new Thread(new Runnable() {	
 			public void run() {
@@ -1334,8 +1310,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	
 	private void clickCam(final Integer y) {
 		if (state.getBoolean(State.values.autodocking)) return;
-		
-//		Util.debug("___clickCam(): " + "y: " + y, this);
 		
 		int n = maxclickcam * y / 240;
 		n = state.getInteger(State.values.cameratilt) +n;

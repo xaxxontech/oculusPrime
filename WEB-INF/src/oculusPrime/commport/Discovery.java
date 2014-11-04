@@ -110,7 +110,11 @@ public class Discovery {
 		Enumeration thePorts = CommPortIdentifier.getPortIdentifiers();
 		while (thePorts.hasMoreElements()) {
 			CommPortIdentifier com = (CommPortIdentifier) thePorts.nextElement();
-			if (com.getPortType() == CommPortIdentifier.PORT_SERIAL) ports.add(com.getName());
+			if (com.getPortType() == CommPortIdentifier.PORT_SERIAL) { 
+				String name = com.getName();
+				if (name.matches("/dev/ttyUSB.+")) ports.add(com.getName());
+//				ports.add(com.getName());
+			}
 		}
 	}
 

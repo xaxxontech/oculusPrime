@@ -403,7 +403,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 *            is the parameter to pass onto the function
 	 */
 	public void playerCallServer(final String fn, final String str) {
-//		Util.debug("from player flash: "+fn+", "+str, this); 
 		
 		if (fn == null) return;
 		if (fn.equals("")) return;
@@ -671,14 +670,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case autodock:
-			Util.debug("playerCallServer(): autodock: " + str, this);
 			docker.autoDock(str); 
 			break;
 		case getlightlevel:
 			docker.getLightLevel(); break;
 		case dock:
-			Util.debug("playerCallServer(): dock: " + str, this);
-//			if(str.equals("undock")) docker.undock();
 			if(str.equals("dock")) docker.dock();
 			break;
 		case strobeflash:
@@ -926,7 +922,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			state.set(State.values.framegrabbusy.name(), true);
 		}
 		
-		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
+//		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
 
@@ -991,7 +987,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		} catch (Exception e) {  e.printStackTrace();  }
 
-		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
+//		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
 
 	}
 	
@@ -1029,7 +1025,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		} catch (Exception e) {			e.printStackTrace();		}
 
-		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
+//		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
 	}
 	
 	public void messageplayer(String str, String status, String value) {
@@ -1214,7 +1210,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void streamSettingsSet(String str) {
-		Util.debug("streamSettingsSet: "+str, this);
 		settings.writeSettings("vset", "v" + str);
 		String s = "stream set to: " + str;
 		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
@@ -1373,8 +1368,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	private void clickSteer(String str) {
 		
-		Util.debug("+++ clickSteer(): " + str, this);
-
 		if (str == null) return;
 		
 		if (!state.getBoolean(State.values.motionenabled)) {
@@ -1517,10 +1510,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 						state.set(State.values.driverstream, true);
 					}
 				}).start();
-//				if (str.equals("camera") || str.equals("camandmic")) {
-//					monitor("on");
-//					Util.debug("monitor on", this);
-//				}
+
 				Util.log("OCULUS: player broadcast start", this);
 			} else {
 				sc.invoke("publish", new Object[] { "stop", null, null, null,null,null });
@@ -1963,7 +1953,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (val.length != 2) { return; } 
 		Integer videoThreshold = Integer.parseInt(val[0]);
 		Integer audioThreshold = Integer.parseInt(val[1]);
-		// Util.debug("threshold vals: "+videoThreshold+","+audioThreshold, this);
+
 		state.set(State.values.streamActivityThreshold.name(), str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
@@ -2003,35 +1993,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
-//	@Override
-//	public void updated(String key) {
-		
-		// Util.debug("updated(): " + key, this);
-		
-//		if(key.equals(State.values.cameratilt.name())){
-//			if(state.getInteger(State.values.cameratilt) > 150 //(ArduinoPrime.CAM_MAX /2) 
-//					&! state.getBoolean(State.values.controlsinverted)){
-//				if (player!=null) {
-//					IServiceCapableConnection sc = (IServiceCapableConnection) player;
-//					sc.invoke("flipVideo", new Object[] { true });
-//					
-//					messageplayer("inverting video and controls", null,null);
-//				}
-//				state.set(State.values.controlsinverted, true);
-//			}
-//			if(state.getInteger(State.values.cameratilt) < (ArduinoPrime.CAM_MAX /2) && 
-//					state.getBoolean(State.values.controlsinverted)){
-//				if (player!=null) {
-//					IServiceCapableConnection sc = (IServiceCapableConnection) player;
-//					sc.invoke("flipVideo", new Object[] { false });
-//					
-//					messageplayer("un-inverting video and controls", null,null);
-//				}
-//				state.delete(State.values.controlsinverted);
-//			}
-//		}
-		
-//	}
 }
 
 

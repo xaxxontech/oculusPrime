@@ -10,7 +10,7 @@ public class State {
 	
 	public enum values{ 
 		motionenabled, moving, movingforward, motorport,  // motors
-		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
+		dockgrabbusy, docking, dockstatus, autodocking, // dock 
 		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 		driver, logintime, pendinguserconnected,  // rtmp users
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
@@ -136,7 +136,7 @@ public class State {
 			//
 			Util.delay(10);
 			if (System.currentTimeMillis()-start > timeout){ 
-				Util.debug("block() timeout: " + member.name(), this);
+//				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}
@@ -393,16 +393,8 @@ public class State {
 		boolean exist = false;
 		if(get(arg) != null) exist = true;
 		
-		// if(exist) Util.debug("-..contains: " + arg.name() + " props: " + get(arg), this);
-		// else Util.debug("-..contains: not: " + arg.name() + " props: " + get(arg), this);
 
 		return exist;
-		
-		/* doesn't work... crazy dangerous bad ... invetigate 
-		if(props.containsKey(arg)) Util.debug("contains: " + arg.name() + " props: " + props.get(arg), this);
-		else Util.debug("contains: not: " + arg.name() + " props: " + props.get(arg), this);
-		return props.containsKey(arg);
-		*/
 		
 	}
 

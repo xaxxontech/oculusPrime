@@ -56,9 +56,7 @@ public class AutoDock { // implements Observer {
 
 	public void autoDock(String str){//PlayerCommands.autodockargs arg) {
 
-		Util.debug("autoDock(): " + str, this);
 		String cmd[] = str.split(" ");
-		Util.debug(str, this);
 		
 		if (cmd[0].equals("cancel")) {
 			autoDockCancel();
@@ -104,10 +102,6 @@ public class AutoDock { // implements Observer {
 		}
 		if (cmd[0].equals("dockgrabbed")) { 
 			
-			state.set(State.values.dockxpos.name(), cmd[2]);
-			state.set(State.values.dockypos.name(), cmd[3]);
-			state.set(State.values.dockxsize.name(), cmd[4]);
-			state.set(State.values.dockslope.name(), cmd[6]);
 			if (cmd[1].equals("find") && state.getBoolean(State.values.autodocking)) { // x,y,width,height,slope
 				int width = Integer.parseInt(cmd[4]);
 				if (width < (int) (0.02*imgwidth) || width > (int) (0.875*imgwidth) || cmd[5].equals("0")) { // unrealistic widths,failed to find target
@@ -115,7 +109,7 @@ public class AutoDock { // implements Observer {
 								settings.readSetting(GUISettings.vset).equals("vlow"))) {  // failed, switch to highres if avail and try again 
 						lowres = false;
 						dockGrab("start", 0, 0);
-						Util.debug("trying again in higher resolution",this);
+						Util.debug("trying again higher res",this);
 					}
 					else {
 						state.set(State.values.autodocking, false);
@@ -212,53 +206,19 @@ public class AutoDock { // implements Observer {
 
 		}	
 	}
-	
-/*
-	@Override
-	public void updated(String key) {
-		Util.debug("updated(): " + key, this);
-		
-		if(state.equals(State.values.batterycharging, key)){
-			Util.debug("updated(): battery charging.....", this);
-		}
-		
-	}
-*/	
-	public void autoDockStart(final String str) {
-		Util.debug("autoDockStart(): " + str, this);
-	}
+
 
 	public void autoDockCancel() {
-		Util.debug("autoDockCancel(): ", this);
 		state.set(State.values.autodocking, false);
 		app.message("auto-dock ended", "multiple", "cameratilt " + state.get(State.values.cameratilt) + " autodockcancelled blank motion stopped");
 	}
 
-	public void autoDockcalibrate(final String str) {
-		Util.debug("autoDockcalibrate(): " + str, this);
-	}
-	
-/*
-	private class WatchdogTask extends Thread {
-		@Override
-		public void run(){
-			
-			
-			Util.debug("dock(): battery level: " + state.get(oculus.State.values.batterylife), this);
-			// state.block(State.values., target, timeout)
-		
-		}
-	}
-*/
 	
 	// drive the bot in to charger watching for battery change with a blocking thread 
 	public void dock() {
 		
-		if (state.getBoolean(State.values.docking)) {
-			Util.debug("dock(): already docking", this);
-			return;
-		}
-
+		if (state.getBoolean(State.values.docking))  return;
+ 
 		if (!state.getBoolean(State.values.motionenabled)) {
 			app.message("motion disabled", null, null);
 			return;
@@ -401,7 +361,7 @@ public class AutoDock { // implements Observer {
 		final int s1 = (int) (dockw * dockh * 0.07  * w / h);  // (area) medium range start
 		final int s2 = (int) (dockw * dockh * 0.40 * w / h); // (area) close range start
 		final double s2slopetolerance = 1.2; // +/-
-		final double s1slopetolerance = 1.4; // +/-
+		final double s1slopetolerance = 1.3; // +/-
 		
 		// optionally set breaking delay longer for fast bots
 		int bd = settings.getInteger(ManualSettings.stopdelay.toString());
@@ -456,16 +416,29 @@ public class AutoDock { // implements Observer {
 				}).start();
 			}
 		} // end of S1 check
+		
 		if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
 			int fl = state.getInteger(State.values.floodlightlevel);
 			if (fl > 0 && fl != 15) comport.floodLight(FLLOW); 
 			
+			
+			
 			if (autodockingcamctr) { // if cam centered do check and comps below
 				autodockingcamctr = false;
 				int autodockcompdir = 0;
-				if (Math.abs(slopedeg - dockslopedeg) > s1slopetolerance) {
-					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*0.09) - Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
+
+ 				final double slopeDiffMax = 7.0;
+				double slopeDiff = Math.abs(slopedeg - dockslopedeg);
+				if (slopeDiff > slopeDiffMax)   slopeDiff = slopeDiffMax;
+
+				if (slopeDiff > s1slopetolerance) {
+					final double magicRatioMin = 0.09;
+					final double magicRatioMax = 0.22;
+					double magicRatio = magicRatioMax - (slopeDiff/slopeDiffMax)*(magicRatioMax-magicRatioMin);
+					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*magicRatio) - 
+								Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
 				}
+				
 				if (slope > dockslope) {
 					autodockcompdir *= -1;
 				} // approaching from left
@@ -631,13 +604,9 @@ public class AutoDock { // implements Observer {
 							break;
 						}
 					}
-
-					Util.debug("img received, processing...", this);
-					
 					
 					BufferedImage img = null;
 					if (Application.framegrabimg != null) {
-						Util.debug("framegrabimg received, processing...", this);
 
 						// convert bytes to image
 						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
@@ -647,7 +616,6 @@ public class AutoDock { // implements Observer {
 					}
 						
 					else if (Application.processedImage != null) {
-						Util.debug("frame received, processing processedImage", this);
 						img = Application.processedImage;
 					}
 					
@@ -726,7 +694,6 @@ public class AutoDock { // implements Observer {
 
 					BufferedImage img = null;
 					if (Application.framegrabimg != null) {
-						Util.debug("dockGrab(): img received, processing...", this);
 
 						// convert bytes to image
 						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
@@ -736,14 +703,12 @@ public class AutoDock { // implements Observer {
 					}
 						
 					else if (Application.processedImage != null) {
-						Util.debug("frame received, processing processedImage", this);
 						img = Application.processedImage;
 					}
 					
 					else { Util.log("dockgrab failure", this); return; }
 						
 					imgwidth= img.getWidth();
-					Util.debug("image width: "+imgwidth, this);
 					imgheight= img.getHeight();
 					rescomp = 640/imgwidth; // for clicksteer gui 640 window
 
@@ -794,8 +759,6 @@ public class AutoDock { // implements Observer {
 						String str = guix + " " + guiy + " " + guiw + " " + guih + " " + results[4];
 						// results = x,y,width,height,slope
 						
-//						autoDock("dockgrabbed find " + str);
-//						Util.debug(str, this);
 						app.message(str, "autodocklock", str);
 //						app.sendplayerfunction("processedImg", "load");
 
