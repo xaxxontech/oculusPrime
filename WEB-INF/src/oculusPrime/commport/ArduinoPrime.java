@@ -61,6 +61,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final byte ODOMETRY_START = 'i';
 	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
 	public static final byte ODOMETRY_REPORT = 'k';
+	public static final byte PING = 'c';
 		
 	public static final int CAM_NUDGE = 3; // degrees
 	public static final long CAM_SMOOTH_DELAY = 50;
@@ -83,7 +84,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected String version = null;
 	
 	protected static Settings settings = Settings.getReference();
-	protected final double nominalsysvolts = 12.0;
 	
 	// data buffer 
 	protected byte[] buffer = new byte[32];
@@ -185,7 +185,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	/** inner class to check if getting responses in timely manor */
 	public class WatchDog extends Thread {
 		oculusPrime.State state = oculusPrime.State.getReference();
-
+		
 		public WatchDog() {
 			this.setDaemon(true);
 		}
@@ -198,22 +198,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			while (true) {
 				long now = System.currentTimeMillis();
 				
-//				if (isconnected) Util.debug("watchdog",this);
 				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" PCB past reset delay", this);
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
 						!state.getBoolean(oculusPrime.State.values.moving)) {
-//						state.getInteger(oculusPrime.State.values.telnetusers) < 1 && isconnected) { //TODO: this started barfing after commit 5ddbcd7
-					
-					// check for autodocking = false; driver = false; telnet = false;
-					// application.message("battery board periodic reset", "battery", "resetting");
 					Util.log("motors board periodic reset", this);
 					reset();
 				}
 
-				if (now - lastSent > DEAD_TIME_OUT && isconnected) {
-					sendCommand(GET_PRODUCT); // ping
+				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
+					sendCommand(PING); 
 					long delay = 10L;
 					Util.delay(delay);
 					if (now + delay - lastRead > delay && isconnected) { // no response!
@@ -221,7 +216,14 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						reset();
 					}
 				}
-								
+				
+//				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
+//					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+//					reset();
+//				}
+				
+				if (now - lastSent > WATCHDOG_DELAY && isconnected)  sendCommand(PING);			
+
 				Util.delay(WATCHDOG_DELAY);
 			}		
 		}
@@ -304,6 +306,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		if(response.equals("reset")) {
 			version = null;
 			sendCommand(GET_VERSION);  
+			Util.debug(FIRMWARE_ID+" "+response, this);
 		} 
 		
 		if(response.startsWith("version:")) {
@@ -478,12 +481,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			}
 		}
 		
-//		if(DEBUGGING) {
+//		if(settings.getBoolean(ManualSettings.debugenabled)) {
 //			String text = "sendCommand(): " + (char)cmd[0] + " ";
 //			for(int i = 1 ; i < cmd.length ; i++) 
 //				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
 //			
-//			Util.debug(text, this);
+//			Util.log("DEBUG: "+ text, this);
 //		}
 		
 		final byte[] command = cmd;
@@ -1233,12 +1236,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	 * @return modified (typically extended) milliseconds
 	 */
 	private double voltsComp(double n) {
-		double sysvolts = 12.0;
-		if (state.exists(State.values.sysvolts.toString())) {
-			sysvolts= Double.parseDouble(state.get(State.values.sysvolts));
+		double volts = 12.0;
+		final double nominalvolts = 12.0;
+		final double exponent = 1.6;
+
+		if (state.exists(State.values.battvolts.toString())) {
+			volts = Double.parseDouble(state.get(State.values.battvolts));
 		}
 		
-		n = n * Math.pow(nominalsysvolts/sysvolts, 2.3);
+		n = n * Math.pow(nominalvolts/volts, exponent);
 		return n;
 	}
 	

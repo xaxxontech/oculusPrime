@@ -206,7 +206,8 @@ public class Discovery {
 			
 			for (int n=0; n < searchDevices.size(); n++) {
 				if (id.equalsIgnoreCase(searchDevices.get(n))) {
-//					state.set(deviceStateStrings.get(n), getPortName());
+					
+					// pass open ports to their respective classes
 					
 					if (id.equalsIgnoreCase(ArduinoPrime.FIRMWARE_ID)) {
 						state.set(State.values.motorport, getPortName());
@@ -229,18 +230,6 @@ public class Discovery {
 						application.powerport.initialize();
 						break;
 					}
-					
-//					else if (id.equalsIgnoreCase(ArduinoGyro.FIRMWARE_ID)) {
-//						state.set(State.values.gyroport, getPortName());
-//						application.gyroport.serialPort = serialPort;
-//						application.gyroport.in = inputStream;
-//						application.gyroport.out = outputStream;
-//						application.gyroport.isconnected = true;
-//						application.gyroport.portname = getPortName();
-//						application.gyroport.initialize();
-//						break;
-//					}
-					
 					
 					else { close(); }
 					

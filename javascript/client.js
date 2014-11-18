@@ -1403,7 +1403,7 @@ function holdservo(str) {
 }
 
 function restart() {
-	if (confirm("restart server\nare you sure?")) { 
+	if (confirm("restart server application\nare you sure?")) { 
 	  message("sending restart: "+str,sentcmdcolor);
 	  callServer('restart','');
 	}

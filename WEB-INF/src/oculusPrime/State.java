@@ -15,7 +15,7 @@ public class State {
 		driver, logintime, pendinguserconnected,  // rtmp users
 		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
 		volume, framegrabbusy, //audio video
-		batterycharging, batterylife, powerport, batteryinfo, sysvolts, // battery
+		wallpower, batterylife, powerport, batteryinfo, battvolts, powererror, // battery
 		boottime, httpPort, // system
 		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves,   
@@ -30,7 +30,7 @@ public class State {
 	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
 	public enum booleanValues{ moving, movingforward, autodocking, docking, batterycharging, framegrabbusy, dockgrabbusy, motionenabled, 
 		floodlighton, driverstream, muteOnROVmove, controlsinverted, strobeflashon,
-		odometry, stopbetweenmoves, diagnosticmode};
+		odometry, stopbetweenmoves, diagnosticmode, wallpower};
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterycharging, batterylife, sysvolts, batteryinfo; };	

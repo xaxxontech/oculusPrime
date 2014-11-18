@@ -848,11 +848,11 @@ Server Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: softwareupdate('version','');">software version</a><br>
 <a class="blackbg" href="javascript: softwareupdate('check','');">check for software update</a><br>
-<a class="blackbg" href="javascript: systemcall('shutdown -s -f -t 01','y');">shutdown</a><br>
-<a class="blackbg" href="javascript: systemcall('shutdown -r -f -t 01','y')">reboot</a><br>
-<a class="blackbg" href="javascript: restart();">restart server</a><br>
+<a class="blackbg" href="javascript: callServer('systemshutdown','');">shutdown OS</a><br>
+<a class="blackbg" href="javascript: callServer('reboot','');">reboot OS</a><br>
+<a class="blackbg" href="javascript: restart();">restart server application</a><br>
 <a class="blackbg" href="javascript: serverlog();">server log</a><br>
-reboot every 48 hrs <span style="font-size: 11px">(requires server restart)</span>
+reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>
 <a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
 <a class="blackbg" href="javascript: writesetting('reboot false');">no</a>
 

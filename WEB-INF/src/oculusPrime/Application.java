@@ -39,7 +39,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private boolean initialstatuscalled = false; 
 
 	//	private ScriptRunner scriptRunner = new ScriptRunner();	
-	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
+//	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
 	// TODO: added to jet is started, could be anywhere, not refrenced in this file yet though.
 	
 	private LoginRecords loginRecords = new LoginRecords();
@@ -505,8 +505,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.dockGrab("test", 0, 0);
 			docker.lowres = true;
 			break;
-//		case digitalread: comport.digitalRead(Integer.parseInt(str)); break;
-//		case analogwrite: comport.AnalogWrite(Integer.parseInt(str)); break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str);
 		case move: move(str); break;
 		case nudge: nudge(str); break;
@@ -687,6 +685,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			powerport.reset();
 			break;
 			
+		case powercommand:
+			messageplayer("powercommand: "+str, null, null);
+			powerport.sendCommand(str.getBytes());
+			
 		case block:
 			banlist.addBlockedFile(str);
 			break;
@@ -700,10 +702,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case reboot:
+			powerport.writeStatusToEeprom();
 			Util.reboot();
 			break;
 		
 		case systemshutdown:
+			powerport.writeStatusToEeprom();
 			Util.shutdown();
 			break;
 			
@@ -1242,7 +1246,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageGrabber("restarting server application", null);
 		if(commandServer!=null) { commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); }
 		File f;
-//		f = new File(System.getenv("RED5_HOME") + "\\restart"); // windows
+		
+		powerport.writeStatusToEeprom();
+
 		f = new File(Settings.redhome + Settings.sep + "restart"); // windows & linux
 		try {
 			if (!f.exists()) {
@@ -1261,6 +1267,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public void quit() { 
 		messageplayer("server shutting down",null,null);
 		if(commandServer!=null) { commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); }
+		
+		powerport.writeStatusToEeprom();
+		
 		try {
 			if (Settings.os.equalsIgnoreCase("linux")) {
 				Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
@@ -1329,9 +1338,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		ArduinoPrime.direction dir = ArduinoPrime.direction.valueOf(str);
 		switch (dir) {
-		case backward: comport.goBackward(); break;
-		case right: comport.turnRight(); break;
-		case left: comport.turnLeft(); 
+			case backward: comport.goBackward(); break;
+			case right: comport.turnRight(); break;
+			case left: comport.turnLeft(); 
 		}
 	
 		messageplayer("command received: " + str, "motion", "MOVING");

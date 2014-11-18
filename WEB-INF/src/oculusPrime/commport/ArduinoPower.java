@@ -27,13 +27,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int DEAD_TIME_OUT = 10000;
 	public static final int WATCHDOG_DELAY = 5000;
 	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
+	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
 	public static final int BAUD = 115200;
 	public static final String FIRMWARE_ID = "oculusPower";
-//	public static final byte BATTERYPLUSPFETOFF = 'm';
-//	public static final byte BATTERYPLUSPFETON= 'n';
 	public static final byte INITIATESHUTDOWN= 'p';
 	public static final byte CONFIRMSHUTDOWN= 'w'; 
 	public static final byte GET_VERSION = '7';
+	public static final byte READERROR = 's'; 
+	public static final byte STATUSTOEEPROM = 'A';
 	
 	protected Application application = null;
 	protected State state = State.getReference();
@@ -44,6 +45,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected volatile boolean isconnected = false;
 	protected long lastRead;
 	protected long lastReset;
+	protected long lastHostHeartBeat;
 		
 	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
@@ -79,11 +81,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public void initialize() {
 		
 		Util.debug("initialize", this);
-		
 		registerListeners();
+		sendCommand(READERROR);
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;
-
 		
 	}
 	
@@ -129,15 +130,22 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 
 		public void run() {
-
 			
 			Util.delay(SETUP);
+			long now = System.currentTimeMillis();
+			lastReset = now;
+			lastHostHeartBeat = now;
+			Util.debug("run", this);
+			
 			while (true) {
-//				if (isconnected)  Util.debug("watchdog", this);
-				
-				long now = System.currentTimeMillis();
+				now = System.currentTimeMillis();
 
 				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" past reset delay", this); 
+				
+				
+				if (state.exists(oculusPrime.State.values.powererror.toString())) {
+					application.message("power board error: " + state.get(oculusPrime.State.values.powererror), null, null);
+				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
@@ -145,15 +153,20 @@ public class ArduinoPower implements SerialPortEventListener  {
 					reset();
 				}
 				
-				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
-						state.get(oculusPrime.State.values.driver) == null &&
-						state.getInteger(oculusPrime.State.values.telnetusers) == 0) {
+				if (now - lastReset > RESET_DELAY && isconnected && !state.getBoolean(oculusPrime.State.values.autodocking) ){ //&& 
+//						state.get(oculusPrime.State.values.driver) == null &&
+//						state.getInteger(oculusPrime.State.values.telnetusers) == 0) {
 					// check for autodocking = false; driver = false; telnet = false;
 					application.message("battery board periodic reset", "battery", "resetting");
 					Util.log("battery board periodic reset", this);
 					reset();
 				}
 				
+				if (now - lastHostHeartBeat > HOST_HEARTBEAT_DELAY && isconnected) { 
+					sendCommand((byte) 0); // null, no response expected
+					lastHostHeartBeat = now;
+				}
+
 				Util.delay(WATCHDOG_DELAY);
 			}		
 		}
@@ -166,11 +179,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 					close();
 					connect();
 					Util.delay(SETUP);
-					registerListeners();
-					long now = System.currentTimeMillis();
-			
-					lastReset = now;
-					lastRead = now;
+					initialize();
+//					registerListeners();
+//					long now = System.currentTimeMillis();
+//			
+//					lastReset = now;
+//					lastRead = now;
+					
+					
 				}
 			}).start();
 		}
@@ -249,22 +265,37 @@ public class ArduinoPower implements SerialPortEventListener  {
 			return;
 		}
 		
+		
+		else if (s[0].equals("power_error")) {
+			if (!s[1].equals("0")) { 
+				state.set(State.values.powererror, s[1]);
+				application.message("power board error: " + s[1], null, null);
+			}
+			else {
+				if (state.exists(State.values.powererror.toString()))
+					state.delete(State.values.powererror);
+			}
+			return;
+		}
+		
 		else if (s[0].equals("docked")) {
+			if (!state.getBoolean(State.values.wallpower))
+				state.set(State.values.wallpower, true);
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "dock", AutoDock.DOCKED);
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
-				state.set(State.values.batterycharging, true);
 				state.set(State.values.motionenabled, false); 
 			}
 		}
 		
 		else if (s[0].equals("undocked")) {
+			if (state.getBoolean(State.values.wallpower))
+				state.set(State.values.wallpower, false);
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					!state.getBoolean(State.values.autodocking)) {
 				state.put(State.values.dockstatus, AutoDock.UNDOCKED);
 				state.put(State.values.batterylife, "draining");
 				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" battery draining");
-				state.set(State.values.batterycharging, false);
 				state.set(State.values.motionenabled, true); 
 			}
 
@@ -291,15 +322,28 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.put(State.values.batteryinfo, extinfo);
 	
 				// extract sysvolts '_sV:'
-			    Pattern pat = Pattern.compile("_sV:\\d+\\.\\d+");
+//			    Pattern pat = Pattern.compile("_sV:\\d+\\.\\d+");
+//			    Matcher mat = pat.matcher(extinfo);
+//			    while (mat.find()) {
+//			    	String sysvolts = mat.group().replaceFirst("_sV:", "");
+//			    	if ((!state.exists(State.values.sysvolts.toString()) || 
+//							!state.get(State.values.sysvolts).equals(sysvolts))) {
+////							&& !state.getBoolean(State.values.moving) && ! state.getBoolean(State.values.wallpower)) { 
+//			    		// sysvolts only used by voltscomp, so only update when undocked and NOT moving
+//			    		state.put(State.values.sysvolts, sysvolts);
+//			    	}
+//			    	break;
+//			    }
+			    
+			    // extract battvolts '_lV:'
+			    Pattern pat = Pattern.compile("_lV:\\d+\\.\\d+");
 			    Matcher mat = pat.matcher(extinfo);
 			    while (mat.find()) {
-			    	String sysvolts = mat.group().replaceFirst("_sV:", "");
-			    	if ((!state.exists(State.values.sysvolts.toString()) || 
-							!state.get(State.values.sysvolts).equals(sysvolts)) && !state.getBoolean(State.values.moving)) {
-			    		state.put(State.values.sysvolts, sysvolts);
+			    	String battvolts = mat.group().replaceFirst("_lV:", "");
+			    	if ((!state.exists(State.values.battvolts.toString()) || 
+							!state.get(State.values.battvolts).equals(battvolts))) {
+			    		state.put(State.values.battvolts, battvolts);
 			    	}
-			    	break;
 			    }
 			    
 			}
@@ -386,11 +430,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		sendCommand(INITIATESHUTDOWN);
 	}
 	
-//	public void prepareBatteryToDock() {
-//		sendCommand(BATTERYPLUSPFETOFF);
-//	}
-//	
-//	public void manualSetBatteryUnDocked() {
-//		sendCommand(BATTERYPLUSPFETON);
-//	}
+	public void writeStatusToEeprom() {
+		sendCommand(STATUSTOEEPROM);
+	}
 }

@@ -41,7 +41,7 @@ public class AutoDock { // implements Observer {
 	private final int FLHIGH = 25;
 	private final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
-	
+
 	
 	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
@@ -144,16 +144,12 @@ public class AutoDock { // implements Observer {
 									Util.delay(50);
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
-//									int pos = ArduinoPrime.CAM_MAX - 10;
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
-									Thread.sleep(100); // sometimes above command being ignored, maybe this will help
-									comport.rotate(ArduinoPrime.direction.left, 180);
-//									state.set(State.values.cameratilt, 0); // arbitrary value, to 	wait for actual position reached
-//									state.block(oculusPrime.State.values.cameratilt, Integer.toString(pos), 10000); 
-									Thread.sleep(100); // sometimes above command being ignored, maybe this will help
+									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
-									Thread.sleep(2500);
-//									autoDock("go");
+									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
+									comport.rotate(ArduinoPrime.direction.left, 180);
+									Thread.sleep(comport.fullrotationdelay/2+2000);
 									state.set(State.values.autodocking, true);
 									dockGrab("find", 0, 0);
 									
@@ -235,22 +231,22 @@ public class AutoDock { // implements Observer {
 		new Thread(new Runnable() {	
 			public void run() {		
 				int inchforward = 0;
-				while (inchforward < 15 && !state.getBoolean(State.values.batterycharging) && 
+				while (inchforward < 15 && !state.getBoolean(State.values.wallpower) && 
 						state.getBoolean(State.values.docking)) {
 					comport.goForward();
 					Util.delay(150);
 					comport.stopGoing();
 					
-					state.block(oculusPrime.State.values.batterycharging, "true", 400);
+					state.block(oculusPrime.State.values.wallpower, "true", 400);
 					inchforward ++;
 				}
 				
-				if(state.getBoolean(State.values.batterycharging)) { // dock maybe successful
+				if(state.getBoolean(State.values.wallpower)) { // dock maybe successful
 					comport.strobeflash("on", 120, 20);
 					Util.delay(3000); // wait to see if came-undocked immediately (fairly commmon) 
 				}
 				
-				if(state.getBoolean(State.values.batterycharging)) { // dock successful
+				if(state.getBoolean(State.values.wallpower)) { // dock successful
 					
 					state.set(State.values.docking, false);
 					state.set(State.values.motionenabled, false);

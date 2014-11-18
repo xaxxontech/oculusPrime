@@ -9,16 +9,7 @@ import java.util.Vector;
  * JUnit tests will validate the sub-sets player commands and the sub-sets. 
  */
 public enum PlayerCommands { // all valid commands
-	
-	// uncategorized 
-	speech, getdrivingsettings, drivingsettingsupdate,   
-	relaunchgrabber, statuscheck,   
-	writesetting, readsetting, opennisensor, pushtotalktoggle, 
-    email, state, help, framegrabtofile,   
-    settings, rssadd, 
-    getlightlevel, block, unblock,  
-    clearmap, stereo, 
-    
+	    
     // server
     uptime, restart, shutdown, showlog, softwareupdate,
     
@@ -38,15 +29,28 @@ public enum PlayerCommands { // all valid commands
     muterovmiconmovetoggle, streamsettingsset,
     
     // power board
-    battstats, powerreset, powershutdown, 
+    battstats, powerreset, powershutdown, powercommand,
     
     // malg board 
-    analogwrite, digitalread, motorsreset, cameracommand, camtilt, holdservo, 
+    motorsreset, cameracommand, camtilt, holdservo, 
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
     // lights
-    strobeflash, spotlight, spotlightsetbrightness, floodlight, fwdflood;
+    strobeflash, spotlight, spotlightsetbrightness, floodlight, fwdflood,
+    
+	// uncategorized 
+	speech, getdrivingsettings, drivingsettingsupdate,   
+	relaunchgrabber, statuscheck,   
+	writesetting, readsetting, pushtotalktoggle, 
+    email, state, help, framegrabtofile,   
+    settings, rssadd, 
+    getlightlevel, block, unblock,  
+   
+    // experimental
+    opennisensor, clearmap, stereo,
+    
+    ;
 	
 	enum autodockargs { go, cancel, framegrab };
 	
