@@ -235,8 +235,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		comport = new ArduinoPrime(this);
 		powerport = new ArduinoPower(this);
-//		gyroport = new ArduinoGyro(this);
 		new Discovery(this);
+		comport.initialize(); // this used to be called from discovery, not working
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
 //		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
@@ -1277,34 +1277,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
 		} catch (Exception e) { e.printStackTrace(); }
 	}
-
-//	public void monitor(String str) {
-//		// uses nircmd.exe from http://www.nirsoft.net/utils/nircmd.html
-////		if (Settings.os.equals("linux")) {
-////			// messageplayer("unsupported in linux",null,null);
-////			return;
-////		}
-//		messageplayer("monitor " + str, null, null);
-//		str = str.trim();
-//		try {
-//
-//			if (str.equals("on")) {
-//				if (Settings.os.equals("linux")) {
-//					str = "xset -display :0 dpms force on";
-//					Runtime.getRuntime().exec(str);
-//					str = "gnome-screensaver-command -d";
-//				}
-//				else { str = "cmd.exe /c start monitoron.bat"; }
-//			} else {
-//				if (Settings.os.equals("linux")) {
-//					str = "xset -display :0 dpms force off";
-//				}
-//				else { str = "nircmdc.exe monitor async_off"; }
-//			}
-//			Runtime.getRuntime().exec(str);
-//			
-//		} catch (Exception e) { e.printStackTrace(); }
-//	}
 
 	@SuppressWarnings("incomplete-switch")
 	public void move(final String str) {

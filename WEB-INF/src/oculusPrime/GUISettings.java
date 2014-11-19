@@ -35,7 +35,7 @@ public enum GUISettings {
 		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2700");
 		config.setProperty(onemeterdelay.name(), "2400");
-		config.setProperty(steeringcomp.name(), "0");
+		config.setProperty(steeringcomp.name(), "L20");
 		config.setProperty(camhoriz.name(), "70");
 		config.setProperty(camreverse.name(), "138");
 		

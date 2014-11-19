@@ -33,7 +33,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public enum mode { on, off };
 
 	public static final long DEAD_TIME_OUT = 60000;
-	public static final int WATCHDOG_DELAY = 5000;	
+	public static final int WATCHDOG_DELAY = 8000;	
 	public static final long RESET_DELAY = 14400000; // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
 	public static final int SETUP = 4000;
@@ -148,17 +148,17 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			
 			Util.log("attempting to connect to port"+portname, this);
 			
-					if (!isconnected) {
-						connect();
-						Util.delay(SETUP);
-					}
-					if(isconnected){
-						
-						Util.log("Connected to port: " + state.get(State.values.motorport), this);
-						
-						initialize();
+				if (!isconnected) {
+					connect();
+					Util.delay(SETUP);
+				}
+				if(isconnected){
+					
+					Util.log("Connected to port: " + state.get(State.values.motorport), this);
+					
+					initialize();
 
-					}
+				}
 			
 		}
 		
@@ -171,12 +171,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		Util.debug("initialize", this);
 		
 		registerListeners();
+		cameraToPosition(CAM_HORIZ);
 		setSpotLightBrightness(0);
 		floodLight(0);
-
-//		application.gyroport.sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
-//		state.set(State.values.cameratilt, CAM_HORIZ);
-		cameraToPosition(CAM_HORIZ);
 		
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;		
@@ -207,22 +204,23 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					reset();
 				}
 
-				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
-					sendCommand(PING); 
-					long delay = 10L;
-					Util.delay(delay);
-					if (now + delay - lastRead > delay && isconnected) { // no response!
-						application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
-						reset();
-					}
-				}
-				
 //				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
-//					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
-//					reset();
+//					sendCommand(PING); 
+//					long delay = 10L;
+//					Util.delay(delay);
+//					if (now + delay - lastRead > delay && isconnected) { // no response!
+//						application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+//						reset();
+//					}
 //				}
 				
-				if (now - lastSent > WATCHDOG_DELAY && isconnected)  sendCommand(PING);			
+				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
+					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+					reset();
+				}
+				
+//				if (now - lastSent > WATCHDOG_DELAY && isconnected)  sendCommand(PING);			
+				sendCommand(PING);
 
 				Util.delay(WATCHDOG_DELAY);
 			}		
@@ -1296,7 +1294,10 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		state.put(State.values.movingforward, false);
 		if (settings.getBoolean(GUISettings.muteonrovmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
 
-//		application.gyroport.sendCommand(STOP);
+		// needs deaccel!
+//		if (state.getBoolean(State.values.stopbetweenmoves)) sendCommand(HARD_STOP);
+//		else sendCommand(STOP);
+		
 		sendCommand(STOP);
 		
 		if (!state.getBoolean(State.values.stopbetweenmoves)) { // firmware can call stop when odometry running

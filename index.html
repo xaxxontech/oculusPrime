@@ -50,7 +50,7 @@ a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /*
 	margin-bottom: 1px; margin-top: 1px}
 /* .cancelbox { border: 1px solid #cccccc; padding-left: 3px; padding-right: 3px } */
 .cancelbox { color: #000000; background-color: #cccccc; padding-left: 3px; padding-right: 3px }
-.messagebox {  font-size: 13px; line-height: 16px; }
+.messagebox {  font-size: 13px; line-height: 16px; word-wrap: break-word; }
 .menu { color: #999999; }
 .cambutton { color: #cccccc; cursor: pointer; background-repeat: no-repeat; background-position: center; height: 26px} /* 484fcd */
 .facebox { border: 2px solid #4c56fe; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; line-height: 0px}
@@ -848,8 +848,10 @@ Server Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: softwareupdate('version','');">software version</a><br>
 <a class="blackbg" href="javascript: softwareupdate('check','');">check for software update</a><br>
-<a class="blackbg" href="javascript: callServer('systemshutdown','');">shutdown OS</a><br>
-<a class="blackbg" href="javascript: callServer('reboot','');">reboot OS</a><br>
+<a class="blackbg" href="javascript: if (confirm(&quot;shutdown OS\nare you sure?&quot;)) {
+	callServer('systemshutdown',''); }">shutdown OS</a><br>
+<a class="blackbg" href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
+	callServer('reboot',''); }">reboot OS</a><br>
 <a class="blackbg" href="javascript: restart();">restart server application</a><br>
 <a class="blackbg" href="javascript: serverlog();">server log</a><br>
 reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>

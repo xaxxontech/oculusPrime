@@ -18,8 +18,6 @@ import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
 
-//import java.util.regex.Matcher;
-//import java.util.regex.Pattern;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
@@ -176,16 +174,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 		if (isconnected) {
 			new Thread(new Runnable() {
 				public void run() {
+					writeStatusToEeprom();
+					Util.delay(100);
 					close();
 					connect();
 					Util.delay(SETUP);
 					initialize();
-//					registerListeners();
-//					long now = System.currentTimeMillis();
-//			
-//					lastReset = now;
-//					lastRead = now;
-					
 					
 				}
 			}).start();
@@ -282,7 +276,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!state.getBoolean(State.values.wallpower))
 				state.set(State.values.wallpower, true);
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-				application.message(null, "dock", AutoDock.DOCKED);
+				application.message(null, "multiple", "dock "+AutoDock.DOCKED+" motion disabled");
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
 				state.set(State.values.motionenabled, false); 
 			}
@@ -294,8 +288,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					!state.getBoolean(State.values.autodocking)) {
 				state.put(State.values.dockstatus, AutoDock.UNDOCKED);
-				state.put(State.values.batterylife, "draining");
-				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" battery draining");
+//				state.put(State.values.batterylife, "draining");
+				application.message(null, "dock", AutoDock.UNDOCKED);
 				state.set(State.values.motionenabled, true); 
 			}
 
@@ -412,8 +406,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 					out.write(13);
 		
 				} catch (Exception e) {
-					reset();
-					Util.log("ArduinoPower: sendCommand(), " + e.getMessage(), this);
+//					reset();
+					Util.log("ArduinoPower: sendCommand(), ERROR " + e.getMessage(), this);
 				}
 			}
 		}).start();

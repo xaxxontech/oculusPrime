@@ -75,12 +75,6 @@ public class AutoDock { // implements Observer {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-
-//							if (state.getInteger(State.values.spotlightbrightness) > 20 && 
-//									!state.getBoolean(State.values.controlsinverted)) {
-//								comport.setSpotLightBrightness(20);
-//								Thread.sleep(500); 
-//							} 
 														
 							dockGrab("start", 0, 0);
 							state.set(State.values.autodocking, true);
@@ -94,8 +88,6 @@ public class AutoDock { // implements Observer {
 						} catch (Exception e) { e.printStackTrace(); }
 					}
 				}).start();
-				
-
 				
 			}
 			else { app.message("motion disabled","autodockcancelled", null); }
@@ -225,8 +217,6 @@ public class AutoDock { // implements Observer {
 		state.set(State.values.dockstatus, DOCKING);
 		comport.speedset(ArduinoPrime.speeds.slow.toString());
 		state.set(State.values.movingforward, false);
-//		powerport.prepareBatteryToDock();
-		
 		
 		new Thread(new Runnable() {	
 			public void run() {		
@@ -249,15 +239,15 @@ public class AutoDock { // implements Observer {
 				if(state.getBoolean(State.values.wallpower)) { // dock successful
 					
 					state.set(State.values.docking, false);
-					state.set(State.values.motionenabled, false);
-					state.set(State.values.dockstatus, DOCKED);
+//					state.set(State.values.motionenabled, false);
+//					state.set(State.values.dockstatus, DOCKED);
 					comport.speedset(ArduinoPrime.speeds.fast.toString());
 
 					String str = "";
 					
 					if (state.getBoolean(State.values.autodocking)) {
 						state.set(State.values.autodocking, false);
-						str += " cameratilt "+state.get(State.values.cameratilt)+" autodockcancelled blank";
+						str += "cameratilt "+state.get(State.values.cameratilt)+" speed fast autodockcancelled blank";
 						if (!state.get(State.values.stream).equals("stop") && state.get(State.values.driver)==null) { 
 							app.publish("stop"); 
 						}
@@ -266,15 +256,16 @@ public class AutoDock { // implements Observer {
 						comport.camCommand(ArduinoPrime.cameramove.horiz);
 					}
 					
-					app.message("docked successfully", "multiple", "motion disabled dock docked battery charging"+str);
-					Util.debug("run(): " + state.get(State.values.driver) + " docked successfully", this);
+					app.message("docked successfully", "multiple", str);
+					Util.debug(state.get(State.values.driver) + " docked successfully", this);
 
 				} else { // dock fail
 					
 					if (state.getBoolean(State.values.docking)) {
 						state.set(State.values.docking, false); 
-						state.set(State.values.dockstatus, UNDOCKED);
-						app.message("docking timed out", "multiple", "dock un-docked motion stopped");
+//						state.set(State.values.dockstatus, UNDOCKED);
+//						app.message("docking timed out", "multiple", "dock un-docked motion stopped");
+						app.message("docking timed out", null, null);
 						Util.debug("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 //						powerport.manualSetBatteryUnDocked();						
 						
@@ -549,7 +540,7 @@ public class AutoDock { // implements Observer {
 						}
 					}).start();
 					Util.debug("autodock backup", this);
-				} else {
+				} else { // all good, let er rip
 					// System.out.println("dock "+dockslopedeg+" "+slopedeg);
 					new Thread(new Runnable() {
 						public void run() {
