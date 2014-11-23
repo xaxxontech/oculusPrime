@@ -1821,30 +1821,30 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if(str != null) result += "username " + str + " ";
 
 		// commport
-		if(ArduinoPrime.motorsReady()) result += "comport " + state.get(State.values.motorport) + " ";
-		else result += "comport nil ";
+//		if(ArduinoPrime.motorsReady()) result += "comport " + state.get(State.values.motorport) + " ";
+//		else result += "comport nil ";
 		
 		// TODO: 
 		// lights
 		
 		// if(ArduinoPrime.motorsAvailable()) result += "lightport " + settings.readSetting(ManualSettings.lightport) + " ";
-		result += "lightport nil ";
+//		result += "lightport nil ";
 
 		
 		// law and wan
-		String lan = state.get(State.values.localaddress);
-		if(lan == null) result += "lanaddress error ";
-		else result += "lanaddress " + lan + " ";
+//		String lan = state.get(State.values.localaddress);
+//		if(lan == null) result += "lanaddress error ";
+//		else result += "lanaddress " + lan + " ";
 
-		String wan = state.get(State.values.externaladdress);
-		if(wan == null) result += "wanaddress error ";
-		else result += "wanaddress " + wan + " ";
+//		String wan = state.get(State.values.externaladdress);
+//		if(wan == null) result += "wanaddress error ";
+//		else result += "wanaddress " + wan + " ";
 
 		// http port
-		result += "httpport " + settings.readRed5Setting("http.port") + " ";
+//		result += "httpport " + settings.readRed5Setting("http.port") + " ";
 
 		// rtmp port
-		result += "rtmpport " + settings.readRed5Setting("rtmp.port") + " ";
+//		result += "rtmpport " + settings.readRed5Setting("rtmp.port") + " ";
 
 		messageGrabber(result, null);
 		
