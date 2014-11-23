@@ -41,7 +41,7 @@ public class AutoDock { // implements Observer {
 	private final int FLHIGH = 25;
 	private final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
-
+	public static final int STOPDELAY = 750;
 	
 	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
@@ -267,7 +267,6 @@ public class AutoDock { // implements Observer {
 //						app.message("docking timed out", "multiple", "dock un-docked motion stopped");
 						app.message("docking timed out", null, null);
 						Util.debug("dock(): " + state.get(State.values.driver) + " docking timed out", this);
-//						powerport.manualSetBatteryUnDocked();						
 						
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
 							// back up and retry
@@ -278,7 +277,7 @@ public class AutoDock { // implements Observer {
 //								Thread.sleep(400);
 								comport.delayWithVoltsComp(800);
 								comport.stopGoing();
-								Thread.sleep(settings.getInteger(ManualSettings.stopdelay)); // let deaccelerate							
+								Thread.sleep(STOPDELAY); // let deaccelerate							
 							} catch (InterruptedException e) { e.printStackTrace(); }
 							dockGrab("start", 0, 0);
 							state.set(State.values.autodocking, true);
@@ -351,9 +350,7 @@ public class AutoDock { // implements Observer {
 		final double s1slopetolerance = 1.3; // +/-
 		
 		// optionally set breaking delay longer for fast bots
-		int bd = settings.getInteger(ManualSettings.stopdelay.toString());
-		if (bd == Settings.ERROR) bd = 500;
-		final int stopdelay = bd;
+
 		final int s1FWDmilliseconds = 500; // 400
 		final int s2FWDmilliseconds = 250; // 100
 		
@@ -377,7 +374,7 @@ public class AutoDock { // implements Observer {
 //							Thread.sleep(s1FWDmilliseconds);
 							comport.delayWithVoltsComp(s1FWDmilliseconds);
 							comport.stopGoing();
-							Thread.sleep(stopdelay);
+							Thread.sleep(STOPDELAY);
 							dockGrab("find", 0, 0);
 
 						} catch (Exception e) {
@@ -394,7 +391,7 @@ public class AutoDock { // implements Observer {
 //							Thread.sleep(s1FWDmilliseconds);
 							comport.delayWithVoltsComp(s1FWDmilliseconds);
 							comport.stopGoing();
-							Thread.sleep(stopdelay); // let deaccelerate
+							Thread.sleep(STOPDELAY); // let deaccelerate
 							dockGrab("find", 0, 0);
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -443,7 +440,7 @@ public class AutoDock { // implements Observer {
 //								Thread.sleep(s2FWDmilliseconds);
 								comport.delayWithVoltsComp(s2FWDmilliseconds);
 								comport.stopGoing();
-								Thread.sleep(stopdelay); // let deaccelerate
+								Thread.sleep(STOPDELAY); // let deaccelerate
 								dockGrab("find", 0, 0);
 							} catch (Exception e) {
 								e.printStackTrace();
@@ -459,7 +456,7 @@ public class AutoDock { // implements Observer {
 //								Thread.sleep(s2FWDmilliseconds);
 								comport.delayWithVoltsComp(s2FWDmilliseconds);
 								comport.stopGoing();
-								Thread.sleep(stopdelay); // let deaccelerate
+								Thread.sleep(STOPDELAY); // let deaccelerate
 								dockGrab("find", 0, 0);
 							} catch (Exception e) {
 								e.printStackTrace();
@@ -532,7 +529,7 @@ public class AutoDock { // implements Observer {
 //								Thread.sleep(s1FWDmilliseconds);
 								comport.delayWithVoltsComp(s1FWDmilliseconds);
 								comport.stopGoing();
-								Thread.sleep(stopdelay); // let deaccelerate
+								Thread.sleep(STOPDELAY); // let deaccelerate
 								dockGrab("find", 0, 0);
 							} catch (Exception e) {
 								e.printStackTrace();

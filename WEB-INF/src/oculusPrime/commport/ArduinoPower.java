@@ -22,7 +22,7 @@ import gnu.io.SerialPortEventListener;
 public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int SETUP = 4000;
-	public static final int DEAD_TIME_OUT = 10000;
+	public static final int DEAD_TIME_OUT = 15000; 
 	public static final int WATCHDOG_DELAY = 5000;
 	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
 	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
@@ -273,24 +273,27 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 		
 		else if (s[0].equals("docked")) {
-			if (!state.getBoolean(State.values.wallpower))
+			if (!state.getBoolean(State.values.wallpower)) {
 				state.set(State.values.wallpower, true);
+				state.set(State.values.motionenabled, false); 
+			}
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "multiple", "dock "+AutoDock.DOCKED+" motion disabled");
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
-				state.set(State.values.motionenabled, false); 
 			}
 		}
 		
 		else if (s[0].equals("undocked")) {
-			if (state.getBoolean(State.values.wallpower))
+			if (state.getBoolean(State.values.wallpower)) {
 				state.set(State.values.wallpower, false);
+				state.set(State.values.motionenabled, true); 
+			}
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					!state.getBoolean(State.values.autodocking)) {
 				state.put(State.values.dockstatus, AutoDock.UNDOCKED);
 //				state.put(State.values.batterylife, "draining");
-				application.message(null, "dock", AutoDock.UNDOCKED);
-				state.set(State.values.motionenabled, true); 
+//				application.message(null, "dock", AutoDock.UNDOCKED);
+				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" motion disabled");
 			}
 
 		}

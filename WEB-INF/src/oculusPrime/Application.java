@@ -56,7 +56,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
 	public static developer.depth.Stereo stereo = null;
-	public static Speech speech = new Speech();
+
 	public static byte[] framegrabimg  = null;
 	public static Boolean passengerOverride = false;
 	public static BufferedImage processedImage = null;
@@ -236,7 +236,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		comport = new ArduinoPrime(this);
 		powerport = new ArduinoPower(this);
 		new Discovery(this);
-		comport.initialize(); // this used to be called from discovery, not working
 		
 		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
 //		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
@@ -263,6 +262,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 		new SystemWatchdog(); // reboots OS every 2 days
 		
+		comport.camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
+		comport.setSpotLightBrightness(0);
+		comport.floodLight(0);
 		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); 
 		
 		Util.debug("initialize done", this);
@@ -1067,20 +1069,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void saySpeech(String str) {
-//		if (Settings.os.equals("linux")) {
-//			messageplayer("unsupported in linux",null,null);
-//			return;
-//		}
-		//Speech speech = new Speech();   // DONT initialize each time here, takes too long
+
 		Util.debug("SPEECH sayspeech: "+str, this);
-		if (Settings.os.equals("linux")) {
-			try {
-				String strarr[] = {"espeak",str};
-				Runtime.getRuntime().exec(strarr);
-			} catch (IOException e) { e.printStackTrace(); }
-		}
-		else { speech.mluv(str); }
 		
+		try {
+			String strarr[] = {"espeak",str};
+			Runtime.getRuntime().exec(strarr);
+		} catch (IOException e) { e.printStackTrace(); }
+	
 	}
 
 	private void getDrivingSettings() {

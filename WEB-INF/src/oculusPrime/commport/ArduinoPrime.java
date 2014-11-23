@@ -171,9 +171,9 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		Util.debug("initialize", this);
 		
 		registerListeners();
-		cameraToPosition(CAM_HORIZ);
-		setSpotLightBrightness(0);
-		floodLight(0);
+//		cameraToPosition(CAM_HORIZ);
+//		setSpotLightBrightness(0);
+//		floodLight(0);
 		
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;		
@@ -1096,6 +1096,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					}
 				}
 				
+				if (msg.equals("")) msg = null;
 				state.put(State.values.motorspeed, tempspeed);
 				application.message(msg, "motion", "stopped");
 				
@@ -1363,10 +1364,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			settings.writeSettings(GUISettings.camreverse.name(), r);
 			CAM_REVERSE = r;
 		}
-		
-//		CAM_MAX = CAM_HORIZ - 50; // 20; 
-//		CAM_MIN = CAM_HORIZ + 30; // 100;
-//		CAM_REVERSE = CAM_HORIZ + 68; // + 82 for bradz bot!
 		
 		double servoResolutionComp =  (CAM_REVERSE - CAM_HORIZ)/68.0;
 		CAM_MAX = (int) (CAM_HORIZ - 45 * servoResolutionComp); 
