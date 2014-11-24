@@ -92,13 +92,7 @@ public class Downloader {
 			return false;
 		}
 				
-		// if zip exists, blocking extraction 
-		if (System.getProperty("os.name").matches("Linux")) { 
-			Util.systemCallBlocking("unzip "+zip+" -d "+des);
-		}
-		else {
-			Util.systemCallBlocking("fbzip -e -p " + zip + " " + des);
-		}
+		Util.systemCallBlocking("unzip "+zip+" -d "+des);
 			
 		// test if folders 
 		if(new File(des).exists())
@@ -112,48 +106,6 @@ public class Downloader {
 		return false;
 	}
 	
-	/**
-	 * @param zipFile the zip file that needs to be unzipped
-	 * @param destFolder the folder into which unzip the zip file and create the folder structure
-	 
-	public boolean unzipFolderJava( String zipFile, String destFolder ) {
-		boolean result = false;
-		try {
-			ZipFile zf = new ZipFile(zipFile);
-			Enumeration< ? extends ZipEntry> zipEnum = zf.entries();
-			String dir = destFolder;
-
-			while( zipEnum.hasMoreElements() ) {
-				ZipEntry item = (ZipEntry) zipEnum.nextElement();
-
-				if (item.isDirectory()) {
-					File newdir = new File(dir + File.separator + item.getName());
-					newdir.mkdir();
-				} else {
-					String newfilePath = dir + File.separator + item.getName();
-					File newFile = new File(newfilePath);
-					if (!newFile.getParentFile().exists()) {
-						newFile.getParentFile().mkdirs();
-					}
-
-					InputStream is = zf.getInputStream(item);
-					FileOutputStream fos = new FileOutputStream(newfilePath);
-					int ch;
-					while( (ch = is.read()) != -1 ) {
-						fos.write(ch);
-					}
-					is.close();
-					fos.close();
-				}
-			}
-			result = true;
-			zf.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
-	 */
 	
 	/**
 	 * @param filename

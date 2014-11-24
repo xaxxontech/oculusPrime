@@ -7,13 +7,12 @@ import java.util.regex.Pattern;
 
 public class Updater {
 		
-	public static final String path = "http://code.google.com/p/oculus/downloads/list";
-	// "http://dev.xaxxon.com/files/");
+	public static final String path = "https://www.xaxxon.com/downloads/";
 	
 	/** @return number of current version, or -1 if unknown */
-	public int getCurrentVersion() {
+	public double getCurrentVersion() {
 		// log.info("reading current version");
-		int currentVersion = -1;
+		double currentVersion = -1;
 
 		// get current version info from txt file in root folder
 		String sep = System.getProperty("file.separator");
@@ -26,7 +25,8 @@ public class Updater {
 			String line = "";
 		    while ((line = reader.readLine()) != null) {
 		    	if ((line.trim()).equals("version")) {
-		    		currentVersion = Integer.parseInt((reader.readLine()).trim());
+//		    		currentVersion = Integer.parseInt((reader.readLine()).trim());
+		    		currentVersion = Double.parseDouble((reader.readLine()).trim());
 		    		break;
 		    	}
 		    }
@@ -47,8 +47,6 @@ public class Updater {
 		//pull download list into string
 		String downloadListPage = "";
 		try {
-			//URL url = new URL("http://code.google.com/p/oculus/downloads/list");
-			//URL url = new URL("http://dev.xaxxon.com/files/");
 			URLConnection con = new URL(path).openConnection();
 			String charset = "ISO-8859-1";
 			Reader r = new InputStreamReader(con.getInputStream(), charset);
@@ -66,20 +64,17 @@ public class Updater {
 		
 		
 		// scrape html, check for matching update files
-		// format =>  http://.../update*###.zip  where ### = version num (any number of digits)
+		// format =>  updatepackage_oculusprime_server_v###.zip  => where ### = digits or .
 		if (!downloadListPage.equals(null)) {
 			BufferedReader reader = new BufferedReader(new StringReader(downloadListPage));
 		    String str;
-		    Pattern pat = Pattern.compile("oculus\\.googlecode\\.com/files/update\\w*\\.zip");
-		    //Pattern pat = Pattern.compile("http://oculus\\.googlecode\\.com/files/update\\w*\\.zip");
-		    // http://oculus.googlecode.com/files/
-		    //Pattern pat = Pattern.compile("update\\w*\\.zip");
+		    Pattern pat = Pattern.compile("updatepackage_oculusprime_server_v.{0,12}\\.zip");
 		    Matcher mat = null;
 			try {
 				while ((str = reader.readLine()) != null) {
 					mat = pat.matcher(str);
 					while (mat.find()) {
-						filename = "http://"+mat.group();
+						filename = path+mat.group();
 						break;
 					}
 				}
@@ -87,8 +82,7 @@ public class Updater {
 			  e.printStackTrace();
 			}
 		}
-		//if (!filename.equals("")) { filename = "http://dev.xaxxon.com/files/" + filename; }
-		//System.out.println("filename="+filename);
+		Util.log("update filename: "+filename);
 		return filename; 
 	}
 	
@@ -97,15 +91,16 @@ public class Updater {
 	 * @param url string 
 	 * @return version integer
 	 */
-	public int versionNum(String url) {
-		int version = -1;
-		Pattern pat = Pattern.compile("\\d+$");
+	public double versionNum(String url) {
+		double version = -1;
+		Pattern pat = Pattern.compile("\\d+\\.+\\d*$");
 		url = url.replaceFirst("\\.zip$", "");
 		Matcher mat = pat.matcher(url);
 		while (mat.find()) {
-			version = Integer.parseInt(mat.group());
+			version = Double.parseDouble(mat.group());
 			break;
 		}
+		Util.log("update version: "+version);
 		return version;
 	}
 }

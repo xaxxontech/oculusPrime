@@ -11,7 +11,7 @@ import java.util.Vector;
 public enum PlayerCommands { // all valid commands
 	    
     // server
-    uptime, restart, shutdown, showlog, softwareupdate,
+    uptime, restart, quit, showlog, softwareupdate,
     
     // system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, 

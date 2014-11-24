@@ -188,13 +188,22 @@ function checkforstatusreceived() {
 		message("status request failed", sentcmdcolor);
 		setstatus("lag","<span style='color: red;'>LARGE</span>");
 		if (missedstatuschecks > 20) {
-			setstatus("connection","<span style='color: #666666;'>RELOAD PAGE</span>");
+			connectionlost();
 		}
 		else { countdowntostatuscheck(); }
 	}
 	else { 
 		missedstatuschecks =0;
 	}
+}
+
+function connectionlost() {
+	setstatus("connection","<span style='color: red;'>CLOSED</span>");
+	document.title = "closed";
+	connected = false;
+	setstatusunknown();
+	videologo("on");
+	message("reload page", "green");
 }
 
 function callServer(fn, str) {
@@ -326,10 +335,7 @@ function setstatus(status, value) {
 		if (status=="cameratilt") { value += "&deg;"; }
 		a.innerHTML = value;
 		if (status == "connection" && value == "closed") { 
-			a.style.color = "red";
-			connected = false;
-			setstatusunknown();
-			videologo("on");
+			connectionlost();
 		}
 		var clr = a.style.color;
 		var bclr = a.style.backgroundColor;

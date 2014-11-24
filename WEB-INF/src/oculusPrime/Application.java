@@ -486,7 +486,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case restart: restart(); break;
 		case softwareupdate: softwareUpdate(str); break;
 		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
-		case shutdown: quit(); break;
+		case quit: quit(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
@@ -1857,9 +1857,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (str.equals("check")) {
 			messageplayer("checking for new software...", null, null);
 			Updater updater = new Updater();
-			int currver = updater.getCurrentVersion();
+			double currver = updater.getCurrentVersion();
 			String fileurl = updater.checkForUpdateFile();
-			int newver = updater.versionNum(fileurl);
+			double newver = updater.versionNum(fileurl);
 			if (newver > currver) {
 				String message = "New version available: v." + newver + "\n";
 				if (currver == -1) {
@@ -1901,7 +1901,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}).start();
 		}
 		if (str.equals("versiononly")) {
-			int currver = new Updater().getCurrentVersion();
+			double currver = new Updater().getCurrentVersion();
 			String msg = "";
 			if (currver == -1)
 				msg = "version unknown";

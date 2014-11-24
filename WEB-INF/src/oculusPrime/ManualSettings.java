@@ -7,7 +7,8 @@ import oculusPrime.commport.Discovery;
 /** place extensions to settings here */
 public enum ManualSettings {
 	
-	motorport, powerport, developer, debugenabled, diagnostic, telnetport, vself, wheeldiameter, loginnotify, gyrocomp, 
+	motorport, powerport, developer, debugenabled, diagnostic, telnetport, vself, wheeldiameter, loginnotify, 
+	gyrocomp, 
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address; 
 	
 	 // new counter to see if constantly searching
