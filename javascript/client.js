@@ -382,7 +382,7 @@ function setstatus(status, value) {
 		if (initialdockedmessage==false) {
 			initialdockedmessage = true;
 			if (value == "docked") {
-				message("docked, charging","green");
+				message("docked","green");
 			}
 		}
 		if (!/docking/i.test(value)) {
@@ -641,10 +641,10 @@ function docklineposition(n) {
 	d.style.left = (ctr+i+(docklinewidth/2))+"px";
 	a.style.top = top + "px";
 	a.style.height = height + "px";
-	c.style.top = (top + 60) + "px";
-	c.style.height = (height/2-40) + "px";
-	d.style.top = (top + 60) + "px";
-	d.style.height = (height/2-40) + "px";
+	c.style.top = height/2 - 60 + top + "px";
+	c.style.height = "120px";
+	d.style.top = height/2 - 60 + top + "px";
+	d.style.height = "120px";
 }
 
 function relaunchgrabber() {
@@ -918,39 +918,10 @@ function camera(fn) {
 	}
 }
 
-function tiltcontrols(state) {
-	var str = document.getElementById("tiltcontrols").innerHTML;
-	popupmenu("menu","show",null,null,str);
-	callServer("gettiltsettings", "");
-	message("request tilt settings values", sentcmdcolor);
-	lagtimer = new Date().getTime(); // has to be *after* message()
-}
-
-function tiltsettingssend() {
-	str = document.getElementById('camhoriz').value + " "
-			+ document.getElementById('cammax').value + " "
-			+ document.getElementById('cammin').value + " "
-			+ document.getElementById('maxclickcam').value + " "
-			+ parseInt(document.getElementById('vidscale').value);
-	callServer("tiltsettingsupdate", str);
-	message("sending tilt settings values: " + str, sentcmdcolor);
-	lagtimer = new Date().getTime(); // has to be *after* message()
-}
-
-function tiltsettingsdisplay(str) {
-	message("tilt setings values received", "green");
-	splitstr = str.split(" ");
-	document.getElementById('camhoriz').value = splitstr[0];
-	document.getElementById('cammax').value = splitstr[1];
-	document.getElementById('cammin').value = splitstr[2];
-	document.getElementById('maxclickcam').value = splitstr[3];
-	document.getElementById('vidscale').value = splitstr[4];
-}
-
 function tilttest() {
 	var str = document.getElementById('tilttestposition').value;
-	callServer("tilttest", str);
-	message("sending tilt test: " + str, sentcmdcolor);
+	callServer("camtilt", str);
+	message("sending tilt position: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }
 
@@ -1010,10 +981,12 @@ function autodock(str) {
 		videooverlayposition();
 		var a =document.getElementById("videooverlay");
 	    a.onclick = autodockcalibrate;
-	    var str = "Auto-dock calibration: <table><tr><td style='height: 7px'></td></tr></table>";
-	    str+="Place Oculus square and centered in charging dock, then click within white area of target"
+	    var str = "Auto-Dock Calibration: <table><tr><td style='height: 7px'></td></tr></table>";
+	    str+="Align robot with charging dock, reverse camera, then click within white area of target"
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";
-	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
+		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
+    	str+="<table><tr><td style='height: 11px'></td></tr></table>";
+    	str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
 	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
@@ -1382,18 +1355,6 @@ function chatdivShow() {
 	document.getElementById('chatbox_input').value='';
 	document.getElementById('chatbox_input').focus();
 	popupmenu('menu','resize');
-}
-
-function arduinoReset() {
-	message("resetting arduinoculus ",sentcmdcolor);
-	callServer("arduinoreset","");
-//	overlay('off');
-}
-
-function arduinoEcho(value){
-	message("firmware command echo " + value, sentcmdcolor);
-	if(value=="true")	{ callServer("arduinoecho", "true"); }
-	if(value=="false")  { callServer("arduinoecho", "false"); }
 }
 
 function writesetting(value){
@@ -1855,10 +1816,9 @@ function docklinecalibrate(str) {
 	    document.getElementById("docklineright").style.display = "";
 	    docklineposition();
 
-	    var str = "Dockline Calibration:"
+	    var str = "Manual Dock Guide Calibration:"
 	    str += "<table><tr><td style='height: 7px'></td></tr></table>";
-	    str += "place Oculus square and centered in charging dock, then click screen to align dockline";
-	    str += " with dock spire.";
+	    str += "Align robot with charging dock, then click screen to align guide line";
 	    str += "<table><tr><td style='height: 7px'></td></tr></table>";
 	    str += "<a href='javascript: docklinecalibrate(&quot;save&quot;);'>";
 	    str += "<span class='cancelbox'>&#x2714;</span> SAVE</a> &nbsp; &nbsp; ";

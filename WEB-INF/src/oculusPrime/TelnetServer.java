@@ -263,9 +263,11 @@ public class TelnetServer implements Observer {
 		if(args.length()==0) args = "";
 		
 		// now send it, assign driver status 1st 
-		Application.passengerOverride = true;	
-		app.playerCallServer(player, args);
-		Application.passengerOverride = false;		
+//		Application.passengerOverride = true;	
+//		app.playerCallServer(player, args);
+//		Application.passengerOverride = false;
+		
+		app.driverCallServer(player, args);
 	}
 	
 	

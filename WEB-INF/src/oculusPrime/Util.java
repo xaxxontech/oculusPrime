@@ -419,19 +419,13 @@ public class Util {
     }
 	
 	public static void reboot() {
-		if (Settings.os.equals("linux")) {
-			String str  = Settings.redhome + Settings.sep + "systemreboot.sh"; // windows & linux
-			Util.systemCall(str);
-		}
-		else { Util.systemCall("shutdown -r -f -t 01"); } // windows
+		String str  = Settings.redhome + Settings.sep + "systemreboot.sh"; 
+		Util.systemCall(str);
 	}
 	
 	public static void shutdown() {
-		if (Settings.os.equals("linux")) {
-			String str  = Settings.redhome + Settings.sep + "systemshutdown.sh"; 
-			Util.systemCall(str);
-		}
-		else { Util.systemCall("shutdown -s -f -t 01"); } // windows		
+		String str  = Settings.redhome + Settings.sep + "systemshutdown.sh"; 
+		Util.systemCall(str);
 	}
 
 }

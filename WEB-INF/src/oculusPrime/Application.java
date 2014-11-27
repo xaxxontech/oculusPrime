@@ -21,13 +21,13 @@ import org.red5.server.api.service.IServiceCapableConnection;
 import org.jasypt.util.password.*;
 import org.red5.io.amf3.ByteArray;
 
-import developer.SendMail;
 import developer.UpdateFTP;
 import developer.depth.Mapper;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
 
+	public enum streamstate{ stop, camera, camandmic, mic };
 	private static final int STREAM_CONNECT_DELAY = 2000;
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
@@ -67,7 +67,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setPlainDigest(true);
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
-		AuthGrab.setApp(this);
 		initialize();
 	}
 
@@ -126,8 +125,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			if (!state.getBoolean(State.values.autodocking)) { //if autodocking, keep autodocking
 				if (state.get(State.values.stream) != null) {
-					if (!state.get(State.values.stream).equals("stop")) {
-						publish("stop");
+					if (!state.get(State.values.stream).equals(streamstate.stop.toString())) {
+						publish(streamstate.stop);
 					}
 				}
 
@@ -237,7 +236,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport = new ArduinoPower(this);
 		new Discovery(this);
 		
-		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
+		state.set(State.values.httpport, settings.readRed5Setting("http.port"));
 //		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
@@ -260,7 +259,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		grabberInitialize();
 				
-		new SystemWatchdog(); // reboots OS every 2 days
+		new SystemWatchdog(this); 
 		
 		comport.camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
 		comport.setSpotLightBrightness(0);
@@ -290,7 +289,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			public void run() {
 				try {
 					// stream = null;
-					String address = "127.0.0.1:" + state.get(State.values.httpPort);
+					String address = "127.0.0.1:" + state.get(State.values.httpport);
 					if (Settings.os.equals("linux")) {
 						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
 					}
@@ -310,7 +309,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				try {
 
 					// stream = "stop";
-					String address = "127.0.0.1:" + state.get(State.values.httpPort);
+					String address = "127.0.0.1:" + state.get(State.values.httpport);
 					if (Settings.os.equals("linux")) {
 						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
 					}
@@ -387,13 +386,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 
-//	public void dockGrab() {
-//		if (grabber instanceof IServiceCapableConnection) {
-//			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-//			sc.invoke("dockgrab", new Object[] { 0, 0, "find" });
-//			state.set(oculus.State.values.dockgrabbusy.name(), true);
-//		}
-//	}
+
+	public void driverCallServer(final PlayerCommands fn, final String str) {
+		passengerOverride = true;
+		playerCallServer(fn, str);
+		passengerOverride = false;
+	}
 
 	/**
 	 * distribute commands from pla
@@ -481,7 +479,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 //		case monitor: monitor(str); break;
 		case showlog: showlog(str); break;
-		case publish: publish(str); break;
+		case publish: publish(streamstate.valueOf(str)); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case restart: restart(); break;
 		case softwareupdate: softwareUpdate(str); break;
@@ -498,16 +496,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
-			if (str.equals("highres")) docker.lowres = false;
-			docker.dockGrab("start", 0, 0);
+			if (str!=null) if (str.equals("highres")) docker.lowres = false;
+			docker.dockGrab(AutoDock.dockgrabmodes.start, 0, 0);
 			docker.lowres = true;
 			break;
 		case dockgrabtest:
-			if (str.equals("highres")) docker.lowres = false;
-			docker.dockGrab("test", 0, 0);
-			docker.lowres = true;
+			if (str.equals("highres")) docker.lowres = false; // ?
+			docker.dockGrab(AutoDock.dockgrabmodes.test, 0, 0);
+			docker.lowres = true; // ?
 			break;
-		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str);
+		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
 		case move: move(str); break;
 		case nudge: nudge(str); break;
 		
@@ -587,12 +585,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			settings.writeSettings("vidctroffset", str);
 			messageplayer("vidctroffset set to : " + str, null, null);
 			break;
-
-//		case arduinoecho:
-//			if (str.equalsIgnoreCase("true"))comport.setEcho(true);
-//			else comport.setEcho(false);
-//			messageplayer("echo set to: " + str, null, null);
-//			break;
 
 		case motorsreset:
 			comport.reset();
@@ -689,7 +681,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case powercommand:
 			messageplayer("powercommand: "+str, null, null);
-			powerport.sendCommand(str.getBytes());
+			powerport.powercommand(str);
 			
 		case block:
 			banlist.addBlockedFile(str);
@@ -844,7 +836,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("grabber video sound mode = "+str, this);
 	}
 	
-	public void publish(String str) {
+	public void publish(streamstate mode) {
 		
 		if (state.getBoolean(State.values.autodocking.name())) {
 			messageplayer("command dropped, autodocking", null, null);
@@ -866,9 +858,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 				int height = Integer.parseInt(vals[1]);
 				int fps = Integer.parseInt(vals[2]);
 				int quality = Integer.parseInt(vals[3]);
-				sc.invoke("publish", new Object[] { str, width, height, fps, quality });
-				messageplayer("command received: publish " + str, null, null);
-				Util.log("publish: " + str, this);
+				sc.invoke("publish", new Object[] { mode.toString(), width, height, fps, quality });
+				messageplayer("command received: publish " + mode.toString(), null, null);
+				Util.log("publish: " + mode.toString(), this);
 			}
 		} catch (NumberFormatException e) {
 			Util.log("publish() " + e.getMessage());
@@ -1202,7 +1194,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeSettings("vcustom", str);
 		String s = "custom stream set to: " + str;
 		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
-			publish(state.get(State.values.stream));
+			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
@@ -1213,7 +1205,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeSettings("vset", "v" + str);
 		String s = "stream set to: " + str;
 		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
-			publish(state.get(State.values.stream));
+			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
@@ -1704,7 +1696,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void showlog(String str) {
 		int lines = 100; //default	
 		if (!str.equals("")) { lines = Integer.parseInt(str); }
-		String header = "latest "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
+		String header = "last "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
 		sendplayerfunction("showserverlog", header + Util.tail(lines));
 	}
 
@@ -1937,17 +1929,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (state.get(State.values.videosoundmode.name()).equals("high")) {
 				setGrabberVideoSoundMode("low"); // videosoundmode needs to be low to for activity threshold to work
 				if (stream != null) {
-					if (!stream.equals("stop")) { // if stream already running,
-						publish(stream); // restart, in low mode
+					if (!stream.equals(streamstate.stop.toString())) { // if stream already running,
+						publish(streamstate.valueOf(stream)); // restart, in low mode
 					}
 				}
 			}
 			
 			if (stream != null) { 
-				if (stream.equals("stop")) {
-					if (audioThreshold == 0 && videoThreshold > 0) { publish("camera"); }
-					else if (audioThreshold > 0 && videoThreshold == 0) { publish("mic"); }
-					else { publish("camandmic"); }
+				if (stream.equals(streamstate.stop.toString())) {
+					if (audioThreshold == 0 && videoThreshold > 0) { publish(streamstate.camandmic); }
+					else if (audioThreshold > 0 && videoThreshold == 0) { publish(streamstate.mic); }
+					else { publish(streamstate.camandmic); }
 				}
 			}
 			state.set(State.values.streamActivityThresholdEnabled.name(), System.currentTimeMillis());

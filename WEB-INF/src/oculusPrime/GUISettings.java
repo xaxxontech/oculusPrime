@@ -17,7 +17,7 @@ public enum GUISettings {
 		config.setProperty(speedslow.name() , "50");
 		config.setProperty(speedmed.name() , "150");
 		config.setProperty(docktarget.name() , "1.194_0.23209_0.17985_0.22649_129_116_80_67_-0.045455");
-		config.setProperty(vidctroffset.name() , "-46");
+		config.setProperty(vidctroffset.name() , "0");
 		config.setProperty(vlow.name() , "320_240_4_85");
 		config.setProperty(vmed.name() , "320_240_8_95");
 		config.setProperty(vhigh.name() , "640_480_8_85");

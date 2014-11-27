@@ -68,6 +68,8 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final long CAM_RELEASE_DELAY = 500;
 //	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
 	public static final String FIRMWARE_ID = "malg";
+	public static final int LINEAR_STOP_DELAY = 750;
+	public static final int TURNING_STOP_DELAY = 500;
 
 	private static final long STROBEFLASH_MAX = 5000; //strobe timeout
 	private static final int ACCEL_DELAY = 75;
@@ -200,7 +202,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
 						!state.getBoolean(oculusPrime.State.values.moving)) {
-					Util.log("motors board periodic reset", this);
+					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
 					reset();
 				}
 
@@ -299,7 +301,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-//		Util.debug("serial in: " + response, this);
+		Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			version = null;
@@ -941,7 +943,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 //				state.set(State.values.cameratilt, CAM_MIN);
 //				return;
 //				
-			case rearstop:   // legacy compatibility, same as reverse
+			case rearstop:   // deprecated, same as reverse
 				
 			case reverse:
 				sendCommand(new byte[] { CAM, (byte) CAM_REVERSE });

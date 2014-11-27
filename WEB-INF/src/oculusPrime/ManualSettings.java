@@ -9,7 +9,7 @@ public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, diagnostic, telnetport, vself, wheeldiameter, loginnotify, 
 	gyrocomp, 
-	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address; 
+	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address; 
 	
 	 // new counter to see if constantly searching
 
@@ -27,6 +27,7 @@ public enum ManualSettings {
 		config.setProperty(email_username.name(), Settings.DISABLED);
 		config.setProperty(email_password.name(), Settings.DISABLED);
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
+		config.setProperty(email_to_address.name(), Settings.DISABLED);
 		// config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "110");
