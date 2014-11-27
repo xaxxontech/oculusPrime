@@ -216,7 +216,7 @@ public class Discovery {
 						application.comport.out = outputStream;
 						application.comport.isconnected = true;
 						application.comport.portname = getPortName();
-						application.comport.initialize(); // not working here?!!
+						application.comport.initialize();
 						break;
 					}
 					
@@ -227,7 +227,7 @@ public class Discovery {
 						application.powerport.out = outputStream;
 						application.powerport.isconnected = true;
 						application.powerport.portname = getPortName();
-						application.powerport.initialize();
+//						application.powerport.initialize();
 						break;
 					}
 					

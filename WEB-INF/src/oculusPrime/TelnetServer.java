@@ -15,7 +15,7 @@ import org.jasypt.util.password.ConfigurablePasswordEncryptor;
  */
 public class TelnetServer implements Observer {
 	
-	public static enum Commands {chat, exit, bye};
+	public static enum Commands {chat, exit, bye, quit};
 	public static final boolean ADMIN_ONLY = true;
 	public static final String MSGPLAYERTAG = "<messageclient>";
 	public static final String MSGGRABBERTAG = "<messageserverhtml>";
@@ -291,7 +291,8 @@ public class TelnetServer implements Observer {
 				app.playerCallServer(PlayerCommands.chat, args);
 			return true;
 		
-		case bye: 
+		case bye:
+		case quit:
 		case exit: shutDown("user left", out, in, clientSocket); return true;
 		}
 		

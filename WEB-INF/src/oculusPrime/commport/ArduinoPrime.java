@@ -191,8 +191,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		public void run() {
 			
-			
-			Util.delay(SETUP);
+			Util.delay(Util.ONE_MINUTE);
 			
 			while (true) {
 				long now = System.currentTimeMillis();

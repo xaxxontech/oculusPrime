@@ -3,6 +3,8 @@ package oculusPrime.commport;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TooManyListenersException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,6 +12,7 @@ import java.util.regex.Pattern;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.ManualSettings;
+import oculusPrime.PlayerCommands;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
@@ -35,7 +38,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte READERROR = 's'; 
 	public static final byte STATUSTOEEPROM = 'A';
 	public static final byte TESTFORCEERRORCODE = '9';
-	public static final byte CLEARCURRENTWARNINGERROR = 'C';
+	public static final byte CLEARALLWARNINGERRORS = 'B';
 	public static final byte PING = 'X';
 	
 	protected Application application = null;
@@ -55,11 +58,49 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected String portname = settings.readSetting(ManualSettings.powerport);
 	protected String version = null;
 	
+	// errors
+	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
+	public static final int WARNING_ONLY_BELOW = 40;
+	public static final int RESET_REQUIRED_ABOVE= 19;
+	
+	
 	public ArduinoPower(Application app) {
 		application = app;	
 		state.put(State.values.powerport, portname);
 		
-		if(powerReady()){
+		Map<String, Integer> temp = new HashMap<String, Integer>();
+		// (reversed declaration for easier transcribing from firmware)
+		// ERROR CODES
+		temp.put("ERROR_NO_ERROR_ALL_IS_WELL",0);
+		// EROR CODES, WARNING (1-19):
+		temp.put("ERROR_ATTEMPT_ZERO_CURRENT_WHEN_ACTIVE",			1); 
+		temp.put("ERROR_HIGH_DRAIN_CURRENT_SHUTDOWN", 				2);
+		temp.put("ERROR_NO_BATTERY_CONNECTED", 						3); 
+		temp.put("ERROR_WALL_BRICK_LOW_VOLTAGE", 					4);
+		temp.put("ERROR_OVER_DISCHARGED_PACK",						5);
+		//ERROR CODES, WARNING SAFE CHARGE (20-39):
+		temp.put("ERROR_PACK_DRAINED_TO_ZERO_PERCENT",				22); 
+		temp.put("ERROR_NO_HOST_HEARTBEAT", 						23);
+		//ERROR CODES, FATAL NO CHARGE (40-59):		
+		temp.put("ERROR_SEVERELY_UNBALANCED_PACK",					41); 
+		temp.put("ERROR_MAX_PWM_BUT_LOW_CURRENT", 					42);
+		temp.put("ERROR_OVERCHARGED_CELL", 							43); 
+		temp.put("ERROR_REGULATOR_CANT_FIND_TARGET", 				44);
+		temp.put("ERROR_UNABLE_TO_COMPLETE_CHARGE", 				45); 
+		temp.put("ERROR_CHARGE_TIMED_OUT	", 						46);		
+		//ERROR CODES, FATAL SAFE CHARGE (60-79):
+		temp.put("ERROR_POWER_SOFT_SWITCH_FAIL",					61);
+		temp.put("ERROR_EEPROM_ROLLOVER",							62);
+		//ERROR CODES, FATAL NO CHARGE FORCE UNDOCK (80+):
+		temp.put("ERROR_CURRENT_OFFSET_TOO_HIGH",					81);
+		temp.put("ERROR_UNEXPECTED_CHARGE_CURRENT",					82);
+		temp.put("ERROR_CONSISTENT_OVER_CHARGE",					83);
+		// inverse 
+		for(Map.Entry<String, Integer> entry : temp.entrySet()){
+			pwrerr.put(entry.getValue(), entry.getKey());
+		}
+		
+		if(powerReady()){ // typically skipped if Discovery enabled
 			
 			Util.log("attempting to connect to port "+portname, this);
 			
@@ -70,9 +111,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if(isconnected){
 					
 					Util.log("Connected to port: " + state.get(State.values.powerport), this);
-					initialize();
+//					initialize();
+					reset();
 				}
-
 			
 		}
 
@@ -133,7 +174,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 		public void run() {
 			
-			Util.delay(SETUP);
+			Util.delay(Util.ONE_MINUTE);
 			long now = System.currentTimeMillis();
 			lastReset = now;
 			lastHostHeartBeat = now;
@@ -146,7 +187,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				
 				
 				if (state.exists(oculusPrime.State.values.powererror.toString())) {
-					application.message("power PCB error: " + state.get(oculusPrime.State.values.powererror), null, null);
+					String msg = "power PCB error: " + state.get(oculusPrime.State.values.powererror);
+					application.message(msg, null, null);
+					application.messageGrabber(msg, "");
 				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
@@ -271,9 +314,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.set(State.values.powererror, s[1]);
 				application.message("power PCB error: " + s[1], null, null);
 			}
-			else {
-				if (state.exists(State.values.powererror.toString()))
-					state.delete(State.values.powererror);
+			else  if (state.exists(State.values.powererror.toString())) {
+				state.delete(State.values.powererror);
+				application.message("power PCB error cleared", null, null);
 			}
 			return;
 		}
@@ -311,8 +354,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 		
 		else if (s[0].equals("redock")) {
-			state.set(State.values.redock, true);
-//			sendCommand(CLEARCURRENTWARNINGERROR);
+			application.playerCallServer(PlayerCommands.redock, null);
 		}
 		
 		else if (s[0].equals("force_undock")) {
@@ -372,6 +414,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 	/** Close the serial port streams */
 	private void close() {
 		
+		isconnected = false;
+		
 		try {
 			Util.debug("closing input stream", this);
 			if (in != null) in.close(); in=null;
@@ -391,8 +435,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 			serialPort.close();
 			serialPort = null;
 		}
-		
-		isconnected = false;
 
 	}
 	
@@ -464,4 +506,22 @@ public class ArduinoPower implements SerialPortEventListener  {
 			}
 		}
 	}
+	
+	public void clearWarningErrors() {
+
+		boolean warningonly = true;
+		boolean resetrequired = false;
+		String code[] = state.get(State.values.powererror).split(",");
+		for (int i=0; i < code.length; i++) {
+			int c = Integer.parseInt(code[i]);
+			if (c > WARNING_ONLY_BELOW ) warningonly = false;
+			if (c > RESET_REQUIRED_ABOVE) resetrequired = true;
+		}
+		if (! warningonly) return;
+		sendCommand(CLEARALLWARNINGERRORS);
+		if (resetrequired) reset();
+		//  state.powererror gets cleared by firmware if command succeeds
+	}
+
+	
 }

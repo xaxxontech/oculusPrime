@@ -48,6 +48,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private State state = State.getReference();
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
+	private SystemWatchdog watchdog;
 	
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
@@ -259,12 +260,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		grabberInitialize();
 				
-		new SystemWatchdog(this); 
+		watchdog = new SystemWatchdog(this); 
 		
 		comport.camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
 		comport.setSpotLightBrightness(0);
 		comport.floodLight(0);
-		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); 
+		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
+		
+		powerport.reset();
 		
 		Util.debug("initialize done", this);
 
@@ -382,6 +385,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.log("player video sound mode = "+videosoundmode, this);
 			
 			state.delete(State.values.controlsinverted);
+			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
 		}
 	}
 
@@ -477,14 +481,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case extrauser_password_update: account("extrauser_password_update", str); break;
 		case username_update: account("username_update", str); break;
 		case disconnectotherconnections: disconnectOtherConnections(); break;
-//		case monitor: monitor(str); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
+		case redock: watchdog.redock(); break;
 		case restart: restart(); break;
 		case softwareupdate: softwareUpdate(str); break;
 		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
-		case quit: quit(); break;
+		case quitserver: quit(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
@@ -527,7 +531,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case speed:
-//			comport.speedset(ArduinoPrime.speeds.valueOf(str));
 			comport.speedset(str);
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
@@ -558,7 +561,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			moveMacroCancel();
-//			comport.movedistance(ArduinoPrime.direction.valueOf(cmd[0]), Double.parseDouble(cmd[1]));
 			comport.movedistance(ArduinoPrime.direction.valueOf(fn.toString()),Double.parseDouble(str));
 			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
 			break;
@@ -627,7 +629,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case videosoundmode:
 			setGrabberVideoSoundMode(str);
-			messageplayer("video/sound mode set to: "+str, null, null);
+//			messageplayer("video/sound mode set to: "+str, null, null);
 			break;
 		
 		case pushtotalktoggle:
@@ -682,6 +684,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case powercommand:
 			messageplayer("powercommand: "+str, null, null);
 			powerport.powercommand(str);
+
+		case erroracknowledged:
+			if (str.equals("true")) {
+				Util.log("power error acknowledged");
+				if (watchdog.powererrorwarningonly) { 
+					powerport.clearWarningErrors(); 
+					watchdog.lastpowererrornotify = null; 
+				}
+			}
+			else Util.log("power error purposefully dismissed");
+			break;
 			
 		case block:
 			banlist.addBlockedFile(str);

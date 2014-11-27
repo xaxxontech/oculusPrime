@@ -9,8 +9,9 @@ public class Scratch {
         public static void main(String[] args) {
 
         	
-        	byte b = 'C';
-			System.out.println((char)b);    		
+        	String s = null;
+        	if (s.equals(null)) System.out.println("Asdf");   
+        	else System.out.println("eryerty");
 
         }
 }

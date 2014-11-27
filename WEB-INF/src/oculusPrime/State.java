@@ -21,7 +21,7 @@ public class State {
 		volume, framegrabbusy, //audio video
 
 		wallpower, batterylife, powerport, batteryinfo, battvolts, powererror, // power
-		redock, forceundock, // power problems
+		forceundock, // power problems
 
 		boottime, httpport, // system
 

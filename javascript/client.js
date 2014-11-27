@@ -56,9 +56,9 @@ var tempdivtext;
 var autodocking = false;
 var sendcommandtimelast = 0;
 var lastcommandsent;
-//var popupmenumouseposinterval;
 var popupmenu_xoffset = null;
 var popupmenu_yoffset = null;
+var mainmenuwidth = null;
 var bworig;
 var rovvolume = 0;
 var xmlhttp=null;
@@ -673,11 +673,21 @@ function mainmenu(id) {
 	if (id) {
 		var link = document.getElementById(id);
 		var xy = findpos(link);
-		x = xy[0]+link.offsetWidth+270; // =150;
+		
+//		var w = mainmenuwidth;
+//		if (w == null) { w=285; }
+		w = 0;
+		
+		x = xy[0]+ w; // =150;
 		xy = findpos(document.getElementById("video"));
 		y = xy[1]+4; // +30
 	}
-	popupmenu("menu", "show", x, y, str, null, 1, 0);
+	popupmenu("menu", "show", x, y, str, null, 0, 0);
+	if (mainmenuwidth == null) {
+		var m = document.getElementById("menu_menu_contents");
+		mainmenuwidth = m.offsetWidth;
+		
+	}
 //	resized();
 }
 
@@ -2222,9 +2232,28 @@ function streamset(str) {
 	}
 }
 
-function emailgrab() {
-	callServer("emailgrab", null);
-	overlay("off");
+function acknowledgeerror(str) {
+	
+	if (str == "true") {
+		popupmenu("context", "close");
+		callServer("erroracknowledged","true");
+	}
+	else if (str == "cancel") {
+		popupmenu("context", "close");
+		callServer("erroracknowledged","false");
+	}
+	
+	else {
+		
+		popupmenu("menu","close");
+	    
+	    var video = document.getElementById("video");
+	    var xy = findpos(video);
+	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, null, 1, 0);
+	    //function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offsetmult) {
+
+	}
+
 }
 
 
@@ -2252,6 +2281,7 @@ function displaymessages() {
 	document.write(str);
 }
 /* end of message recording utils */
+
 
 /* 
  * radar functions

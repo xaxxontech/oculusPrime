@@ -15,15 +15,16 @@ public class SystemWatchdog {
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
 	
-	// check every ten minutes
 	private static final long DELAY = 10000;
 	private static final long AUTODOCKTIMEOUT= 360000; // 6 min
 
-	// when is the system stale and need reboot
+	// stale system reboot frequency 
 	private static final long STALE = Util.ONE_DAY * 2; 
 	
-	// shared state variables
 	private State state = State.getReference();
+	
+	public String lastpowererrornotify = null; // this gets set to null on client login 
+	public boolean powererrorwarningonly = true;
 	
     /** Constructor */
 	SystemWatchdog(Application a){ 
@@ -34,16 +35,16 @@ public class SystemWatchdog {
 	
 	private class Task extends TimerTask {
 		public void run() {
-			
-			// check for redock command from battery firmware
-			if (state.getBoolean(State.values.redock)) {
-				state.set(State.values.redock, false);
-				redock();
-			}
-			
+
 			// saftey: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				forceundock();
+			}
+			
+			// notify clients of power errors
+			if (state.exists(State.values.powererror.toString())) {
+				if (lastpowererrornotify == null) notifyPowerError();
+				else if ( ! lastpowererrornotify.equals(state.get(State.values.powererror))) notifyPowerError();
 			}
 			
 			// regular reboot if set 
@@ -59,7 +60,46 @@ public class SystemWatchdog {
 		}
 	}
 	
-	private void redock() {
+	private void notifyPowerError() {
+		lastpowererrornotify = state.get(State.values.powererror);
+		boolean warningonly = true;
+		String longerror = "";
+		String code[] = lastpowererrornotify.split(",");
+		for (int i=0; i < code.length; i++) {
+			int c = Integer.parseInt(code[i]);
+			if (c > ArduinoPower.WARNING_ONLY_BELOW ) { 
+				warningonly = false;
+				longerror += "<span style='color: red'>";
+			}
+			if (c != 0) longerror += ArduinoPower.pwrerr.get(c).replaceFirst("ERROR_", "") + "<br>";
+			if (!warningonly) longerror += "</span>";
+		}
+		
+		if (state.exists(State.values.driver.toString())) {
+			String msg = "";
+			if (warningonly) msg += "POWER WARNING<br>History:<br><br>";
+			else msg += "POWER SYSTEM ERROR<br>History:<br><br>";
+			
+			msg += longerror + "<br>";
+			
+			if (warningonly) msg += "OK to clear warnings?<br><br>";
+			else msg += "Please UNPLUG BATTERY and contact technical support<br><br>";
+		
+			msg += "<a href='javascript: acknowledgeerror(&quot;true&quot;);'>";
+		    msg += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
+
+			if (warningonly) { powererrorwarningonly = true;
+			    msg += "<a href='javascript: acknowledgeerror(&quot;cancel&quot;);'>";
+			    msg += "<span class='cancelbox'><b>X</b></span> IGNORE</a><br>";
+			}
+			else powererrorwarningonly = false;
+			
+			application.sendplayerfunction("acknowledgeerror", msg);
+		}
+		else if (!warningonly) callForHelp("Oculus Prime POWER ERROR","Please UNPLUG BATTERY and contact technical support");
+	}
+	
+	public void redock() {
 		new Thread(new Runnable() { public void run() {
 			long start; 
 			String subject = "Oculus Prime Unable to Dock";
@@ -99,11 +139,13 @@ public class SystemWatchdog {
 				}
 				
 				application.driverCallServer(PlayerCommands.dockgrab, res);
+				Util.delay(10); // thread safe
 				while (!state.exists(State.values.dockfound.toString()) ) {} // wait
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit
 					application.driverCallServer(PlayerCommands.left, "25");
+					Util.delay(10); // thread safe
 					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) ) {} // wait
 					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
 				}
@@ -128,6 +170,9 @@ public class SystemWatchdog {
 	
 	private void callForHelp(String subject, String body) {
 		application.driverCallServer(PlayerCommands.messageclients, body);
+
+		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
+		
 		String emailto = settings.readSetting(ManualSettings.email_to_address);
 		if (!emailto.equals(Settings.DISABLED))
 			application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
@@ -135,6 +180,7 @@ public class SystemWatchdog {
 	}
 	
 	private void forceundock() {
+		application.driverCallServer(PlayerCommands.messageclients, "Power ERROR, Forced Un-Dock");
 		// go forward momentarily
 		application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
 		state.set(State.values.motionenabled, true);
@@ -142,10 +188,10 @@ public class SystemWatchdog {
 		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
 		Util.delay(800);
 		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
-		// 
-		String subject = "Oculus Prime Power ERROR, Forced Un-Dock";
-		String body = "Oculus Prime Power ERROR, Forced Un-Dock";
-		callForHelp(subject, body);
+		 
+//		String subject = "Oculus Prime Power ERROR, Forced Un-Dock";
+//		String body = "Oculus Prime Power ERROR, Forced Un-Dock";
+//		callForHelp(subject, body);
 	}
 
 }

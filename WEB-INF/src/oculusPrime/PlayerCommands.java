@@ -11,7 +11,7 @@ import java.util.Vector;
 public enum PlayerCommands { // all valid commands
 	    
     // server
-    uptime, restart, quit, showlog, softwareupdate,
+    uptime, restart, quitserver, showlog, softwareupdate,
     
     // system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, 
@@ -22,14 +22,14 @@ public enum PlayerCommands { // all valid commands
     assumecontrol, loginrecords, messageclients, 
     
     //docking
-    dockgrabtest, dock, dockgrab, docklineposupdate, autodock,  autodockcalibrate,
+    dockgrabtest, dock, dockgrab, docklineposupdate, autodock,  autodockcalibrate, redock,
     
     // video/audio (flash)
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
     muterovmiconmovetoggle, streamsettingsset,
     
     // power board
-    battstats, powerreset, powershutdown, powercommand,
+    battstats, powerreset, powershutdown, powercommand, erroracknowledged, 
     
     // malg board 
     motorsreset, cameracommand, camtilt, holdservo, 
@@ -52,10 +52,6 @@ public enum PlayerCommands { // all valid commands
     
     ;
 	
-	enum autodockargs { go, cancel, framegrab };
-	
-	enum dockargs { dock, cancle, undock };
-	
 	/** get text for any player command */
 	public String getHelp(){
 		return HelpText.valueOf(this.name()).getText();
@@ -72,7 +68,7 @@ public enum PlayerCommands { // all valid commands
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
 	    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssaddb, block, 
-	    unblock, powershutdown, reboot, systemshutdown, clearmap;	
+	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged;	
 
 	}
 	

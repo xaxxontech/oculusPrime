@@ -8,7 +8,7 @@ import oculusPrime.commport.Discovery;
 public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, diagnostic, telnetport, vself, wheeldiameter, loginnotify, 
-	gyrocomp, 
+	gyrocomp, alertsenabled,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address; 
 	
 	 // new counter to see if constantly searching
@@ -33,6 +33,7 @@ public enum ManualSettings {
 		config.setProperty(wheeldiameter.name(), "110");
 		config.setProperty(loginnotify.name() , "false");
 		config.setProperty(gyrocomp.name() , "1.09");
+		config.setProperty(alertsenabled.name() , "true");
 		return config;
 	}
 	
