@@ -8,6 +8,7 @@ import java.util.TimerTask;
 import java.util.TooManyListenersException;
 import java.util.UUID;
 
+import jssc.SerialPortList;
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
 import oculusPrime.Application;
@@ -17,15 +18,14 @@ import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
-import gnu.io.CommPortIdentifier;
-import gnu.io.SerialPort;
-import gnu.io.SerialPortEvent;
-import gnu.io.SerialPortEventListener;
+import jssc.SerialPort;
+import jssc.SerialPortEvent;
+import jssc.SerialPortException;
 
 /**
- *  Communicate with the motors and lights on one arduino and battery board 
+ *  Communicate with the MALG board 
  */
-public class ArduinoPrime  implements SerialPortEventListener {
+public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public enum direction { stop, right, left, forward, backward, unknown };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
@@ -36,7 +36,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static final int WATCHDOG_DELAY = 8000;	
 	public static final long RESET_DELAY = 14400000; // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
-	public static final int SETUP = 4000;
+	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int BAUD = 115200;
 	
 	
@@ -80,15 +80,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	protected long lastReset = System.currentTimeMillis();
 	protected static State state = State.getReference();
 	protected Application application = null;
-	protected static SerialPort serialPort = null;	
-	protected static OutputStream out = null; 
-	protected static InputStream in = null;
-	protected String version = null;
 	
 	protected static Settings settings = Settings.getReference();
 	
+	protected static SerialPort serialPort = null;
 	// data buffer 
-	protected byte[] buffer = new byte[32];
+	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
 	
 	// thread safety 
@@ -118,13 +115,11 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public static int CAM_MAX; 
 	public static int CAM_MIN;
 	
-	public String portname = settings.readSetting(ManualSettings.motorport);
 	
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
-//	public static final int turnspeed = 255;
-//	private static final double GYROCOMP = 1.09;
-		
+
+	
 	public ArduinoPrime(Application app) {	
 		
 		application = app;	
@@ -138,32 +133,15 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
-		state.put(State.values.motorport, portname);
+
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
-//		state.put(State.values.wheeldiamm,  settings.readSetting(ManualSettings.wheeldiameter));
 		state.put(State.values.direction, direction.stop.toString());
-//		state.put(State.values.gyrocomp, GYROCOMP);
-		
+
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 		
-		if(motorsReady()){
-			
-			Util.log("attempting to connect to port"+portname, this);
-			
-				if (!isconnected) {
-					connect();
-					Util.delay(SETUP);
-				}
-				if(isconnected){
-					
-					Util.log("Connected to port: " + state.get(State.values.motorport), this);
-					
-					initialize();
-
-				}
-			
-		}
-		
+		if(settings.readSetting(ManualSettings.motorport).equals(Settings.ENABLED)) connect();
+		initialize();
+		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
 		new WatchDog().start();
 
 	}
@@ -172,7 +150,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		
 		Util.debug("initialize", this);
 		
-		registerListeners();
 //		cameraToPosition(CAM_HORIZ);
 //		setSpotLightBrightness(0);
 //		floodLight(0);
@@ -191,7 +168,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 		public void run() {
 			
-			Util.delay(Util.ONE_MINUTE);
+//			Util.delay(Util.ONE_MINUTE);
 			
 			while (true) {
 				long now = System.currentTimeMillis();
@@ -202,6 +179,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
 						!state.getBoolean(oculusPrime.State.values.moving)) {
 					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
+					lastReset = now;
 					reset();
 				}
 
@@ -217,26 +195,18 @@ public class ArduinoPrime  implements SerialPortEventListener {
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+					lastRead = now;
 					reset();
 				}
 				
 //				if (now - lastSent > WATCHDOG_DELAY && isconnected)  sendCommand(PING);			
-				sendCommand(PING);
+				sendCommand(PING); // expect "" response
 
 				Util.delay(WATCHDOG_DELAY);
 			}		
 		}
 	}
 	
-	public static boolean motorsReady (){
-		final String motors = state.get(State.values.motorport); 
-		if(motors == null) return false; 
-		if(motors.equals(Discovery.params.disabled.name())) return false;
-		if(motors.equals(Discovery.params.discovery.name())) return false;
-		
-		return true;
-	}
-
 	public void floodLight(int target) {
 		state.set(State.values.floodlightlevel, target);
 
@@ -262,7 +232,7 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	public void strobeflash(String mode, long d, int i) {
 		if (d==0) d=STROBEFLASH_MAX;
 		final long duration = d;
-		if (i==0) i=255;
+		if (i==0) i=100;
 		final int intensity = i * 255 / 100;
 		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString())) {
 			state.set(State.values.strobeflashon, true);
@@ -303,13 +273,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
-			version = null;
 			sendCommand(GET_VERSION);  
 			Util.debug(FIRMWARE_ID+" "+response, this);
 		} 
 		
 		if(response.startsWith("version:")) {
-			version = response.substring(response.indexOf("version:") + 8, response.length());
+			String version = response.substring(response.indexOf("version:") + 8, response.length());
 			application.message("malg board firmware version: " + version, null, null);		
 		} 
 	
@@ -348,92 +317,100 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	}
 
+	/**
+	 * port query and connect 
+	 */
 	private void connect() {
+		isconnected = false;
+		
 		try {
 
-			Util.debug("attempting connect to "+portname, this);
-			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portname).open(ArduinoPrime.class.getName(), SETUP);
-			serialPort.setSerialPortParams(BAUD, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+	    	String[] portNames = SerialPortList.getPortNames();
+	        if (portNames.length == 0) return;
+	        
+	        String otherdevice = "";
+	        if (state.exists(State.values.powerport.toString())) 
+	        	otherdevice = state.get(State.values.powerport);
+	        
+	        for (int i=0; i<portNames.length; i++) {
+        		if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
+        			
+        			Util.log("querying port "+portNames[i], this);
+        			
+        			serialPort = new SerialPort(portNames[i]);
+        			serialPort.openPort();
+        			serialPort.setParams(BAUD, 8, 1, 0);
+        			Thread.sleep(DEVICEHANDSHAKEDELAY);
+        			byte[] buffer = new byte[99];
+        			buffer = serialPort.readBytes(); // clear serial buffer
+        			
+        			serialPort.writeBytes(new byte[] { GET_PRODUCT, 13 }); // query device
+        			Thread.sleep(100); // some delay is required
+        			buffer = serialPort.readBytes();
+        			
+        			if (buffer == null) break;
+        			
+        			String device = new String();
+        			for (int n=0; n<buffer.length; n++) {
+        				if((int)buffer[n] == 13 || (int)buffer[n] == 10) { break; }
+        				if(Character.isLetter((char) buffer[n]))
+        					device += (char) buffer[n];
+        			}
+        			
+        			if (device.length() == 0) break;
+        			Util.debug(device+" "+portNames[i], this);
+    				if (device.trim().startsWith("id")) device = device.substring(2, device.length());
+    				Util.debug(device+" "+portNames[i], this);
+    				
+    				if (device.equals(FIRMWARE_ID)) {
+    					
+    					Util.log("malg connected to "+portNames[i], this);
+    					
+    					isconnected = true;
+    					state.set(State.values.motorport, portNames[i]);
+    		            serialPort.addEventListener(this, SerialPort.MASK_RXCHAR);//Add SerialPortEventListener
+    					break; // don't read any more ports, time consuming
+    				}
+    				serialPort.closePort();
+	        	}
+	        }
 
-			// open streams
-			out = serialPort.getOutputStream();
-			in = serialPort.getInputStream();
-
-			isconnected = true;
-
-		} catch (Exception e) {
-			
+		} catch (Exception e) {	
 			Util.log("can't connect to port: " + e.getMessage(), this);
+		}
 			
-		}
-	}
-	
-	protected void registerListeners() {
-		if (serialPort != null) {
-			try {
-				serialPort.addEventListener(this);
-			} catch (TooManyListenersException e) {
-				e.printStackTrace();
-			}
-			serialPort.notifyOnDataAvailable(true);
-		}
 	}
 
 	public boolean isConnected() {
 		return isconnected;
 	}
 
-	/** */
-	public void manageInput(){
+	public void serialEvent(SerialPortEvent event) {
+		if (!event.isRXCHAR())  return;
+
 		try {
 			byte[] input = new byte[32];
-			int read = in.read(input);
-			for (int j = 0; j < read; j++) {
-				// print() or println() from arduino code
+			
+			input = serialPort.readBytes();
+			for (int j = 0; j < input.length; j++) {
 				if ((input[j] == '>') || (input[j] == 13) || (input[j] == 10)) {
-					// do what ever is in buffer
 					if (buffSize > 0) execute();
 					buffSize = 0; // reset
-					// track input from arduino
-					lastRead = System.currentTimeMillis();
-				} else if (input[j] == '<') {
-					// start of message
+					lastRead = System.currentTimeMillis(); 	// last command from board
+
+				}else if (input[j] == '<') {  // start of message
 					buffSize = 0;
 				} else {
-					// buffer until ready to parse
-					buffer[buffSize++] = input[j];
+					buffer[buffSize++] = input[j];   // buffer until ready to parse
 				}
 			}
-		} catch (IOException e) {
-			System.out.println("event : " + e.getMessage());
+			
+		} catch (SerialPortException e) {
+			e.printStackTrace();
 		}
-	}
 		
-	public void serialEvent(SerialPortEvent event) {
-		if (event.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
-			manageInput();
-		}
 	}
 
-	public long getWriteDelta() {
-		return System.currentTimeMillis() - lastSent;
-	}
-	
-	public String getVersion() {
-		return version;
-	}
-	
-	public long getReadDelta() {
-		return System.currentTimeMillis() - lastRead;
-	}
-
-	
-//	public void setEcho(boolean update) {
-//		if (update) sendCommand(ECHO_ON);
-//		else sendCommand(ECHO_OFF);
-//	}
-
-	
 	public void reset() {
 //		if (isconnected) {
 			new Thread(new Runnable() {
@@ -441,7 +418,6 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					Util.log("resetting MALG board", this);
 					disconnect();
 					connect();
-					Util.delay(SETUP);
 					initialize();
 				}
 			}).start();
@@ -451,14 +427,12 @@ public class ArduinoPrime  implements SerialPortEventListener {
 	/** shutdown serial port */
 	protected void disconnect() {
 		try {
-			if(in!=null) in.close();
-			if(out!=null) out.close();
 			isconnected = false;
-			version = null;
+			serialPort.closePort();
+			state.delete(State.values.motorport);
 		} catch (Exception e) {
-			Util.log("disconnect(): " + e.getMessage(), this);
+			Util.log("error in disconnect(): " + e.getMessage(), this);
 		}
-		if(serialPort!=null) serialPort.close();
 	}
 
 	/**
@@ -480,28 +454,27 @@ public class ArduinoPrime  implements SerialPortEventListener {
 			}
 		}
 		
-//		if(settings.getBoolean(ManualSettings.debugenabled)) {
-//			String text = "sendCommand(): " + (char)cmd[0] + " ";
-//			for(int i = 1 ; i < cmd.length ; i++) 
-//				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
-//			
-//			Util.log("DEBUG: "+ text, this);
-//		}
+		/*
+		if(settings.getBoolean(ManualSettings.debugenabled)) {
+			String text = "sendCommand(): " + (char)cmd[0] + " ";
+			for(int i = 1 ; i < cmd.length ; i++) 
+				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
+			
+			Util.log("DEBUG: "+ text, this);
+		}   // */
+		
 		
 		final byte[] command = cmd;
 		new Thread(new Runnable() {
 			public void run() {
 				try {
 
-					// send
-					out.write(command);
-		
-					// end of command
-					out.write(13);
+					serialPort.writeBytes(command);  // byte array
+					serialPort.writeInt(13);  					// end of command
 		
 				} catch (Exception e) {
-					reset();
 					Util.log("OCULUS: sendCommand(), " + e.getMessage(), this);
+					e.printStackTrace(); // TODO: debugging
 				}
 			}
 		}).start();

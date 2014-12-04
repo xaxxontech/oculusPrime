@@ -12,7 +12,6 @@ import java.util.Set;
 
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
-import oculusPrime.commport.Discovery;
 
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
@@ -64,6 +63,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public Application() {
 		super();
+		Util.log("==============Oculus Prime Java Start===============");
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		FrameGrabHTTP.setApp(this);
@@ -234,10 +234,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 
-		comport = new ArduinoPrime(this);
-		powerport = new ArduinoPower(this);
-		new Discovery(this);
-		
+		comport = new ArduinoPrime(this); // note: blocking
+		powerport = new ArduinoPower(this); // note: blocking
+
 		state.set(State.values.httpport, settings.readRed5Setting("http.port"));
 //		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
 		initialstatuscalled = false;
@@ -263,14 +262,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 		watchdog = new SystemWatchdog(this); 
 		
-		comport.camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
-		comport.setSpotLightBrightness(0);
-		comport.floodLight(0);
-		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
-		
-		powerport.reset();
-		
-		Util.debug("initialize done", this);
+		new Thread(new Runnable() { public void run() {
+			Util.delay(10000);  // arduino takes 10 sec to reach full power?
+			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
+		} }).start();
+				
+		Util.debug("application initialize done", this);
 
 	}
 
@@ -294,12 +291,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 				try {
 					// stream = null;
 					String address = "127.0.0.1:" + state.get(State.values.httpport);
-					if (Settings.os.equals("linux")) {
-						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
-					}
-					else { // win
-						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculusPrime/initialize.html");
-					}
+
+//					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
+					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/initialize.html");
+
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -314,12 +309,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 					// stream = "stop";
 					String address = "127.0.0.1:" + state.get(State.values.httpport);
-					if (Settings.os.equals("linux")) {
-						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
-					}
-					else { // win
-						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculusPrime/server.html");
-					}
+//					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
+					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html");
 
 				} catch (Exception e) {
 					e.printStackTrace();

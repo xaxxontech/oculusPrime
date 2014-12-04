@@ -16,7 +16,7 @@ public enum GUISettings {
 		config.setProperty(skipsetup.name() , "no");
 		config.setProperty(speedslow.name() , "50");
 		config.setProperty(speedmed.name() , "150");
-		config.setProperty(docktarget.name() , "1.194_0.23209_0.17985_0.22649_129_116_80_67_-0.045455");
+		config.setProperty(docktarget.name() , "1.6666666_0.27447918_0.22083333_0.28177083_125_115_80_48_-0.041666668");
 		config.setProperty(vidctroffset.name() , "0");
 		config.setProperty(vlow.name() , "320_240_4_85");
 		config.setProperty(vmed.name() , "320_240_8_95");

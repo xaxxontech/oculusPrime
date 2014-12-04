@@ -2,8 +2,6 @@ package oculusPrime;
 
 import java.util.Properties;
 
-import oculusPrime.commport.Discovery;
-
 /** place extensions to settings here */
 public enum ManualSettings {
 	
@@ -20,8 +18,8 @@ public enum ManualSettings {
 		config.setProperty(developer.name(), "false");
 		config.setProperty(debugenabled.name(), "false");
 		config.setProperty(vself.name(), "320_240_8_85");
-		config.setProperty(motorport.name(), Discovery.params.discovery.name());
-		config.setProperty(powerport.name(), Discovery.params.discovery.name());
+		config.setProperty(motorport.name(), Settings.ENABLED);
+		config.setProperty(powerport.name(), Settings.ENABLED);
 		config.setProperty(email_smtp_server.name(), Settings.DISABLED);
 		config.setProperty(email_smtp_port.name(), "25");
 		config.setProperty(email_username.name(), Settings.DISABLED);
