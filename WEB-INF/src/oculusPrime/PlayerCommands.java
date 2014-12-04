@@ -17,7 +17,7 @@ public enum PlayerCommands { // all valid commands
     reboot, systemshutdown, memory, systemcall, setsystemvolume, 
     
     //user, accounts
-    who, chat, password_update, beapassenger, disconnectotherconnections, playerexit, 
+    who, chat, password_update, beapassenger, disconnectotherconnections, driverexit, 
     new_user_add, user_list, delete_user, extrauser_password_update, username_update,
     assumecontrol, loginrecords, messageclients, 
     

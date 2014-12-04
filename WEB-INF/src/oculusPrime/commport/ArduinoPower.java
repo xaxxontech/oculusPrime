@@ -480,7 +480,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 	}
 	
 	public void shutdown() {
-		sendCommand(INITIATESHUTDOWN);
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			application.message("can't power down when docked", null, null);
+		}
+		else sendCommand(INITIATESHUTDOWN);
 	}
 	
 	public void writeStatusToEeprom() {

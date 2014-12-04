@@ -152,6 +152,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			
 			player = null;
+			connection.close();
 		}
 		
 		if (connection.equals(grabber)) {
@@ -471,7 +472,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case clicksteer:clickSteer(str);break;
 		case streamsettingscustom:streamSettingsCustom(str);break;
 		case streamsettingsset:streamSettingsSet(str);break;
-		case playerexit: appDisconnect(player); break;
+		case driverexit: appDisconnect(player); break;
 		case playerbroadcast: playerBroadCast(str); break;
 		case password_update: account("password_update", str); break;
 		case new_user_add: account("new_user_add", str); break;
@@ -484,7 +485,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
-		case redock: watchdog.redock(); break;
+		case redock: watchdog.redock(str); break;
 		case restart: restart(); break;
 		case softwareupdate: softwareUpdate(str); break;
 		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
@@ -812,6 +813,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			public void run() {
 				try {
 					Thread.sleep(STREAM_CONNECT_DELAY);
+//					if (stream.equals(streamstate.camandmic)); Thread.sleep(STREAM_CONNECT_DELAY*2); // longer delay required doesn't help
 					Collection<Set<IConnection>> concollection = getConnections();
 					for (Set<IConnection> cc : concollection) {
 						for (IConnection con : cc) {

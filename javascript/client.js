@@ -1503,28 +1503,28 @@ function videoOverlayGetMousePos(ev) {
 	b.style.left = x + "px";
     var video = document.getElementById("video");
     b.style.top = video.offsetTop + "px";
-    var th = y - video.offsetTop -25; if (th<0) { th=0; } 
+    var th = y - video.offsetTop -15; if (th<0) { th=0; } 
     b.style.height = th + "px";
 	var c = document.getElementById("videocursor_bottom");
 	c.style.left = x + "px";
-    c.style.top = (y + 25) + "px";
-    var bh = video.offsetTop + video.offsetHeight - y -25; if (bh<0) { bh=0; }
+    c.style.top = (y + 16) + "px";
+    var bh = video.offsetTop + video.offsetHeight - y -15; if (bh<0) { bh=0; }
     c.style.height = bh + "px";
     var d = document.getElementById("videocursor_left");
     d.style.left = video.offsetLeft + "px";
     d.style.top = y + "px";
-    var lw = x - video.offsetLeft - 25; if (lw<0) { lw=0; }
+    var lw = x - video.offsetLeft - 15; if (lw<0) { lw=0; }
     d.style.width = lw + "px";
     var e = document.getElementById("videocursor_right");
     e.style.top = y + "px";
-    e.style.left = (x +25) + "px";
-    var rw = video.offsetLeft + video.offsetWidth - x -25; if (rw<0) { rw=0; }
+    e.style.left = (x +16) + "px";
+    var rw = video.offsetLeft + video.offsetWidth - x -15; if (rw<0) { rw=0; }
     e.style.width = rw + "px";
     if (html5) { var f = document.getElementById("videocursor_ctr"); }
     else { var f = document.getElementById("videocursor_ctr_html4"); }
 	f.style.display = "";
-	f.style.left = (x-25) + "px";
-	f.style.top = (y-25) + "px";
+	f.style.left = (x-15) + "px";
+	f.style.top = (y-15) + "px";
 	document.onmousemove = null;
 	videooverlaymouseposinterval = setTimeout("videoOverlaySetMousePosGrabber();", 20)
 }
@@ -1683,7 +1683,7 @@ function assumecontrol() {
 }
 
 function playerexit() {
-	callServer("playerexit","");
+	callServer("driverexit","");
 }
 
 function steeringmouseover(id, str) {

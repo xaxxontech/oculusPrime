@@ -96,8 +96,8 @@ function message(message,status) {
 		stream = b[1]; 
 	}
 	if (message=="shutdown") { shutdownwindow(); } 
-	if (message=="playing player stream") { screensize("full"); }
-	if (message=="player stream stopped") { screensize("reduced"); }
+//	if (message=="playing player stream") { screensize("full"); }
+//	if (message=="player stream stopped") { screensize("reduced"); }
 	if (status != null && !initialize) { setstatus(status); } 
 }
 

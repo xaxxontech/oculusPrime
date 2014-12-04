@@ -88,7 +88,6 @@ public class AutoDock { // implements Observer {
 		if (cmd[0].equals(autodockmodes.dockgrabbed.toString())) { 
 			
 			if (cmd[1].equals(dockgrabmodes.find.toString()) ) { // x,y,width,height,slope
-				int width = Integer.parseInt(cmd[4]);
 				
  				if (!state.getBoolean(State.values.dockfound)) {
 					
@@ -349,8 +348,8 @@ public class AutoDock { // implements Observer {
 		// 2 in calibration:
 		final int s1 = (int) (dockw * dockh * 0.07  * w / h);  // (area) medium range start
 		final int s2 = (int) (dockw * dockh * 0.40 * w / h); // (area) close range start
-		final double s2slopetolerance = 1.2; // +/-
-		final double s1slopetolerance = 1.3; // +/-
+		final double s2slopetolerance = 1.2; // 1.2
+		final double s1slopetolerance = 1.3; // 1.3
 		
 		// optionally set breaking delay longer for fast bots
 

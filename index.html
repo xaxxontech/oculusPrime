@@ -418,7 +418,7 @@ border-top: none; border-right: none; border-left: none; height: 1px;"></div>
 <div id="videocursor_right" class="videocursor" style="position: absolute; display: none; 
 border-top: none; border-right: none; border-left: none; height: 1px;"></div>
 <canvas id="videocursor_ctr" width="50" height="50" style="display:none; position: absolute"></canvas> 
-<div id="videocursor_ctr_html4" class="videocursor" style="width: 48px; height: 48px; display: none;
+<div id="videocursor_ctr_html4" class="videocursor" style="width: 30px; height: 30px; display: none;
 position: absolute"> </div>
 
 <div id="facebox" class="facebox" style="display: none; position: absolute;"> </div>
@@ -594,7 +594,10 @@ Settings and Calibration:
 <a class="blackbg" href="javascript: autodock('calibrate');">calibrate auto-dock</a><br>
 <a class="blackbg" href="javascript: docklinecalibrate('start');">manual dock guide</a><br>
 login notify <a class="blackbg" href="javascript: writesetting('loginnotify true');">on</a> / 
-<a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br> 
+<a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br>
+reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>
+<a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
+<a class="blackbg" href="javascript: writesetting('reboot false');">no</a> 
 <!-- 
 <a class="blackbg" href="javascript: muteROVonmovetoggle();">mute 
 <span style="font-variant: smallcaps;">ROV</span> when moving on/off</a><br>
@@ -823,18 +826,12 @@ Server Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: softwareupdate('version','');">software version</a><br>
 <a class="blackbg" href="javascript: softwareupdate('check','');">check for software update</a><br>
-<a class="blackbg" href="javascript: if (confirm(&quot;shutdown OS\nare you sure?&quot;)) {
-	callServer('systemshutdown',''); }">shutdown OS</a><br>
-<a class="blackbg" href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
-	callServer('reboot',''); }">reboot OS</a><br>
-<a class="blackbg" href="javascript: restart(); ">restart server application</a><br>
 <a class="blackbg" href="javascript: serverlog();">server log</a><br>
-reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>
-<a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
-<a class="blackbg" href="javascript: writesetting('reboot false');">no</a>
-
-<br> 
-
+<a class="blackbg" href="javascript: restart(); ">restart server application</a><br>
+<a class="blackbg" href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
+	callServer('reboot',''); }">reboot</a><br>
+<a class="blackbg" href="javascript: if (confirm(&quot;power down\nare you sure?&quot;)) {
+	callServer('powershutdown',''); }">power down</a><br>
 
 </div>
 
@@ -882,7 +879,7 @@ onKeyPress="if (keypress(event)==13) { systemcall('',''); }">
 <span class="cancelbox">&#x2714;</span></a>
 </span><br/>
 
-<a class="blackbg" href="javascript: clicksteer('');">click steer on/off</a><br>
+<a class="blackbg" href="javascript: clicksteer('');">crosshairs on/off</a><br>
 <a class="blackbg" href="frameGrabHTTP" target="_blank">frame grab</a><br> 
 
 </div>

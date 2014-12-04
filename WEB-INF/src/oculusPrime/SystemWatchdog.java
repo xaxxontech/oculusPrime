@@ -7,6 +7,7 @@ import java.util.TimerTask;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
+import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 
@@ -15,8 +16,10 @@ public class SystemWatchdog {
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
 	
-	private static final long DELAY = 10000;
+	private static final long DELAY = 10000; // 10 sec 
 	private static final long AUTODOCKTIMEOUT= 360000; // 6 min
+	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
+	public static final String NOFORWARD = "noforward";
 
 	// stale system reboot frequency 
 	private static final long STALE = Util.ONE_DAY * 2; 
@@ -25,6 +28,7 @@ public class SystemWatchdog {
 	
 	public String lastpowererrornotify = null; // this gets set to null on client login 
 	public boolean powererrorwarningonly = true;
+	private boolean redocking = true;
 	
     /** Constructor */
 	SystemWatchdog(Application a){ 
@@ -48,14 +52,26 @@ public class SystemWatchdog {
 			}
 			
 			// regular reboot if set 
-			if ((state.getUpTime() > STALE) && !state.getBoolean(State.values.driver) && 
-					!state.exists(State.values.powererror.toString()) &&
+			if ((state.getUpTime() > STALE) && !state.exists(State.values.driver.toString()) && 
+					!state.exists(State.values.powererror.toString()) && // why..? 
+					state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN &&
 					(settings.getBoolean(GUISettings.reboot))){ 
 				
 				String boot = new Date(state.getLong(State.values.boottime.name())).toString();				
 				Util.log("rebooting, last boot was: " + boot, this);
 				Util.reboot();
 			}
+			
+			// deal with abandoned logins
+			if (state.exists(State.values.driver.toString()) && 
+					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN ) {
+
+				application.driverCallServer(PlayerCommands.disconnectotherconnections, null);
+				application.driverCallServer(PlayerCommands.driverexit, null);
+				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) redock(NOFORWARD);
+			}
+			
+			// TODO: deal with abandonded, undocked, low battery, not redocking, not already attempted redock
 
 		}
 	}
@@ -99,8 +115,9 @@ public class SystemWatchdog {
 		else if (!warningonly) callForHelp("Oculus Prime POWER ERROR","Please UNPLUG BATTERY and contact technical support");
 	}
 	
-	public void redock() {
+	public void redock(final String option) {
 		new Thread(new Runnable() { public void run() {
+			redocking = true;
 			long start; 
 			String subject = "Oculus Prime Unable to Dock";
 			String body = "Un-docked, battery draining";
@@ -112,16 +129,18 @@ public class SystemWatchdog {
 			application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
 			state.set(State.values.motionenabled, true);
 			state.set(State.values.controlsinverted, false); 
-			application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
-			Util.delay(800); 
-			application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+			if (!option.equals(NOFORWARD)) {
+				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
+				Util.delay(800); 
+				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+			}
 			// reverse tilt
 			application.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
 			// docklight on, spotlight off
 			application.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLLOW));
 			application.driverCallServer(PlayerCommands.spotlight, "0");
-			Util.delay(2000); // allow for motion stop and light to settle
-
+			Util.delay(2000); // allow for motion stop and light to settle			
+		
 			// rotate and dock detect
 			int rot = 0;
 			String res = "";
@@ -152,7 +171,7 @@ public class SystemWatchdog {
 				rot ++;
 			}
 
-			application.driverCallServer(PlayerCommands.autodock, "go"); // attempt dock
+			application.driverCallServer(PlayerCommands.autodock, autodockmodes.go.toString()); // attempt dock
 			// wait while autodocking does its thing 
 			start = System.currentTimeMillis();
 			while (state.getBoolean(State.values.autodocking) && System.currentTimeMillis() - start < AUTODOCKTIMEOUT)  
@@ -164,8 +183,10 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 				application.driverCallServer(PlayerCommands.floodlight, "0");
 			}
-		
+			
+			redocking = false;
 		}  }).start();
+
 	}
 	
 	private void callForHelp(String subject, String body) {
