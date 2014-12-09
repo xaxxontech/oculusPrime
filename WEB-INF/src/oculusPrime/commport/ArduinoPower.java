@@ -32,7 +32,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
 	public static final int BAUD = 115200;
 	public static final String FIRMWARE_ID = "oculusPower";
-	public static final String ENABLED = "enabled";
+//	public static final String ENABLED = "enabled";
 	public static final byte INITIATESHUTDOWN= 'p';
 	public static final byte CONFIRMSHUTDOWN= 'w'; 
 	public static final byte GET_VERSION = '7';
@@ -101,7 +101,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			pwrerr.put(entry.getValue(), entry.getKey());
 		}
 		
-		if(settings.readSetting(ManualSettings.powerport).equals(Settings.ENABLED)) connect();
+		if(!settings.readSetting(ManualSettings.powerport).equals(Settings.DISABLED)) connect();
 		initialize();
 		new WatchDog().start();
 		
@@ -308,11 +308,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 		else if (s[0].equals("power_error")) {
 			if (!s[1].equals("0")) { 
 				state.set(State.values.powererror, s[1]);
-				application.message("power PCB error: " + s[1], null, null);
+				application.message("from power PCB, code " + s[1], null, null);
 			}
 			else  if (state.exists(State.values.powererror.toString())) {
 				state.delete(State.values.powererror);
-				application.message("power PCB error cleared", null, null);
+				application.message("power PCB code cleared", null, null);
 			}
 			return;
 		}

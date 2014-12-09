@@ -477,10 +477,10 @@ function keyBoardPressed(event) {
 		if (keycode == 40 || keycode == 88) { // down arrow or X
 			move("backward");
 		}
-		if (keycode == 37 || keycode == 81) { // left arrow
+		if (keycode == 37 || keycode == 81) { // left arrow or Q
 			move("left");
 		}
-		if (keycode == 39 || keycode == 69) { // right arrow
+		if (keycode == 39 || keycode == 69) { // right arrow or E
 			move("right");
 		}
 		if (keycode == 65) { // A
@@ -613,7 +613,7 @@ function docklinetoggle(str) {
 				str += "<img src='images/dockline.png'"; 
 		str += " border='0' height='22' style='vertical-align: middle'> ";
 		str += "Manual dock <table><tr><td style='height: 20px'></td></tr></table>";
-		str += "&nbsp; <a href='javascript: dock(&quot;dock&quot;);'><span class='cancelbox'>&#x2714;</span> GO</a>";
+		str += "&nbsp; <a href='javascript: dock();'><span class='cancelbox'>&#x2714;</span> GO</a>";
 		str += "&nbsp; <a href='javascript: docklinetoggle(&quot;off&quot;); move(&quot;stop&quot;);'><span "; 
 		str += "class='cancelbox'><b>X</b></span> CANCEL</a>";
 		str += "<table><tr><td style='height: 20px'></td></tr></table>";
@@ -941,9 +941,9 @@ function speedset(str) {
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }
 
-function dock(str) {
-	callServer("dock", str);
-	message("sending: " + str, sentcmdcolor);
+function dock() {
+	callServer("dock", "");
+	message("sending: dock", sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 	if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 }

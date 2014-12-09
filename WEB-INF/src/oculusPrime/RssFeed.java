@@ -85,9 +85,9 @@ public class RssFeed {
 			FileWriter fw = new FileWriter(new File(RSSFILE));
 			fw.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<rss version=\"2.0\" ");
 			fw.append("xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
-			fw.append("<channel>\n<title>Oculus rss feed</title>\n");
+			fw.append("<channel>\n<title>Oculus Prims RSS feed</title>\n");
 			fw.append("<link>http://"+state.get(State.values.externaladdress)+":"+
-					settings.readRed5Setting("http.port")+"/oculus/rss.xml</link>\n");
+					settings.readRed5Setting("http.port")+"/oculusPrime/rss.xml</link>\n");
 			fw.append("<description>Oculus events</description>\n");
 			for (int i=0; i<items.size(); i++) {
 				Item item = items.get(i);
@@ -96,6 +96,9 @@ public class RssFeed {
 				fw.append("<guid>"+item.guid+"</guid>\n");
 				fw.append("<pubDate>"+item.pubDate+"</pubDate>\n</item>\n");
 			}
+//			fw.append("<atom:link href=\"http://"+state.get(State.values.externaladdress)+":"+
+//					settings.readRed5Setting("http.port")+
+//					"/oculusPrime/rss.xml\" rel=\"self\" type=\"application/rss+xml\" />\n");
 			fw.append("</channel></rss>");
 			fw.close();
 			
@@ -122,9 +125,9 @@ public class RssFeed {
 			Calendar cal = Calendar.getInstance();
 			this.pubDate = dateFormat.format(cal.getTime());
 			this.link = "http://"+state.get(State.values.externaladdress)+":"+
-					settings.readRed5Setting("http.port")+"/oculus/rss.xml?title="+
+					settings.readRed5Setting("http.port")+"/oculusPrime/rss.xml?title="+
 					t.trim().toLowerCase().replaceAll("[^a-z0-9]+", "-");
-			this.guid = this.link;
+			this.guid = this.link+"?"+System.currentTimeMillis();
 		}
 	}
 

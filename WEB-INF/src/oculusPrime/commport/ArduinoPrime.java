@@ -34,7 +34,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public static final long DEAD_TIME_OUT = 60000;
 	public static final int WATCHDOG_DELAY = 8000;	
-	public static final long RESET_DELAY = 14400000; // 4 hrs
+	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int BAUD = 115200;
@@ -139,7 +139,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 		
-		if(settings.readSetting(ManualSettings.motorport).equals(Settings.ENABLED)) connect();
+		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) connect();
 		initialize();
 		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
 		new WatchDog().start();
@@ -514,7 +514,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, true);
-		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+//		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
 		int speed1 = (int) voltsComp((double) speedslow);
 		if (speed1 > 255) { speed1 = 255; }
@@ -636,7 +636,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, false);
-		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+//		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
 		
 		int speed1 = (int) voltsComp((double) speedslow);
@@ -744,7 +744,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (delay==0) {
 			sendCommand(new byte[] { RIGHT, (byte) tmpspeed, (byte) tmpspeed });
 			state.put(State.values.moving, true);
-			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+//			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		}
 		else {
         	byte d1 = (byte) ((delay >> 8) & 0xff);
@@ -757,6 +757,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		turnLeft(0);
 	}
 	
+	/**
+	 * Turn Left
+	 * @param delay milliseconds, then stop (timed directly by firmware). If 0, continuous movement
+	 */
 	public void turnLeft(int delay) {
 		final UUID moveID = UUID.randomUUID(); 
 		currentMoveID = moveID;
@@ -796,7 +800,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (delay==0) {
 			sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
 			state.put(State.values.moving, true);
-			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+//			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		}
 		else {
         	byte d1 = (byte) ((delay >> 8) & 0xff);
@@ -1267,7 +1271,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.put(State.values.moving, false);
 		state.put(State.values.movingforward, false);
-		if (settings.getBoolean(GUISettings.muteonrovmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
+//		if (settings.getBoolean(GUISettings.muteonrovmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
 
 		// needs deaccel!
 //		if (state.getBoolean(State.values.stopbetweenmoves)) sendCommand(HARD_STOP);

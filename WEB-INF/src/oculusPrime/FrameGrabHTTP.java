@@ -243,32 +243,32 @@ public class FrameGrabHTTP extends HttpServlet {
 
 	}
 
-	public static void saveToFile(final String str) {
-		
-		final String urlString = "http://127.0.0.1:" + settings.readRed5Setting("http.port") + "/oculus/frameGrabHTTP";
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {			
-					int i = 1;
-					if (!str.equals("")) { i = Integer.parseInt(str); }
-					Downloader dl = new Downloader();
-					String sep = Settings.sep;
-					for(; i > 0 ; i--) {
-						Util.debug(i + " framegrab save: " + urlString, this);
-						DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
-						Calendar cal = Calendar.getInstance();
-						String datetime = dateFormat.format(cal.getTime());
-
-						dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculus"+sep+"framegrabs");
-//						Util.saveUrl("capture/" + System.currentTimeMillis() + ".jpg", urlString );
-					}
-				} catch (Exception e) {
-					Util.log("can't get image: " + e.getLocalizedMessage(), this);
-				}
-			}
-		}).start();
-	}
+//	public static void saveToFile(final String str) {
+//		
+//		final String urlString = "http://127.0.0.1:" + settings.readRed5Setting("http.port") + "/oculus/frameGrabHTTP";
+//		new Thread(new Runnable() {
+//			@Override
+//			public void run() {
+//				try {			
+//					int i = 1;
+//					if (!str.equals("")) { i = Integer.parseInt(str); }
+//					Downloader dl = new Downloader();
+//					String sep = Settings.sep;
+//					for(; i > 0 ; i--) {
+//						Util.debug(i + " framegrab save: " + urlString, this);
+//						DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
+//						Calendar cal = Calendar.getInstance();
+//						String datetime = dateFormat.format(cal.getTime());
+//
+//						dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculus"+sep+"framegrabs");
+////						Util.saveUrl("capture/" + System.currentTimeMillis() + ".jpg", urlString );
+//					}
+//				} catch (Exception e) {
+//					Util.log("can't get image: " + e.getLocalizedMessage(), this);
+//				}
+//			}
+//		}).start();
+//	}
 	
 
 }

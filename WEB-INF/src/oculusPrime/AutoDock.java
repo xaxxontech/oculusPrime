@@ -214,7 +214,10 @@ public class AutoDock { // implements Observer {
 		state.set(State.values.movingforward, false);
 		
 		new Thread(new Runnable() {	
-			public void run() {		
+			public void run() {
+				comport.goForward();
+				Util.delay(300);
+				comport.stopGoing();
 				int inchforward = 0;
 				while (inchforward < 15 && !state.getBoolean(State.values.wallpower) && 
 						state.getBoolean(State.values.docking)) {

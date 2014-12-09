@@ -70,9 +70,9 @@ public class TelnetServer implements Observer {
 				user = ManualSettings.diagnostic.name();
 				state.delete(values.motionenabled);			
 			} else {
-				sendToSocket("Welcome to Oculus build " + new Updater().getCurrentVersion(), out); 
-				sendToSocket("LOGIN with admin user:password OR user:encrypted_password", out);
-				if( ! authenticate(socket)) return; // failure 
+				sendToSocket("Welcome to Oculus Prime v" + new Updater().getCurrentVersion(), out); 
+//				sendToSocket("LOGIN with admin user:password OR user:encrypted_password", out);
+//				if( ! authenticate(socket)) return; // failure 
 			}
 			
 			printers.add(out);	
@@ -129,7 +129,7 @@ public class TelnetServer implements Observer {
 		@Override
 		public void run() {
 			
-			if(settings.getBoolean(ManualSettings.loginnotify)) app.saySpeech("lawg inn telnet");
+			if(settings.getBoolean(GUISettings.loginnotify)) app.saySpeech("lawg inn telnet");
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
 			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
@@ -467,7 +467,7 @@ public class TelnetServer implements Observer {
 		@Override
 		public void run() {
 			
-			if(settings.getBoolean(ManualSettings.loginnotify)) app.saySpeech("lawg inn telnet");
+			if(settings.getBoolean(GUISettings.loginnotify)) app.saySpeech("lawg inn telnet");
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
 			
 			// loop on input from the client

@@ -11,44 +11,57 @@ import java.util.Vector;
 public enum PlayerCommands { // all valid commands
 	    
     // server
-    uptime, restart, quitserver, showlog, softwareupdate,
+    uptime, restart, quitserver, showlog, writesetting, readsetting, settings, 
+    //undocumented (not typically used by scripts):
+    softwareupdate, 
     
     // system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, 
     
     //user, accounts
-    who, chat, password_update, beapassenger, disconnectotherconnections, driverexit, 
+    who, chat, disconnectotherconnections, driverexit, loginrecords, messageclients,  
+    //undocumented (not typically used by scripts):
+    password_update, beapassenger, assumecontrol,  
     new_user_add, user_list, delete_user, extrauser_password_update, username_update,
-    assumecontrol, loginrecords, messageclients, 
+    
     
     //docking
-    dockgrabtest, dock, dockgrab, docklineposupdate, autodock,  autodockcalibrate, redock,
+    dock, dockgrab, autodock,  redock,
+    //undocumented (not typically used by scripts):
+    docklineposupdate, autodockcalibrate, dockgrabtest,  
+
+    // power board
+    battstats, powerreset, powershutdown,   
+	// undocumented (not typically used by scripts):
+    erroracknowledged, powercommand,
     
     // video/audio (flash)
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
-    muterovmiconmovetoggle, streamsettingsset,
+    streamsettingsset,
     
-    // power board
-    battstats, powerreset, powershutdown, powercommand, erroracknowledged, 
     
     // malg board 
-    motorsreset, cameracommand, camtilt, holdservo, 
+    // misc
+    motorsreset, cameracommand, camtilt, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
     // lights
-    strobeflash, spotlight, spotlightsetbrightness, floodlight, fwdflood,
+    strobeflash, spotlight, floodlight,
+    //undocumented (unused):
+    fwdflood,
     
 	// uncategorized 
-	speech, getdrivingsettings, drivingsettingsupdate,   
-	relaunchgrabber, statuscheck,   
-	writesetting, readsetting, pushtotalktoggle, 
-    email, state, help, framegrabtofile,   
-    settings, rssadd, 
-    getlightlevel, block, unblock,  
-   
-    // experimental
+	speech, relaunchgrabber, email, state,   
+    rssadd, getlightlevel,   
+	// undocumented    
+    statuscheck, block, unblock, help, 
+    
+    // experimental (undocumented)
     opennisensor, clearmap, stereo,
+    
+    // deprecated (kept for mobile client compatibility, undocumented)
+    spotlightsetbrightness,
     
     ;
 	
@@ -66,8 +79,8 @@ public enum PlayerCommands { // all valid commands
 		disconnectotherconnections, showlog, softwareupdate,
 		arduinoreset, muterovmiconmovetoggle, 
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
-	    setstreamactivitythreshold, email, state, uptime, help, framegrabtofile, memory, who, 
-	    loginrecords, settings, analogwrite, digitalread, messageclients, dockgrabtest, rssaddb, block, 
+	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
+	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
 	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged;	
 
 	}
@@ -106,11 +119,9 @@ public enum PlayerCommands { // all valid commands
 		holdservo ("{BOOLEAN}"), 
 		opennisensor("on", "off"), 
 		videosoundmode("low", "high"), 
-		pushtotalktoggle("{BOOLEAN}"),
 		setstreamactivitythreshold("[0-100] [0-100]"),
 		email("{STRING}"),
 		analogread("{INT}"),
-		digitalread("{INT}"),
 		rssadd("{STRING}"),
 		messageclients("{STRING}");
 			
@@ -329,7 +340,6 @@ public enum PlayerCommands { // all valid commands
 		holdservo ("Set/unset use of power break for persicope servo"), 
 		opennisensor("Kinect/Xtion Primesense sensor control"), 
 		videosoundmode("Set robot video compression codec"), 
-		pushtotalktoggle("When broadcasting client mic through robot speakers, always on or mute until keypress"),
 		restart("Restart server application on robot"),
 		shutdown("Quit server application on robot"),
 		setstreamactivitythreshold("Set video motion, audio volume detection threshold, 0-100 (0=off)"),
@@ -337,13 +347,10 @@ public enum PlayerCommands { // all valid commands
 		state("With 1 or 0 args, returns list of one or all non null state key/value pairs, 2 args sets key to value"),
 		uptime("Returns server uptime, in milliseconds"),
 		help("Returns complete list of available commands. Add COMMAND as argument for extended command info"),
-		framegrabtofile("Saves a frame from video stream to JPG in folder Oculus/webapps/oculus/framegrabs"),
 		memory("Returns memory in use by the Java Virtual Machine"),
 		who("Returns info on current connected users"),
 		loginrecords("Returns list of RTMP driver login history for current server session"),
 		settings("Returns list of all settings from oculus_settings.txt"),
-		analogwrite("Sends command �a� followed by two bytes (pin #, value) to ArduinOculus microcontroller"),
-		digitalread("Sends command �d� followed by byte (pin #) to ArduinOculus microcontroller"),
 		messageclients("Send text to all other connected users. Similar to �chat,� but without preceding user info"),
 		rssadd("Create new rss feed item with params: [title] description");
 

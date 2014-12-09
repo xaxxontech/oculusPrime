@@ -128,12 +128,14 @@ public class SystemWatchdog {
 			// go forward momentarily
 			application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
 			state.set(State.values.motionenabled, true);
-			state.set(State.values.controlsinverted, false); 
-			if (!option.equals(NOFORWARD)) {
+			state.set(State.values.controlsinverted, false);
+
+			if (option == null || option.isEmpty()) {
 				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
 				Util.delay(800); 
 				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 			}
+
 			// reverse tilt
 			application.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
 			// docklight on, spotlight off

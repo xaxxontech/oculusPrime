@@ -38,7 +38,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private boolean initialstatuscalled = false; 
 
 	//	private ScriptRunner scriptRunner = new ScriptRunner();	
-//	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
+	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
 	// TODO: added to jet is started, could be anywhere, not refrenced in this file yet though.
 	
 	private LoginRecords loginRecords = new LoginRecords();
@@ -368,7 +368,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.log("playersignin(), " + str, this);
 			loginRecords.beDriver();
 			
-			if (settings.getBoolean(ManualSettings.loginnotify)) {
+			if (settings.getBoolean(GUISettings.loginnotify)) {
 				saySpeech("lawg inn " + state.get(State.values.driver));
 			}
 			
@@ -479,13 +479,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case redock: watchdog.redock(str); break;
 		case restart: restart(); break;
 		case softwareupdate: softwareUpdate(str); break;
-		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
+//		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
 		case quitserver: quit(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
 		case help: messageplayer(PlayerCommands.help(str),null,null); break;
-		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
+//		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
@@ -624,10 +624,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			messageplayer("video/sound mode set to: "+str, null, null);
 			break;
 		
-		case pushtotalktoggle:
-			settings.writeSettings("pushtotalk", str);
-			messageplayer("self mic push T to talk "+str, null, null);
-			break;
+//		case pushtotalktoggle:
+//			settings.writeSettings("pushtotalk", str);
+//			messageplayer("self mic push T to talk "+str, null, null);
+//			break;
 		
 		case state: 
 			String s[] = str.split(" ");
@@ -661,7 +661,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case getlightlevel:
 			docker.getLightLevel(); break;
 		case dock:
-			if(str.equals("dock")) docker.dock();
+			docker.dock();
 			break;
 		case strobeflash:
 			comport.strobeflash(str,0,0);
@@ -898,17 +898,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
-	private void muteROVMicOnMoveToggle() {
-		if (settings.getBoolean(GUISettings.muteonrovmove)) {
-//			state.set(State.values.muteOnROVmove, false);
-			settings.writeSettings(GUISettings.muteonrovmove.toString(), "false");
-			messageplayer("mute ROV onmove off", null, null);
-		} else {
-//			state.set(State.values.muteOnROVmove, true);
-			settings.writeSettings(GUISettings.muteonrovmove.toString(), "true");
-			messageplayer("mute ROV onmove on", null, null);
-		}
-	}
+//	private void muteROVMicOnMoveToggle() {
+//		if (settings.getBoolean(GUISettings.muteonrovmove)) {
+////			state.set(State.values.muteOnROVmove, false);
+//			settings.writeSettings(GUISettings.muteonrovmove.toString(), "false");
+//			messageplayer("mute ROV onmove off", null, null);
+//		} else {
+////			state.set(State.values.muteOnROVmove, true);
+//			settings.writeSettings(GUISettings.muteonrovmove.toString(), "true");
+//			messageplayer("mute ROV onmove on", null, null);
+//		}
+//	}
 
 	/**  */
 	public boolean frameGrab() {
@@ -1432,7 +1432,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		pendingplayerisnull = true;
 		loginRecords.beDriver();
 		
-		if (settings.getBoolean(ManualSettings.loginnotify)) {
+		if (settings.getBoolean(GUISettings.loginnotify)) {
 			saySpeech("lawg inn " + state.get(State.values.driver));
 		}
 	}
@@ -1458,7 +1458,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		loginRecords.bePassenger(user);
 		
-		if (settings.getBoolean(ManualSettings.loginnotify)) {
+		if (settings.getBoolean(GUISettings.loginnotify)) {
 			saySpeech("passenger lawg inn " + user);
 		}
 	}
@@ -1467,13 +1467,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (player instanceof IServiceCapableConnection) {
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
 			if (!str.equals("off")) {
-				String vals[] = (settings.readSetting("vself")).split("_");
+				String vals[] = "320_240_8_85".split("_"); // TODO: nuke this for audio only 
 				int width = Integer.parseInt(vals[0]);
 				int height = Integer.parseInt(vals[1]);
 				int fps = Integer.parseInt(vals[2]);
 				int quality = Integer.parseInt(vals[3]);
-				boolean pushtotalk = settings.getBoolean(GUISettings.pushtotalk);
-				sc.invoke("publish", new Object[] { str, width, height, fps, quality, pushtotalk });
+//				boolean pushtotalk = settings.getBoolean(GUISettings.pushtotalk);
+				sc.invoke("publish", new Object[] { str, width, height, fps, quality, false });
 				new Thread(new Runnable() {
 					public void run() {
 						try {

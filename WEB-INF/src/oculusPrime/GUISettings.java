@@ -7,8 +7,8 @@ public enum GUISettings {
 	/** these settings must be available in basic configuration */
 	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay, onemeterdelay,
 	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
-	maxclickcam, muteonrovmove, 
-	videoscale, volume, reboot, pushtotalk, camhoriz, camreverse; 
+	maxclickcam, loginnotify, 
+	volume, reboot, camhoriz, camreverse; 
 	
 	/** get basic settings */
 	public static Properties createDeaults() {
@@ -24,20 +24,20 @@ public enum GUISettings {
 		config.setProperty(vfull.name() , "640_480_8_95");
 		config.setProperty(vcustom.name() , "1024_768_8_85");
 		config.setProperty(vset.name() , "vmed");
-		config.setProperty(pushtotalk.name() , "true");
 		config.setProperty(maxclicknudgedelay.name() , "180");
 		config.setProperty(nudgedelay.name() , "80");
 		config.setProperty(maxclickcam.name() , "30");
 		config.setProperty(volume.name() , "20");
-		config.setProperty(muteonrovmove.name() , "true"); 
-		config.setProperty(videoscale.name() , "100");
+//		config.setProperty(muteonrovmove.name() , "true"); 
+//		config.setProperty(videoscale.name() , "100");
 		config.setProperty(reboot.name() , "false");
-		config.setProperty(pushtotalk.name() , "false");
+//		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2700");
 		config.setProperty(onemeterdelay.name(), "2400");
 		config.setProperty(steeringcomp.name(), "L20");
 		config.setProperty(camhoriz.name(), "70");
 		config.setProperty(camreverse.name(), "138");
+		config.setProperty(loginnotify.name() , "false");
 		
 		return config;
 	}

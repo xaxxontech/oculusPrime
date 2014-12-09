@@ -411,7 +411,7 @@ public class Util {
     	String str = "";
 		str += "memory : " +
 				((double)Runtime.getRuntime().freeMemory()
-						/ (double)Runtime.getRuntime().totalMemory()) + " %<br>";
+						/ (double)Runtime.getRuntime().totalMemory())*100 + "% used<br>";
 		
 		str += "memorytotal : "+Runtime.getRuntime().totalMemory()+"<br>";    
 	    str += "memoryfree : "+Runtime.getRuntime().freeMemory()+"<br>";
