@@ -68,9 +68,11 @@ public class RssFeed {
 					String description = str.substring(str.indexOf("<description>")+13, str.indexOf("</description>"));
 					String link = str.substring(str.indexOf("<link>")+6, str.indexOf("</link>"));
 					String pubDate = str.substring(str.indexOf("<pubDate>")+9, str.indexOf("</pubDate>"));
+					String guid = str.substring(str.indexOf("<guid>")+6, str.indexOf("</guid"));
 					Item item = new Item(title, description);
 					item.link = link;
 					item.pubDate = pubDate;
+					item.guid = guid;
 					result.add(item);
 				}
 			}
@@ -126,8 +128,9 @@ public class RssFeed {
 			this.pubDate = dateFormat.format(cal.getTime());
 			this.link = "http://"+state.get(State.values.externaladdress)+":"+
 					settings.readRed5Setting("http.port")+"/oculusPrime/rss.xml?title="+
-					t.trim().toLowerCase().replaceAll("[^a-z0-9]+", "-");
-			this.guid = this.link+"?"+System.currentTimeMillis();
+					t.trim().toLowerCase().replaceAll("[^a-z0-9]+", "-")
+					+"_"+System.currentTimeMillis(); // make link unique
+			this.guid = this.link;
 		}
 	}
 

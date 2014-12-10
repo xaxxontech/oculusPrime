@@ -421,7 +421,7 @@ public class AutoDock { // implements Observer {
 				if (slopeDiff > slopeDiffMax)   slopeDiff = slopeDiffMax;
 
 				if (slopeDiff > s1slopetolerance) {
-					final double magicRatioMin = 0.09;
+					final double magicRatioMin = 0.04;
 					final double magicRatioMax = 0.22;
 					double magicRatio = magicRatioMax - (slopeDiff/slopeDiffMax)*(magicRatioMax-magicRatioMin);
 					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*magicRatio) - 
