@@ -1,6 +1,6 @@
 # OCULUS PRIME  SERVER#
 
-Oculus Prime Robot Server - Java Application
+Oculus Prime Robot
  
 ![Alt text](http://www.xaxxon.com/images/oculusprime/oculusprime_charging.jpg)
 
