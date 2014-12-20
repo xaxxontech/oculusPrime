@@ -88,7 +88,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		temp.put("ERROR_OVERCHARGED_CELL", 							43); 
 		temp.put("ERROR_REGULATOR_CANT_FIND_TARGET", 				44);
 		temp.put("ERROR_UNABLE_TO_COMPLETE_CHARGE", 				45); 
-		temp.put("ERROR_CHARGE_TIMED_OUT	", 						46);		
+		temp.put("ERROR_CHARGE_TIMED_OUT",							46);		
 		//ERROR CODES, FATAL SAFE CHARGE (60-79):
 		temp.put("ERROR_POWER_SOFT_SWITCH_FAIL",					61);
 		temp.put("ERROR_EEPROM_ROLLOVER",							62);
@@ -96,7 +96,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		temp.put("ERROR_CURRENT_OFFSET_TOO_HIGH",					81);
 		temp.put("ERROR_UNEXPECTED_CHARGE_CURRENT",					82);
 		temp.put("ERROR_CONSISTENT_OVER_CHARGE",					83);
-		// inverse 
+		// inverse: 
 		for(Map.Entry<String, Integer> entry : temp.entrySet()){
 			pwrerr.put(entry.getValue(), entry.getKey());
 		}
@@ -318,10 +318,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 		
 		else if (s[0].equals("docked")) {
-			if (!state.getBoolean(State.values.wallpower)) {
-				state.set(State.values.wallpower, true);
-				state.set(State.values.motionenabled, false); 
-			}
+
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "multiple", "dock "+AutoDock.DOCKED+" motion disabled");
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
@@ -341,6 +338,13 @@ public class ArduinoPower implements SerialPortEventListener  {
 				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" motion disabled");
 			}
 
+		}
+		
+		else if (s[0].equals("wallpower")) {
+			if (!state.getBoolean(State.values.wallpower)) {
+				state.set(State.values.wallpower, true);
+				state.set(State.values.motionenabled, false);
+			}
 		}
 		
 		else if (s[0].equals("shutdown")) {

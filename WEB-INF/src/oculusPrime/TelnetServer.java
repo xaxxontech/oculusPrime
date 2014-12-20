@@ -76,8 +76,9 @@ public class TelnetServer implements Observer {
 			}
 			
 			printers.add(out);	
-			sendToSocket(user + " connected via socket", out);
-			Util.log(user+" connected via socket", this);
+			String ip_address = clientSocket.getInetAddress().toString().substring(1);
+			sendToSocket(ip_address + " connected via socket", out);
+			Util.log(ip_address+" connected via socket", this);
 			this.start();
 		}
 		

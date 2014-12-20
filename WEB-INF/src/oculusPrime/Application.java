@@ -873,7 +873,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			e.printStackTrace();
 		}
 		
-		state.delete(State.values.controlsinverted);
+		if (state.exists(State.values.controlsinverted.toString())) state.delete(State.values.controlsinverted);
 	}
 
 	public void muteROVMic() {

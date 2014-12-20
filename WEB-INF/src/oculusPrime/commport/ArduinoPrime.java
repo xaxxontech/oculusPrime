@@ -269,8 +269,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		String response = "";
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
-		
-		Util.debug("serial in: " + response, this);
+
+		if (!state.getBoolean(State.values.odometry)) Util.debug("serial in: " + response, this);
 		
 		if(response.equals("reset")) {
 			sendCommand(GET_VERSION);  

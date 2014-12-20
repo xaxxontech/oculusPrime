@@ -79,8 +79,7 @@ public class AutoDock { // implements Observer {
 				autodockctrattempts = 0;
 				dockattempts = 1;
 				app.message("auto-dock in progress", "motion", "moving");
-				System.out.println("OCULUS: autodock started");
-
+				Util.log("autodock go");
 				
 			}
 			else { app.message("motion disabled","autodockcancelled", null); }
@@ -219,7 +218,7 @@ public class AutoDock { // implements Observer {
 				Util.delay(300);
 				comport.stopGoing();
 				int inchforward = 0;
-				while (inchforward < 15 && !state.getBoolean(State.values.wallpower) && 
+				while (inchforward < 20 && !state.getBoolean(State.values.wallpower) && 
 						state.getBoolean(State.values.docking)) {
 					comport.goForward();
 					Util.delay(150);
@@ -230,15 +229,18 @@ public class AutoDock { // implements Observer {
 				}
 				
 				if(state.getBoolean(State.values.wallpower)) { // dock maybe successful
+					comport.goForward(); // on more nudge
+					Util.delay(150);
+					comport.stopGoing();
+					
 					comport.strobeflash("on", 120, 20);
-					Util.delay(3000); // wait to see if came-undocked immediately (fairly commmon) 
+					Util.delay(5000); // allow time for charger to get up to voltage 
+								     // and wait to see if came-undocked immediately (fairly commmon) 
 				}
 				
-				if(state.getBoolean(State.values.wallpower)) { // dock successful
+				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful
 					
 					state.set(State.values.docking, false);
-//					state.set(State.values.motionenabled, false);
-//					state.set(State.values.dockstatus, DOCKED);
 					comport.speedset(ArduinoPrime.speeds.fast.toString());
 
 					String str = "";
@@ -255,7 +257,7 @@ public class AutoDock { // implements Observer {
 					}
 					
 					app.message("docked successfully", "multiple", str);
-					Util.debug(state.get(State.values.driver) + " docked successfully", this);
+					Util.log(state.get(State.values.driver) + " docked successfully", this);
 
 				} else { // dock fail
 					
@@ -263,7 +265,7 @@ public class AutoDock { // implements Observer {
 						state.set(State.values.docking, false); 
 
 						app.message("docking timed out", null, null);
-						Util.debug("dock(): " + state.get(State.values.driver) + " docking timed out", this);
+						Util.log("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 
 						// back up and retry
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
@@ -541,7 +543,7 @@ public class AutoDock { // implements Observer {
 							}
 						}
 					}).start();
-					Util.debug("autodock backup", this);
+					Util.log("autodock backup", this);
 				} else { // all good, let er rip
 					// System.out.println("dock "+dockslopedeg+" "+slopedeg);
 					new Thread(new Runnable() {
