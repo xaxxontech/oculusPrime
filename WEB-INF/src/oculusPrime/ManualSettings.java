@@ -6,7 +6,7 @@ import java.util.Properties;
 public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, diagnostic, telnetport, wheeldiameter,  
-	gyrocomp, alertsenabled,
+	gyrocomp, alertsenabled, redock,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address; 
 	
 	 // new counter to see if constantly searching
@@ -30,6 +30,7 @@ public enum ManualSettings {
 		config.setProperty(wheeldiameter.name(), "110");
 		config.setProperty(gyrocomp.name() , "1.09");
 		config.setProperty(alertsenabled.name() , "true");
+		config.setProperty(redock.name() , "true");
 		return config;
 	}
 	

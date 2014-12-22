@@ -29,6 +29,7 @@ public class SystemWatchdog {
 	public String lastpowererrornotify = null; // this gets set to null on client login 
 	public boolean powererrorwarningonly = true;
 	private boolean redocking = true;
+	private boolean lowbattredock = false;
 	
     /** Constructor */
 	SystemWatchdog(Application a){ 
@@ -40,7 +41,7 @@ public class SystemWatchdog {
 	private class Task extends TimerTask {
 		public void run() {
 
-			// saftey: check for force_undock command from battery firmware
+			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				forceundock();
 			}
@@ -62,16 +63,29 @@ public class SystemWatchdog {
 				Util.reboot();
 			}
 			
-			// deal with abandoned logins
+			// deal with abandoned logins, driver still connected
 			if (state.exists(State.values.driver.toString()) && 
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN ) {
 
 				application.driverCallServer(PlayerCommands.disconnectotherconnections, null);
 				application.driverCallServer(PlayerCommands.driverexit, null);
-				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) redock(NOFORWARD);
+				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
+						settings.getBoolean(ManualSettings.redock))
+					redock(NOFORWARD);
 			}
 			
 			// TODO: deal with abandonded, undocked, low battery, not redocking, not already attempted redock
+			if (!state.exists(State.values.driver.toString()) && 
+				System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
+				redocking == false && lowbattredock == false &&	
+				state.getInteger(State.values.batterylife) <= 10 &&
+				state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
+				settings.getBoolean(ManualSettings.redock)
+				){
+				lowbattredock = true;
+				redock(null);
+			}
+			else  lowbattredock = false; 
 
 		}
 	}
@@ -115,12 +129,24 @@ public class SystemWatchdog {
 		else if (!warningonly) callForHelp("Oculus Prime POWER ERROR","Please UNPLUG BATTERY and contact technical support");
 	}
 	
-	public void redock(final String option) {
+	public void redock(String str) {
+		if (redocking) return;
+		
+		if (str == null) str = "";
+		final String option = str;
 		new Thread(new Runnable() { public void run() {
 			redocking = true;
 			long start; 
 			String subject = "Oculus Prime Unable to Dock";
 			String body = "Un-docked, battery draining";
+			
+			// warn
+			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
+			Util.delay(1000); // including 500 delay 
+			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
+			Util.delay(1000); // including 500 delay 
+			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
+			Util.delay(6000); // allow reaction
 			
 			// camera on
 			application.driverCallServer(PlayerCommands.streamsettingsset, "high");
@@ -130,7 +156,7 @@ public class SystemWatchdog {
 			state.set(State.values.motionenabled, true);
 			state.set(State.values.controlsinverted, false);
 
-			if (option == null || option.isEmpty()) {
+			if (!option.equals(NOFORWARD)) {
 				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
 				Util.delay(800); 
 				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
@@ -151,6 +177,7 @@ public class SystemWatchdog {
 					callForHelp(subject, body);
 					application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 					application.driverCallServer(PlayerCommands.floodlight, "0");
+					redocking = false;
 					return;
 				}
 				

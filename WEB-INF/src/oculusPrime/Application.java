@@ -664,7 +664,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.dock();
 			break;
 		case strobeflash:
-			comport.strobeflash(str,0,0);
+			String mode = "on";
+			int duration = 0;
+			int intensity = 0;
+			if (str != null) {
+				String[] STR = str.split(" ");
+				mode = STR[0];
+				if (STR.length >= 3) {
+					duration = Integer.parseInt(STR[1]);
+					intensity = Integer.parseInt(STR[2]);
+				}
+			}
+			comport.strobeflash(mode, duration, intensity);
 			messageplayer("strobeflash "+str, null, null);
 			break;
 

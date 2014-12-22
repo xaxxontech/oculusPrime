@@ -230,12 +230,14 @@ public class AutoDock { // implements Observer {
 				
 				if(state.getBoolean(State.values.wallpower)) { // dock maybe successful
 					comport.goForward(); // on more nudge
-					Util.delay(150);
+					Util.delay(100);
 					comport.stopGoing();
 					
 					comport.strobeflash("on", 120, 20);
-					Util.delay(5000); // allow time for charger to get up to voltage 
-								     // and wait to see if came-undocked immediately (fairly commmon) 
+					// allow time for charger to get up to voltage 
+				     // and wait to see if came-undocked immediately (fairly commmon) 
+//					state.block(oculusPrime.State.values.wallpower, "false", 5000);
+					Util.delay(5000);
 				}
 				
 				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful

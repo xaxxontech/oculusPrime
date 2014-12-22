@@ -15,6 +15,7 @@ import oculusPrime.ManualSettings;
 import oculusPrime.PlayerCommands;
 import oculusPrime.Settings;
 import oculusPrime.State;
+import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
@@ -333,9 +334,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					!state.getBoolean(State.values.autodocking)) {
 				state.put(State.values.dockstatus, AutoDock.UNDOCKED);
-//				state.put(State.values.batterylife, "draining");
-//				application.message(null, "dock", AutoDock.UNDOCKED);
 				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" motion disabled");
+				
+				// redock if unplanned and redock set
+				if (!state.exists(State.values.telnetusers.toString())) state.set(State.values.telnetusers, 0);
+				if (!state.exists(State.values.driver.toString()) && state.getInteger(State.values.telnetusers) ==0 &&
+						settings.getBoolean(ManualSettings.redock)) { 
+					application.driverCallServer(PlayerCommands.redock, null);
+				}
 			}
 
 		}

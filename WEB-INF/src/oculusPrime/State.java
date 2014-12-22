@@ -124,7 +124,14 @@ public class State {
 //		return block(member, Boolean.valueOf(target), timeout);
 //	}
 	
-	/** */
+	/**
+	 * block until timout or until member == target
+	 * 
+	 * @param member state key
+	 * @param target block until timeout or until member == target
+	 * @param timeout
+	 * @return
+	 */
 	public boolean block(final values member, final String target, int timeout){
 		
 		long start = System.currentTimeMillis();
