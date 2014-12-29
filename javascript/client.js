@@ -2311,16 +2311,13 @@ function radar(mode) {
 		str +="<span style='background-color: #666666; color: #000000;'>ROV</span></div>";
 		str += "</div>"
 		popupmenu('aux', 'show', x, y, str, 240, 1, 0);
-//		radarimagereload();
 	}
 	if (mode=="off") {
-		// lagtimer = new Date().getTime(); // has to be *after* message()
-		// document.getElementById("radarimg").src="";
 		popupmenu("aux", "close");
 	}
-	if (mode=="shutdown") { // unused
+	if (mode=="shutdown") { 
 		callServer("opennisensor", "off");
-		message("sending opennisensor off " + str, sentcmdcolor);
+		message("sending opennisensor off", sentcmdcolor);
 	}
 }
 

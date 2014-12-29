@@ -17,39 +17,40 @@ public class OpenNIRead  {
 	
 	private boolean depthCamInit = false;
 	public  boolean depthCamGenerating = false;
-	private ByteBuffer frameData;
+	private static ByteBuffer frameData;
 	private int[] lastresult;
 	Process camproc;
 	File lockfile = new File("/run/shm/xtion.raw.lock");
 	ImageUtils imageUtils = new ImageUtils();
-	private int width = 320;
-	private int height = 240;
+	private static int width = 320;
+	private static int height = 240;
+	private final static int BYTEDEPTH = 4;
 	
 	public void startDepthCam() {
 		if (depthCamInit) return;
-		oculusPrime.Util.log("start depth cam", this);
-
-		lockfile.delete();
-		
-		new Thread(new Runnable() { 
-			public void run() {
-				try {
-					
-					String sep = System.getProperty("file.separator");
-					String dir = System.getenv("RED5_HOME")+sep+"xtionread";
-					String javadir = System.getProperty("java.home");
-					String cmd = javadir+sep+"bin"+sep+"java"; 
-					String arg = dir+sep+"xtion.jar";
-					ProcessBuilder pb = new ProcessBuilder(cmd, "-jar", arg);
-					Map<String, String> env = pb.environment();
-					env.put("LD_LIBRARY_PATH", dir);
-					camproc = pb.start();
-					
-				} catch (Exception e) {
-					e.printStackTrace();
-				}		
-			} 	
-		}).start();
+//		oculusPrime.Util.log("start depth cam", this);
+//
+//		lockfile.delete();
+//		
+//		new Thread(new Runnable() { 
+//			public void run() {
+//				try {
+//					
+//					String sep = System.getProperty("file.separator");
+//					String dir = System.getenv("RED5_HOME")+sep+"xtionread";
+//					String javadir = System.getProperty("java.home");
+//					String cmd = javadir+sep+"bin"+sep+"java"; 
+//					String arg = dir+sep+"xtion.jar";
+//					ProcessBuilder pb = new ProcessBuilder(cmd, "-jar", arg);
+//					Map<String, String> env = pb.environment();
+//					env.put("LD_LIBRARY_PATH", dir);
+//					camproc = pb.start();
+//					
+//				} catch (Exception e) {
+//					e.printStackTrace();
+//				}		
+//			} 	
+//		}).start();
 
 		depthCamGenerating = true;
 		depthCamInit = true;
@@ -60,7 +61,7 @@ public class OpenNIRead  {
 		if (!depthCamInit) return;
 		oculusPrime.Util.log("stop depth cam", this);
 
-		camproc.destroy();
+//		camproc.destroy();
 		
 		depthCamInit = false;
 		depthCamGenerating = false;
@@ -69,16 +70,16 @@ public class OpenNIRead  {
 	public int[] readHorizDepth(int y) {
 
 		int[]result = new int[width];
-		int size = width*height*2;
+		int size = width*height*BYTEDEPTH;
 		
 		getFrame(size);
 
     	boolean blank=true;
-		for (int x=0; x<width; x++) {
+		for (int x=width-1; x>=0; x--) {
 	        
-	        int p = ((width * y)+x)*2;
-	        int depth = (int) frameData.getShort(p);
-	        result[x] = depth;
+	        int p = ((width * y)+x)*BYTEDEPTH;
+	        float depth = frameData.getFloat(p); // reads 4 bytes
+	        result[x] = (short) (depth*1000);
 	        
 	        if (depth != 0) { blank = false; }
 		}
@@ -96,19 +97,18 @@ public class OpenNIRead  {
 	public short[] readFullFrame() {
 		
 		short[] result = new short[width*height];
-		int size = width*height*2;
+		int size = width*height*BYTEDEPTH;
 
 		boolean blank=true;
     	while (true) {
     		boolean rcpt = getFrame(size);
 	    	int i = 0;
 	    	for (int y=0; y<height; y++) {
-				for (int x=0; x<width; x++) {
+				for (int x=width-1; x>=0; x--) {
 			        
-			        int p = ((width * y)+x)*2;
-			        short depth = frameData.getShort(p);
-//			        if (depth !=0)  depth -= ScanUtils.cameraSetBack; // depth is to center of rotation
-			        result[i] = depth;
+			        int p = ((width * y)+x)*BYTEDEPTH;
+			        float depth = frameData.getFloat(p); // reads 4 bytes
+			        result[i] = (short) (depth*1000); // convert to mm
 			        i++;
 			        if (depth != 0) { blank = false; }
 				}	
@@ -123,45 +123,6 @@ public class OpenNIRead  {
 		return result; 
 		
 	}
-	
-	//unused
-	public short[] readFullFrameAveraged() {
-		short[] result = new short[width*height];
-		int max = 5;
-		int size = width*height*2;
-
-		short[][] frames = new short[width*height][max];
-    	for (int f=0; f<max; f++) {
-    		getFrame(size);
-	    	int i = 0;
-			for (int y=0; y<height; y++) {
-				for (int x=0; x<width; x++) {
-			        
-			        int p = ((width * y)+x)*2;
-			        short depth = frameData.getShort(p);
-			        frames[i][f] = depth;
-			        i++;
-				}	
-	    	}
-			Util.delay(100);
-    	}
-
-    	for (int i=0; i<width*height; i++) {
-			int total = 0;
-			int compared = 0;
-			for (int f=0;f<max;f++) {
-				if (frames[i][f] != 0) {
-					total += frames[i][f];
-					compared ++;
-				}
-			}
-			if (compared != 0) {
-				result[i] = (short) (total/compared);
-			}
-		}
-    	
-		return result;
-	}
 
 	private boolean getFrame(int size) {
 		long start = System.currentTimeMillis();
@@ -171,7 +132,10 @@ public class OpenNIRead  {
     			break;
     		}
     		long now = System.currentTimeMillis();
-    		if (now - start > 5000) return false; // 5 sec timeout
+    		if (now - start > 5000) {
+    			Util.debug("lockfile timeout", this);
+    			return false; // 5 sec timeout
+    		}
 		}
 		
     	try {
@@ -186,6 +150,7 @@ public class OpenNIRead  {
 				lockfile.delete();
 				return true;
 			}
+			else Util.debug("frame size not matching", this);
 			ch.close();
 			file.close();
 		} catch (Exception e) {
@@ -232,4 +197,14 @@ public class OpenNIRead  {
 		return img;
 	}
 	
+	
+	public static void main(String s[]) {
+		OpenNIRead read = new OpenNIRead();
+		read.startDepthCam();
+		int size = width*height*BYTEDEPTH;
+		read.getFrame(size);
+		System.out.println(frameData.capacity());
+	}
+	
 }
+

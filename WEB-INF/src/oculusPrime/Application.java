@@ -260,6 +260,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		grabberInitialize();
 				
+		state.put(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog? 
 		watchdog = new SystemWatchdog(this); 
 		
 		new Thread(new Runnable() { public void run() {

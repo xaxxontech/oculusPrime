@@ -28,7 +28,7 @@ public class SystemWatchdog {
 	
 	public String lastpowererrornotify = null; // this gets set to null on client login 
 	public boolean powererrorwarningonly = true;
-	private boolean redocking = true;
+	private boolean redocking = false;
 	private boolean lowbattredock = false;
 	
     /** Constructor */
@@ -60,7 +60,7 @@ public class SystemWatchdog {
 				
 				String boot = new Date(state.getLong(State.values.boottime.name())).toString();				
 				Util.log("rebooting, last boot was: " + boot, this);
-				Util.reboot();
+				application.driverCallServer(PlayerCommands.reboot, null);
 			}
 			
 			// deal with abandoned logins, driver still connected
@@ -70,8 +70,10 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.disconnectotherconnections, null);
 				application.driverCallServer(PlayerCommands.driverexit, null);
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
-						settings.getBoolean(ManualSettings.redock))
+						settings.getBoolean(ManualSettings.redock)) {
+					Util.log("abandoned logins, driver still connected", this);
 					redock(NOFORWARD);
+				}
 			}
 			
 			// TODO: deal with abandonded, undocked, low battery, not redocking, not already attempted redock
@@ -83,6 +85,7 @@ public class SystemWatchdog {
 				settings.getBoolean(ManualSettings.redock)
 				){
 				lowbattredock = true;
+				Util.log("abandonded, undocked, low battery, not redocking", this);
 				redock(null);
 			}
 			else  lowbattredock = false; 
