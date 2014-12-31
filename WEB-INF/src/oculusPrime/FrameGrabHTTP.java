@@ -171,7 +171,8 @@ public class FrameGrabHTTP extends HttpServlet {
 			g2d.fill(new Rectangle2D.Double(0, 0, w, h));
 			
 			// too close out of range background fill
-			g2d.setColor(new Color(23,25,0)); 
+//			g2d.setColor(new Color(23,25,0)); 
+			g2d.setColor(new Color(20,20,20)); 
 			int r = 40;
 			g2d.fill(new Ellipse2D.Double( w/2-r, h-1-r*0.95+voff, r*2, r*2*0.95));
 			
@@ -187,6 +188,7 @@ public class FrameGrabHTTP extends HttpServlet {
 				g2d.setColor(new Color(0,70,0)); // shadow colour
 				int xdctr = xdepth.length/2;
 				for (int xd=0; xd < xdepth.length; xd++) {
+//				for (int xd=xdepth.length-1; xd>=0; xd--) {
 					int y = (int) ((float)xdepth[xd]/(float)maxDepthInMM*(float)h);
 					// x(opposite) = tan(angle)*y(adjacent)
 					double xdratio = (double)(xd - xdctr)/ (double) xdctr;
@@ -220,7 +222,8 @@ public class FrameGrabHTTP extends HttpServlet {
 			g2d.draw(new Ellipse2D.Double( w/2-r, h-1-r*0.95+voff, r*2, r*2*0.95));	
 			
 			// outside cone colour fill
-			g2d.setColor(new Color(23,25,0)); 
+//			g2d.setColor(new Color(23,25,0)); // blue opposite comp?
+			g2d.setColor(new Color(20,20,20)); 
 			for (int y= 0-voff; y<h+voff; y++) {
 				int x = (int) (Math.tan(angle)*(double)(h-y-1));
 				if (x>=0) {

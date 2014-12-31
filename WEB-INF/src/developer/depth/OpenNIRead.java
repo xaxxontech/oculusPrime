@@ -75,11 +75,14 @@ public class OpenNIRead  {
 		getFrame(size);
 
     	boolean blank=true;
+//		for (int x=0; x<width; x++) {
+    	int i = 0;
 		for (int x=width-1; x>=0; x--) {
 	        
 	        int p = ((width * y)+x)*BYTEDEPTH;
 	        float depth = frameData.getFloat(p); // reads 4 bytes
-	        result[x] = (short) (depth*1000);
+	        result[i] = (short) (depth*1000);
+	        i++;
 	        
 	        if (depth != 0) { blank = false; }
 		}

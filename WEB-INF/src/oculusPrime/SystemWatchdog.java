@@ -97,6 +97,7 @@ public class SystemWatchdog {
 		lastpowererrornotify = state.get(State.values.powererror);
 		boolean warningonly = true;
 		String longerror = "";
+		boolean commlost = false;
 		String code[] = lastpowererrornotify.split(",");
 		for (int i=0; i < code.length; i++) {
 			int c = Integer.parseInt(code[i]);
@@ -106,16 +107,18 @@ public class SystemWatchdog {
 			}
 			if (c != 0) longerror += ArduinoPower.pwrerr.get(c).replaceFirst("ERROR_", "") + "<br>";
 			if (!warningonly) longerror += "</span>";
+			if (c == ArduinoPower.COMM_LOST) commlost = true;
 		}
 		
 		if (state.exists(State.values.driver.toString())) {
 			String msg = "";
-			if (warningonly) msg += "POWER WARNING<br>History:<br><br>";
+			if (warningonly && !commlost) msg += "POWER WARNING<br>History:<br><br>";
 			else msg += "POWER SYSTEM ERROR<br>History:<br><br>";
 			
 			msg += longerror + "<br>";
 			
-			if (warningonly) msg += "OK to clear warnings?<br><br>";
+			if (warningonly && !commlost) msg += "OK to clear warnings?<br><br>";
+			else if (warningonly && commlost) msg += "Try: restart application, reboot, check USB cable<br><br>"; // commlost
 			else msg += "Please UNPLUG BATTERY and contact technical support<br><br>";
 		
 			msg += "<a href='javascript: acknowledgeerror(&quot;true&quot;);'>";
@@ -130,6 +133,7 @@ public class SystemWatchdog {
 			application.sendplayerfunction("acknowledgeerror", msg);
 		}
 		else if (!warningonly) callForHelp("Oculus Prime POWER ERROR","Please UNPLUG BATTERY and contact technical support");
+		else if (warningonly && commlost) callForHelp("Oculus Prime POWER ERROR","Power PCB Communication Lost");
 	}
 	
 	public void redock(String str) {
@@ -209,7 +213,8 @@ public class SystemWatchdog {
 			while (state.getBoolean(State.values.autodocking) && System.currentTimeMillis() - start < AUTODOCKTIMEOUT)  
 				Util.delay(100); 
 				
-			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && 
+						!state.exists(State.values.driver.toString())) {
 
 				callForHelp(subject, body);
 				application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
