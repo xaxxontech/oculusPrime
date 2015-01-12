@@ -688,6 +688,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case powercommand:
 			messageplayer("powercommand: "+str, null, null);
 			powerport.powercommand(str);
+			break;
 
 		case erroracknowledged:
 			if (str.equals("true")) {

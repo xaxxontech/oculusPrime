@@ -43,6 +43,7 @@ public class SystemWatchdog {
 
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+				Util.log("System WatchDog, force undock", this);
 				forceundock();
 			}
 			
@@ -71,7 +72,7 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.driverexit, null);
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
 						settings.getBoolean(ManualSettings.redock)) {
-					Util.log("abandoned logins, driver still connected", this);
+					Util.log("abandoned logins, driver still connected, attempt redock", this);
 					redock(NOFORWARD);
 				}
 			}
@@ -79,8 +80,9 @@ public class SystemWatchdog {
 			// TODO: deal with abandonded, undocked, low battery, not redocking, not already attempted redock
 			if (!state.exists(State.values.driver.toString()) && 
 				System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
-				redocking == false && lowbattredock == false &&	
-				state.getInteger(State.values.batterylife) <= 10 &&
+				redocking == false && lowbattredock == false &&
+				Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 10 &&
+//				state.getInteger(State.values.batterylife) <= 10 && // FAIL! (returns -1, error)
 				state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
 				settings.getBoolean(ManualSettings.redock)
 				){
@@ -213,10 +215,9 @@ public class SystemWatchdog {
 			while (state.getBoolean(State.values.autodocking) && System.currentTimeMillis() - start < AUTODOCKTIMEOUT)  
 				Util.delay(100); 
 				
-			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && 
-						!state.exists(State.values.driver.toString())) {
+			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 
-				callForHelp(subject, body);
+				if (!state.exists(State.values.driver.toString()))  callForHelp(subject, body);
 				application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 				application.driverCallServer(PlayerCommands.floodlight, "0");
 			}

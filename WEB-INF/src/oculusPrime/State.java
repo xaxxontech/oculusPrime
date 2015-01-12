@@ -11,7 +11,7 @@ public class State {
 	public enum values{ 
 		motionenabled, moving, movingforward, motorport,  // motors
 
-		dockgrabbusy, docking, dockstatus, autodocking, dockfound, // dock 
+		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics, // dock 
 
 		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 

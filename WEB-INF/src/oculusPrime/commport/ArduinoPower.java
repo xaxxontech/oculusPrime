@@ -30,7 +30,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 10000; // was 15000 
-	public static final int ERROR_TIME_OUT = 45000;
+	public static final int ERROR_TIME_OUT = (int) Util.ONE_MINUTE;
 	public static final int WATCHDOG_DELAY = 5000;
 	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
 	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
@@ -69,8 +69,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int WARNING_ONLY_BELOW = 40;
 	public static final int RESET_REQUIRED_ABOVE= 19;
 	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4);  // log only, suppress gui warnings:
-	
-	private WatchDog watchdog = new WatchDog();
 	
 	
 	public ArduinoPower(Application app) {
@@ -118,7 +116,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		
 		if (isconnected) { 
 			initialize();
-			watchdog.start();
+			new WatchDog().start();
 		}
 		
 	}
@@ -241,13 +239,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 				
 				if (now - lastRead > ERROR_TIME_OUT && !isconnected) { // comm with pcb lost!
 					if (state.exists(oculusPrime.State.values.powererror.toString())) {
-							state.set(oculusPrime.State.values.powererror, 
-									state.get(oculusPrime.State.values.powererror)+","+COMM_LOST);
+						state.set(oculusPrime.State.values.powererror, ","+COMM_LOST);
 					}
-					else  state.set(oculusPrime.State.values.powererror, COMM_LOST);
-					
-					Util.log(pwrerr.get(COMM_LOST), this);
-					break; // watchdog exit
+					else state.set(oculusPrime.State.values.powererror, COMM_LOST);
 				}
 
 				Util.delay(WATCHDOG_DELAY);
@@ -256,23 +250,18 @@ public class ArduinoPower implements SerialPortEventListener  {
 	}
 	
 	public void reset() {
-		
-		if (!watchdog.isAlive()) {
-			Util.log("Cannot reset, watchdog not running, try restart");
-			return; 
-		}
 
-		new Thread(new Runnable() {
-			public void run() {
-				writeStatusToEeprom(); // this may throw error if port lost
-				Util.delay(100); 
-				
-				Util.log("resetting Power board", this);
-				disconnect();
-				connect();
-				initialize();
-			}
-		}).start();
+			new Thread(new Runnable() {
+				public void run() {
+					writeStatusToEeprom(); // this may throw error if port lost
+					Util.delay(100); 
+					
+					Util.log("resetting Power board", this);
+					disconnect();
+					connect();
+					initialize();
+				}
+			}).start();
 
 	}
 	
@@ -349,7 +338,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!s[1].equals("0")) { 
 				state.set(State.values.powererror, s[1]);
 				application.message("from power PCB, code " + s[1], null, null);
-				Util.log(pwrerr.get(Integer.parseInt(s[1])), this);
 			}
 			
 			else if (state.exists(State.values.powererror.toString())) {
@@ -369,7 +357,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 		
 		else if (s[0].equals("undocked")) {
-			if (state.getBoolean(State.values.wallpower)) {
+			if (state.getBoolean(State.values.wallpower)) { 
 				state.set(State.values.wallpower, false);
 				state.set(State.values.motionenabled, true); 
 			}
@@ -532,7 +520,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			else {
 				byte val1 = (byte) (val & 0xFF);
 				byte val2 = (byte) ((val >>8) & 0xFF);
-				sendCommand(new byte[]{s[0].getBytes()[0], val2, val1}); // bigendian
+				sendCommand(new byte[]{s[0].getBytes()[0], val1, val2}); 
 			}
 		}
 	}

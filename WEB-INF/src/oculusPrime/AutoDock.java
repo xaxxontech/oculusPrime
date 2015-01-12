@@ -236,8 +236,7 @@ public class AutoDock { // implements Observer {
 					comport.strobeflash("on", 120, 20);
 					// allow time for charger to get up to voltage 
 				     // and wait to see if came-undocked immediately (fairly commmon)
-					Util.delay(2000);
-					state.block(oculusPrime.State.values.wallpower, "false", 5000);
+					Util.delay(7000);
 				}
 				
 				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful
@@ -645,6 +644,7 @@ public class AutoDock { // implements Observer {
 		
 		state.set(oculusPrime.State.values.dockgrabbusy, true);
 		state.delete(oculusPrime.State.values.dockfound);
+		state.delete(oculusPrime.State.values.dockmetrics);
 
 		if (state.getBoolean(State.values.framegrabbusy.name())
 				|| ! (state.get(State.values.stream).equals("camera") 
@@ -733,7 +733,10 @@ public class AutoDock { // implements Observer {
                         // interpret results
                         if (width < (int) (0.02*imgwidth) || width > (int) (0.875*imgwidth) || results[3].equals("0")) 
         					state.set(State.values.dockfound, false); // failed to find target! unrealistic widths
-        				else state.set(State.values.dockfound, true); // success!
+        				else { 
+        					state.set(State.values.dockfound, true); // success!
+        					state.set(State.values.dockmetrics, str);
+        				}
 
                         if (state.getBoolean(State.values.autodocking))
 //                        	autoDock("dockgrabbed find " + str);
