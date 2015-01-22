@@ -1,15 +1,12 @@
 //TODO: clean out unused 'overlay off' and 'extended settings box' references (in html too) 
 
 var sentcmdcolor = "#777777";
-var systimeoffset;
 var enablekeyboard = false;
 var lagtimer = 0;
 var officiallagtimer = 0;
-//var maxlogbuffer = 1000; // was 50000
 var statusflashingarray= new Array();
 var pinginterval = null; //timer
 var pingcountdown = null; //timer
-var pingintervalcountdowntimer; //timer
 var pingcountdownaftercheck; //timer
 var laststatuscheck = null;
 var pingintervalamount = 5;
@@ -40,24 +37,29 @@ var broadcastmicon = false;
 var clicksteeron = true;
 var maxmessagecontents = 50000; // was 150000
 var maxmessageboxsize = 4000;
+
 var tempimage = new Image();
 tempimage.src = 'images/eye.gif';
 var tempimage2 = new Image();
 tempimage2.src = 'images/ajax-loader.gif';
 var tempimage3 = new Image();
 tempimage3.src = 'images/dockline.gif';
+var tempimage4 = new Image();
+tempimage4.src = 'images/steering_icon_selected.gif';
+
 var admin = false;
 var userlistcalledby;
 var initialdockedmessage = false;
 var html5 = true;
-var faceboxtimer;
-var facegrabon = false;
-var tempdivtext;
 var autodocking = false;
 var sendcommandtimelast = 0;
 var lastcommandsent;
 var popupmenu_xoffset = null;
 var popupmenu_yoffset = null;
+var popupmenu_xsizestart;
+var popupmenu_ysizestart;
+var popupmenu_widthstart;
+var popupmenu_heightstart;
 var mainmenuwidth = null;
 var bworig;
 var rovvolume = 0;
@@ -68,22 +70,49 @@ var videoscale = 100;
 var pingcountertimer;
 var pushtotalk;
 var lastcommand; 
+var maintopbarTimer = null;
+var subwindows = ["aux", "context", "menu", "main", "rosmap"];  // purposely skipped "error" window
+var windowpos = [null, null, null, null]; // needs same length as above
 
 function loaded() {
+	loadwindowpositions();
+	
+	// main window init:
+	var mm = document.getElementById("main_menu_over");
+	var mt = document.getElementById("maintable");
+	var x = mt.offsetLeft;
+	var y = mt.offsetTop - mm.style.paddingTop;
+	mm.style.position = "absolute";
+	var i = subwindows.indexOf("main");
+	if (windowpos[i] != null) {
+		x = windowpos[i][0];
+		y = windowpos[i][1]+22;
+	}
+	mm.style.left = x + "px";
+	mm.style.top = y -22 + "px"; 
+	var under = document.getElementById("main_menu_under");
+	under.style.display = "";
+	under.style.width = null; //ie fix
+	under.style.height = null; //ie fix
+	var margin = 4;
+	under.style.left = (mm.offsetLeft - margin) + "px";
+	under.style.top = (mm.offsetTop -margin) + "px";
+	under.style.width = (mm.offsetWidth + margin*2) + "px";
+	under.style.height = (mm.offsetHeight + margin*2) + "px";
+	under.style.display = "none";
+	
+	
 	if (clicksteeron) { clicksteer("on"); }
     overlay("on");
     browserwindowresized();
-	var b = new Image();
-	b.src = 'images/steering_icon_selected.gif';
 	bworig= document.body.clientWidth;
-	var a = document.getElementById("blorg");
-
-//	debug("<a href='javascript: displaymessages();'>show msg</a>"); // message recording
 }
 
 function flashloaded() {
 	videologo("on");
 	openxmlhttp("rtmpPortRequest",rtmpPortReturned);
+	
+
 }
 
 function openxmlhttp(theurl, functionname) {
@@ -126,12 +155,10 @@ function resized() {
 }
 
 function browserwindowresized() {
-	var a = document.getElementById("visiblepagediv");
-//	debug(document.body.clientHeight + " " + a.offsetHeight);
-	if (document.body.clientHeight < document.getElementById("visiblepagediv").offsetHeight + 40) {
-		document.getElementById("topgap").style.height = "5px";
-	}
-	else { document.getElementById("topgap").style.height = "30px"; }
+//	if (document.body.clientHeight < document.getElementById("visiblepagediv").offsetHeight + 40) {
+//		document.getElementById("topgap").style.height = "5px";
+//	}
+//	else { document.getElementById("topgap").style.height = "30px"; }
 	
 	docklineposition();
 	videooverlayposition();
@@ -263,8 +290,6 @@ function publish(str) {
 }
 
 function message(message, colour, status, value) {
-	
-//	recordmessage(message, colour, status, value); // message recording, dev only
 	
 	if (message != null) {
 		var tempmessage = message;
@@ -449,7 +474,7 @@ function hiddenmessageboxShow() {
 	document.getElementById("overlaydefault").style.display = "none";
 	document.getElementById("login").style.display = "none";
 	document.getElementById("someonealreadydrivingbox").style.display = "none";
-	document.getElementById("advancedmenubox").style.display = "none";
+//	document.getElementById("advancedmenubox").style.display = "none";
 	document.getElementById("extrastuffcontainer").style.display = "none";
 	document.getElementById("hiddenmessageboxcontainer").style.display = "";
 	overlay("on");
@@ -459,7 +484,7 @@ function extrastuffboxShow() {
 	document.getElementById("overlaydefault").style.display = "none";
 	document.getElementById("login").style.display = "none";
 	document.getElementById("someonealreadydrivingbox").style.display = "none";
-	document.getElementById("advancedmenubox").style.display = "none";
+//	document.getElementById("advancedmenubox").style.display = "none";
 	document.getElementById("hiddenmessageboxcontainer").style.display = "none";
 	document.getElementById("extrastuffcontainer").style.display = "";
 	overlay("on");
@@ -472,15 +497,19 @@ function keyBoardPressed(event) {
 			move("stop");
 		}
 		if (keycode == 38 || keycode == 87) { // up arrow or W
+			event.preventDefault(); // supress scrolling
 			move("forward");
 		}
 		if (keycode == 40 || keycode == 88) { // down arrow or X
+			event.preventDefault(); // supress scrolling
 			move("backward");
 		}
 		if (keycode == 37 || keycode == 81) { // left arrow or Q
+			event.preventDefault(); // supress scrolling
 			move("left");
 		}
 		if (keycode == 39 || keycode == 69) { // right arrow or E
+			event.preventDefault(); // supress scrolling
 			move("right");
 		}
 		if (keycode == 65) { // A
@@ -631,11 +660,12 @@ function docklineposition(n) {
 	if (n) { i = n; }
 	var a = document.getElementById("dockline");
 	var b = document.getElementById("video");
+	var xy = findpos(b);
 	var c = document.getElementById("docklineleft");
 	var d = document.getElementById("docklineright");
-	var top = b.offsetTop;
+	var top = xy[1];
 	var height = b.offsetHeight;
-	var ctr = b.offsetLeft + b.offsetWidth/2;
+	var ctr = xy[0] + b.offsetWidth/2;
 	a.style.left = (ctr+i) +"px";
 	c.style.left = (ctr+i-(docklinewidth/2))+"px";
 	d.style.left = (ctr+i+(docklinewidth/2))+"px";
@@ -852,7 +882,7 @@ function streamdetailspopulate() {
 
 function streamSettingsBullSet(str) {
 	var settings = ["low", "med", "high", "full", "custom"];
-	for (i in settings) {
+	for (var i = 0; i < settings.length; i++) {
 //		debug(setting);
 		document.getElementById(settings[i]+"_bull").style.visibility = "hidden";
 	}
@@ -1027,8 +1057,9 @@ function autodockclick(ev) { // TODO: unused if autodock("go") used above, inste
 		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
 	}
 	var v = document.getElementById("video");
-	x -= v.offsetLeft;
-	y -= v.offsetTop;
+	var xy = findpos(v);
+	x -= xy[0];
+	y -= xy[1];
 	//alert(v.offsetLeft);
 	
 	var b = document.getElementById("docklinecalibratebox")
@@ -1052,14 +1083,15 @@ function autodocklock(str) {
 	videooverlayposition();
 	var scale =2;
 	var video = document.getElementById("video");
+	var xy = findpos(video);
 	var box = document.getElementById("facebox");
 	splitstr = str.split(" "); // left top width height
 	box.style.width = (splitstr[2]*scale*videoscale/100)+"px";
 	box.style.height = (splitstr[3]*scale*videoscale/100)+"px";
 	//box.style.left = (video.offsetLeft + (splitstr[0]*scale)) + "px";
-	box.style.left = video.offsetLeft + (video.offsetWidth/2) + 
+	box.style.left = xy[0] + (video.offsetWidth/2) + 
 	   (((splitstr[0]*scale) - (video.offsetWidth/2)) * (videoscale/100)) + "px";
-	box.style.top = video.offsetTop + (video.offsetHeight/2) + 
+	box.style.top = xy[1] + (video.offsetHeight/2) + 
 	   (((splitstr[1]*scale) - (video.offsetHeight/2)) * (videoscale/100)) + "px";
 	box.style.display = "";
 	setTimeout("document.getElementById('facebox').style.display='none';",500);
@@ -1076,9 +1108,10 @@ function autodockcalibrate(ev) {
 		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
 	}
 	var video = document.getElementById("video");
+	var xy = findpos(video);
 	scale = 2; // convert to 320
-	var xctroffset = x - (video.offsetLeft + (video.offsetWidth/scale)); 
-	var yctroffset = y - (video.offsetTop + (video.offsetHeight/scale)); 
+	var xctroffset = x - (xy[0] + (video.offsetWidth/scale)); 
+	var yctroffset = y - (xy[1] + (video.offsetHeight/scale)); 
 	if (!(xctroffset ==0 && yctroffset==0)) {
 		xctroffset /= videoscale/100;
 		yctroffset /= videoscale/100;
@@ -1109,11 +1142,18 @@ function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offset
 		under.style.height = null; //ie fix
 		if (sizewidth != null) { contents.style.width = sizewidth + "px"; }
 		
-		if (x != null && y !==null) {
+		if (x != null && y != null) {
 			if (!x_offsetmult) { x_offsetmult = 0; }
 			if (!y_offsetmult) { y_offsetmult = 0; }
 			x = x - (x_offsetmult * over.offsetWidth);
 			y = y - (y_offsetmult * over.offsetHeight); 
+			
+			var i = subwindows.indexOf(pre_id);
+			if (windowpos[i] != null) {
+				x = windowpos[i][0];
+				y = windowpos[i][1];
+			}
+			
 			over.style.left = x + "px";
 			over.style.top = y + "px";		
 			under.style.display = "";
@@ -1161,19 +1201,14 @@ function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offset
 		over.style.width = over.offsetWidth;
 		over.style.height = over.offsetHeight;
 	}
+	
 	resized();
 }
 
 function popupmenumove(ev, pre_id) {
-	ev = ev || window.event;
-	if (ev.pageX || ev.pageY) {
-		var x = ev.pageX;
-		var y = ev.pageY;
-	}
-	else {
-		var x = ev.clientX + document.body.scrollLeft - document.body.clientLeft;
-		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
-	}
+	var xy = getmousepos(ev);
+	var x= xy[0];
+	var y= xy[1];
 	var under = document.getElementById(pre_id+"_menu_under");
 	var over = document.getElementById(pre_id+"_menu_over");
 	if (!popupmenu_xoffset) { popupmenu_xoffset = over.offsetLeft - x; }
@@ -1187,10 +1222,86 @@ function popupmenumove(ev, pre_id) {
 	resized();
 }
 
-function debug(str) {
-	document.getElementById('debugbox').innerHTML = str;
+function popupmenusize(pre_id, ev) {
+	var xy = getmousepos(ev);
+	popupmenu_xsizestart = xy[0];
+	popupmenu_ysizestart = xy[1];
 	
+	var contents = document.getElementById(pre_id+"_menu_contents");
+	popupmenu_widthstart = contents.offsetWidth - 20; 
+	popupmenu_heightstart = contents.offsetHeight-18; 
+	document.onmousemove = function(event) { popupmenusizedrag(event, pre_id); }
+	
+	document.body.onclick = null;
+	if (clicksteeron && document.getElementById("videologo").style.display == "none") {  
+		clicksteer("off");
+		clicksteeron = true;
+	}
+	
+	document.onmouseup = function (pre_id) { 
+		document.onmousemove = null;
+		document.onmouseup = null;
+		if (clicksteeron && document.getElementById("videologo").style.display == "none") {
+			clicksteer("on");
+		}
+	}
 }
+
+function popupmenusizedrag(ev, pre_id) {
+	var xy = getmousepos(ev);
+	var xdelta = xy[0] - popupmenu_xsizestart;
+	var ydelta = xy[1] - popupmenu_ysizestart;
+
+	var contents = document.getElementById(pre_id +"_menu_contents");
+	contents.style.width = null; //ie fix
+	contents.style.height = null; //ie fix
+	contents.style.width = (popupmenu_widthstart + xdelta) + "px";
+	contents.style.height = (popupmenu_heightstart + ydelta) + "px";
+
+	var over = document.getElementById(pre_id +"_menu_over");	
+	over.style.width = null; //ie fix
+	over.style.height = null; //ie fix
+	over.style.width = over.offsetWidth;
+	over.style.height = over.offsetHeight;
+	
+	var under = document.getElementById(pre_id+"_menu_under");
+	var margin = 4;
+	under.style.left = (over.offsetLeft - margin) + "px";
+	under.style.top = (over.offsetTop -margin) + "px";
+	under.style.width = (over.offsetWidth + margin*2) + "px";
+	under.style.height = (over.offsetHeight + margin*2) + "px";
+	
+	if (pre_id == "rosmap") {
+		rmid = document.getElementById('rosmapimgdiv');
+		mapimgdivwidth = contents.offsetWidth - 20 ;
+		rmid.style.width = mapimgdivwidth + "px";
+		mapimgdivheight = contents.offsetHeight - 17 - 
+			document.getElementById("rosmapheader").offsetHeight;
+		rmid.style.height = mapimgdivheight +"px";
+//		debug(rmid.style.height);
+	}
+	
+	resized();
+}
+
+function getmousepos(ev) {
+	ev = ev || window.event;
+	if (ev.pageX || ev.pageY) {
+		var x = ev.pageX;
+		var y = ev.pageY;
+	}
+	else {
+		var x = ev.clientX + document.body.scrollLeft - document.body.clientLeft;
+		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
+	}
+	return [x,y];
+}
+
+function debug(str) {
+	document.getElementById('debugbox').style.display = "";
+	document.getElementById('debugbox').innerHTML = str;
+}
+
 function keyboard(str) {
 	if (str=="enable") {
 		setstatus("keyboard","enabled");
@@ -1267,25 +1378,26 @@ function crosshairs(state) {
 function crosshairsposition() {
     var hfromctr=cspulsatenum;
     var vfromctr=cspulsatenum;
-    var video = document.getElementById('video');
+    var video = document.getElementById("video");
+    var xy = findpos(video);
     var videow = video.offsetWidth; // + ctroffset*2;
     var videoh = video.offsetHeight;
 
     var a=document.getElementById("crosshair_top");
-    a.style.left = (videow/2 + video.offsetLeft) + "px";
-    a.style.top = (video.offsetTop + videoh/2 - vfromctr - parseInt(a.style.height)) + "px";
+    a.style.left = (videow/2 + xy[0]) + "px";
+    a.style.top = (xy[1] + videoh/2 - vfromctr - parseInt(a.style.height)) + "px";
 
     var b=document.getElementById("crosshair_right");
-    b.style.left = (videow/2 + hfromctr + video.offsetLeft) + "px";
-    b.style.top = (videoh/2 + video.offsetTop) + "px";
+    b.style.left = (videow/2 + hfromctr + xy[0]) + "px";
+    b.style.top = (videoh/2 + xy[1]) + "px";
 
     var c=document.getElementById("crosshair_bottom");
-    c.style.left = (videow/2 + video.offsetLeft) + "px";
-    c.style.top = (videoh/2 + vfromctr + video.offsetTop) + "px";
+    c.style.left = (videow/2 + xy[0]) + "px";
+    c.style.top = (videoh/2 + vfromctr + xy[1]) + "px";
 
     var d=document.getElementById("crosshair_left");
-	d.style.left = (videow/2 - hfromctr - parseInt(d.style.width) + video.offsetLeft) + "px";
-	d.style.top = (videoh/2 + video.offsetTop) + "px";
+	d.style.left = (videow/2 - hfromctr - parseInt(d.style.width) + xy[0]) + "px";
+	d.style.top = (videoh/2 + xy[1]) + "px";
 }
 
 function crosshairspulsate() {
@@ -1445,10 +1557,11 @@ function clicksteer(str) {
 function videooverlayposition() {
 	var a = document.getElementById("videooverlay");
     var video = document.getElementById("video");
+    var xy = findpos(video);
     a.style.width = video.offsetWidth + "px";
     a.style.height = video.offsetHeight + "px";
-    a.style.left = video.offsetLeft + "px";
-    a.style.top = video.offsetTop + "px";
+    a.style.left = xy[0] + "px";
+    a.style.top = xy[1] + "px";
 }
 
 function videoOverlayMouseOver() {
@@ -1460,8 +1573,8 @@ function videoOverlayMouseOver() {
 		document.getElementById("videocursor_left").style.display="";
 		document.getElementById("videocursor_right").style.display="";
 		crosshairs("on");
-		var a=document.getElementById("videocursor_ctr"); // <canvas>
-		a.style.display = "";
+//		var a=document.getElementById("videocursor_ctr"); // <canvas>
+//		a.style.display = "";
 //		try {
 //
 //			var ctx = a.getContext("2d");
@@ -1473,13 +1586,13 @@ function videoOverlayMouseOver() {
 //		catch(err) { 
 //			html5=false;
 //		} // some non html5 browsers
-		html5=false;
-		if (html5==false) {
-			a.style.display = "none";
-			a=document.getElementById("videocursor_ctr_html4");
-			a.style.display = "";
-
-		}
+//		html5=false;
+//		if (html5==false) {
+//			a.style.display = "none";
+		var a=document.getElementById("videocursor_ctr_html4");
+		a.style.display = "";
+//
+//		}
 		videoOverlayGetMousePos(); // ie fix
 	}
 }
@@ -1502,26 +1615,28 @@ function videoOverlayGetMousePos(ev) {
 	var b = document.getElementById("videocursor_top");
 	b.style.left = x + "px";
     var video = document.getElementById("video");
-    b.style.top = video.offsetTop + "px";
-    var th = y - video.offsetTop -15; if (th<0) { th=0; } 
+    var xy = findpos(video);
+    b.style.top = xy[1] + "px";
+    var th = y - xy[1] -15; if (th<0) { th=0; } 
     b.style.height = th + "px";
 	var c = document.getElementById("videocursor_bottom");
 	c.style.left = x + "px";
     c.style.top = (y + 16) + "px";
-    var bh = video.offsetTop + video.offsetHeight - y -15; if (bh<0) { bh=0; }
+    var bh = xy[1] + video.offsetHeight - y -15; if (bh<0) { bh=0; }
     c.style.height = bh + "px";
     var d = document.getElementById("videocursor_left");
-    d.style.left = video.offsetLeft + "px";
+    d.style.left = xy[0] + "px";
     d.style.top = y + "px";
-    var lw = x - video.offsetLeft - 15; if (lw<0) { lw=0; }
+    var lw = x - xy[0] - 15; if (lw<0) { lw=0; }
     d.style.width = lw + "px";
     var e = document.getElementById("videocursor_right");
     e.style.top = y + "px";
     e.style.left = (x +16) + "px";
-    var rw = video.offsetLeft + video.offsetWidth - x -15; if (rw<0) { rw=0; }
+    var rw = xy[0] + video.offsetWidth - x -15; if (rw<0) { rw=0; }
     e.style.width = rw + "px";
-    if (html5) { var f = document.getElementById("videocursor_ctr"); }
-    else { var f = document.getElementById("videocursor_ctr_html4"); }
+//    if (html5) { var f = document.getElementById("videocursor_ctr"); }
+//    else { var f = document.getElementById("videocursor_ctr_html4"); }
+    var f = document.getElementById("videocursor_ctr_html4");
 	f.style.display = "";
 	f.style.left = (x-15) + "px";
 	f.style.top = (y-15) + "px";
@@ -1541,9 +1656,10 @@ function videoOverlayClick(ev) {
 			var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
 		}
 		var video = document.getElementById("video");
+		var xy = findpos(video);
 		scale = 2; // convert to 320
-		var xctroffset = x - (video.offsetLeft + (video.offsetWidth/scale)); 
-		var yctroffset = y - (video.offsetTop + (video.offsetHeight/scale)); 
+		var xctroffset = x - (xy[0] + (video.offsetWidth/scale)); 
+		var yctroffset = y - (xy[1] + (video.offsetHeight/scale)); 
 		if (Math.abs(xctroffset) < 30*videoscale/100 ) { xctroffset = 0; }
 		else { flashvidcursor("videocursor_top"); flashvidcursor("videocursor_bottom"); }
 		if (Math.abs(yctroffset) < 15*videoscale/100) { yctroffset = 0; }
@@ -1570,7 +1686,7 @@ function videoOverlayMouseOut() {
 		document.getElementById("videocursor_bottom").style.display="none";
 		document.getElementById("videocursor_left").style.display="none";
 		document.getElementById("videocursor_right").style.display="none";
-		document.getElementById("videocursor_ctr").style.display="none";
+//		document.getElementById("videocursor_ctr").style.display="none";
 		document.getElementById("videocursor_ctr_html4").style.display="none";
 		crosshairs("off");
 	}
@@ -1802,10 +1918,11 @@ function videologo(state) {
 	// pass "" as state to reposition only
 	var i = document.getElementById("videologo");
     var video = document.getElementById("video");
+    var xy = findpos(video);
 	if (state=="on") { i.style.display = ""; }
 	if (state=="off") { i.style.display = "none"; }
-    var x = video.offsetLeft + (video.offsetWidth/2) - (i.width/2);
-    var y = video.offsetTop + (video.offsetHeight/2) - (i.height/2);
+    var x = xy[0] + (video.offsetWidth/2) - (i.width/2);
+    var y = xy[1] + (video.offsetHeight/2) - (i.height/2);
     i.style.left = x + "px";
     i.style.top = y + "px";
 }
@@ -1865,7 +1982,8 @@ function docklineclick(ev) {
 	} 
 	// var x = ev.clientX + document.body.scrollLeft - document.body.clientLeft;
 	var video = document.getElementById("video");
-	ctroffsettemp  = x - (video.offsetLeft + (video.offsetWidth/2));
+	var xy = findpos(video);
+	ctroffsettemp  = x - (xy[0] + (video.offsetWidth/2));
 	docklineposition(ctroffsettemp);
 }
 
@@ -2130,13 +2248,6 @@ function chat() {
 	}
 }
 
-//function monitor(str) {
-//	callServer("monitor",str);
-//	message("sending monitor: " + str, sentcmdcolor);
-//	lagtimer = new Date().getTime();
-//	overlay('off');
-//}
-
 function serverlog() {
 	callServer("showlog","");
 	message("request server log",sentcmdcolor);
@@ -2235,11 +2346,11 @@ function streamset(str) {
 function acknowledgeerror(str) {
 	
 	if (str == "true") {
-		popupmenu("context", "close");
+		popupmenu("error", "close");
 		callServer("erroracknowledged","true");
 	}
 	else if (str == "cancel") {
-		popupmenu("context", "close");
+		popupmenu("error", "close");
 		callServer("erroracknowledged","false");
 	}
 	
@@ -2249,43 +2360,96 @@ function acknowledgeerror(str) {
 	    
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
-	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, null, 1, 0);
+	    popupmenu("error", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, null, 1, 0);
 	    //function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offsetmult) {
 
 	}
 
 }
 
-
-/* message recording utils 
- * also line in loaded(), message()
- * */
-
-var messages = []
-var messagesstart = new Date().getTime();
-
-function recordmessage(message, colour, status, value) {
-	var d = new Date().getTime();
-	d -= messagesstart;
-	messages.push([message, colour, status, value,d]);
-}
-
-function displaymessages() {
-	var str = "";
-	for (var i = 0; i < messages.length; i++) {
-		for (var n = 0; n < messages[i].length; n++) {
-			str += "&quot;"+messages[i][n] + "&quot,";
-		}
-		str +=  "<br>";
+function maintopbar(mode) {
+	if (mode=="over") {
+		document.getElementById('main_menu_under').style.display='';
+		document.getElementById('main_menu_contents').style.backgroundColor='#151515';
 	}
-	document.write(str);
+	else if (mode=="out") {
+		clearTimeout(maintopbarTimer);
+		document.getElementById('main_menu_under').style.display='none';
+		document.getElementById('main_menu_contents').style.backgroundColor='transparent';
+	}
+	else if (mode="overpending") {
+		maintopbarTimer = setTimeout("maintopbar('over');", 250);
+	}
 }
-/* end of message recording utils */
 
+/*
+ * menu functions:
+ * 	save open window positions
+ *  	-aux, context, (error), menu, main
+ * 	default window positions (takes effect next browser page reload)
+ * 		-simply delete windowpositions cookie
+ * 
+ *  in loaded():
+ *  	-check for windowpositions cookie, set values for non null global vars window_[name]_x, window_[name]_y
+ *  
+ *  in popupmenu(show)
+ *  	-check for non null vars window_[name]_x, window_[name]_y, use instead of default 
+ *  	
+ * 
+ */
+
+//createCookie(name,value,days) 
+//readCookie(name) 
+//eraseCookie(name) 
+
+function saveopenwindowpositions() {
+	
+	var value = "";
+	for (var i = 0; i < subwindows.length; i++) {
+		var w = document.getElementById(subwindows[i]+"_menu_over");
+		if (w.style.display == "") { // if open 
+			var xy = findpos(w);
+			value += xy[0]+","+xy[1]+",";
+			windowpos[i] = xy;
+		}
+		else {
+			value += "null,null,";
+			windowpos[i] = null;
+		}
+	}
+	createCookie("windowpositions",value,364);
+}
+
+function defaultwindowpositions() {
+	eraseCookie("windowpositions");
+	for (var i = 0; i < subwindows.length; i++)  windowpos[i] = null;
+}
+
+function loadwindowpositions() {
+	var c = readCookie("windowpositions")
+	if (c == null)  return;
+	
+	positions=c.split(","); 
+	for (var i = 0; i < subwindows.length; i++) {
+		if (positions[i*2] == "null") windowpos[i] = null;
+		else {
+			windowpos[i] = [parseInt(positions[i*2]), parseInt(positions[i*2+1])];
+		}
+	}
+}
+
+if (!Array.prototype.indexOf) {
+    Array.prototype.indexOf = function(obj, start) {
+         for (var i = (start || 0), j = this.length; i < j; i++) {
+             if (this[i] === obj) { return i; }
+         }
+         return -1;
+    }
+}
 
 /* 
- * radar functions
- * TODO: put radar functions into separate js file, load only if needed
+ * Developer functions
+ * TODO: put dev functions into separate js file, load only if needed
  */
 function radar(mode) {
 	if (mode=="init") {		
@@ -2399,3 +2563,257 @@ function depthViewImgReload(mode) {
 	img.src = "frameGrabHTTP?mode="+mode+"&date="+new Date().getTime();
 	img.onload = function() { depthViewRepeat(mode); }
 }
+
+// TODO: move globals to top
+var mapzoom = null; //future: set from cookie
+var mapimgdivwidth = 480; //future: set from cookie
+var mapimgdivheight = 480; //future: set from cookie
+var mapimgleft = 0; //future: set from cookie
+var mapimgtop = 0; //future: set from cookie
+var mapzoomtimer;
+var rosmapinfotimer = null;
+var rosmapimgleftstart = null;
+var rosmapimgtopstart = null;
+var rosmapimggrabstartxy = null;
+//var rosimgloading = true;
+var rosmapimgnext = new Image();
+var rosmapupdate = null;
+var robotx = 0;
+var roboty = 0; 
+var robotsize = 0.3;
+var mapinfo="0_0_0_0_0_0";
+var odom="0_0_0";
+
+function rosmap(mode) {
+	
+	var v = document.getElementById("main_menu_over");
+	var xy = findpos(v);
+	var x = xy[0] + v.offsetWidth;
+	var y=findpos(document.getElementById("video"))[1];
+	var date = new Date().getTime();
+	var str = document.getElementById("rosmap_menu_hiddencontents").innerHTML;
+	var img = new Image();
+	img.src = 'frameGrabHTTP?mode=rosmap&date='+ date;
+	
+	img.onload= function() {
+		// defaults
+		var width = mapimgdivwidth;
+		if (width == null ) width = 480;
+		var height = mapimgdivheight;
+		if (height == null) height = 480;
+
+		var zoom = mapzoom;
+		if (zoom == null) {
+			if (img.naturalWidth/width > img.naturalHeight/height) {
+				zoom = width/img.naturalWidth;
+				mapzoom = zoom;
+			}
+			else zoom = height/img.naturalHeight;
+		}
+		
+		var left = mapimgleft;
+		if (left == null) left = -((img.naturalWidth * zoom)-width)/2; // center default
+		var top = mapimgtop;
+		if (top == null) top = -((img.naturalHeight * zoom)-height)/2; // center default	
+		
+		str +="<div id='rosmapimgdiv' style='width: "+width+"px; height: "+height+"px; "; // img div
+		str += "overflow: hidden;'>";
+		str += "<img id='rosmapimg' src='frameGrabHTTP?mode=rosmap&date=" + date + "' " ;
+		str += "width='" + img.naturalWidth * zoom +"' ";
+		str += "height='" + img.naturalHeight * zoom +"' ";
+		str += "style='position: relative; left: "+left+"px; top: "+top+"px; '";
+		str +=	"alt=''></div>";
+		popupmenu('rosmap', 'show', x, y, str, null, 1, null );
+		
+		// drag
+		var rmi = document.getElementById("rosmaprobot"); // was rosmapimg
+		rmi.ondragstart = function() { return false; };
+		rmi.onmousedown = function(event) {
+			rosmapimggrabstartxy = getmousepos(event);
+			rosmapimgleftstart = mapimgleft;
+			rosmapimgtopstart = mapimgtop;
+			var i = document.getElementById("rosmaprobot");
+			i.onmousemove = function(event) { rosmapimgdrag(event); }
+			i.onmouseout = function() { 
+				document.getElementById("rosmaprobot").onmousemove = null; }
+		}
+		rmi.onmouseup = function() { 
+			document.getElementById("rosmaprobot").onmousemove = null; }
+
+//		clearTimeout(rosimgreloadtimer);
+//		rosimgreloadtimer = setTimeout("rosmapImgReload();", 250); // 50
+//		rosimgloading = false;
+		rosmapupdate = null;
+		openxmlhttp("frameGrabHTTP?mode=rosmapinfo", rosinfo);
+	}
+	
+}
+
+function rosmapImgReload() {
+	if (document.getElementById("rosmap_menu_over").style.display != "") return;
+	
+	rosimgreloadtimer = null; // ?
+	date = new Date().getTime();
+	rosmapimgnext.src = "frameGrabHTTP?mode=rosmap&date="+date;
+//	rosimgloading = true;
+	rosmapimgnext.onload = function() {
+//		debug(new Date().getTime());
+		var img = document.getElementById('rosmapimg');
+		img.src = rosmapimgnext.src;
+//		rosimgloading = false;
+//		clearTimeout(rosimgreloadtimer);
+//		rosimgreloadtimer = setTimeout("rosmapImgReload();", 250);
+	}
+}
+
+function rosinfo() {
+	if (document.getElementById("rosmap_menu_over").style.display != "") return;
+	
+	if (xmlhttp.readyState==4) {// 4 = "loaded"
+		if (xmlhttp.status==200) {// 200 = OK
+			var str = xmlhttp.responseText;
+			//  width_height_res_originx_originy_originth_updatetime odomx_odomy_odomth
+			
+			var s = str.split(" ");
+			mapinfo = s[0].split("_"); // width_height_res_originx_originy_originth_updatetime
+			odom = s[1].split("_"); // odomx_odomy_odomth (actually amcl, not odom)
+			drawmapinfo();
+			
+			var updatetime = parseFloat(mapinfo[6]);
+			if (rosmapupdate != null) { 
+				if (updatetime > rosmapupdate) rosmapImgReload();
+			}
+			rosmapupdate = updatetime;
+
+
+			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo', rosinfo);", 500);
+		}
+	}
+}
+
+function rosmapimgdrag(ev) {
+
+	var xy = getmousepos(ev);
+	var xdelta = xy[0] - rosmapimggrabstartxy[0];
+	var ydelta = xy[1] - rosmapimggrabstartxy[1];
+	mapimgleft = rosmapimgleftstart +xdelta;
+	mapimgtop = rosmapimgtopstart + ydelta;
+	var img = document.getElementById("rosmapimg");
+	img.style.left = mapimgleft + "px";
+	img.style.top = mapimgtop + "px";
+	
+	var robot = document.getElementById("rosmaprobot");
+	robot.style.left = robotx * mapzoom  + mapimgleft - 5 + "px";
+	robot.style.top = roboty * mapzoom + mapimgtop - 5 + "px";
+	
+	drawmapinfo();
+}
+
+
+function rosmapzoom(mult) {
+	var increment = 0.1;
+	var steptime = 100;
+	if (mult != 0) { 
+		var zoom = mapzoom * (1 + increment * mult);
+		if (mapzoomtimer == null) steptime = 0;
+		mapzoomtimer = setTimeout("rosmapzoomdraw("+zoom+", "+mult+");", steptime);
+	}
+	else { // cancel
+		clearTimeout(mapzoomtimer);
+		mapzoomtimer = null;
+	}
+}
+
+function rosmapzoomdraw(zoom, mult) {
+	if (zoom < 0.1 || zoom > 10) return;
+	
+	var img = document.getElementById("rosmapimg");
+	//determine previous center position ratio
+	var ctrwidthratio = ((mapimgdivwidth/2)-mapimgleft)/img.width;
+	var ctrheightratio = ((mapimgdivheight/2)-mapimgtop)/img.height;
+	// set new zoom level:
+	img.width = img.naturalWidth * zoom;
+	img.height = img.naturalHeight * zoom;
+	//set new position:
+	
+	mapimgleft = (mapimgdivwidth/2)-(img.width * ctrwidthratio);
+	mapimgtop = (mapimgdivheight/2)-(img.height * ctrheightratio);
+	
+	img.style.left = mapimgleft+"px";
+	img.style.top = mapimgtop+"px";
+	
+	var robot = document.getElementById("rosmaprobot");
+	robot.style.left = robotx * zoom  + mapimgleft - 5 + "px";
+	robot.style.top = roboty * zoom + mapimgtop - 5 + "px";
+	
+	mapzoom = zoom;
+	drawmapinfo();
+	rosmapzoom(mult);
+}
+
+function drawmapinfo(str) {
+	//  width_height_res_originx_originy_originth_updatetime odomx_odomy_odomth
+	
+//	var s = str.split(" ");
+//	var mapinfo = s[0].split("_"); // width_height_res_originx_originy_originth_updatetime
+//	var odom = s[1].split("_"); // odomx_odomy_odomth (actually amcl, not odom)
+	
+	var robotcanvas = document.getElementById("rosmaprobot");
+	robotcanvas.width = mapimgdivwidth;
+	robotcanvas.height = mapimgdivheight;
+
+	// robot center
+	var x = parseFloat(mapinfo[3]) - parseFloat(odom[0]);  // x = originx - odomx
+	x /= -parseFloat(mapinfo[2]);   //   x /= res
+	robotx = x; // before scaling and offsets
+	x = x*mapzoom + mapimgleft;
+	var y = parseFloat(mapinfo[4]) - parseFloat(odom[1]);  // y = originy - odomy
+	y /= -parseFloat(mapinfo[2]);  // y /= res
+	y = parseFloat(mapinfo[1])-y;
+	roboty = y; // before scaling and offsets
+	y = y*mapzoom + mapimgtop;
+	// angle
+	var th = -(parseFloat(mapinfo[5])+parseFloat(odom[2])); // originth + odomth
+	// size
+	var size = robotsize/parseFloat(mapinfo[2]) * mapzoom;
+	
+	var context = robotcanvas.getContext('2d');
+
+	// translate context to center of canvas
+	context.translate(x, y);
+
+	// rotate 45 degrees clockwise
+	context.rotate(th);
+	
+	var linewidth = 3;
+	var stroke = "#ff0000";
+	var fill = "#ffff00";
+	
+	context.beginPath();
+	context.moveTo(size/2, 0);
+	context.lineTo(size/2+30, 0);
+	context.lineWidth = linewidth;
+	context.strokeStyle = stroke;
+	context.stroke();
+	
+	context.beginPath();
+	context.moveTo(size/2+24,6);
+	context.lineTo(size/2+30,0);
+	context.lineTo(size/2+24,-6);
+	context.lineWidth = linewidth;
+	context.strokeStyle = stroke;
+	context.stroke();
+	
+	context.beginPath();
+	context.rect(size / -2, size / -2, size, size);
+	context.fillStyle = fill;
+	context.fill();
+	context.lineWidth = linewidth;
+	context.strokeStyle = stroke;
+	context.stroke();
+	
+}
+
+/* end of dev functions
+ */
+

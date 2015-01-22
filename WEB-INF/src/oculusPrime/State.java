@@ -172,19 +172,18 @@ public class State {
 		if(key==null) return;
 		if(value==null) return;
 		
-		// avoid unnecessary state updates
-		/*if(get(key).equals(value)){
-			Util.log("WARN: adding a state value that is NOT in the enum!", this);
-			return;
-		}*/
+		// avoid unnecessary state updates  (tends to break things, disabled)
+//		if (exists(key)) {
+//			if(get(key).equals(value)) return;
+//		}
 		
 		// TODO: enforce these checks with fatal error ?
-		try {
-			values.valueOf(key);
-		} catch (Exception e) {
-			Util.log("DANGEROUS: adding a state value that is NOT in the enum!", this);
-			return;
-		}
+//		try {
+//			values.valueOf(key);
+//		} catch (Exception e) {
+//			Util.debug("WARNING: non enum state key", this);
+////			return;
+//		}
 			
 		// TODO: enforce these checks with fatal error ?
 		if(isBoolean(key)){

@@ -28,10 +28,10 @@ public class OpenNIRead  {
 	
 	public void startDepthCam() {
 		if (depthCamInit) return;
-//		oculusPrime.Util.log("start depth cam", this);
-//
-//		lockfile.delete();
-//		
+		oculusPrime.Util.log("START ros openni 320x240", this);
+
+		lockfile.delete();
+		
 //		new Thread(new Runnable() { 
 //			public void run() {
 //				try {
@@ -51,7 +51,10 @@ public class OpenNIRead  {
 //				}		
 //			} 	
 //		}).start();
-
+		
+		String sep = System.getProperty("file.separator");
+		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh";
+		Util.systemCall(cmd);
 		depthCamGenerating = true;
 		depthCamInit = true;
 		
@@ -59,9 +62,9 @@ public class OpenNIRead  {
 	
 	public void stopDepthCam()  {
 		if (!depthCamInit) return;
-		oculusPrime.Util.log("stop depth cam", this);
+		oculusPrime.Util.log("STOP ros openni 320x240", this);
 
-//		camproc.destroy();
+		Util.systemCall("pkill roslaunch");
 		
 		depthCamInit = false;
 		depthCamGenerating = false;

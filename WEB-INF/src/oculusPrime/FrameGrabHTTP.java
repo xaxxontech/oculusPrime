@@ -10,6 +10,7 @@ import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -19,10 +20,13 @@ import java.util.Calendar;
 
 
 
+
+
 import javax.imageio.ImageIO;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import developer.ros;
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
 
@@ -88,7 +92,16 @@ public class FrameGrabHTTP extends HttpServlet {
                 Application.processedImage = Application.stereo.leftCameraFeed();
                 processedImg(req,res);
             }
-
+            else if (mode.equals("rosmap")) {
+            	Application.processedImage = ros.rosmapImg();
+            	processedImg(req,res);
+            }
+            else if (mode.equals("rosmapinfo")) { // xmlhttp text
+        		res.setContentType("text/html");
+        		PrintWriter out = res.getWriter();
+        		out.print(state.get(ros.ROSMAPINFO)+" "+state.get(ros.ROSAMCL));
+        		out.close();
+            }
         }
 		else { frameGrab(req,res); }        
 	}

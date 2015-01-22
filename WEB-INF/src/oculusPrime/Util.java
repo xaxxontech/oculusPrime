@@ -406,6 +406,11 @@ public class Util {
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
 			System.out.println("DEBUG: " + getTime() + ", " + c.getClass().getName() +  ", " +str);
 	}
+    
+    public static void debug(String str) {
+    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled))
+    		System.out.println("DEBUG: " + getTime() + ", " +str);
+    }
 
 	public static String memory() {
     	String str = "";

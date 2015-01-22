@@ -632,11 +632,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		case state: 
 			String s[] = str.split(" ");
-			if (s.length == 2) { state.set(s[0], s[1]); }
+			if (s.length == 2) { // two args
+				if (s[0].equals("delete")) state.delete(s[1]);
+				else state.set(s[0], s[1]); 
+			}
 			else {  
-				if (s[0].matches("\\S+")) { 
+				if (s[0].matches("\\S+")) { // one arg 
 					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
-				} else { 
+				} else {  // no args
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
 			}

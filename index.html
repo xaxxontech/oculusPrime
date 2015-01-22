@@ -50,6 +50,8 @@ a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /*
 	margin-bottom: 1px; margin-top: 1px}
 /* .cancelbox { border: 1px solid #cccccc; padding-left: 3px; padding-right: 3px } */
 .cancelbox { color: #000000; background-color: #cccccc; padding-left: 3px; padding-right: 3px }
+.zoombutton { color: #cccccc; background-color: transparent; text-decoration: none; }
+.zoombutton:hover { color: #ffffff; background-color: #666666; text-decoration: none; } /* #0711AF */
 .messagebox {  font-size: 13px; line-height: 16px; word-wrap: break-word; }
 .menu { color: #999999; }
 .cambutton { color: #cccccc; cursor: pointer; background-repeat: no-repeat; background-position: center; height: 26px} /* 484fcd */
@@ -80,13 +82,18 @@ var requiredRevision = 0;
 <body id="thebody" onkeydown= "keyBoardPressed(event);" onkeyup = "keyBoardReleased(event);" 
 onload="loaded();" onunload="playerexit();" onresize="browserwindowresized();">
 
-<table width="100%"><tr><td id="topgap" style="height: 30px"> </td></tr></table>
+<table><tr><td style="height: 8px"></td></tr></table>
 
-<!-- visible page div -->
-<div id="visiblepagediv">  
+<!--  base_popup_menu -->
+<div id="main_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; "></div>
+<div id="main_menu_over" >  <!-- main_menu_over div -->
+<div id="main_menu_topbar" style="line-height: 18px; cursor: move;"
+onmouseover="maintopbar('overpending');" onmouseout="maintopbar('out');"
+onmousedown="popupmenu('main', 'move');" > &nbsp; </div>
+<div id="main_menu_contents"  style="padding: 4px; padding-left: 0px; "> <!-- main_menu_contents div -->
 
 <table id="maintable" align="center" ><tr valign="top">
-<td style="padding-left: 5px">
+<td style="padding-left: 5px; padding-top: 10px;">
 <div id="mainmenulink" onmouseover="camiconbutton('over',this.id);" 
 onmouseout="camiconbutton('out',this.id);" onclick="mainmenu('mainmenulink');"
 onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
@@ -387,9 +394,8 @@ style="padding-left: 3px; padding-right: 3px">
 </tr></table>
  
 </td></tr></table>
-
-
-</div><!-- ** end of visible page div ** -->
+</div><!-- ** end of main_menu_contents div ** -->
+</div><!-- ** end of main_menu_over div ** -->
 
 
 
@@ -417,13 +423,15 @@ border-top: none; border-left: none; border-bottom: none; width:1px"></div>
 border-top: none; border-right: none; border-left: none; height: 1px;"></div>
 <div id="videocursor_right" class="videocursor" style="position: absolute; display: none; 
 border-top: none; border-right: none; border-left: none; height: 1px;"></div>
-<canvas id="videocursor_ctr" width="50" height="50" style="display:none; position: absolute"></canvas> 
+<!--  <canvas id="videocursor_ctr" width="50" height="50" style="display:none; position: absolute"></canvas> --> 
 <div id="videocursor_ctr_html4" class="videocursor" style="width: 30px; height: 30px; display: none;
 position: absolute"> </div>
 
+<!-- facebox (used for autodocklock) -->
 <div id="facebox" class="facebox" style="display: none; position: absolute;"> </div>
 
-<div id="mousecontrolshighlitebox" class="mousecontrolshighlitebox" style="display: none; position: absolute;"> </div>
+<div id="mousecontrolshighlitebox" class="mousecontrolshighlitebox" style="display: none; 
+position: absolute; "> </div>
 <div id="forwardhighlitebox" class="forwardhighlitebox" style="display: none; position: absolute;"> </div>
 
 <!-- video overlay invisible -->
@@ -434,9 +442,7 @@ filter:alpha(opacity=0); opacity: 0.0; -moz-opacity:0.0; line-height: 0px"></div
 <img id="videologo" src="images/eye.gif" width="640" height="480" 
 style="position: absolute; display: none; z-index: 4" alt="">
 
-<!-- popoutbox -->
-<div id="popoutbox_under" class="overlay" style="position: absolute; display: none;"></div>
-
+<!-- speechbox -->
 <div id="speechbox" style="position: absolute; display: none; padding: 4px; padding-left: 7px">
 <input id="speechbox_input" onblur="javascript: speakchat('hide','speechbox');" type="text"  
 onKeyPress="if (keypress(event)==13) { speech(); }" 
@@ -446,6 +452,8 @@ class="inputbox" style="width: 150px; background-color: #000000;">
 <a class="blackbg" href="" onmousedown="speech();">
 <span class="cancelbox">&#x2714;</span></a>
 </div>
+
+<!--  hidden windows -->
 
 <!--  aux_popup_menu -->
 <div id="aux_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
@@ -463,6 +471,36 @@ onmousedown="popupmenu('context', 'move');" > &nbsp; </div>
 <div id="context_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
 </div>
 
+<!--  rosmap_popup_menu -->
+<div id="rosmap_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="rosmap_menu_over" style="position: absolute; display: none; z-index: 5; overflow: hidden">
+<div id="rosmap_menu_topbar" style="line-height: 18px; cursor: move; "
+onmousedown="popupmenu('rosmap', 'move');" > &nbsp; </div>
+<div id="rosmap_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+<div style="height: 0px; position: relative; top: -20px; text-align: right"
+onmousedown="popupmenusize('rosmap', event);" >
+<span id="rosmap_menu_resizehandle" class="popupmenu_underlay" style="font-size: 20px; padding-left: 5px; 
+padding-right: 0px; cursor: move; color: #cccccc;  "> &#x2798; </span>   <!-- &#x2798 -->
+</div>
+</div>
+<div id="rosmap_menu_hiddencontents" style="display: none;">
+<div id="rosmapheader">
+<a class="blackbg" href= "javascript: popupmenu('rosmap', 'close');">
+<span class="cancelbox"><b>X</b></span> CLOSE</a> 
+&nbsp; &nbsp; &nbsp; &nbsp;
+<span class="zoombutton" 
+style="cursor: pointer" onmousedown="rosmapzoom(-1);" onmouseup="rosmapzoom(0);"
+><span class="cancelbox" style="padding-left: 7px; padding-right: 7px"
+><b>-</b></span> &nbsp;ZO</span><span class="zoombutton" 
+style="cursor: pointer" onmousedown="rosmapzoom(1);" onmouseup="rosmapzoom(0);"
+>OM &nbsp;<span class="cancelbox" style="padding-left: 5px; padding-right: 5px"><b>+</b></span></span>
+<table><tr><td style="height: 10px"></td></tr></table>
+<div style="height: 0px; width: 0px; position: relative; z-index: 5">
+<canvas id="rosmaprobot" style="cursor: move;"></canvas>
+</div>
+</div>
+</div>
+
 <!--  menu_popup_menu -->
 <div id="menu_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
 <div id="menu_menu_over" style="position: absolute; display: none; z-index: 5;">
@@ -471,6 +509,15 @@ onmousedown="popupmenu('menu', 'move');" > &nbsp; </div>
 <div id="menu_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px; "></div>
 </div>
 
+<!--  error_popup_menu -->
+<div id="error_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="error_menu_over" style="position: absolute; display: none; z-index: 5;">
+<div id="error_menu_topbar" style="line-height: 18px; cursor: move;"
+onmousedown="popupmenu('error', 'move');" > &nbsp; </div>
+<div id="error_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+</div>
+
+<!--  end of hidden windows -->
 
 <!--  main menu -->
 <div id="main_menu" style="display: none;">
@@ -522,6 +569,8 @@ onmouseup="callServer('strobeflash','off')">strobeflash</a><br>
 
 </div>
 
+<!-- various window contents -->
+
 <!-- main menu admin -->
 <div id = "main_menu_admin" style="display: none;">
 <a class="blackbg" 
@@ -542,20 +591,15 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 developer menu</a> &gt;
 </div>
 <a class="blackbg" href="javascript: logout();">logout</a><br>
-
 </div>
 
-<!--  main menu developer link -->
+<!--  main menu developer link (??) -->
 
 
 <!-- main menu non-admin -->
 <div id = "main_menu_nonadmin" style="display: none;">
 <a class="blackbg" href="javascript: account('change_password');">change password</a><br>
-
-
 <a class="blackbg" href="javascript: logout();">logout</a><br>
-
-
 </div> 
 
 <!-- custom stream settings (ROV) -->
@@ -597,12 +641,10 @@ login notify <a class="blackbg" href="javascript: writesetting('loginnotify true
 <a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br>
 reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>
 <a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
-<a class="blackbg" href="javascript: writesetting('reboot false');">no</a> 
-<!-- 
-<a class="blackbg" href="javascript: muteROVonmovetoggle();">mute 
-<span style="font-variant: smallcaps;">ROV</span> when moving on/off</a><br>
-<a class="blackbg" href="javascript: pushtotalktoggle();">self mic push T to talk on/off</a><br>
- -->
+<a class="blackbg" href="javascript: writesetting('reboot false');">no</a><br> 
+<a class="blackbg" href="javascript: saveopenwindowpositions();">save window positions</a><br>
+<a class="blackbg" href="javascript: defaultwindowpositions();">default window positions</a>
+<span style="font-size: 11px">(requires browser page refresh)</span><br>
 </div>
 
 <!-- driving settings -->
@@ -685,18 +727,6 @@ onKeyPress="if (keypress(event)==13) { chat(); }">
 <a class="blackbg" href="javascript: chat();" onmousedown="chat();">
 <span class="cancelbox">&#x2714;</span></a>
 </span><br>
-
-<!--
-<div id="chatbox" style="position: absolute; display: none;">
-<span style="font-size: 11px">text</span>
-<input id="chatbox_input" onblur="javascript: speakchat('hide','chatbox');" type="text"  
-onKeyPress="if (keypress(event)==13) { chat(); }" 
-class="inputbox" style="width: 150px; background-color: #000000;">
-<a class="cancelbox" href=""><b>X</b></a>
-<a class="cancelbox" href="" onmousedown="chat();">&#x2714;</a>
-</div>
--->
-
 </div>
 
 <!-- change username -->
@@ -812,7 +842,6 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 Delete user:
 <table><tr><td style="height: 7px"></td></tr></table>
 <div id="deluserlist"></div>
-
 </div>
 
 <!-- server commands -->
@@ -832,7 +861,6 @@ Server Menu:<br>
 	callServer('reboot',''); }">reboot</a><br>
 <a class="blackbg" href="javascript: if (confirm(&quot;power down\nare you sure?&quot;)) {
 	callServer('powershutdown',''); }">power down</a><br>
-
 </div>
 
 <!--  advanced menu -->
@@ -881,7 +909,6 @@ onKeyPress="if (keypress(event)==13) { systemcall('',''); }">
 
 <a class="blackbg" href="javascript: clicksteer('');">crosshairs on/off</a><br>
 <a class="blackbg" href="frameGrabHTTP" target="_blank">frame grab</a><br> 
-
 </div>
 
 <!-- developer menu -->
@@ -908,6 +935,8 @@ floor plane top view <a class="blackbg" href="javascript: depthView('floorPlaneT
 
 processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> / 
 <a class="blackbg" href="javascript: processedImg('close');">off</a><br> 
+<a class="blackbg" href="javascript: rosmap();">rosmap</a><br>
+<!-- 
 stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> / 
 <a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
 stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> / 
@@ -916,8 +945,8 @@ stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on
 <a class="blackbg" href="javascript: depthView('off');">off</a><br>
 left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
 <a class="blackbg" href="javascript: depthView('off');">off</a><br>
-
-
+ -->
+ 
 </div>
 
 <!--  overlay -->
@@ -976,47 +1005,18 @@ Choose action:<br>
 <br>
 </div>
 
-<!--  advanced menubox -->
-<div id="advancedmenubox" style="display: none; width: 650px; padding-top: 20px;">
-<a class="blackbg" href= "javascript: overlay('off');">
-<span class="cancelbox"><b>X</b></span> CLOSE</a>
-<table><tr><td style="height: 10px"></td></tr></table>
-<table ><tr valign="top"><td style="padding-left: 10px;">
-
-
-<!-- admin menu -->
-<div class="menu" id="admin_menu" style="display: none;">
-
-
-<table><tr><td style="height: 7px"></td></tr></table>
-
-<table><tr><td style="height: 7px"></td></tr></table>
-<div class="menu" style="padding-left: 10px">
-
-
-</div>
-<table><tr><td style="height: 7px"></td></tr></table>
-
-</div> <!-- end of admin menu -->
-
-</td><td style="padding-left: 10px">
-<div class="menu" id="extendedsettingsbox" style="display: none; line-height: 22px"></div>
-
-</td>
-</tr></table>
-</div> <!--  end of admin commands box -->
-
 </td></tr></table>
 </div> <!--  end of overlaycontents -->
 
+<!-- logo -->
+<!-- 
 <div style="position: fixed; bottom: 5px; right: 5px; z-index: -1; padding-left: 5px;">
-
-<!--   <img src="images/oculus_corner_logo.gif" alt="">  -->
-
+<img src="images/oculus_corner_logo.gif" alt="">  
 </div>
- 
+-->
+
 <!--  debugbox -->
-<div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px"></div>
+<div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px; display: none; "></div>
 
 </body>
 </html>
