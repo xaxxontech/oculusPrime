@@ -34,10 +34,10 @@ a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /*
 .docklineright { border-left: 1px dotted yellow; filter:alpha(opacity=40); opacity: 0.40; -moz-opacity:0.40; }
 .overlay { background-color: #000000; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; }
 .steering_button { width: 38px; height: 40px; cursor: pointer; }
-.blackbg { color: #eeeeee; background-color: transparent; text-decoration: none; }
-.blackbg:link { color: #eeeeee; background-color: transparent; text-decoration: none; }
-.blackbg:visited { color: #eeeeee; background-color: transparent; text-decoration: none; }
-.blackbg:hover { color: #ffffff; background-color: #555555; text-decoration: none; } 
+.blackbg { color: #eeeeee; background-color: transparent; text-decoration: none; white-space: nowrap;}
+.blackbg:link { color: #eeeeee; background-color: transparent; text-decoration: none; white-space: nowrap;}
+.blackbg:visited { color: #eeeeee; background-color: transparent; text-decoration: none; white-space: nowrap;}
+.blackbg:hover { color: #ffffff; background-color: #555555; text-decoration: none; white-space: nowrap;} 
 .boxcolor { background-color: #1b1b1b; }
 .boxbg { color: #cccccc; background-color: transparent; text-decoration: none; }
 .boxbg:link { color: #cccccc; background-color: transparent; text-decoration: none; }
@@ -64,6 +64,7 @@ a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /*
 .slider { color: #cccccc; background-color: #111111; height: 26px; text-align: center; cursor: pointer; }
 </style>
 <script src="javascript/client.js" type="text/javascript"></script>
+<script src="javascript/map.js" type="text/javascript"></script>
 <script src="flash/AC_OETags.js" type="text/javascript"></script>
 <script type="text/javascript">
 <!--
@@ -485,6 +486,7 @@ padding-right: 0px; cursor: move; color: #cccccc;  "> &#x2798; </span>   <!-- &#
 </div>
 <div id="rosmap_menu_hiddencontents" style="display: none;">
 <div id="rosmapheader">
+
 <a class="blackbg" href= "javascript: popupmenu('rosmap', 'close');">
 <span class="cancelbox"><b>X</b></span> CLOSE</a> 
 &nbsp; &nbsp; &nbsp; &nbsp;
@@ -494,10 +496,15 @@ style="cursor: pointer" onmousedown="rosmapzoom(-1);" onmouseup="rosmapzoom(0);"
 ><b>-</b></span> &nbsp;ZO</span><span class="zoombutton" 
 style="cursor: pointer" onmousedown="rosmapzoom(1);" onmouseup="rosmapzoom(0);"
 >OM &nbsp;<span class="cancelbox" style="padding-left: 5px; padding-right: 5px"><b>+</b></span></span>
-<table><tr><td style="height: 10px"></td></tr></table>
-<div style="height: 0px; width: 0px; position: relative; z-index: 5">
-<canvas id="rosmaprobot" style="cursor: move;"></canvas>
-</div>
+&nbsp; &nbsp; &nbsp; &nbsp;
+<a class="blackbg" href="javascript: rosmaparrow('position');">
+<span class="cancelbox" ><b>&#x2798;</b></span> POSITION</a>
+&nbsp; &nbsp; &nbsp; &nbsp;
+<a class="blackbg" href="javascript: rosmaparrow('waypoint');">
+<span class="cancelbox" ><b>&#x2798;</b></span> WAYPOINT</a>
+<table><tr><td style="height: 6px"></td></tr></table>
+<div id="rosmapinfobar" style="height: 18px"> </div>
+
 </div>
 </div>
 

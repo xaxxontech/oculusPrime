@@ -99,7 +99,7 @@ public class FrameGrabHTTP extends HttpServlet {
             else if (mode.equals("rosmapinfo")) { // xmlhttp text
         		res.setContentType("text/html");
         		PrintWriter out = res.getWriter();
-        		out.print(state.get(ros.ROSMAPINFO)+" "+state.get(ros.ROSAMCL));
+        		out.print(ros.mapinfo());
         		out.close();
             }
         }

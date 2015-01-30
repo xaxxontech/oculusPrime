@@ -436,7 +436,12 @@ function setstatus(status, value) {
 		}
 		else { videoscale = vs; }
 	}
-	if (status == "developer") { document.getElementById("developermenu").style.display = ""; }
+	if (status == "developer") { 
+		document.getElementById("developermenu").style.display = "";
+//		  fileref=document.createElement('script')
+//		  fileref.setAttribute("type","text/javascript")
+//		  fileref.setAttribute("src", "javascript/map.js")
+	}
 	if (status == "debug") { debug(value); }
 	if (status=="pushtotalk") {
 		if (value=="false") {
@@ -2447,10 +2452,13 @@ if (!Array.prototype.indexOf) {
     }
 }
 
-/* 
- * Developer functions
- * TODO: put dev functions into separate js file, load only if needed
+/*
+ * dev functions follow
  */
+
+var radartimer = null;
+
+
 function radar(mode) {
 	if (mode=="init") {		
 		callServer("opennisensor", "on"); 
@@ -2486,8 +2494,6 @@ function radar(mode) {
 }
 
 
-var radartimer = null;
-
 function radarrepeat() {
 	clearTimeout(radartimer);
 	radartimer = setTimeout("radarimagereload();", 50);
@@ -2496,6 +2502,7 @@ function radarrepeat() {
 function radarimagereload() {
 	radartimer = null;
 	var img = document.getElementById('radarimg');
+	if (img == null) return;
 	img.src = "frameGrabHTTP?mode=radar&date="+new Date().getTime();
 	img.onload = function() { radarrepeat(); }
 }
@@ -2564,256 +2571,4 @@ function depthViewImgReload(mode) {
 	img.onload = function() { depthViewRepeat(mode); }
 }
 
-// TODO: move globals to top
-var mapzoom = null; //future: set from cookie
-var mapimgdivwidth = 480; //future: set from cookie
-var mapimgdivheight = 480; //future: set from cookie
-var mapimgleft = 0; //future: set from cookie
-var mapimgtop = 0; //future: set from cookie
-var mapzoomtimer;
-var rosmapinfotimer = null;
-var rosmapimgleftstart = null;
-var rosmapimgtopstart = null;
-var rosmapimggrabstartxy = null;
-//var rosimgloading = true;
-var rosmapimgnext = new Image();
-var rosmapupdate = null;
-var robotx = 0;
-var roboty = 0; 
-var robotsize = 0.3;
-var mapinfo="0_0_0_0_0_0";
-var odom="0_0_0";
-
-function rosmap(mode) {
-	
-	var v = document.getElementById("main_menu_over");
-	var xy = findpos(v);
-	var x = xy[0] + v.offsetWidth;
-	var y=findpos(document.getElementById("video"))[1];
-	var date = new Date().getTime();
-	var str = document.getElementById("rosmap_menu_hiddencontents").innerHTML;
-	var img = new Image();
-	img.src = 'frameGrabHTTP?mode=rosmap&date='+ date;
-	
-	img.onload= function() {
-		// defaults
-		var width = mapimgdivwidth;
-		if (width == null ) width = 480;
-		var height = mapimgdivheight;
-		if (height == null) height = 480;
-
-		var zoom = mapzoom;
-		if (zoom == null) {
-			if (img.naturalWidth/width > img.naturalHeight/height) {
-				zoom = width/img.naturalWidth;
-				mapzoom = zoom;
-			}
-			else zoom = height/img.naturalHeight;
-		}
-		
-		var left = mapimgleft;
-		if (left == null) left = -((img.naturalWidth * zoom)-width)/2; // center default
-		var top = mapimgtop;
-		if (top == null) top = -((img.naturalHeight * zoom)-height)/2; // center default	
-		
-		str +="<div id='rosmapimgdiv' style='width: "+width+"px; height: "+height+"px; "; // img div
-		str += "overflow: hidden;'>";
-		str += "<img id='rosmapimg' src='frameGrabHTTP?mode=rosmap&date=" + date + "' " ;
-		str += "width='" + img.naturalWidth * zoom +"' ";
-		str += "height='" + img.naturalHeight * zoom +"' ";
-		str += "style='position: relative; left: "+left+"px; top: "+top+"px; '";
-		str +=	"alt=''></div>";
-		popupmenu('rosmap', 'show', x, y, str, null, 1, null );
-		
-		// drag
-		var rmi = document.getElementById("rosmaprobot"); // was rosmapimg
-		rmi.ondragstart = function() { return false; };
-		rmi.onmousedown = function(event) {
-			rosmapimggrabstartxy = getmousepos(event);
-			rosmapimgleftstart = mapimgleft;
-			rosmapimgtopstart = mapimgtop;
-			var i = document.getElementById("rosmaprobot");
-			i.onmousemove = function(event) { rosmapimgdrag(event); }
-			i.onmouseout = function() { 
-				document.getElementById("rosmaprobot").onmousemove = null; }
-		}
-		rmi.onmouseup = function() { 
-			document.getElementById("rosmaprobot").onmousemove = null; }
-
-//		clearTimeout(rosimgreloadtimer);
-//		rosimgreloadtimer = setTimeout("rosmapImgReload();", 250); // 50
-//		rosimgloading = false;
-		rosmapupdate = null;
-		openxmlhttp("frameGrabHTTP?mode=rosmapinfo", rosinfo);
-	}
-	
-}
-
-function rosmapImgReload() {
-	if (document.getElementById("rosmap_menu_over").style.display != "") return;
-	
-	rosimgreloadtimer = null; // ?
-	date = new Date().getTime();
-	rosmapimgnext.src = "frameGrabHTTP?mode=rosmap&date="+date;
-//	rosimgloading = true;
-	rosmapimgnext.onload = function() {
-//		debug(new Date().getTime());
-		var img = document.getElementById('rosmapimg');
-		img.src = rosmapimgnext.src;
-//		rosimgloading = false;
-//		clearTimeout(rosimgreloadtimer);
-//		rosimgreloadtimer = setTimeout("rosmapImgReload();", 250);
-	}
-}
-
-function rosinfo() {
-	if (document.getElementById("rosmap_menu_over").style.display != "") return;
-	
-	if (xmlhttp.readyState==4) {// 4 = "loaded"
-		if (xmlhttp.status==200) {// 200 = OK
-			var str = xmlhttp.responseText;
-			//  width_height_res_originx_originy_originth_updatetime odomx_odomy_odomth
-			
-			var s = str.split(" ");
-			mapinfo = s[0].split("_"); // width_height_res_originx_originy_originth_updatetime
-			odom = s[1].split("_"); // odomx_odomy_odomth (actually amcl, not odom)
-			drawmapinfo();
-			
-			var updatetime = parseFloat(mapinfo[6]);
-			if (rosmapupdate != null) { 
-				if (updatetime > rosmapupdate) rosmapImgReload();
-			}
-			rosmapupdate = updatetime;
-
-
-			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo', rosinfo);", 500);
-		}
-	}
-}
-
-function rosmapimgdrag(ev) {
-
-	var xy = getmousepos(ev);
-	var xdelta = xy[0] - rosmapimggrabstartxy[0];
-	var ydelta = xy[1] - rosmapimggrabstartxy[1];
-	mapimgleft = rosmapimgleftstart +xdelta;
-	mapimgtop = rosmapimgtopstart + ydelta;
-	var img = document.getElementById("rosmapimg");
-	img.style.left = mapimgleft + "px";
-	img.style.top = mapimgtop + "px";
-	
-	var robot = document.getElementById("rosmaprobot");
-	robot.style.left = robotx * mapzoom  + mapimgleft - 5 + "px";
-	robot.style.top = roboty * mapzoom + mapimgtop - 5 + "px";
-	
-	drawmapinfo();
-}
-
-
-function rosmapzoom(mult) {
-	var increment = 0.1;
-	var steptime = 100;
-	if (mult != 0) { 
-		var zoom = mapzoom * (1 + increment * mult);
-		if (mapzoomtimer == null) steptime = 0;
-		mapzoomtimer = setTimeout("rosmapzoomdraw("+zoom+", "+mult+");", steptime);
-	}
-	else { // cancel
-		clearTimeout(mapzoomtimer);
-		mapzoomtimer = null;
-	}
-}
-
-function rosmapzoomdraw(zoom, mult) {
-	if (zoom < 0.1 || zoom > 10) return;
-	
-	var img = document.getElementById("rosmapimg");
-	//determine previous center position ratio
-	var ctrwidthratio = ((mapimgdivwidth/2)-mapimgleft)/img.width;
-	var ctrheightratio = ((mapimgdivheight/2)-mapimgtop)/img.height;
-	// set new zoom level:
-	img.width = img.naturalWidth * zoom;
-	img.height = img.naturalHeight * zoom;
-	//set new position:
-	
-	mapimgleft = (mapimgdivwidth/2)-(img.width * ctrwidthratio);
-	mapimgtop = (mapimgdivheight/2)-(img.height * ctrheightratio);
-	
-	img.style.left = mapimgleft+"px";
-	img.style.top = mapimgtop+"px";
-	
-	var robot = document.getElementById("rosmaprobot");
-	robot.style.left = robotx * zoom  + mapimgleft - 5 + "px";
-	robot.style.top = roboty * zoom + mapimgtop - 5 + "px";
-	
-	mapzoom = zoom;
-	drawmapinfo();
-	rosmapzoom(mult);
-}
-
-function drawmapinfo(str) {
-	//  width_height_res_originx_originy_originth_updatetime odomx_odomy_odomth
-	
-//	var s = str.split(" ");
-//	var mapinfo = s[0].split("_"); // width_height_res_originx_originy_originth_updatetime
-//	var odom = s[1].split("_"); // odomx_odomy_odomth (actually amcl, not odom)
-	
-	var robotcanvas = document.getElementById("rosmaprobot");
-	robotcanvas.width = mapimgdivwidth;
-	robotcanvas.height = mapimgdivheight;
-
-	// robot center
-	var x = parseFloat(mapinfo[3]) - parseFloat(odom[0]);  // x = originx - odomx
-	x /= -parseFloat(mapinfo[2]);   //   x /= res
-	robotx = x; // before scaling and offsets
-	x = x*mapzoom + mapimgleft;
-	var y = parseFloat(mapinfo[4]) - parseFloat(odom[1]);  // y = originy - odomy
-	y /= -parseFloat(mapinfo[2]);  // y /= res
-	y = parseFloat(mapinfo[1])-y;
-	roboty = y; // before scaling and offsets
-	y = y*mapzoom + mapimgtop;
-	// angle
-	var th = -(parseFloat(mapinfo[5])+parseFloat(odom[2])); // originth + odomth
-	// size
-	var size = robotsize/parseFloat(mapinfo[2]) * mapzoom;
-	
-	var context = robotcanvas.getContext('2d');
-
-	// translate context to center of canvas
-	context.translate(x, y);
-
-	// rotate 45 degrees clockwise
-	context.rotate(th);
-	
-	var linewidth = 3;
-	var stroke = "#ff0000";
-	var fill = "#ffff00";
-	
-	context.beginPath();
-	context.moveTo(size/2, 0);
-	context.lineTo(size/2+30, 0);
-	context.lineWidth = linewidth;
-	context.strokeStyle = stroke;
-	context.stroke();
-	
-	context.beginPath();
-	context.moveTo(size/2+24,6);
-	context.lineTo(size/2+30,0);
-	context.lineTo(size/2+24,-6);
-	context.lineWidth = linewidth;
-	context.strokeStyle = stroke;
-	context.stroke();
-	
-	context.beginPath();
-	context.rect(size / -2, size / -2, size, size);
-	context.fillStyle = fill;
-	context.fill();
-	context.lineWidth = linewidth;
-	context.strokeStyle = stroke;
-	context.stroke();
-	
-}
-
-/* end of dev functions
- */
 
