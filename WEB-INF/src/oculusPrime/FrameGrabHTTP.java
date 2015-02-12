@@ -148,6 +148,8 @@ public class FrameGrabHTTP extends HttpServlet {
 	
 	private void processedImg(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 		
+		if (Application.processedImage == null) return;
+		
 		// send image
 		res.setContentType("image/gif");
 //		res.setContentType("image/jpg");

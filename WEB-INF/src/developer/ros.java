@@ -20,13 +20,17 @@ public class ros {
 	public static final String ROSAMCL = "rosamcl";
 	public static final String ROSGLOBALPATH = "rosglobalpath";
 	public static final String ROSSCAN = "rosscan";
-//	public static final String ROSGOAL = "rosgoal";
+	public static final String ROSCURRENTGOAL = "roscurrentgoal";
+	public static final String ROSMAPUPDATED = "rosmapupdated";
+
 	private static File lockfile = new File("/run/shm/map.raw.lock");
 	private static BufferedImage map = null;
 	private static double lastmapupdate = 0f;
 	
-	public static BufferedImage rosmapImg() {		 
-		String mapinfo[] = state.get(ROSMAPINFO).split("_");
+	public static BufferedImage rosmapImg() {	
+		if (!state.exists(ROSMAPINFO)) return null;
+		
+		String mapinfo[] = state.get(ROSMAPINFO).split(",");
 //		// width height res originx originy originth updatetime	
 //		int width = Integer.parseInt(mapinfo[0]);
 //		int height = Integer.parseInt(mapinfo[1]);
@@ -60,7 +64,7 @@ public class ros {
 	}
 	
 	private static BufferedImage updateMapImg() {
-		String mapinfo[] = state.get(ROSMAPINFO).split("_");
+		String mapinfo[] = state.get(ROSMAPINFO).split(",");
 		// width height res originx originy originth updatetime	
 		int width = Integer.parseInt(mapinfo[0]);
 		int height = Integer.parseInt(mapinfo[1]);
@@ -126,13 +130,26 @@ public class ros {
 		
 	}
 
-	public static String mapinfo() {
+	public static String mapinfo() { // send info to javascript
 		String str = "";
-		if (state.exists(ROSMAPINFO)) str += state.get(ROSMAPINFO);
-		if (state.exists(ROSAMCL)) str += " " + state.get(ROSAMCL);
-		if (state.exists(ROSSCAN)) str += " " + state.get(ROSSCAN);
-		if (state.exists(ROSGLOBALPATH)) str += " " + state.get(ROSGLOBALPATH);
+		if (state.exists(ROSMAPINFO)) str += ROSMAPINFO+"_" + state.get(ROSMAPINFO);
+		if (state.exists(ROSAMCL)) str += " " + ROSAMCL+"_" + state.get(ROSAMCL);
+		if (state.exists(ROSSCAN)) str += " " + ROSSCAN+"_" + state.get(ROSSCAN);
+		if (state.exists(ROSGLOBALPATH)) str += " " + ROSGLOBALPATH+"_" + state.get(ROSGLOBALPATH);
+		if (state.exists(ROSCURRENTGOAL)) str += " " + ROSCURRENTGOAL+"_" + state.get(ROSCURRENTGOAL);
+		if (state.exists(ROSMAPUPDATED)) {
+			str += " " + ROSMAPUPDATED +"_" + state.get(ROSMAPUPDATED);
+			state.delete(ROSMAPUPDATED);
+		}
 		
 		return str;
 	}
+	
+	public static void launch(String launch) {
+		String sep = System.getProperty("file.separator");
+		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh"; // setup ros environment
+		cmd += " roslaunch oculusprime "+launch+".launch";
+		Util.systemCall(cmd);
+	}
+	
 }

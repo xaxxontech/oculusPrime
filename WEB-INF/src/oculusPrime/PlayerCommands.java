@@ -58,7 +58,7 @@ public enum PlayerCommands { // all valid commands
     statuscheck, block, unblock, help, 
     
     // experimental (undocumented)
-    opennisensor, clearmap, stereo,
+    opennisensor, clearmap, stereo, ros,
     
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness,

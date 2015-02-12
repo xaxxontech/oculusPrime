@@ -76,6 +76,7 @@ var windowpos = [null, null, null, null]; // needs same length as above
 
 function loaded() {
 	loadwindowpositions();
+	loadrosmapwindowpos();
 	
 	// main window init:
 	var mm = document.getElementById("main_menu_over");
@@ -269,18 +270,18 @@ function getFlashMovie(movieName) {
 	return (isIE) ? window[movieName] : document[movieName];
 }
 
-function publish(str) {
-	if (str=="broadcast_mic") {
-		callServer("playerbroadcast","mic");
-		broadcasting = "mic";
-		message ("sending: playerbroadcast miconly",sentcmdcolor);
-		clicksteer("off");
+function publish(str) { 
+	if (str=="broadcast_mic") {  // forces page reload
+		callServer("playerbroadcast","mic"); 
+//		broadcasting = "mic";
+//		message ("sending: playerbroadcast miconly",sentcmdcolor);
+//		clicksteer("off");
 	}
-	else if (str=="broadcast_off") {
+	else if (str=="broadcast_off") { // forces page reload
 		callServer("playerbroadcast","off"); 
-		broadcasting = null;
-		message ("sending: playerbroadcast off",sentcmdcolor);
-		clicksteer("on"); 
+//		broadcasting = null;
+//		message ("sending: playerbroadcast off",sentcmdcolor);
+//		clicksteer("on"); 
 	}
 	else {
 		message("sending command: publish " + str, sentcmdcolor);
@@ -385,8 +386,7 @@ function setstatus(status, value) {
 		}
 	}
 	if (status=="vidctroffset") { ctroffset = parseInt(value); }
-	//if (status=="motion" && value=="disabled") { motionenabled = false; }
-	if (status=="connection" && value == "connected" && !connected) { // initialize
+	else if (status=="connection" && value == "connected" && !connected) { // initialize
 		overlay("off");
 		countdowntostatuscheck(); 
 		connected = true;
@@ -395,15 +395,15 @@ function setstatus(status, value) {
 		clearTimeout(logintimer);
 		callServer("videosoundmode", "high");
 	}
-	if (status == "storecookie") {
+	else if (status == "storecookie") {
 		createCookie("auth",value,30); 
 	}
-	if (status == "someonealreadydriving") { someonealreadydriving(value); }
-	if (status == "user") { username = value; }
-	if (status == "hijacked") { window.location.reload(); }
-	if (status == "stream" && (value.toUpperCase() != streammode.toUpperCase())) { play(value); }
-	if (status == "admin" && value == "true") { admin = true; }
-	if (status == "dock") {
+	else if (status == "someonealreadydriving") { someonealreadydriving(value); }
+	else if (status == "user") { username = value; }
+	else if (status == "hijacked") { window.location.reload(); }
+	else if (status == "stream" && (value.toUpperCase() != streammode.toUpperCase())) { play(value); }
+	else if (status == "admin" && value == "true") { admin = true; }
+	else if (status == "dock") {
 		if (initialdockedmessage==false) {
 			initialdockedmessage = true;
 			if (value == "docked") {
@@ -414,21 +414,19 @@ function setstatus(status, value) {
 			docklinetoggle("off");
 		}
 	}
-	if (status == "streamsettings") {
+	else if (status == "streamsettings") {
 		streamdetails = value.split("_");
 	}
-//	if (status=="facefound") { facefound(value); }
-	if (status=="autodocklock") { autodocklock(value)}
-	if (status=="autodockcancelled") { autodocking=false; autodock("cancel"); }
-	if (status=="softwareupdate") {
+	else if (status=="autodocklock") { autodocklock(value)}
+	else if (status=="autodockcancelled") { autodocking=false; autodock("cancel"); }
+	else if (status=="softwareupdate") {
 		if (value=="downloadcomplete") { softwareupdate("downloadcomplete",""); }
 		else { softwareupdate("available",value); }
 	}
-	// if (status == "framegrabbed") { framegrabbed(); }
-	if (status == "rovvolume") { rovvolume = parseInt(value); }
-	if (status == "light") { spotlightlevel = parseInt(value); }
-	if (status == "floodlight") { floodlightlevel = parseInt(value); }
-	if (status == "videoscale") { 
+	else if (status == "rovvolume") { rovvolume = parseInt(value); }
+	else if (status == "light") { spotlightlevel = parseInt(value); }
+	else if (status == "floodlight") { floodlightlevel = parseInt(value); }
+	else if (status == "videoscale") { 
 		var vs = parseInt(value);	
 		if (vs != videoscale && (streammode == "camera" || streammode == "camandmic")){
 			videoscale = vs;
@@ -436,14 +434,14 @@ function setstatus(status, value) {
 		}
 		else { videoscale = vs; }
 	}
-	if (status == "developer") { 
+	else if (status == "developer") { 
 		document.getElementById("developermenu").style.display = "";
-//		  fileref=document.createElement('script')
-//		  fileref.setAttribute("type","text/javascript")
-//		  fileref.setAttribute("src", "javascript/map.js")
 	}
-	if (status == "debug") { debug(value); }
-	if (status=="pushtotalk") {
+	else if (status == "navigation") {
+		document.getElementById("navigationmenu").style.display = "";
+	}
+	else if (status == "debug") { debug(value); }
+	else if (status=="pushtotalk") {
 		if (value=="false") {
 			pushtotalk = false;
 			getFlashMovie("oculusPrime_player").unmutePlayerMic();
@@ -453,6 +451,23 @@ function setstatus(status, value) {
 			getFlashMovie("oculusPrime_player").mutePlayerMic();
 		}
 	}
+	else if (status=="loadpage") {
+		playerexit();
+		window.open(value,'_self');
+	}
+	else if (status=="selfstream") {
+		if (value == "mic") {
+			broadcasting = "mic";
+			clicksteer("off");
+		}
+		else {
+			broadcasting = "off";
+			clicksteer("on");
+		}
+		
+	}
+	
+	
  
 }
 
@@ -2416,6 +2431,9 @@ function saveopenwindowpositions() {
 			var xy = findpos(w);
 			value += xy[0]+","+xy[1]+",";
 			windowpos[i] = xy;
+			
+			if (subwindows[i]="rosmap")  saverosmapwindowpos();
+			
 		}
 		else {
 			value += "null,null,";
@@ -2423,11 +2441,15 @@ function saveopenwindowpositions() {
 		}
 	}
 	createCookie("windowpositions",value,364);
+	message("window positions saved","orange");
+
 }
 
 function defaultwindowpositions() {
 	eraseCookie("windowpositions");
 	for (var i = 0; i < subwindows.length; i++)  windowpos[i] = null;
+	defaultrosmapwindowpos();
+	message("default window positions, refresh page","orange");
 }
 
 function loadwindowpositions() {
@@ -2436,11 +2458,12 @@ function loadwindowpositions() {
 	
 	positions=c.split(","); 
 	for (var i = 0; i < subwindows.length; i++) {
-		if (positions[i*2] == "null") windowpos[i] = null;
+		if (positions[i*2] == "null") windowpos[i] = null; //?
 		else {
 			windowpos[i] = [parseInt(positions[i*2]), parseInt(positions[i*2+1])];
 		}
 	}
+	
 }
 
 if (!Array.prototype.indexOf) {

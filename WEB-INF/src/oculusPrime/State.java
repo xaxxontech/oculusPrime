@@ -34,11 +34,6 @@ public class State {
 		
 		;
 	};
-	
-	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
-	public enum booleanValues{ moving, movingforward, autodocking, docking, framegrabbusy, dockgrabbusy, 
-		motionenabled, controlsinverted, strobeflashon, dockfound, driverstream,
-		odometry, stopbetweenmoves, wallpower, redock, forceundock };
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo; };	
@@ -156,42 +151,12 @@ public class State {
 			}
 		}
 	}
-
-	public boolean isBoolean(final String text){
-		Object[] list = booleanValues.values();
-		for(int i = 0 ; i < list.length ; i++)
-			if(list[i].toString().equals(text)) 
-				return true;
-		
-		return false;
-	}
 	
 	/** Put a name/value pair into the configuration */
 	public synchronized void set(final String key, final String value) {
 		
 		if(key==null) return;
 		if(value==null) return;
-		
-		// avoid unnecessary state updates  (tends to break things, disabled)
-//		if (exists(key)) {
-//			if(get(key).equals(value)) return;
-//		}
-		
-		// TODO: enforce these checks with fatal error ?
-//		try {
-//			values.valueOf(key);
-//		} catch (Exception e) {
-//			Util.debug("WARNING: non enum state key", this);
-////			return;
-//		}
-			
-		// TODO: enforce these checks with fatal error ?
-		if(isBoolean(key)){
-			if( ! (value.equals("true") || value.equals("false"))){
-				Util.log("DANGEROUS: can't add because is a boolean type: " + key + " = " + value, this);
-				return;
-			}
-		}
 		
 		try {
 			props.put(key.trim(), value.trim());
@@ -234,26 +199,17 @@ public class State {
 	}
 
 	
-	/** */
+	/** true returns true, anything else returns false */
 	public boolean getBoolean(String key) {
 		
 		boolean value = false;
-		
-		if( ! isBoolean(key)){ // TODO: testing .... 
-			Util.log("___DANGEROUS: asking for a NON-boolean type: " + key + " = " + value, this);
-			///return false;
-		}
 		
 		try {
 
 			value = Boolean.parseBoolean(get(key));
 
 		} catch (Exception e) {
-			if(key.equals("yes")) { // TODO: testing .... 
-				Util.log("____DANGEROUS: using _yes_ for a boolean: " + key + " = " + value, this);
-				return true;
-			}
-			else return false;
+			return false;
 		}
 
 		return value;

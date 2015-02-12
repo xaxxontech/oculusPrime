@@ -293,24 +293,27 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			state.set(State.values.distanceangle, d +" "+a);
 			
 			// TODO: testing only ----------------
-			if (Application.openNIRead.depthCamGenerating) {
-				if (!state.exists(State.values.distanceanglettl.toString())) {
-					state.set(State.values.distanceanglettl, "0 0");
+			if (settings.getBoolean(ManualSettings.developer.name())) {
+				if (Application.openNIRead.depthCamGenerating) {
+					if (!state.exists(State.values.distanceanglettl.toString())) {
+						state.set(State.values.distanceanglettl, "0 0");
+					}
+					
+					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+					dttl += d;
+					attl += a;
+					String dattl = dttl+" "+attl;
+					state.set(State.values.distanceanglettl,dattl);
 				}
-				
-				int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-				double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
-				dttl += d;
-				attl += a;
-				String dattl = dttl+" "+attl;
-				state.set(State.values.distanceanglettl,dattl);
 			}
 			// end of testing only ----------------
 		}
 		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) 
 			state.set(State.values.direction, direction.stop.toString());
 		else if (s[0].equals("stopdetectfail")) {
-			application.message("FIRMWARE STOP DETECT FAIL", null, null);
+//			application.message("FIRMWARE STOP DETECT FAIL", null, null);
+			Util.debug("FIRMWARE STOP DETECT FAIL", this);
 			if (state.getBoolean(State.values.stopbetweenmoves)) 
 				state.set(State.values.direction, direction.stop.toString());
 		}
@@ -1323,10 +1326,12 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		sendCommand(ODOMETRY_START);
 		state.delete(State.values.distanceangle);
 		state.set(State.values.odometry, true);
+		state.set(State.values.stopbetweenmoves, true);
 	}
 	public void odometryStop() {
 		sendCommand(ODOMETRY_STOP_AND_REPORT);
 		state.set(State.values.odometry, false);
+		state.set(State.values.stopbetweenmoves, false);
 	}
 	public void odometryReport() {
 		sendCommand(ODOMETRY_REPORT);

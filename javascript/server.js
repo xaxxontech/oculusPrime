@@ -99,6 +99,7 @@ function message(message,status) {
 //	if (message=="playing player stream") { screensize("full"); }
 //	if (message=="player stream stopped") { screensize("reduced"); }
 	if (status != null && !initialize) { setstatus(status); } 
+	if (message=="loadpage") { window.open(status,'_self'); }
 }
 
 function setstatus(status) {

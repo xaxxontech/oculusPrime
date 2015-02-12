@@ -53,7 +53,8 @@ public class OpenNIRead  {
 //		}).start();
 		
 		String sep = System.getProperty("file.separator");
-		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh";
+		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh"; // setup ros environment
+		cmd += " roslaunch oculusprime depthcam_to_java.launch";
 		Util.systemCall(cmd);
 		depthCamGenerating = true;
 		depthCamInit = true;

@@ -17,13 +17,17 @@ var robotsize = 0.3;
 var amcloffstx = 0;
 var amcloffsty = 0;
 var amcloffstth = 0;
-var mapinfo="0_0_0_0_0_0";
-var odom="0_0_0";
+var rosodomx = 0;
+var rosodomy = 0;
+var rosodomth = 0;
+var mapinfo=[0,0,0,0,0,0];
+var odom=[0,0,0];
 var globalpath = null;
 var maparrowpose = null;
 var rosmaparrowmode = null;
 var mapwaypoint = null;
 var laserscan = null;
+var waypointsettime = 0; 
 
 function rosmap(mode) {
 	
@@ -71,7 +75,7 @@ function rosmap(mode) {
 		str += "height='" + img.naturalHeight * zoom +"' ";
 		str += "style='position: relative; left: "+left+"px; top: "+top+"px; '";
 		str +=	"alt=''></div>";
-		popupmenu('rosmap', 'show', x, y, str, null, 1, null );
+		popupmenu('rosmap', 'show', x, y, str, width, 1, null );
 		
 		// drag
 		var rmi = document.getElementById("rosmaprobot"); // was rosmapimg
@@ -88,9 +92,6 @@ function rosmap(mode) {
 		rmi.onmouseup = function() { 
 			document.getElementById("rosmaprobot").onmousemove = null; }
 
-//		clearTimeout(rosimgreloadtimer);
-//		rosimgreloadtimer = setTimeout("rosmapImgReload();", 250); // 50
-//		rosimgloading = false;
 		rosmapupdate = null;
 		openxmlhttp("frameGrabHTTP?mode=rosmapinfo", rosinfo);
 	}
@@ -103,14 +104,9 @@ function rosmapImgReload() {
 	rosimgreloadtimer = null; // ?
 	date = new Date().getTime();
 	rosmapimgnext.src = "frameGrabHTTP?mode=rosmap&date="+date;
-//	rosimgloading = true;
 	rosmapimgnext.onload = function() {
-//		debug(new Date().getTime());
 		var img = document.getElementById('rosmapimg');
 		img.src = rosmapimgnext.src;
-//		rosimgloading = false;
-//		clearTimeout(rosimgreloadtimer);
-//		rosimgreloadtimer = setTimeout("rosmapImgReload();", 250);
 	}
 }
 
@@ -123,34 +119,69 @@ function rosinfo() {
 			//  width_height_res_originx_originy_originth_updatetime odomx_odomy_odomth
 			
 			var s = str.split(" ");
-			mapinfo = s[0].split("_"); // width_height_res_originx_originy_originth_updatetime
-			odom = s[1].split("_"); // odomx_odomy_odomth (actually amcl, not odom)
 			
-			if (s.length > 2) {
-				laserscan = s[2].split(","); // depth,depth,depth, ...
-			}
-			else laserscan = null;
-
-			if (s.length > 3)  {
-				var g = s[3].split("_");
-				var a = g[0].split(",");
-				amcloffstx = parseFloat(a[0]);
-				amcloffsty = parseFloat(a[1]);
-				amcloffstth = parseFloat(a[2]);
-				globalpath = g[1].split(","); // x,y,x,y,x,y...
-			}
-			else  globalpath = null;
+			var nukewaypoint = true;
+//			if (s.length == 0) nukewaypoint = false; // in case of empty xmlhttp
+			// to prevent cancellening right after setting:
+			var t = new Date().getTime();
+			if (t - waypointsettime < 5000) nukewaypoint = false;
 			
-			drawmapinfo();
+			var rosmaprezoom = false;
+			
+			for (var i=0; i<s.length; i++) {
+				var ss = s[i].split("_");
+				
+				switch(ss[0]) {
+					
+					case "rosmapinfo":
+						mapinfo = ss[1].split(",");
+						break;
+						
+					case "rosmapupdated": 
+						rosmaprezoom = true;
+						break;
+					
+					case "rosamcl":
+						var amcl = ss[1].split(",");
+						amcloffstx = parseFloat(amcl[0]);
+						amcloffsty = parseFloat(amcl[1]);
+						amcloffstth = parseFloat(amcl[2]);
+						rosodomx = parseFloat(amcl[3]);
+						rosodomy = parseFloat(amcl[4]);
+						rosodomth = parseFloat(amcl[5]);
+						break;
+						
+					case "rosglobalpath":
+						globalpath = ss[1].split(",");
+						break;
+						
+					case "rosscan":
+						laserscan = ss[1].split(",");
+						break;
+						
+					case "roscurrentgoal":
+						nukewaypoint = false;
+						break;
+				
+				}
+			}
+			
+			if (mapwaypoint != null && nukewaypoint)  {
+				mapwaypoint = null;
+				rosmaparrow("cancel");
+			}
+			
+			if (rosmaprezoom) { rosmapzoomdraw(mapzoom, 0); }
+			else drawmapinfo();
+//			drawmapinfo();
 			
 			var updatetime = parseFloat(mapinfo[6]);
 			if (rosmapupdate != null) { 
 				if (updatetime > rosmapupdate) rosmapImgReload();
 			}
 			rosmapupdate = updatetime;
-
-
-			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo', rosinfo);", 500);
+			
+			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo', rosinfo);", 510);
 		}
 	}
 }
@@ -165,11 +196,7 @@ function rosmapimgdrag(ev) {
 	var img = document.getElementById("rosmapimg");
 	img.style.left = mapimgleft + "px";
 	img.style.top = mapimgtop + "px";
-	
-//	var robot = document.getElementById("rosmaprobot");
-//	robot.style.left = robotx * mapzoom  + mapimgleft - 5 + "px";
-//	robot.style.top = roboty * mapzoom + mapimgtop - 5 + "px";
-	
+
 	drawmapinfo();
 }
 
@@ -226,19 +253,19 @@ function drawmapinfo(str) {
 	var res = parseFloat(mapinfo[2]);  // resolution
 
 	// robot center
-	var x = parseFloat(mapinfo[3]) - parseFloat(odom[0]);  // x = originx - odomx
+	var x = parseFloat(mapinfo[3]) - (rosodomx + amcloffstx);  // x = originx - odomx
 	x /= -res;   //   x /= res
 	robotx = x; // before scaling and offsets
 	x= x * mapzoom + mapimgleft;
 
-	var y = parseFloat(mapinfo[4]) - parseFloat(odom[1]);  // y = originy - odomy
+	var y = parseFloat(mapinfo[4]) - (rosodomy + amcloffsty);  // y = originy - odomy
 	y /= -res;  // y /= res
 	y = parseFloat(mapinfo[1])-y;
 	roboty = y; // before scaling and offsets
 	y = y * mapzoom + mapimgtop;
 
 	// robot angle
-	var th = -(parseFloat(mapinfo[5])+parseFloat(odom[2])); // originth + odomth
+	var th = -(parseFloat(mapinfo[5]) + (rosodomth + amcloffstth)); // originth + odomth
 	// robot size
 	var size = robotsize/parseFloat(mapinfo[2]) * mapzoom; 
 	
@@ -272,7 +299,6 @@ function drawmapinfo(str) {
 		context.rotate(+amcloffstth);
 	} 
 		
-	
 	context.rotate(th);
 	
 	if (laserscan) {
@@ -289,7 +315,8 @@ function drawmapinfo(str) {
 			angle -= anglestep;
 		}
 	}
-	
+
+	// draw robot
 	var linewidth = 3;
 	var stroke = "#ff0000";
 	var fill = "#ffffff";
@@ -310,7 +337,13 @@ function drawmapinfo(str) {
 	context.stroke();
 	
 	context.beginPath();
-	context.rect(size / -2, size / -2, size, size);
+	context.moveTo(size / -2, size / -2);
+	context.lineTo(size / 4, size / -2);
+	context.lineTo(size / 2, size / -6);
+	context.lineTo(size /2, size / 6);
+	context.lineTo(size / 4, size /2);
+	context.lineTo(size / -2, size /2);
+	context.lineTo(size / -2, size / -2);
 	context.fillStyle = fill;
 	context.fill();
 	context.lineWidth = linewidth;
@@ -322,13 +355,12 @@ function drawmapinfo(str) {
 	
 }
 
-var click;
-
 function rosmaparrow(mode) {
 	if (mode == "position" || mode == "waypoint") {
-//		rosmaparrowmode = mode;
 		
-		var str = "<a class='blackbg' href='javascript: rosmaparrow(&quot;cancel&quot;)'>CANCEL</a>"; 
+		var str = "<a class='blackbg' href='javascript: rosmaparrow(&quot;cancel&quot;)'>";
+		str += "<span class='cancelbox'><b>X</b></span> ";
+		str += "CANCEL</a>"; 
 		document.getElementById("rosmapinfobar").innerHTML = str; 
 		
 		var robotcanvas = document.getElementById("rosmaprobot");
@@ -336,11 +368,7 @@ function rosmaparrow(mode) {
 		
 		var arrowcanvas = document.getElementById("rosmaparrow");
 		var img = document.getElementById("rosmapimg");
-//		arrowcanvas.width = img.naturalWidth * mapzoom;
-//		arrowcanvas.height = img.naturalHeight * mapzoom;
-//		arrowcanvas.style.left = mapimgleft+"px";
-//		arrowcanvas.style.top = mapimgtop+"px";
-		
+
 		arrowcanvas.width = mapimgdivwidth;
 		arrowcanvas.height = mapimgdivheight;
 		
@@ -354,8 +382,6 @@ function rosmaparrow(mode) {
 		document.onmousemove = function(event) {
 			if (maparrowpose == null) return;
 			var xy = getmousepos(event);
-//			var arrowcanvas = document.getElementById("rosmaparrow");
-//			var arxy = findpos(arrowcanvas);
 			var arxy = findpos(document.getElementById("rosmapimg"));
 			maparrowpose[0] = (xy[0]-arxy[0])/mapzoom;
 			maparrowpose[1] = (xy[1]-arxy[1])/mapzoom;
@@ -364,13 +390,9 @@ function rosmaparrow(mode) {
 
 		robotcanvas.onclick = function(event) {
 			
-			click = true;
-			
 			document.onmousemove = function(event) {
 				
 				var xy = getmousepos(event);
-//				var arrowcanvas = document.getElementById("rosmaparrow");
-//				var arxy = findpos(arrowcanvas);
 				var arxy = findpos(document.getElementById("rosmapimg"));
 				
 				var deltax = (xy[0]-arxy[0])/mapzoom - maparrowpose[0];
@@ -384,8 +406,14 @@ function rosmaparrow(mode) {
 				// arrow drop complete  
 				if (rosmaparrowmode == "waypoint") { 
 					mapwaypoint = maparrowpose;
+					waypointsettime = new Date().getTime();
 					// send waypoint maparrowpose[] to ROS:
 					callServer("state","rossetgoal "+torosmeters(mapwaypoint));
+					callServer("state","roscurrentgoal pending");
+					str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;, &quot;rosgoalcancel true&quot;)'>";
+					str += "<span class='cancelbox'><b>X</b></span> ";
+					str += "CANCEL GOAL</a>"; 
+					document.getElementById("rosmapinfobar").innerHTML = str; 
 				}
 				else if (rosmaparrowmode == "position") {
 					// send position maparrowpose[] to ROS:
@@ -396,14 +424,13 @@ function rosmaparrow(mode) {
 						arrowcanvas.width = 0;
 						arrowcanvas.height = 0;						
 					}
-					
+					document.getElementById("rosmapinfobar").innerHTML = "";
 				}
 				maparrowpose = null;
 				document.onmousemove = null;
 				robotcanvas.onclick = null;
 				robotcanvas.onmouseover = null;
 				robotcanvas.style.cursor = "move";
-				document.getElementById("rosmapinfobar").innerHTML = "";
 				rosmaparrowmode = null;
 			}
 		}
@@ -454,8 +481,8 @@ function drawmaparrow() {
 		var fill = "#000000";
 	}
 	else {
-		var stroke = "#ffff00";
-		var fill = "#000000";
+		var stroke = "#ffffff";
+		var fill = "#ff0000";
 	}
 	
 	var r = 10;
@@ -517,3 +544,22 @@ function torosmeters(str) {
 	return x+"_"+y+"_"+th;
 }
 
+function saverosmapwindowpos() {
+	var mapwindowvalue = mapzoom+","+mapimgdivwidth+","+mapimgdivheight+","+mapimgleft+","+mapimgtop;
+	createCookie("rosmapwindow", mapwindowvalue, 364 );
+}
+
+function loadrosmapwindowpos() {
+	var m = readCookie("rosmapwindow");
+	if (m == null) return;
+	values = m.split(",");
+	mapzoom = parseFloat(values[0]);
+	mapimgdivwidth = parseInt(values[1]);
+	mapimgdivheight = parseInt(values[2]);
+	mapimgleft = parseInt(values[3]);
+	mapimgtop = parseInt(values[4]);
+}
+
+function defaultrosmapwindowpos() {
+	eraseCookie("rosmapwindow");
+}

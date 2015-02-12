@@ -21,12 +21,14 @@ import org.jasypt.util.password.*;
 import org.red5.io.amf3.ByteArray;
 
 import developer.UpdateFTP;
+import developer.ros;
 import developer.depth.Mapper;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
 
-	public enum streamstate{ stop, camera, camandmic, mic };
+	public enum streamstate { stop, camera, camandmic, mic };
+	public enum driverstreamstate { stop, mic, pending };
 	private static final int STREAM_CONNECT_DELAY = 2000;
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
@@ -125,22 +127,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 			loginRecords.signoutDriver();
 
 			if (!state.getBoolean(State.values.autodocking)) { //if autodocking, keep autodocking
-				if (state.get(State.values.stream) != null) {
-					if (!state.get(State.values.stream).equals(streamstate.stop.toString())) {
-						publish(streamstate.stop);
+				
+				if (!state.get(State.values.driverstream).equals(driverstreamstate.pending.toString())) {
+				
+					if (state.get(State.values.stream) != null) {
+						if (!state.get(State.values.stream).equals(streamstate.stop.toString())) {
+							publish(streamstate.stop);
+						}
 					}
-				}
-
-				if (comport.isConnected()) { 
-					comport.setSpotLightBrightness(0);
-					comport.floodLight(0);
-					comport.stopGoing();
-				}
-
-				if (state.getBoolean(State.values.driverstream)) {
-					state.set(State.values.driverstream, false);
-					grabberPlayPlayer(0);
-					messageGrabber("playerbroadcast", "0");
+	
+					if (comport.isConnected()) { 
+						comport.setSpotLightBrightness(0);
+						comport.floodLight(0);
+						comport.stopGoing();
+					}
+	
+					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop)) {
+						state.set(State.values.driverstream, driverstreamstate.stop.toString());
+						grabberPlayPlayer(0);
+						messageGrabber("playerbroadcast", "0");
+					}
+					
 				}
 				
 				// this needs to be before player = null
@@ -192,7 +199,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		str += " stream " + state.get(State.values.stream);
 		messageGrabber("connected to subsystem", "connection " + str);
 		Util.log("grabber signed in from " + grabber.getRemoteAddress(), this);
-		if (state.getBoolean(State.values.driverstream)) {
+		
+		if (state.get(State.values.driverstream).equals(driverstreamstate.mic.toString())) {
 			grabberPlayPlayer(1);
 			messageGrabber("playerbroadcast", "1");
 		}
@@ -257,7 +265,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
-		
+		state.set(State.values.driverstream, driverstreamstate.stop.toString());
+
 		grabberInitialize();
 				
 		state.put(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog? 
@@ -274,13 +283,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	private void grabberInitialize() {
 
-//		if (Settings.os.equals("linux")) {
-//			String str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
-//			Util.systemCall(str);
-//		}
-
 		if (settings.getBoolean(GUISettings.skipsetup)) {
-			grabber_launch();
+			grabber_launch("");
 		} else {
 			initialize_launch();
 		}
@@ -303,7 +307,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}).start();
 	}
 
-	public void grabber_launch() {
+	public void grabber_launch(final String str) {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
@@ -311,7 +315,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					// stream = "stop";
 					String address = "127.0.0.1:" + state.get(State.values.httpport);
 //					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
-					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html");
+					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html"+str);
 
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -572,7 +576,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case relaunchgrabber:
-			grabber_launch();
+			grabber_launch(str);
 			messageplayer("relaunching grabber", null, null);
 			break;
 
@@ -725,6 +729,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			powerport.writeStatusToEeprom();
 			Util.shutdown();
 			break;
+		
+		case ros:
+			ros.launch(str);
+			messageplayer("roslaunch "+str+".launch", null, null);
 			
 		case clearmap: Mapper.clearMap();
 			
@@ -1185,7 +1193,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			str += " vidctroffset " + settings.readSetting("vidctroffset");
 			str += " rovvolume " + settings.readSetting(GUISettings.volume);
-			str += " stream " + state.get(State.values.stream) + " selfstream stop";
+			str += " stream " + state.get(State.values.stream);
+			str += " selfstream " + state.get(State.values.driverstream);
 			str += " pushtotalk " + settings.readSetting("pushtotalk");
 			
 			if (loginRecords.isAdmin()) str += " admin true";
@@ -1194,6 +1203,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
+			if (settings.getBoolean(ManualSettings.navigation)) str += " navigation true";
 
 			String videoScale = settings.readSetting("videoscale");
 			if (videoScale != null) str += " videoscale " + videoScale;
@@ -1479,35 +1489,99 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
-	private void playerBroadCast(String str) {
+	/**
+	 * Broadcast remote web client microphone through robot speaker
+	 * @param str mode (stop, mic, pending)
+	 * 
+	 * need to reload webcam capture webpage on robot, and remote web page to enable 
+	 * enhanced mic, then reload both again when turning off mic
+	 * 
+	 * reload grabber, restart video stream if necessary
+	 * wait
+	 * reload remote client
+	 * 
+	 */
+	private void playerBroadCast(final String str) {
 		if (player instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) player;
-			if (!str.equals("off")) {
-				String vals[] = "320_240_8_85".split("_"); // TODO: nuke this for audio only 
-				int width = Integer.parseInt(vals[0]);
-				int height = Integer.parseInt(vals[1]);
-				int fps = Integer.parseInt(vals[2]);
-				int quality = Integer.parseInt(vals[3]);
-//				boolean pushtotalk = settings.getBoolean(GUISettings.pushtotalk);
-				sc.invoke("publish", new Object[] { str, width, height, fps, quality, false });
+			if (str.equals(driverstreamstate.mic.toString())) { // player mic
+				
+				if (state.get(State.values.driverstream).equals(driverstreamstate.mic.toString())) return;
+				
+				String vals[] = "320_240_8_85".split("_"); // TODO: nuke this, for audio only 
+				final int width = Integer.parseInt(vals[0]);
+				final int height = Integer.parseInt(vals[1]);
+				final int fps = Integer.parseInt(vals[2]);
+				final int quality = Integer.parseInt(vals[3]);
+
+				final streamstate mode = streamstate.valueOf(state.get(State.values.stream));
+				state.set(State.values.driverstream,  driverstreamstate.pending.toString());
+				
 				new Thread(new Runnable() {
 					public void run() {
 						try {
+							messageplayer("starting self mic, reloading page", null, null);
+
+							// reload grabber page with enhanced mic
+							messageGrabber("loadpage", "server.html?broadcast"); // reload page
 							Thread.sleep(STREAM_CONNECT_DELAY);
+							// restart stream if necessary
+							if (!mode.equals(streamstate.stop)) { 
+								publish(mode); 
+								Thread.sleep(STREAM_CONNECT_DELAY);
+							}
+														
+							// reload driver page with enhanced mic
+							messageplayer(null, "loadpage","?broadcast");
+							Thread.sleep(STREAM_CONNECT_DELAY*3);
+							
+							// start driver mic
+							IServiceCapableConnection sc = (IServiceCapableConnection) player;
+							sc.invoke("publish", new Object[] { str, width, height, fps, quality, false });
+							state.set(State.values.driverstream, driverstreamstate.mic.toString());
+							Thread.sleep(50);
+							messageplayer("self mic on", "selfstream",state.get(State.values.driverstream));
+							Thread.sleep(STREAM_CONNECT_DELAY);
+							grabberPlayPlayer(1);
+							
+							
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
-						grabberPlayPlayer(1);
-						state.set(State.values.driverstream, true);
 					}
 				}).start();
+				
+			} else { // player broadcast stop/off
+				
+				if (state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())) return;
 
-				Util.log("OCULUS: player broadcast start", this);
-			} else {
-				sc.invoke("publish", new Object[] { "stop", null, null, null,null,null });
-				grabberPlayPlayer(0);
-				state.set(State.values.driverstream, false);
-				Util.log("OCULUS: player broadcast stop",this);
+				final streamstate mode = streamstate.valueOf(state.get(State.values.stream));
+				state.set(State.values.driverstream,  driverstreamstate.pending.toString());
+				
+				new Thread(new Runnable() {
+					public void run() {
+						try {
+
+							messageplayer("stopping self mic, reloading page", null, null);
+							
+							messageGrabber("loadpage", "server.html"); // reload page normal mic
+							Thread.sleep(STREAM_CONNECT_DELAY);
+							// restart stream if necessary
+							if (!mode.equals(streamstate.stop)) { 
+								publish(mode); 
+								Thread.sleep(STREAM_CONNECT_DELAY);
+							}
+							
+							messageplayer(null, "loadpage","?");
+							Thread.sleep(STREAM_CONNECT_DELAY);
+							state.set(State.values.driverstream, driverstreamstate.stop.toString());
+							messageplayer("self mic off", "selfstream",state.get(State.values.driverstream));
+
+				
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}).start();
 			}
 		}
 	}
