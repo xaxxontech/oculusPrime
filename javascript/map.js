@@ -1,4 +1,4 @@
-var mapzoom = null; //future: set from cookie
+var mapzoom = 1; //future: set from cookie
 var mapimgdivwidth = 480; //future: set from cookie
 var mapimgdivheight = 480; //future: set from cookie
 var mapimgleft = 0; //future: set from cookie

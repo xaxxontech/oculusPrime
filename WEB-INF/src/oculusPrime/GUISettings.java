@@ -7,7 +7,7 @@ public enum GUISettings {
 	/** these settings must be available in basic configuration */
 	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay, onemeterdelay,
 	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
-	maxclickcam, loginnotify, 
+	maxclickcam, loginnotify, redock, navigation,
 	volume, reboot, camhoriz, camreverse; 
 	
 	/** get basic settings */
@@ -38,6 +38,8 @@ public enum GUISettings {
 		config.setProperty(camhoriz.name(), "70");
 		config.setProperty(camreverse.name(), "138");
 		config.setProperty(loginnotify.name() , "false");
+		config.setProperty(redock.name() , "false");
+		config.setProperty(navigation.name() , "false");
 		
 		return config;
 	}

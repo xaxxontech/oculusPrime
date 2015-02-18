@@ -653,7 +653,14 @@ login notify <a class="blackbg" href="javascript: writesetting('loginnotify true
 <a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br>
 reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>
 <a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
-<a class="blackbg" href="javascript: writesetting('reboot false');">no</a><br> 
+<a class="blackbg" href="javascript: writesetting('reboot false');">no</a><br>
+attempt auto re-dock if required
+<a class="blackbg" href="javascript: if (confirm(&quot;this will enable unexpected robot movement\nare you sure?&quot;)) {
+writesetting('redock true'); }">yes</a> /
+<a class="blackbg" href="javascript: writesetting('redock false');">no</a><br>
+enable navigation menu <a class="blackbg" href="javascript: writesetting('navigation true');">yes</a> / 
+<a class="blackbg" href="javascript: writesetting('navigation false');">no</a><br>
+ 
 <a class="blackbg" href="javascript: saveopenwindowpositions();">save window positions</a><br>
 <a class="blackbg" href="javascript: defaultwindowpositions();">default window positions</a>
 <span style="font-size: 11px">(requires browser page refresh)</span><br>
@@ -1046,11 +1053,11 @@ Choose action:<br>
 </div> <!--  end of overlaycontents -->
 
 <!-- logo -->
-<!-- 
+ 
 <div style="position: fixed; bottom: 5px; right: 5px; z-index: -1; padding-left: 5px;">
 <img src="images/oculus_corner_logo.gif" alt="">  
 </div>
--->
+
 
 <!--  debugbox -->
 <div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px; display: none; "></div>

@@ -42,7 +42,7 @@ public enum PlayerCommands { // all valid commands
     
     // malg board 
     // misc
-    motorsreset, cameracommand, camtilt, getdrivingsettings, drivingsettingsupdate,
+    motorsreset, cameracommand, camtilt, camtiltslow, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,

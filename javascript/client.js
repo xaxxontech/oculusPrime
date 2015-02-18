@@ -980,7 +980,7 @@ function camera(fn) {
 
 function tilttest() {
 	var str = document.getElementById('tilttestposition').value;
-	callServer("camtilt", str);
+	callServer("camtiltslow", str);
 	message("sending tilt position: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }

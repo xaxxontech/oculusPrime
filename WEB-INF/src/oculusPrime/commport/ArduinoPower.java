@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
+import oculusPrime.GUISettings;
 import oculusPrime.ManualSettings;
 import oculusPrime.PlayerCommands;
 import oculusPrime.Settings;
@@ -367,7 +368,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				// redock if unplanned and redock set
 				if (!state.exists(State.values.telnetusers.toString())) state.set(State.values.telnetusers, 0);
 				if (!state.exists(State.values.driver.toString()) && state.getInteger(State.values.telnetusers) ==0 &&
-						settings.getBoolean(ManualSettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) { 
+						settings.getBoolean(GUISettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) { 
 					Util.log("unplanned undock, trying redock",this);
 					application.driverCallServer(PlayerCommands.redock, null);
 				}

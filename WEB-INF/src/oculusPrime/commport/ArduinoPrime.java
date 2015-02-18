@@ -93,6 +93,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //	public volatile boolean sliding = false;
 	protected volatile UUID currentMoveID;
 	protected volatile UUID currentCamMoveID;
+	private boolean camLimitOverride = false;
 	
 //	private boolean invertswap = false;
 	
@@ -819,9 +820,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			
 			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - CAM_NUDGE);
 			
-			if (state.getInteger(State.values.cameratilt) <= CAM_MAX) {
+			if (state.getInteger(State.values.cameratilt) <= CAM_MAX && !camLimitOverride) {
 				cameraTimer.cancel();
-//				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
 				state.set(State.values.cameratilt, CAM_MAX);
 				return;
 			}
@@ -836,9 +836,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			
 			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) + CAM_NUDGE);
 			
-			if (state.getInteger(State.values.cameratilt) >= CAM_MIN) {
+			if (state.getInteger(State.values.cameratilt) >= CAM_MIN && !camLimitOverride) {
 				cameraTimer.cancel();
-//				application.gyroport.sendCommand(new byte[] { HOME_TILT_FRONT }); // calibrate
 				state.set(State.values.cameratilt, CAM_MIN);
 				return;
 			}
@@ -883,38 +882,38 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				return;
 			
 			case horiz: 
-				sendCommand(new byte[] { CAM, (byte) CAM_HORIZ });
-				currentCamMoveID = camMoveID;
-				camRelease(camMoveID);
-				state.set(State.values.cameratilt, CAM_HORIZ);
-				if (state.getBoolean(State.values.controlsinverted)) {
-					state.set(State.values.controlsinverted, false);
-				}
+				cameraSlowToPosition(CAM_HORIZ);
+//				sendCommand(new byte[] { CAM, (byte) CAM_HORIZ });
+//				currentCamMoveID = camMoveID;
+//				camRelease(camMoveID);
+//				state.set(State.values.cameratilt, CAM_HORIZ);
+//				if (state.getBoolean(State.values.controlsinverted)) {
+//					state.set(State.values.controlsinverted, false);
+//				}
 				return;
 			
 			case downabit: 
 				position= state.getInteger(State.values.cameratilt) + CAM_NUDGE*3;
 				if (position >= CAM_MIN) { 
 					position = CAM_MIN;
-//					sendCommand(new byte[] { HOME_TILT_FRONT }); //calibrate 
 				}
-				sendCommand(new byte[] { CAM, (byte) position }); 
-				currentCamMoveID = camMoveID;
-				camRelease(camMoveID);				 
-				state.set(State.values.cameratilt, position);
+				cameraSlowToPosition(position);
+//				sendCommand(new byte[] { CAM, (byte) position }); 
+//				currentCamMoveID = camMoveID;
+//				camRelease(camMoveID);				 
+//				state.set(State.values.cameratilt, position);
 				return; 
 			
 			case upabit: 
 				position = state.getInteger(State.values.cameratilt) - CAM_NUDGE*3;
 				if (position <= CAM_MAX) { 
 					position = CAM_MAX;
-//					sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
 				}
-				sendCommand(new byte[] { CAM, (byte) position }); 
-				currentCamMoveID = camMoveID;
-				camRelease(camMoveID);
-				
-				state.set(State.values.cameratilt, position);
+				cameraSlowToPosition(position);
+//				sendCommand(new byte[] { CAM, (byte) position }); 
+//				currentCamMoveID = camMoveID;
+//				camRelease(camMoveID);
+//				state.set(State.values.cameratilt, position);
 				return;
 				
 //			case frontstop:  
@@ -925,23 +924,80 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			case rearstop:   // deprecated, same as reverse
 				
 			case reverse:
-				sendCommand(new byte[] { CAM, (byte) CAM_REVERSE });
-				currentCamMoveID = camMoveID;
-				camRelease(camMoveID);
-				state.set(State.values.cameratilt, CAM_REVERSE);
-				state.set(State.values.controlsinverted, true);
+				cameraSlowToPosition(CAM_REVERSE);
+//				sendCommand(new byte[] { CAM, (byte) CAM_REVERSE });
+//				currentCamMoveID = camMoveID;
+//				camRelease(camMoveID);
+//				state.set(State.values.cameratilt, CAM_REVERSE);
+//				state.set(State.values.controlsinverted, true);
 				return;
 		}
 	
 	}
 	
-	public void cameraToPosition(int position) {
+	public void cameraToPosition(int position) { // max movement speed
 		sendCommand(new byte[] { CAM, (byte) position} );
 		UUID camMoveID = UUID.randomUUID(); 
 		currentCamMoveID = camMoveID;
 		camRelease(camMoveID);
 		state.set(State.values.cameratilt, position);
 		return;
+	}
+	
+	public void cameraSlowToPosition(final int position) { // slow movement speed
+		if (state.getInteger(State.values.cameratilt) == position) return;
+		
+		final UUID camMoveID = UUID.randomUUID();
+		currentCamMoveID = camMoveID;
+		camLimitOverride = true;
+		
+		cameraTimer = new java.util.Timer();
+		boolean temp = false;
+		final int timercode = cameraTimer.hashCode();
+			if (state.getInteger(State.values.cameratilt) > position)  { // up
+			temp = true; 
+			cameraTimer.scheduleAtFixedRate(new cameraUpTask(), 0, CAM_SMOOTH_DELAY);
+		}
+		else { 
+			cameraTimer.scheduleAtFixedRate(new cameraDownTask(), 0, CAM_SMOOTH_DELAY); 
+		} // down
+		final boolean up = temp;
+		
+		new Thread(new Runnable() {
+			public void run() {				
+				
+				while (camMoveID.equals(currentCamMoveID)) {
+					int currentpos = state.getInteger(State.values.cameratilt);
+					if ( (up && currentpos <= position) || (!up && currentpos >= position) ) { // position reached, stop
+						if(cameraTimer != null) cameraTimer.cancel();
+						camRelease(camMoveID);
+						cameraTimer = null;
+						break;
+					}
+					
+					if (Math.abs(currentpos - CAM_REVERSE) < 5 ) {
+						if (!state.getBoolean(State.values.controlsinverted)) 
+								state.set(State.values.controlsinverted, true);
+					}
+					else {
+						if (state.getBoolean(State.values.controlsinverted)) 
+								state.set(State.values.controlsinverted, false);
+					}
+					
+				}
+				
+				if (camMoveID.equals(currentCamMoveID)) {
+					application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+				}
+				else if (cameraTimer != null) {
+					if (cameraTimer.hashCode() == timercode) cameraTimer.cancel(); // cancel if another cam command took over
+				}
+				
+				camLimitOverride = false;
+			}
+				
+		}).start();
+		
 	}
 	
 	private void camRelease(final UUID camMoveID) {

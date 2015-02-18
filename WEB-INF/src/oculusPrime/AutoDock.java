@@ -131,6 +131,7 @@ public class AutoDock { // implements Observer {
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
+//									app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_REVERSE));
 									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
 									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
@@ -255,6 +256,7 @@ public class AutoDock { // implements Observer {
 						
 						comport.floodLight(0);	
 						comport.camCommand(ArduinoPrime.cameramove.horiz);
+//						app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_HORIZ));
 					}
 					
 					app.message("docked successfully", "multiple", str);
@@ -369,7 +371,8 @@ public class AutoDock { // implements Observer {
 			} 
 			
 			if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
-			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
+//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
+			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer and go 
 				comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
 				new Thread(new Runnable() {
 

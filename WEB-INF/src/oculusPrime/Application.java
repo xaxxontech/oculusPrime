@@ -462,6 +462,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
 		case camtilt: comport.cameraToPosition(Integer.parseInt(str)); break;
+		case camtiltslow: comport.cameraSlowToPosition(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
@@ -1203,7 +1204,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
-			if (settings.getBoolean(ManualSettings.navigation)) str += " navigation true";
+			if (settings.getBoolean(GUISettings.navigation)) str += " navigation true";
 
 			String videoScale = settings.readSetting("videoscale");
 			if (videoScale != null) str += " videoscale " + videoScale;

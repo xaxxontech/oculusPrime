@@ -71,7 +71,7 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.disconnectotherconnections, null);
 				application.driverCallServer(PlayerCommands.driverexit, null);
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
-						settings.getBoolean(ManualSettings.redock)) {
+						settings.getBoolean(GUISettings.redock)) {
 					Util.log("abandoned logins, driver still connected, attempt redock", this);
 					redock(NOFORWARD);
 				}
@@ -79,13 +79,13 @@ public class SystemWatchdog {
 			
 			// TODO: deal with abandonded, undocked, low battery, not redocking, not already attempted redock
 			if (!state.exists(State.values.driver.toString()) && 
-				System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
-				redocking == false && lowbattredock == false &&
-				Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 10 &&
-//				state.getInteger(State.values.batterylife) <= 10 && // FAIL! (returns -1, error)
-				state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
-				settings.getBoolean(ManualSettings.redock)
-				){
+					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
+					redocking == false && lowbattredock == false &&
+					Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 10 &&
+	//				state.getInteger(State.values.batterylife) <= 10 && // FAIL! (returns -1, error)
+					state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
+					settings.getBoolean(GUISettings.redock)
+					){
 				lowbattredock = true;
 				Util.log("abandonded, undocked, low battery, not redocking", this);
 				redock(null);
