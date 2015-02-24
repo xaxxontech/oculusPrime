@@ -27,9 +27,8 @@ public enum GUISettings {
 		config.setProperty(maxclicknudgedelay.name() , "180");
 		config.setProperty(nudgedelay.name() , "80");
 		config.setProperty(maxclickcam.name() , "30");
-		config.setProperty(volume.name() , "20");
+		config.setProperty(volume.name() , "100");
 //		config.setProperty(muteonrovmove.name() , "true"); 
-//		config.setProperty(videoscale.name() , "100");
 		config.setProperty(reboot.name() , "false");
 //		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2700");

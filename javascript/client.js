@@ -697,11 +697,6 @@ function docklineposition(n) {
 	d.style.height = "120px";
 }
 
-function relaunchgrabber() {
-	callServer("relaunchgrabber", "");
-	message("sending command: relaunch grabber", sentcmdcolor, 0);
-}
-
 function speech() {
 	var a = document.getElementById('speechbox');
 	var str = a.value;
@@ -2194,6 +2189,11 @@ function openbox(str) {
 	popupmenu("menu","resize");
 }
 
+function closebox(str) {
+	document.getElementById(str).style.display = "none";
+	popupmenu("menu","resize");
+}
+
 function disconnectOtherConnections() {
 	message("request eliminate passengers: "+str, sentcmdcolor);
 	callServer("disconnectotherconnections", "");
@@ -2263,7 +2263,7 @@ function chat() {
 	a.value = "";
 	if (str != "") {
 		callServer("chat", "<i>"+username.toUpperCase()+"</i>: "+str);
-		message("sending command: textchat '" + str + "'", sentcmdcolor);
+		message("sending command: chat '" + str + "'", sentcmdcolor);
 		lagtimer = new Date().getTime();
 	}
 }

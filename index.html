@@ -11,8 +11,8 @@ html, body {height: 100%;}
 body { background-color: #151515; } 
 body, p, ol, ul, td, tr {
 font-family: verdana, arial, helvetica, sans-serif;
-font-size:   13px;
-line-height: 19px; 
+font-size:   14px;
+line-height: 20px; 
 color: #aaaaaa;
 padding: 0px; margin: 0px;}
 TABLE {   border: 0px; border-collapse: collapse; padding: 0px }
@@ -500,10 +500,10 @@ style="cursor: pointer" onmousedown="rosmapzoom(1);" onmouseup="rosmapzoom(0);" 
 <a class="blackbg" href="javascript: rosmaparrow('position');">
 <span class="cancelbox" ><b>&#x2798;</b></span> POSITION</a>
 &nbsp; &nbsp; &nbsp; 
-<a class="blackbg" href="javascript: rosmaparrow('waypoint');">
+<a class="blackbg" href="javascript: rosmaparrow('goalpose');">
 <span class="cancelbox" ><b>&#x2798;</b></span> SET GOAL</a>
 <table><tr><td style="height: 6px"></td></tr></table>
-<div id="rosmapinfobar" style="height: 18px"> </div>
+<div id="rosmapinfobar" style="height: 22px"> </div>
 
 </div>
 </div>
@@ -912,8 +912,6 @@ onKeyPress="if (keypress(event)==13) { oculuscommandgo(); }">
 <a class="blackbg" href="javascript: battStats();">power info</a><br>
 <a class="blackbg" href="javascript: hiddenmessageboxShow();">command log full</a><br>
 
-<a class="blackbg" href="javascript: relaunchgrabber();">relaunch server browser page</a><br>
-
 <a class="blackbg" href="javascript: usersyscommanddivShow();">system command</a><span 
 id="usersyscommanddiv" style="display: none">:<br>&nbsp;
 <input id="usersyscommand" class="inputbox" type="text" size="30" 
@@ -980,17 +978,26 @@ Navigation Menu:<br>
 <a class="blackbg" href="javascript: callServer('ros','remote_nav');">start</a><br>
 <a class="blackbg" href="javascript: systemcall('pkill roslaunch','');">stop</a><br>
 <a class="blackbg" href="javascript: rosmap();">map</a><br>
-<!-- 
-stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> / 
-<a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
-stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> / 
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>
-stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on</a> / 
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>
-left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>
- -->
- 
+
+set waypoint:<br>
+&nbsp; <a class="blackbg" href="javascript: setwaypoint(null);">at current position</a><br>
+&nbsp; <a class="blackbg" href="javascript: rosmaparrow('waypoint');">drop arrow</a><br>
+<a class="blackbg" href="javascript: mapshowwaypoints = true;">show waypoints</a><br>
+<a class="blackbg" href="javascript: mapshowwaypoints = false;">hide waypoints</a><br>
+<a class="blackbg" href="javascript: waypointsmenu();">manage waypoints</a> &gt;<br>
+</div>
+
+<!-- change extra password -->
+<div id="waypoints_menu" style="display: none;">
+<a class="blackbg"
+href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;navigation_menu&quot;).innerHTML);">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Waypoints:
+<table><tr><td style="height: 10px"></td></tr></table>
+<div id="waypointslist"></div>
 </div>
 
 <!--  overlay -->
@@ -1033,23 +1040,25 @@ Choose action:<br>
 <a class="blackbg" href="javascript: logout();">logout</a>
 </div>
 
+</td></tr></table>
+
+
 <!--  hidden message box container --> 
-<div id="hiddenmessageboxcontainer" style="display: none; padding-top: 20px">
+<div id="hiddenmessageboxcontainer" style="display: none; padding-top: 20px; padding-left: 25px">
 <a class="blackbg" href= "javascript: overlay('off');">
 <span class="cancelbox"><b>X</b></span> CLOSE</a>
-<div id="hiddenmessagebox" style="width: 500px; padding-top: 10px;"> </div>
+<div id="hiddenmessagebox" style="padding-top: 10px;"> </div>
 <br>
 </div>
 
 <!-- extra stuff container -->
-<div id="extrastuffcontainer" style="display: none; padding-top: 20px;">
+<div id="extrastuffcontainer" style="display: none; padding-top: 20px; ; padding-left: 25px">
 <a class="blackbg" href= "javascript: overlay('off');">
 <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <div id="extrastuffbox" style="padding-top: 10px;"> </div>
 <br>
 </div>
 
-</td></tr></table>
 </div> <!--  end of overlaycontents -->
 
 <!-- logo -->

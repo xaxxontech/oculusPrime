@@ -9,28 +9,26 @@ import java.util.Vector;
 public class State {
 	
 	public enum values{ 
-		motionenabled, moving, movingforward, motorport,  // motors
+		motionenabled, moving, movingforward, motorport, cameratilt, motorspeed,   // motors
 
 		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics, // dock 
 
 		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
 
-		driver, logintime, pendinguserconnected,  // rtmp users
-		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
+		driver, logintime, pendinguserconnected, telnetusers, // users
+		
+		streamactivityenabled, streamactivitythreshold, videosoundmode, stream, driverstream, //audio video
+		volume, framegrabbusy, controlsinverted, 
 
-		volume, framegrabbusy, //audio video
+		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
+		powererror, forceundock, // power problems
 
-		wallpower, batterylife, powerport, batteryinfo, battvolts, powererror, // power
-		forceundock, // power problems
+		boottime, httpport, lastusercommand, // system
 
-		boottime, httpport, // system
-
-		cameratilt, motorspeed, lastusercommand, controlsinverted, telnetusers,  
-		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves,   
+		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		
 		localaddress, externaladdress, // network things 
 		signalnoise, signalstrength, singlalquality, signalspeed, ssid, gateway, ethernetaddress,
-		// TODO: brad just added 
 		
 		;
 	};

@@ -29,7 +29,7 @@ public enum ManualSettings {
 		// config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "110");
-		config.setProperty(gyrocomp.name() , "1.09");
+		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , "true");
 		return config;
 	}

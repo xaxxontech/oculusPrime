@@ -150,6 +150,7 @@ public class SystemWatchdog {
 			String body = "Un-docked, battery draining";
 			
 			// warn
+			application.driverCallServer(PlayerCommands.speech, "warning, moving, in, 5, seconds");
 			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
 			Util.delay(1000); // including 500 delay 
 			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");

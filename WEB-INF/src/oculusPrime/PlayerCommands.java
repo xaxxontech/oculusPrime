@@ -23,8 +23,7 @@ public enum PlayerCommands { // all valid commands
     //undocumented (not typically used by scripts):
     password_update, beapassenger, assumecontrol,  
     new_user_add, user_list, delete_user, extrauser_password_update, username_update,
-    
-    
+        
     //docking
     dock, dockgrab, autodock,  redock,
     //undocumented (not typically used by scripts):
@@ -39,10 +38,9 @@ public enum PlayerCommands { // all valid commands
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
     streamsettingsset,
     
-    
     // malg board 
     // misc
-    motorsreset, cameracommand, camtilt, camtiltslow, getdrivingsettings, drivingsettingsupdate,
+    motorsreset, cameracommand, camtilt, camtiltfast, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
@@ -52,13 +50,13 @@ public enum PlayerCommands { // all valid commands
     fwdflood,
     
 	// uncategorized 
-	speech, relaunchgrabber, email, state,   
+	speech, serverbrowser, email, state,   
     rssadd, getlightlevel,   
 	// undocumented    
     statuscheck, block, unblock, help, 
     
     // experimental (undocumented)
-    opennisensor, clearmap, stereo, ros,
+    opennisensor, clearmap, stereo, ros, savewaypoints, loadwaypoints, gotowaypoint,
     
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness,

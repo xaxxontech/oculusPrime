@@ -1,12 +1,13 @@
 package developer;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -16,16 +17,24 @@ import oculusPrime.Util;
 public class ros {
 	
 	private static State state = State.getReference();
+	
+	// State keys
 	public static final String ROSMAPINFO = "rosmapinfo";
 	public static final String ROSAMCL = "rosamcl";
 	public static final String ROSGLOBALPATH = "rosglobalpath";
 	public static final String ROSSCAN = "rosscan";
 	public static final String ROSCURRENTGOAL = "roscurrentgoal";
 	public static final String ROSMAPUPDATED = "rosmapupdated";
+	public static final String ROSMAPWAYPOINTS = "rosmapwaypoints";
+	public static final String NAVIGATIONENABLED ="navigationenabled";
+	public static final String ROSSETGOAL ="rossetgoal";
 
 	private static File lockfile = new File("/run/shm/map.raw.lock");
 	private static BufferedImage map = null;
 	private static double lastmapupdate = 0f;
+	
+	private static final String redhome = System.getenv("RED5_HOME");
+	public static File waypointsfile = new File(redhome+"/conf/waypoints.txt");
 	
 	public static BufferedImage rosmapImg() {	
 		if (!state.exists(ROSMAPINFO)) return null;
@@ -107,16 +116,12 @@ public class ros {
 			e.printStackTrace();
 		}
 
-//    	Util.debug(Integer.toString(frameData.limit()));
-
     	// generate image
     	frameData.rewind();
 		for(int y=height-1; y>=0; y--) {
 			for(int x=0; x<width; x++) {
 				
 				int i = frameData.get();
-//				Util.debug("POSITION: "+Integer.toString(frameData.position())+", x: "+Integer.toString(x)+
-//					", y: "+Integer.toString(y));
 				int argb = 0x000000;  // black
 				if (i==0) argb = 0x555555; // grey 
 				else if (i==100) argb = 0x00ff00; // green 
@@ -132,14 +137,20 @@ public class ros {
 
 	public static String mapinfo() { // send info to javascript
 		String str = "";
+
 		if (state.exists(ROSMAPINFO)) str += ROSMAPINFO+"_" + state.get(ROSMAPINFO);
 		if (state.exists(ROSAMCL)) str += " " + ROSAMCL+"_" + state.get(ROSAMCL);
 		if (state.exists(ROSSCAN)) str += " " + ROSSCAN+"_" + state.get(ROSSCAN);
 		if (state.exists(ROSGLOBALPATH)) str += " " + ROSGLOBALPATH+"_" + state.get(ROSGLOBALPATH);
 		if (state.exists(ROSCURRENTGOAL)) str += " " + ROSCURRENTGOAL+"_" + state.get(ROSCURRENTGOAL);
+
 		if (state.exists(ROSMAPUPDATED)) {
 			str += " " + ROSMAPUPDATED +"_" + state.get(ROSMAPUPDATED);
 			state.delete(ROSMAPUPDATED);
+		}
+		if (state.exists(ROSMAPWAYPOINTS)) {
+			str += " " + ROSMAPWAYPOINTS +"_" + state.get(ROSMAPWAYPOINTS);
+			state.delete(ROSMAPWAYPOINTS);
 		}
 		
 		return str;
@@ -150,6 +161,51 @@ public class ros {
 		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh"; // setup ros environment
 		cmd += " roslaunch oculusprime "+launch+".launch";
 		Util.systemCall(cmd);
+	}
+	
+	public static void savewaypoints(String str) {
+		try {
+			FileWriter fw = new FileWriter(waypointsfile);						
+			fw.append(str+"\r\n");
+			fw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static void loadwaypoints() {
+			state.delete(ROSMAPWAYPOINTS);
+			if (!state.exists(ROSMAPINFO)) return;
+			
+			BufferedReader reader;
+			String str = "";
+			try {
+				reader = new BufferedReader(new FileReader(waypointsfile));
+				str = reader.readLine();
+				reader.close();
+
+			} catch (FileNotFoundException e) {
+				Util.debug("no waypoints file yet");
+				return;
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			str = str.trim();
+			if (!str.equals("")) state.set(ROSMAPWAYPOINTS, str.trim());			
+	}
+	
+	public static void setWaypointAsGoal(String name) {
+		loadwaypoints();
+		if (!state.exists(ROSMAPWAYPOINTS)) return;
+		
+		String waypoints[] = state.get(ROSMAPWAYPOINTS).split(",");
+		for (int i = 0 ; i < waypoints.length -4 ; i+=4) {
+			if (waypoints[i].equals(name)) {
+				state.set(ROSSETGOAL, waypoints[i+1]+","+waypoints[i+2]+","+waypoints[i+3]);
+				break;
+			}
+		}
+		state.delete(ROSMAPWAYPOINTS);
 	}
 	
 }

@@ -461,8 +461,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
-		case camtilt: comport.cameraToPosition(Integer.parseInt(str)); break;
-		case camtiltslow: comport.cameraSlowToPosition(Integer.parseInt(str)); break;
+		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
+		case camtilt: comport.cameraSlowToPosition(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
@@ -576,9 +576,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.systemCall(str);
 			break;
 
-		case relaunchgrabber:
+		case serverbrowser:
 			grabber_launch(str);
-			messageplayer("relaunching grabber", null, null);
 			break;
 
 		case docklineposupdate:
@@ -734,8 +733,24 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case ros:
 			ros.launch(str);
 			messageplayer("roslaunch "+str+".launch", null, null);
+			break;
+		
+		case savewaypoints:
+			ros.savewaypoints(str);
+			messageplayer("waypoints saved", null, null);
+			break;
+			
+		case loadwaypoints:
+			ros.loadwaypoints();
+			if (state.exists(ros.ROSMAPWAYPOINTS)) messageplayer("waypoints loaded", null, null);
+			break;
+			
+		case gotowaypoint:
+			ros.setWaypointAsGoal(str);
+			break;
 			
 		case clearmap: Mapper.clearMap();
+			break;
 			
 		}
 	}
@@ -2020,7 +2035,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Integer videoThreshold = Integer.parseInt(val[0]);
 		Integer audioThreshold = Integer.parseInt(val[1]);
 
-		state.set(State.values.streamActivityThreshold.name(), str);
+		state.set(State.values.streamactivitythreshold.name(), str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
 			if (state.get(State.values.videosoundmode.name()).equals("high")) {
@@ -2039,11 +2054,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 					else { publish(streamstate.camandmic); }
 				}
 			}
-			state.set(State.values.streamActivityThresholdEnabled.name(), System.currentTimeMillis());
+			state.set(State.values.streamactivityenabled.name(), System.currentTimeMillis());
 		}
 		else { 
-			state.delete(State.values.streamActivityThresholdEnabled);
-			state.delete(State.values.streamActivityThreshold);
+			state.delete(State.values.streamactivityenabled);
+			state.delete(State.values.streamactivitythreshold);
 		}
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
@@ -2053,7 +2068,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	private void streamActivityDetected(String str) {
-		if (System.currentTimeMillis() > state.getLong(State.values.streamActivityThresholdEnabled) + 5000.0) { 
+		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) { 
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable
 		}

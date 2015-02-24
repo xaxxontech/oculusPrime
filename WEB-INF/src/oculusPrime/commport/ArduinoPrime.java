@@ -1383,12 +1383,33 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.delete(State.values.distanceangle);
 		state.set(State.values.odometry, true);
 		state.set(State.values.stopbetweenmoves, true);
+		
+		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
+			new Thread(new Runnable() {public void run() {
+				
+				while (state.exists(State.values.odometrybroadcast.toString()) && 
+							state.exists(State.values.odometry.toString())) {
+					if (state.getBoolean(State.values.odometry) && 
+							state.getLong(State.values.odometrybroadcast) > 0 ) {
+						Util.delay(state.getLong(State.values.odometrybroadcast));
+						odometryReport();
+						Util.debug("called odomreport");
+					}
+					else {
+						break;
+					}
+				}
+				
+			} }).start();
+		}
 	}
+	
 	public void odometryStop() {
 		sendCommand(ODOMETRY_STOP_AND_REPORT);
 		state.set(State.values.odometry, false);
 		state.set(State.values.stopbetweenmoves, false);
 	}
+	
 	public void odometryReport() {
 		sendCommand(ODOMETRY_REPORT);
 	}
