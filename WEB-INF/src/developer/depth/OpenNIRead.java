@@ -24,7 +24,7 @@ public class OpenNIRead  {
 	ImageUtils imageUtils = new ImageUtils();
 	private static int width = 320;
 	private static int height = 240;
-	private final static int BYTEDEPTH = 4;
+	private final static int BYTEDEPTH = 2;
 	
 	public void startDepthCam() {
 		if (depthCamInit) return;
@@ -84,8 +84,13 @@ public class OpenNIRead  {
 		for (int x=width-1; x>=0; x--) {
 	        
 	        int p = ((width * y)+x)*BYTEDEPTH;
-	        float depth = frameData.getFloat(p); // reads 4 bytes
-	        result[i] = (short) (depth*1000);
+
+//	        float depth = frameData.getFloat(p); // reads 4 bytes
+//	        result[i] = (short) (depth*1000);
+	        
+	        short depth = frameData.getShort(p); // reads 2 bytes
+	        result[i] = depth;
+	        
 	        i++;
 	        
 	        if (depth != 0) { blank = false; }
@@ -114,8 +119,10 @@ public class OpenNIRead  {
 				for (int x=width-1; x>=0; x--) {
 			        
 			        int p = ((width * y)+x)*BYTEDEPTH;
-			        float depth = frameData.getFloat(p); // reads 4 bytes
-			        result[i] = (short) (depth*1000); // convert to mm
+//			        float depth = frameData.getFloat(p); // reads 4 bytes
+//			        result[i] = (short) (depth*1000); // convert to mm
+			        short depth = frameData.getShort(p); // reads 2 bytes
+			        result[i] = depth;
 			        i++;
 			        if (depth != 0) { blank = false; }
 				}	

@@ -17,7 +17,7 @@ public class SystemWatchdog {
 	protected Application application = null;
 	
 	private static final long DELAY = 10000; // 10 sec 
-	private static final long AUTODOCKTIMEOUT= 360000; // 6 min
+	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
 	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
 	public static final String NOFORWARD = "noforward";
 

@@ -489,19 +489,25 @@ padding-right: 0px; cursor: move; color: #cccccc;  "> &#x2798; </span>   <!-- &#
 
 <a class="blackbg" href= "javascript: popupmenu('rosmap', 'close');">
 <span class="cancelbox"><b>X</b></span> CLOSE</a> 
-&nbsp; &nbsp; &nbsp;
+&nbsp; &nbsp; 
 <span class="zoombutton" 
 style="cursor: pointer" onmousedown="rosmapzoom(-1);" onmouseup="rosmapzoom(0);" onmouseout="rosmapzoom(0);"
 ><span class="cancelbox" style="padding-left: 7px; padding-right: 7px"
 ><b>-</b></span> ZO</span><span class="zoombutton" 
 style="cursor: pointer" onmousedown="rosmapzoom(1);" onmouseup="rosmapzoom(0);" onmouseout="rosmapzoom(0);"
 >OM <span class="cancelbox" style="padding-left: 5px; padding-right: 5px"><b>+</b></span></span>
-&nbsp; &nbsp; &nbsp;
+&nbsp; &nbsp; 
 <a class="blackbg" href="javascript: rosmaparrow('position');">
 <span class="cancelbox" ><b>&#x2798;</b></span> POSITION</a>
-&nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; 
 <a class="blackbg" href="javascript: rosmaparrow('goalpose');">
 <span class="cancelbox" ><b>&#x2798;</b></span> SET GOAL</a>
+&nbsp; &nbsp; 
+<a class="blackbg"  
+href="javascript: mainmenu('menulink'); waypointsmenu();">
+waypoints</a> 
+
+
 <table><tr><td style="height: 6px"></td></tr></table>
 <div id="rosmapinfobar" style="height: 22px"> </div>
 
@@ -975,7 +981,7 @@ left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">
 Navigation Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 
-<a class="blackbg" href="javascript: callServer('ros','remote_nav');">start</a><br>
+<a class="blackbg" href="javascript: callServer('startnav','');">start</a><br>
 <a class="blackbg" href="javascript: systemcall('pkill roslaunch','');">stop</a><br>
 <a class="blackbg" href="javascript: rosmap();">map</a><br>
 
@@ -985,9 +991,10 @@ set waypoint:<br>
 <a class="blackbg" href="javascript: mapshowwaypoints = true;">show waypoints</a><br>
 <a class="blackbg" href="javascript: mapshowwaypoints = false;">hide waypoints</a><br>
 <a class="blackbg" href="javascript: waypointsmenu();">manage waypoints</a> &gt;<br>
+<a class="blackbg" href="javascript: routesmenu();">routes</a> &gt;<br>
 </div>
 
-<!-- change extra password -->
+<!-- waypoints_menu -->
 <div id="waypoints_menu" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;navigation_menu&quot;).innerHTML);">
@@ -998,6 +1005,21 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 Waypoints:
 <table><tr><td style="height: 10px"></td></tr></table>
 <div id="waypointslist"></div>
+</div>
+
+<!--  routes menu -->
+<div id="routes_menu" style="display: none;">
+<a class="blackbg"
+href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;navigation_menu&quot;).innerHTML);">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Route List:
+<table><tr><td style="height: 10px"></td></tr></table>
+<div id="routeslist">no routes defined</div>
+<br>
+<a class="blackbg" href="javascript: createroute();">create new route</a><br>
 </div>
 
 <!--  overlay -->

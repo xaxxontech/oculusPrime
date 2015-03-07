@@ -32,6 +32,7 @@ var goalposesettime = 0;
 var waypoints = [];
 var pendingwaypoint = null;
 var mapshowwaypoints = true;
+var routesxml = null;
 
 function rosmap(mode) {
 	
@@ -395,7 +396,12 @@ function rosmaparrow(mode) {
 	    a.onmouseout = null;
 	    a.onclick = null;
 		
-		var str = "<a class='blackbg' href='javascript: rosmaparrow(&quot;cancel&quot;)'>";
+	    var str = "";
+	    
+	    if (mode=="position") str += "drop arrow to set current location &nbsp; ";
+	    else if (mode=="goalpose") str += "drop arrow to drive to location  &nbsp; ";
+	    
+		str += "<a class='blackbg' href='javascript: rosmaparrow(&quot;cancel&quot;)'>";
 		str += "<span class='cancelbox'><b>X</b></span> ";
 		str += "CANCEL</a>"; 
 		document.getElementById("rosmapinfobar").innerHTML = str; 
@@ -411,13 +417,13 @@ function rosmaparrow(mode) {
 		
 		maparrowpose = null;
 		
-		robotcanvas.onmouseover = function() { 
+		robotcanvas.onmouseover = function() { // hover with point only, no arrow yet
 			maparrowpose = [];
 			rosmaparrowmode = mode;
 			robotcanvas.onmouseover = null;
 		}
 		
-		document.onmousemove = function(event) {
+		document.onmousemove = function(event) { // hover with xy point only, no arrow yet
 			if (maparrowpose == null) return;
 			var xy = getmousepos(event);
 			var arxy = findpos(document.getElementById("rosmapimg"));
@@ -426,9 +432,9 @@ function rosmaparrow(mode) {
 			drawmaparrow();
 		}
 
-		robotcanvas.onclick = function(event) {
+		robotcanvas.onclick = function(event) { // set location xy
 						
-			document.onmousemove = function(event) {
+			document.onmousemove = function(event) { // hover setting arrow direction
 				
 				var xy = getmousepos(event);
 				var arxy = findpos(document.getElementById("rosmapimg"));
@@ -440,16 +446,16 @@ function rosmaparrow(mode) {
 				drawmaparrow();
 			}
 			
-			robotcanvas.onclick = function(event) {
-				// arrow drop complete  
+			robotcanvas.onclick = function(event) { // arrow complete
+
 				clicksteer("on");
 				
 				if (rosmaparrowmode == "goalpose") { 
 					rosmapsetgoal(maparrowpose);
 				}
 				else if (rosmaparrowmode == "position") {
-					// send position maparrowpose[] to ROS:
-					var pose = torosmeters(mapgoalpose);
+					// send initial position maparrowpose[] to ROS:
+					var pose = torosmeters(maparrowpose);
 					callServer("state","rosinitialpose "+pose[0]+"_"+pose[1]+"_"+pose[2]);
 					if (mapgoalpose != null) maparrowpose = mapgoalpose;
 					else {
@@ -460,6 +466,7 @@ function rosmaparrow(mode) {
 					document.getElementById("rosmapinfobar").innerHTML = "";
 				}
 				else if (rosmaparrowmode == "waypoint") {
+					// send goal pose
 					setwaypoint(maparrowpose);
 					
 					if (mapgoalpose != null) maparrowpose = mapgoalpose;
@@ -573,8 +580,9 @@ function rosmapsetgoal(pose) {
 	goalposesettime = new Date().getTime();
 	// send goalpose maparrowpose[] to ROS:
 	var pose = torosmeters(mapgoalpose);
-	callServer("state","rossetgoal "+pose[0]+"_"+pose[1]+"_"+pose[2]);
-//	callServer("state","roscurrentgoal pending");
+//	callServer("state","rossetgoal "+pose[0]+","+pose[1]+","+pose[2]);
+	callServer("gotowaypoint", pose[0]+","+pose[1]+","+pose[2]);
+
 	str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;, &quot;rosgoalcancel true&quot;)'>";
 	str += "<span class='cancelbox'><b>X</b></span> ";
 	str += "CANCEL GOAL</a>"; 
@@ -664,8 +672,9 @@ function setwaypoint(pose) {
 	str += "<span class='cancelbox'><b>X</b></span> ";
 	str += "CANCEL</a> &nbsp; name: "; 
 	str += "<input id='waypointname' class='inputbox' type='text' size='15' name='waypointname' "; 
-	str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
-	str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'>";
+	str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;' "; 
+	str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;' ";
+	str += "onKeyPress='if (keypress(event)==13) { savewaypoint(); }'>";
 	str += "&nbsp; <a class='blackbg' href='javascript: savewaypoint()'>";
 	str += "<span class='cancelbox'>&#x2714;</span> SAVE</a>";
 	document.getElementById("rosmapinfobar").innerHTML = str;
@@ -777,7 +786,7 @@ function waypointsmenu() {
 			
 			str += "</td><td>"
 
-			str += "<a class='blackbg' href='javascript: openbox(&quot;waypointrenamediv"+i+"&quot;);'>";
+			str += "<a class='blackbg' href='javascript: waypointenternewname("+i+");'>";
 			str += "rename</a> &nbsp; ";
 
 			str += "<a class='blackbg' href='javascript: waypointdelete("+i+");'>delete</a> &nbsp; ";
@@ -786,8 +795,9 @@ function waypointsmenu() {
 			
 			str += "<div id='waypointrenamediv"+i+"' style='display: none'>";
 			str += "<input id='waypointrename"+i+"' class='inputbox' type='text' size='15' "; 
-			str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
-			str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'>";
+			str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;' "; 
+			str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;' ";
+			str += "onKeyPress='if (keypress(event)==13) { renamewaypoint("+i+"); }'>";
 			str += "&nbsp; <a href='javascript: renamewaypoint("+i+")'>";
 			str += "<span class='cancelbox'>&#x2714;</span> SAVE</a>&nbsp; ";
 			str += "<a class='blackbg' href='javascript: closebox(&quot;waypointrenamediv"+i+"&quot;);'>";
@@ -802,6 +812,11 @@ function waypointsmenu() {
 	}
 	
 	popupmenu("menu","show",null,null,str);
+}
+
+function waypointenternewname(i) {
+	openbox("waypointrenamediv"+i);
+	document.getElementById("waypointrename"+i).focus();
 }
 
 function waypointdelete(i) {
@@ -827,3 +842,28 @@ function gotowaypoint(i) {
 	var pose = [waypoints[i+1], waypoints[i+2], waypoints[i+3]];
 	rosmapsetgoal(pose);
 }
+
+function routesmenu() {
+	str = document.getElementById("routes_menu").innerHTML;
+	
+	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload", routesload);
+	else routespopulate(routesxml);
+	
+	popupmenu("menu","show",null,null,str);
+}
+
+function routesload() {
+	if (xmlhttp.readyState==4) {// 4 = "loaded"
+		if (xmlhttp.status==200) {// 200 = OK
+			routesxml = xmlhttp.responseText;
+			if (routesxml != "") routespopulate(routesxml);
+		}
+	}
+}
+
+function routespopulate(str) {
+	
+	
+}
+
+

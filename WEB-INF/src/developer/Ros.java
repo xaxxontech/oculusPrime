@@ -14,7 +14,7 @@ import java.nio.channels.FileChannel;
 import oculusPrime.State;
 import oculusPrime.Util;
 
-public class ros {
+public class Ros {
 	
 	private static State state = State.getReference();
 	
@@ -27,7 +27,12 @@ public class ros {
 	public static final String ROSMAPUPDATED = "rosmapupdated";
 	public static final String ROSMAPWAYPOINTS = "rosmapwaypoints";
 	public static final String NAVIGATIONENABLED ="navigationenabled";
-	public static final String ROSSETGOAL ="rossetgoal";
+	public static final String ROSSETGOAL = "rossetgoal";
+	public static final String ROSGOALSTATUS = "rosgoalstatus";
+	public static final String ROSGOALCANCEL = "rosgoalcancel";
+	
+	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
+	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
 
 	private static File lockfile = new File("/run/shm/map.raw.lock");
 	private static BufferedImage map = null;
@@ -40,9 +45,6 @@ public class ros {
 		if (!state.exists(ROSMAPINFO)) return null;
 		
 		String mapinfo[] = state.get(ROSMAPINFO).split(",");
-//		// width height res originx originy originth updatetime	
-//		int width = Integer.parseInt(mapinfo[0]);
-//		int height = Integer.parseInt(mapinfo[1]);
 
 		if (map == null || Double.parseDouble(mapinfo[6]) > lastmapupdate) {
 			Util.log("fetching new map");
@@ -52,24 +54,6 @@ public class ros {
 		
 		return map;
 		
-//		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-//		Graphics g = img.getGraphics();
-//    	g.drawImage(map, 0, 0, null);
-//	    g.dispose();
-//		
-//	    String odom[] = state.get(ROSODOM).split("_");  // x_y_th
-//	    
-//		double x = Double.parseDouble(mapinfo[3]) - Double.parseDouble(odom[0]);
-//		x /= -Double.parseDouble(mapinfo[2]);
-//		double y = Double.parseDouble(mapinfo[4]) - Double.parseDouble(odom[1]);
-//		y /= -Double.parseDouble(mapinfo[2]);
-//		y = height - y;
-//		
-//		Graphics2D g2d = img.createGraphics();
-//		g2d.setColor(new Color(255,0,0));  
-//		g2d.fill(new Rectangle2D.Double((int) x-5, (int) y-5, 10, 10));
-//
-//		return img;
 	}
 	
 	private static BufferedImage updateMapImg() {
@@ -194,18 +178,35 @@ public class ros {
 			if (!str.equals("")) state.set(ROSMAPWAYPOINTS, str.trim());			
 	}
 	
-	public static void setWaypointAsGoal(String name) {
+	public static boolean setWaypointAsGoal(String str) {
 		loadwaypoints();
-		if (!state.exists(ROSMAPWAYPOINTS)) return;
+		if (!state.exists(ROSMAPWAYPOINTS)) return false;
 		
+		boolean result = false;
+		
+		state.delete(ROSCURRENTGOAL);
+		
+		// try matching name
 		String waypoints[] = state.get(ROSMAPWAYPOINTS).split(",");
-		for (int i = 0 ; i < waypoints.length -4 ; i+=4) {
-			if (waypoints[i].equals(name)) {
+		for (int i = 0 ; i < waypoints.length -3 ; i+=4) {
+			if (waypoints[i].replaceAll("&nbsp;", " ").equals(str)) {
 				state.set(ROSSETGOAL, waypoints[i+1]+","+waypoints[i+2]+","+waypoints[i+3]);
+				result = true;
 				break;
 			}
 		}
+		
+		// if no name match, try coordinates
+		if (!result) {
+			String coordinates[] = str.split(",");
+			if (coordinates.length == 3) {
+				state.set(ROSSETGOAL, coordinates[0]+","+coordinates[1]+","+coordinates[2]);
+				result = true;
+			}
+		}
+		
 		state.delete(ROSMAPWAYPOINTS);
+		return result;
 	}
 	
 }

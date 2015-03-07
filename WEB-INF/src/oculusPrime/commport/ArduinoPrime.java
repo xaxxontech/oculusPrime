@@ -1,16 +1,11 @@
 package oculusPrime.commport;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.TooManyListenersException;
 import java.util.UUID;
 
 import jssc.SerialPortList;
 import developer.depth.Mapper;
-import developer.depth.ScanUtils;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;
@@ -99,6 +94,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	// tracking motor moves 
 	private static Timer cameraTimer = null;
+	private double lastodomangle = 0; // degrees
+	private int lastodomlinear = 0; // mm
 	
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
@@ -115,7 +112,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static int CAM_REVERSE = settings.getInteger(GUISettings.camreverse);;
 	public static int CAM_MAX; 
 	public static int CAM_MIN;
-	
 	
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
@@ -138,6 +134,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
 		state.put(State.values.direction, direction.stop.toString());
 
+		state.put(State.values.odomturnpwm, speedmed);
+		state.put(State.values.odomlinearpwm, speedmed);
+		state.set(State.values.odomupdated, false);
+		
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 		
 		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) connect();
@@ -286,12 +286,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		String[] s = response.split(" ");
 
 		if (s[0].equals("moved")) {
-			int d = (int) (Double.parseDouble(s[1]) * Math.PI * settings.getInteger(ManualSettings.wheeldiameter));
-			double a = Double.parseDouble(s[2]);
+			lastodomlinear = (int) (Double.parseDouble(s[1]) * Math.PI * settings.getInteger(ManualSettings.wheeldiameter));
+			lastodomangle = Double.parseDouble(s[2]);
 //			a *= state.getDouble(State.values.gyrocomp.toString()); // apply comp
-			a *= settings.getDouble(ManualSettings.gyrocomp.toString());
+			lastodomangle *= settings.getDouble(ManualSettings.gyrocomp.toString());
 			
-			state.set(State.values.distanceangle, d +" "+a);
+			state.set(State.values.distanceangle, lastodomlinear +" "+lastodomangle); //millimeters, degrees
+			state.set(State.values.odomupdated, true);
 			
 			// TODO: testing only ----------------
 			if (settings.getBoolean(ManualSettings.developer.name())) {
@@ -302,8 +303,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
 					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
-					dttl += d;
-					attl += a;
+					dttl += lastodomlinear;
+					attl += lastodomangle;
 					String dattl = dttl+" "+attl;
 					state.set(State.values.distanceanglettl,dattl);
 				}
@@ -313,8 +314,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) 
 			state.set(State.values.direction, direction.stop.toString());
 		else if (s[0].equals("stopdetectfail")) {
-//			application.message("FIRMWARE STOP DETECT FAIL", null, null);
-			Util.debug("FIRMWARE STOP DETECT FAIL", this);
+			if (settings.getBoolean(ManualSettings.debugenabled))
+				application.message("FIRMWARE STOP DETECT FAIL", null, null);
+//			Util.debug("FIRMWARE STOP DETECT FAIL", this);
 			if (state.getBoolean(State.values.stopbetweenmoves)) 
 				state.set(State.values.direction, direction.stop.toString());
 		}
@@ -507,7 +509,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				new Thread(new Runnable() {public void run() {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) {} // wait
+							System.currentTimeMillis() < stopwaiting) { } // wait
 					if (currentMoveID.equals(moveID))  goForward();
 					
 				} }).start();
@@ -518,12 +520,20 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.put(State.values.moving, true);
 		state.put(State.values.movingforward, true);
-//		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
 		int speed1 = (int) voltsComp((double) speedslow);
 		if (speed1 > 255) { speed1 = 255; }
 		
-		int speed2= state.getInteger(State.values.motorspeed);
+//		int speed2= state.getInteger(State.values.motorspeed);
+		
+		int speed2;
+		if (state.exists(State.values.odomlinearmpms.toString())) {
+			speed2 = state.getInteger(State.values.odomlinearpwm); 
+			tracklinearrate(moveID);
+		}
+		else speed2= state.getInteger(State.values.motorspeed);
+		
+		
 	
 		if (speed2<speed1) { 		// voltcomp on slow speed only
 			speed2 = (int) voltsComp((double) speed2);
@@ -535,24 +545,18 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			speed2 = speedmed;
 		}
 		
-//		application.gyroport.sendCommand(FORWARD);
-
+		// if already moving forward, go full speed
 		if (state.get(State.values.direction).equals(direction.forward.toString()) ) {
 			int[] comp = applyComp(speed2); 
 			int L, R;
-//			if (!state.getBoolean(State.values.controlsinverted)) {
-				L = comp[0];
-				R = comp[1];
-//			}
-//			else {
-//				R = comp[1];
-//				L = comp[0];
-//			}
+			L = comp[0];
+			R = comp[1];
+
 			sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 			return;
 		}
 		
-		// slow, un-comped 
+		// start slow, un-comped 
 		sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
 
 		final int spd = speed2;
@@ -565,7 +569,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					if (!currentMoveID.equals(moveID))  return;
 
-					// actual speed, un-comped
+		// actual speed, un-comped
 					sendCommand(new byte[] { FORWARD, (byte) spd, (byte) spd});
 
 				} 
@@ -581,14 +585,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					int[] comp = applyComp(spd); // actual speed, comped
 					int L,R;
-//					if (!state.getBoolean(State.values.controlsinverted)) {
-						L = comp[0];
-						R = comp[1];
-//					}
-//					else {
-//						R = comp[1];
-//						L = comp[0];
-//					}
+					L = comp[0];
+					R = comp[1];
+		// actual speed, comped
 					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 					
 				} 
@@ -629,7 +628,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				new Thread(new Runnable() {public void run() {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) {} // wait
+							System.currentTimeMillis() < stopwaiting) { } // wait
 					if (currentMoveID.equals(moveID))  goBackward();
 					
 				} }).start();
@@ -646,7 +645,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		int speed1 = (int) voltsComp((double) speedslow);
 		if (speed1 > 255) { speed1 = 255; }
 		
-		int speed2= state.getInteger(State.values.motorspeed);
+//		int speed2= state.getInteger(State.values.motorspeed);
+		int speed2;
+		if (state.exists(State.values.odomlinearmpms.toString())) {
+			speed2 = state.getInteger(State.values.odomlinearpwm); 
+			tracklinearrate(moveID);
+		}
+		else speed2= state.getInteger(State.values.motorspeed);
 	
 		if (speed2<speed1) { 		// voltcomp on slow speed only
 			speed2 = (int) voltsComp((double) speed2);
@@ -725,7 +730,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) {} // wait
+							System.currentTimeMillis() < stopwaiting) { } // wait
 					if (currentMoveID.equals(moveID))  turnRight();
 					
 				} }).start();
@@ -736,13 +741,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.set(State.values.direction, direction.right.toString()); // now go
 		
-//		int tmpspeed = turnspeed;
-//		int boost = TURNBOOST;
-//		int speed = state.getInteger(State.values.motorspeed);
-//		if (speed < turnspeed && (speed + boost) < speedfast)
-//			tmpspeed = speed + boost;
+		int tmpspeed;
+		if (state.exists(State.values.odomturndpms.toString())) {
+			tmpspeed = state.getInteger(State.values.odomturnpwm); 
+			trackturnrate(moveID);
+		}
+		else tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
 		
-		int tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
 		if (tmpspeed > 255) tmpspeed = 255;
 		
 		if (delay==0) {
@@ -781,7 +786,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) {} // wait
+							System.currentTimeMillis() < stopwaiting) { } // wait
 					if (currentMoveID.equals(moveID))  turnLeft();
 					
 				} }).start();
@@ -791,14 +796,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}	
 		
 		state.set(State.values.direction, direction.left.toString()); // now go
-
-//		int tmpspeed = turnspeed;
-//		int boost = TURNBOOST;
-//		int speed = state.getInteger(State.values.motorspeed);
-//		if (speed < turnspeed && (speed + boost) < speedfast)
-//			tmpspeed = speed + boost;
 		
-		int tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
+		int tmpspeed;
+		if (state.exists(State.values.odomturndpms.toString())) {
+			tmpspeed = state.getInteger(State.values.odomturnpwm);
+			trackturnrate(moveID);
+		}
+		else tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
+		
 		if (tmpspeed > 255) tmpspeed = 255;
 		
 		if (delay==0) {
@@ -812,6 +817,154 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			sendCommand(new byte[] { LEFTTIMED, (byte) tmpspeed, (byte) tmpspeed, (byte) d1, (byte) d2});
 		}
 
+	}
+	
+	// secondspertwopi=4.2
+	// secondsper 360 deg = 4.2
+	// degrees per second = 360/4.2 = 85.714
+	// degrees per ms = 0.0857 state odomturndpms 0.0857   state odomturnpwm 150
+	// state odometrybroadcast 250      odometrystart
+	
+	/*
+	 * to start:
+	 * state odomturndpms 0.0857
+	 * state odometrybroadcast 250
+	 * odometrystart
+	 * 
+	 * monitor with:
+	 * state odomturnpwm 
+	 * state odomlinearpwm
+	 * 
+	 * state odomlinearmpms
+	 * state odomturndpms
+	 */
+	private void trackturnrate(final UUID moveID) {
+		
+		new Thread(new Runnable() {public void run() {
+			final long turnstart = System.currentTimeMillis();
+			long start = turnstart;
+			final double tolerance = state.getDouble(State.values.odomturndpms.toString())*0.08;
+			final int pwmincr = 5;
+			final int accel = 500;
+			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
+			
+			while (currentMoveID.equals(moveID))  {
+
+				if (state.getBoolean(State.values.odomupdated)) {
+					state.set(State.values.odomupdated, false);
+					
+					long now = System.currentTimeMillis();
+					if (now - turnstart < accel) {
+						start = now;
+						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
+					}
+					
+					double rate = Math.abs(lastodomangle)/(now - start);
+
+					int currentpwm = state.getInteger(State.values.odomturnpwm);
+					int newpwm = currentpwm;
+
+					if (rate > targetrate + tolerance) {
+						newpwm = currentpwm - pwmincr;
+						if (newpwm < speedslow) newpwm = speedslow;
+					}
+					else if (rate < targetrate - tolerance) {
+						newpwm = currentpwm + pwmincr;
+						if (newpwm > 255) newpwm = 255;
+					}
+					else // within tolerance, kill thread to save cpu
+						break;
+					
+					// modify speed
+					state.set(State.values.odomturnpwm, newpwm);
+					if ( state.get(State.values.direction).equals(direction.left.toString()))
+						sendCommand(new byte[] { LEFT, (byte) newpwm, (byte) newpwm });
+					else 
+						sendCommand(new byte[] { RIGHT, (byte) newpwm, (byte) newpwm });
+					
+					start = now;
+					
+				}
+				
+			}
+		} }).start();
+		
+	}
+	
+	// example target rate = 3.2m/s = 0.00032 m/ms
+	/*
+	 * to start:
+	 * state odomlinearmpms 0.00032
+	 * state odometrybroadcast 250
+	 * odometrystart
+	 * 
+	 * monitor with:
+	 * state odomlinearpwm
+	 */
+	private void tracklinearrate(final UUID moveID) {
+		
+		new Thread(new Runnable() {public void run() {
+			final long linearstart = System.currentTimeMillis();
+			long start = linearstart;
+			final double tolerance = state.getDouble(State.values.odomlinearmpms.toString()) * 0.08; //0.000015625; //  meters per ms --- 5% of target speed 0.32m/s (0.00032
+			final int pwmincr = 5;
+			final int accel = 480;
+			final double targetrate = state.getDouble(State.values.odomlinearmpms.toString());
+			
+			while (currentMoveID.equals(moveID))  {
+
+				if (state.getBoolean(State.values.odomupdated)) {
+					state.set(State.values.odomupdated, false);
+					
+					long now = System.currentTimeMillis();
+					if (now - linearstart < accel) {
+						start = now;
+						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
+					}
+					
+					double meters = lastodomlinear/1000.0;
+					double rate = Math.abs(meters)/(now - start); // m per ms
+
+					int currentpwm = state.getInteger(State.values.odomlinearpwm);
+					int newpwm = currentpwm;
+
+					if (rate > targetrate + tolerance) {
+						newpwm = currentpwm - pwmincr;
+						if (newpwm < speedslow) newpwm = speedslow;
+					}
+					else if (rate < targetrate - tolerance) {
+						newpwm = currentpwm + pwmincr;
+						if (newpwm > 255) newpwm = 255;
+					}
+					else // within tolerance, kill thread (save cpu)
+						break;
+					
+					//modify speed
+					state.set(State.values.odomlinearpwm, newpwm);
+
+					int[] comp = applyComp(newpwm); // steering comp
+					int L,R;
+					byte dir;
+
+					
+					if ( state.get(State.values.direction).equals(direction.forward.toString())) {
+						dir = FORWARD;
+						L = comp[0];
+						R = comp[1];
+					} else  {
+						dir = BACKWARD;
+						L = comp[1];
+						R = comp[0];
+					}
+					
+					sendCommand(new byte[] { dir, (byte) R, (byte) L});
+					
+					start = now;
+				}
+
+			}
+		} }).start();
+		
 	}
 	
 	private class cameraUpTask extends TimerTask {
@@ -1063,7 +1216,12 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					n *= 4;
 				}
 				
-				Util.delay((int) voltsComp(n));
+				if (!state.exists(State.values.odomturndpms.toString())) { // normal
+					Util.delay((int) voltsComp(n));
+				} 
+				else { // continuous comp using gyro
+					Util.delay((long) (10 / state.getDouble(State.values.odomturndpms.toString())) );
+				}
 
 				if (state.getBoolean(State.values.movingforward)) goForward();
 				else stopGoing();
@@ -1079,7 +1237,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				final int tempspeed = state.getInteger(State.values.motorspeed);
 				state.put(State.values.motorspeed, speedfast);
 				
-				double n = fullrotationdelay * degrees / 360;
 				
 				if (settings.getBoolean(ManualSettings.developer.name())) {
 					if (Application.openNIRead.depthCamGenerating) { // openni
@@ -1104,7 +1261,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					case left: turnLeft(); 
 				}
 				
-				Util.delay((int) voltsComp(n));
+				if (!state.exists(State.values.odomturndpms.toString())) { // normal
+					double n = fullrotationdelay * degrees / 360;
+					Util.delay((int) voltsComp(n));
+				} 
+				else { // continuous comp using gyro
+					Util.delay((long) (degrees / state.getDouble(State.values.odomturndpms.toString())) );
+				}
 
 				stopGoing();
 				
@@ -1148,7 +1311,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				final int tempspeed = state.getInteger(State.values.motorspeed);
 				state.put(State.values.motorspeed, speedfast);
 				
-				double n = onemeterdelay * meters;
 				
 				// openni
 				short[] depthFrameBefore = null;
@@ -1205,7 +1367,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						goBackward(); 
 				}
 				
-				Util.delay((int) voltsComp(n));
+				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
+					double n = onemeterdelay * meters;
+					Util.delay((int) voltsComp(n));
+				} 
+				else { // continuous comp using gyro
+					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())) );
+				}
 
 				stopGoing();
 				
@@ -1393,11 +1561,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 							state.getLong(State.values.odometrybroadcast) > 0 ) {
 						Util.delay(state.getLong(State.values.odometrybroadcast));
 						odometryReport();
-						Util.debug("called odomreport");
 					}
-					else {
-						break;
-					}
+					else  break;
 				}
 				
 			} }).start();
@@ -1408,6 +1573,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		sendCommand(ODOMETRY_STOP_AND_REPORT);
 		state.set(State.values.odometry, false);
 		state.set(State.values.stopbetweenmoves, false);
+		state.delete(State.values.odomturndpms);
+		state.delete(State.values.odomlinearmpms);
 	}
 	
 	public void odometryReport() {

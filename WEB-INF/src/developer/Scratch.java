@@ -1,5 +1,7 @@
 package developer;
 
+import oculusPrime.State;
+
 
 public class Scratch {
 	
@@ -7,9 +9,14 @@ public class Scratch {
 	
     public static void main(String[] args) {
     	
-    	String s[] = {"asdf","ewrt","98756"};
-		
-		System.out.println( s.length );
+    	int i=0;
+    	while(i<10) {
+    		i++;
+    		if (i==7) continue;
+    		System.out.println(i);
+    		
+    	}
+    		
 
     }
 }

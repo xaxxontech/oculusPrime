@@ -20,8 +20,9 @@ import org.red5.server.api.service.IServiceCapableConnection;
 import org.jasypt.util.password.*;
 import org.red5.io.amf3.ByteArray;
 
+import developer.Navigation;
 import developer.UpdateFTP;
-import developer.ros;
+import developer.Ros;
 import developer.depth.Mapper;
 
 /** red5 application */
@@ -41,7 +42,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	//	private ScriptRunner scriptRunner = new ScriptRunner();	
 	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
-	// TODO: added to jet is started, could be anywhere, not refrenced in this file yet though.
+	// TODO: added to jet is started, could be anywhere, not referenced in this file yet though.
 	
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
@@ -58,14 +59,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
 	public static developer.depth.Stereo stereo = null;
+	private developer.Navigation navigation = null;
 
 	public static byte[] framegrabimg  = null;
-	public static Boolean passengerOverride = false;
+//	public static Boolean passengerOverride = false;
 	public static BufferedImage processedImage = null;
 	
 	public Application() {
 		super();
-		Util.log("==============Oculus Prime Java Start===============");
+		Util.log("\n==============Oculus Prime Java Start===============\n");
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		FrameGrabHTTP.setApp(this);
@@ -261,6 +263,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 		
+		if (settings.getBoolean(GUISettings.navigation))
+			navigation = new developer.Navigation(this);
+		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
@@ -388,14 +393,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 
 
-	public void driverCallServer(final PlayerCommands fn, final String str) {
-		passengerOverride = true;
-		playerCallServer(fn, str);
-		passengerOverride = false;
+	public void driverCallServer(PlayerCommands fn, String str) {
+		playerCallServer(fn, str, true);
 	}
 
 	/**
-	 * distribute commands from pla
+	 * distribute commands 
 	 * 
 	 * @param fn
 	 *            is the function to call
@@ -403,7 +406,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 * @param str
 	 *            is the parameter to pass onto the function
 	 */
-	public void playerCallServer(final String fn, final String str) {
+	public void playerCallServer(String fn, String str) {
 		
 		if (fn == null) return;
 		if (fn.equals("")) return;
@@ -416,7 +419,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("error: unknown command, "+fn,null,null);
 			return;
 		}
-		if (cmd != null) playerCallServer(cmd, str);	
+		if (cmd != null) playerCallServer(cmd, str, false);	
+	}
+	
+	public void playerCallServer(PlayerCommands fn, String str) {
+		playerCallServer(fn, str, false);
 	}
 
 	/**
@@ -428,7 +435,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 *            is the argument string to pass along
 	 */
 	@SuppressWarnings("incomplete-switch")
-	public void playerCallServer(final PlayerCommands fn, final String str) {
+	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
 			if ( ! loginRecords.isAdmin()){ 
@@ -450,15 +457,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		
 		// must be driver/non-passenger for all commands below 
-		if(!passengerOverride){
-			if (Red5.getConnectionLocal() != player && player != null) {
-				Util.log("passenger, command dropped: " + fn.toString(), this);
-				return;
-			}
+
+		if (Red5.getConnectionLocal() != player && player != null && !passengerOverride) {
+			Util.log("passenger, command dropped: " + fn.toString(), this);
+			return;
 		}
 		
 		switch (fn) {
 	
+		case move: {
+			// cancel nav if human remote client sends stop command
+			if (state.exists(Ros.ROSCURRENTGOAL) && !passengerOverride && 
+					str.equals(ArduinoPrime.direction.stop.toString())) 
+				Navigation.goalCancel();
+
+			move(str); 
+			break;
+		}
 		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
 		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
@@ -508,7 +523,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.lowres = true; // ?
 			break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
-		case move: move(str); break;
 		case nudge: nudge(str); break;
 		
 		case writesetting:
@@ -730,23 +744,31 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.shutdown();
 			break;
 		
-		case ros:
-			ros.launch(str);
+		case roslaunch:
+			Ros.launch(str);
 			messageplayer("roslaunch "+str+".launch", null, null);
 			break;
 		
 		case savewaypoints:
-			ros.savewaypoints(str);
+			Ros.savewaypoints(str);
 			messageplayer("waypoints saved", null, null);
 			break;
 			
 		case loadwaypoints:
-			ros.loadwaypoints();
-			if (state.exists(ros.ROSMAPWAYPOINTS)) messageplayer("waypoints loaded", null, null);
+			Ros.loadwaypoints();
+			if (state.exists(Ros.ROSMAPWAYPOINTS)) messageplayer("waypoints loaded", null, null);
 			break;
 			
 		case gotowaypoint:
-			ros.setWaypointAsGoal(str);
+			if (navigation != null) navigation.gotoWaypoint(str);
+			break;
+		
+		case startnav:
+			if (navigation != null) navigation.startNavigation(); 
+			break;
+		
+		case gotodock:
+			if (navigation != null) navigation.dock(); 
 			break;
 			
 		case clearmap: Mapper.clearMap();
@@ -1323,6 +1345,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			comport.stopGoing();
 			moveMacroCancel();
+			
+
 			message("command received: " + str, "motion", "STOPPED");
 			return;
 		}

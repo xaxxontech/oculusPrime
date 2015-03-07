@@ -26,6 +26,7 @@ public class State {
 		boottime, httpport, lastusercommand, // system
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
+		odomturndpms,odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		
 		localaddress, externaladdress, // network things 
 		signalnoise, signalstrength, singlalquality, signalspeed, ssid, gateway, ethernetaddress,
@@ -34,7 +35,9 @@ public class State {
 	};
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
-	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo; };	
+	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, 
+		odomturnpwm, odomupdated,  
+		;};	
 		
 	public static final int ERROR = -1;
 

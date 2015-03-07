@@ -28,7 +28,7 @@ public enum ManualSettings {
 		config.setProperty(email_to_address.name(), Settings.DISABLED);
 		// config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
-		config.setProperty(wheeldiameter.name(), "110");
+		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , "true");
 		return config;

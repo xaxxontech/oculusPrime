@@ -6,30 +6,19 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
-//import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-//import java.util.Random;
-//import java.util.Timer;
-//import java.util.TimerTask;
-
-
-
-
 
 import javax.imageio.ImageIO;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import developer.ros;
+import developer.Ros;
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
 
+@SuppressWarnings("serial")
 public class FrameGrabHTTP extends HttpServlet {
 	
 	private static Application app = null;
@@ -37,7 +26,6 @@ public class FrameGrabHTTP extends HttpServlet {
 	
 	private static int var;
 	private static BufferedImage radarImage = null;
-	private static Settings settings = Settings.getReference();
 	
 	public static void setApp(Application a) {
 		if(app != null) return;
@@ -93,13 +81,13 @@ public class FrameGrabHTTP extends HttpServlet {
                 processedImg(req,res);
             }
             else if (mode.equals("rosmap")) {
-            	Application.processedImage = ros.rosmapImg();
+            	Application.processedImage = Ros.rosmapImg();
             	processedImg(req,res);
             }
             else if (mode.equals("rosmapinfo")) { // xmlhttp text
         		res.setContentType("text/html");
         		PrintWriter out = res.getWriter();
-        		out.print(ros.mapinfo());
+        		out.print(Ros.mapinfo());
         		out.close();
             }
         }
