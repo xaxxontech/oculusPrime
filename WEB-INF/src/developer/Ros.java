@@ -30,6 +30,7 @@ public class Ros {
 	public static final String ROSSETGOAL = "rossetgoal";
 	public static final String ROSGOALSTATUS = "rosgoalstatus";
 	public static final String ROSGOALCANCEL = "rosgoalcancel";
+	public static final String NAVIGATIONROUTE = "navigationroute";
 	
 	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";

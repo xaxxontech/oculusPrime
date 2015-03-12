@@ -775,6 +775,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null) navigation.saveRoute(str); 
 			break;
 			
+		case runroute:
+			if (navigation != null) navigation.runRoute(str); 
+			break;
+
 		case clearmap: Mapper.clearMap();
 			break;
 			

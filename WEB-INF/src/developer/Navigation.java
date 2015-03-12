@@ -9,6 +9,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.PlayerCommands;
@@ -24,6 +32,7 @@ public class Navigation {
 	private static final String DOCK = "dock"; // waypoint name
 	private static final String redhome = System.getenv("RED5_HOME");
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
+	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 
    /** Constructor */
 	public Navigation(Application a){ 
@@ -122,7 +131,7 @@ public class Navigation {
 			
 			// success, shut down nav
 			Util.systemCall("pkill roslaunch");
-			Util.delay(3000);
+			Util.delay(5000);
 			
 			// dock
 			app.driverCallServer(PlayerCommands.streamsettingsset, "high");
@@ -183,5 +192,128 @@ public class Navigation {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public void runRoute(final String name) {
+		// build error checking into this (ignore duplicate waypoints, etc)
+		// assume goto dock at the end, whether or not dock is a waypoint
+		
+		if (state.getBoolean(State.values.autodocking)) {
+			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
+			return;
+		}
+		
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i< routes.getLength(); i++) {
+    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();  
+    		if (rname.equals(name)) {
+    			route = (Element) routes.item(i);
+    			break;
+    		}
+		}
+		
+		if (route == null) { // name not found
+			app.driverCallServer(PlayerCommands.messageclients, "route: "+name+" not found");
+			return;
+		}
+
+		final Element navroute = route;
+		state.set(Ros.NAVIGATIONROUTE, name);
+		app.driverCallServer(PlayerCommands.messageclients, "activating route: "+name);
+		
+		new Thread(new Runnable() { public void run() {
+
+			if (!waitForNavSystem()) {
+				app.driverCallServer(PlayerCommands.messageclients, "Unable to start navigation");
+				return;
+			}
+			
+			// undock if necessary
+			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+				state.set(State.values.motionenabled, true);
+				app.driverCallServer(PlayerCommands.forward, "0.7");
+				Util.delay(1000);
+			}
+			
+	    	NodeList waypoints = navroute.getElementsByTagName("waypoint");
+	    	
+	    	int wpnum = 0;
+	    	while (wpnum < waypoints.getLength()) {
+		    	if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+		    	if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
+
+	    		String wpname = 
+	    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+
+				wpnum ++;
+	    		
+	    		if (wpname.equals(DOCK))  break;
+
+	    		
+	    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
+					app.driverCallServer(PlayerCommands.messageclients, "route "+name+" unable to set waypoint");
+					continue;
+	    		}
+
+	    		state.set(Ros.ROSCURRENTGOAL, "pending");
+	    		
+				long start = System.currentTimeMillis();
+				while (state.exists(Ros.ROSCURRENTGOAL) 
+						&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  } // wait
+			
+				if (state.exists(Ros.ROSCURRENTGOAL) || !state.exists(Ros.ROSGOALSTATUS)) { // this will probably never happen
+					app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
+					continue;
+				}
+				
+				if (!state.get(Ros.ROSGOALSTATUS).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
+					app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
+					continue;
+				}
+	    		
+				Util.delay(1000);
+				
+	    	}
+	    	
+	    	if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+	    	if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
+	    	
+			dock();
+			
+			// wait while autodocking does its thing 
+			long start = System.currentTimeMillis();
+			while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
+				if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+				if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
+				if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) break;
+				Util.delay(100); 
+			}
+				
+			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+				state.delete(Ros.NAVIGATIONROUTE);
+				return; 
+			}
+			
+			// delay 
+			String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
+	    	long timebetween = Long.parseLong(min) * 1000 * 60;
+			app.driverCallServer(PlayerCommands.messageclients, min+" until next route: "+name);
+	    	start = System.currentTimeMillis();
+			while (System.currentTimeMillis() - start < timebetween) {
+				if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+				if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
+				Util.delay(100); 
+			}
+			
+			app.driverCallServer(PlayerCommands.messageclients, "restarting route "+name);
+			runRoute(name);
+		
+		}  }).start();
+		
+//		app.driverCallServer(PlayerCommands.messageclients, "route "+name+" ended");
+//		if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+//		if (state.get(Ros.NAVIGATIONROUTE).equals(name))  state.delete(Ros.NAVIGATIONROUTE);
 	}
 }

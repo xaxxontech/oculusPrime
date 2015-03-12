@@ -9,10 +9,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
 import java.util.Vector;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 public class Util {
 	
@@ -431,6 +439,24 @@ public class Util {
 	public static void shutdown() {
 		String str  = Settings.redhome + Settings.sep + "systemshutdown.sh"; 
 		Util.systemCall(str);
+	}
+	
+	public static Document loadXMLFromString(String xml)
+	{
+		try {
+	    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+	    DocumentBuilder builder;
+		
+			builder = factory.newDocumentBuilder();
+
+	    InputSource is = new InputSource(new StringReader(xml));
+
+	    return builder.parse(is);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 }

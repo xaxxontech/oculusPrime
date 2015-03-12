@@ -884,6 +884,7 @@ function routespopulate() {
 		var name = routes[i].getElementsByTagName("rname")[0].childNodes[0].nodeValue;
 		str += "<td><b>"+name+"</b> &nbsp; &nbsp; </td>";
 		str += "<td><a class='blackbg' href='javascript: editroute(&quot;"+name+"&quot;, routesxml);'>edit</a></td>";
+		str += "<td> &nbsp; <a class='blackbg' href='javascript: deleteroute(&quot;"+i+"&quot;);'>delete</a></td>";
 		str += "</tr>";
 	}
 	str += "</table>";
@@ -897,12 +898,13 @@ function editroute(name, rxml) {
 		temproutesxml = loadXMLString("<routeslist></routeslist>");
 	}
 	else { // clone object to temp
-		temproutesxml = loadXMLString(rxml.getElementsByTagName("routeslist")[0].outerHTML);
+		temproutesxml = loadXMLString(xmlToString(rxml.getElementsByTagName("routeslist")[0]));
 	}
 	
 	if (name == null || name == "") { // new route
 		name = "new route";
 		var routeslist = temproutesxml.getElementsByTagName("routeslist")[0];
+		
 		var newroute = temproutesxml.createElement("route");
 
 		var newname = temproutesxml.createElement("rname");
@@ -917,10 +919,12 @@ function editroute(name, rxml) {
 		newroute.appendChild(newminbetween);
 		
 		routeslist.appendChild(newroute);
+		
+		var routes = routeslist.getElementsByTagName("route");
+		id = routes.length-1;
 	}
 	
 	var routes = temproutesxml.getElementsByTagName("route");
-
 	var route = null;
 	for (var r=0; r < routes.length; r++ ) {
 		if (routes[r].getElementsByTagName("rname")[0].childNodes[0].nodeValue == name) {
@@ -929,6 +933,7 @@ function editroute(name, rxml) {
 		}
 	}
 	if (route == null)  { debug("xmldom error"); return; } // something horribly wrong
+//	var route = temproutesxml.getElementsByTagName("route")[id];
 	
 	var str = document.getElementById("edit_route_menu").innerHTML;
 	popupmenu("menu","show",null,null,str);
@@ -1012,12 +1017,19 @@ function editroute(name, rxml) {
 
 }
 
+function deleteroute(routenum) {
+	var routeslist = routesxml.getElementsByTagName("routeslist")[0];
+	routeslist.removeChild(routeslist.getElementsByTagName("route")[routenum]);
+	saveroutes();
+}
+
 function routewaypointdelete(routenum, waypointnum) {
 	saveeditrouteformprogress(routenum);
  
 	var route = temproutesxml.getElementsByTagName("route")[routenum];
 	route.removeChild(route.getElementsByTagName("waypoint")[waypointnum]);
 	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+//	editroute(routenum, temproutesxml);
 	
 }
 
@@ -1050,6 +1062,7 @@ function waypointreorder(routenum, waypointnum, incr) {
 	route.replaceChild(tempwaypoint2, routewaypoints[waypointnum]);
 	
 	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+//	editroute(routenum, temproutesxml);
 }
 
 
@@ -1110,7 +1123,6 @@ function loadXMLString(txt) {
 		xmlDoc.async = false;
 		xmlDoc.loadXML(txt);
 	}
-	alert(xmlDoc.outerHTML);
 	return xmlDoc;
 }
 
@@ -1126,16 +1138,17 @@ function xmlToString(xmlElement) {
 }
 
 function saveroutes(routenum) {
-	saveeditrouteformprogress(routenum);
-	routesxml = loadXMLString(temproutesxml.getElementsByTagName("routeslist")[0].outerHTML);
+	if (routenum != null) {
+		saveeditrouteformprogress(routenum);
+		routesxml = loadXMLString(xmlToString(temproutesxml.getElementsByTagName("routeslist")[0]));
+	}
 	
 	var str = "<?xml version='1.0' encoding='UTF-8'?>";
 	var routeslist = routesxml.getElementsByTagName("routeslist");
-	str += routeslist[0].outerHTML;
+	str += xmlToString(routeslist[0]);
 	// send via socket
 	callServer("saveroute", str);
 	routesmenu();
-	
 }
 
 
