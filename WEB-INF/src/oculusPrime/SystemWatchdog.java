@@ -230,6 +230,7 @@ public class SystemWatchdog {
 	
 	private void callForHelp(String subject, String body) {
 		application.driverCallServer(PlayerCommands.messageclients, body);
+		Util.log("callForHelp() "+subject+" "+body);
 
 		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
 		

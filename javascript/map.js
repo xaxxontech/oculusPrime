@@ -32,7 +32,9 @@ var goalposesettime = 0;
 var waypoints = [];
 var pendingwaypoint = null;
 var mapshowwaypoints = true;
+
 var routesxml = null;
+var temproutesxml;
 
 function rosmap(mode) {
 	
@@ -45,7 +47,7 @@ function rosmap(mode) {
 	var img = new Image();
 	img.src = 'frameGrabHTTP?mode=rosmap&date='+ date;
 	
-	callServer("loadwaypoints","");
+	if (waypoints.length == 0) 	callServer("loadwaypoints","");
 	
 	img.onload= function() {
 		// defaults
@@ -103,7 +105,7 @@ function rosmap(mode) {
 			document.getElementById("rosmaprobot").onmousemove = null; }
 
 		rosmapupdate = null;
-		openxmlhttp("frameGrabHTTP?mode=rosmapinfo", rosinfo);
+		openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
 	}
 	
 }
@@ -113,7 +115,7 @@ function rosmapImgReload() {
 	
 	rosimgreloadtimer = null; // ?
 	date = new Date().getTime();
-	rosmapimgnext.src = "frameGrabHTTP?mode=rosmap&date="+date;
+	rosmapimgnext.src = "frameGrabHTTP?mode=rosmap&date="+date.toString();
 	rosmapimgnext.onload = function() {
 		var img = document.getElementById('rosmapimg');
 		img.src = rosmapimgnext.src;
@@ -211,7 +213,7 @@ function rosinfo() {
 			}
 			rosmapupdate = updatetime;
 			
-			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo', rosinfo);", 510);
+			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+t+"', rosinfo);", 510);
 		}
 	}
 }
@@ -657,6 +659,7 @@ function loadrosmapwindowpos() {
 	mapimgdivheight = parseInt(values[2]);
 	mapimgleft = parseInt(values[3]);
 	mapimgtop = parseInt(values[4]);
+	
 }
 
 function defaultrosmapwindowpos() {
@@ -844,25 +847,294 @@ function gotowaypoint(i) {
 }
 
 function routesmenu() {
+	if (waypoints.length == 0) { 
+		message("waypoints unavailble","orange");
+		return;
+	}
+	
 	str = document.getElementById("routes_menu").innerHTML;
-	
-	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload", routesload);
-	else routespopulate(routesxml);
-	
 	popupmenu("menu","show",null,null,str);
+
+	var date = new Date().getTime();
+	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload&date="+date, routesload);
+	else routespopulate(routesxml);
 }
 
 function routesload() {
 	if (xmlhttp.readyState==4) {// 4 = "loaded"
 		if (xmlhttp.status==200) {// 200 = OK
-			routesxml = xmlhttp.responseText;
-			if (routesxml != "") routespopulate(routesxml);
+			str = xmlhttp.responseText;
+			if (str != "") {
+				routesxml = loadXMLString(str);
+				routespopulate();
+			}
 		}
 	}
 }
 
-function routespopulate(str) {
+function routespopulate() {
+
+	var str = "";
+	var routes = routesxml.getElementsByTagName("route");
 	
+	if (routes.length == 0) return;
+	
+	str += "<table><tr>";
+	for (var i=0; i < routes.length; i++ ) {
+		var name = routes[i].getElementsByTagName("rname")[0].childNodes[0].nodeValue;
+		str += "<td><b>"+name+"</b> &nbsp; &nbsp; </td>";
+		str += "<td><a class='blackbg' href='javascript: editroute(&quot;"+name+"&quot;, routesxml);'>edit</a></td>";
+		str += "</tr>";
+	}
+	str += "</table>";
+	
+	document.getElementById('routeslist').innerHTML = str;
+	popupmenu('menu','resize');
+}
+
+function editroute(name, rxml) {
+	if (rxml == null) { // if == null here, means it doesn't exist yet, create
+		temproutesxml = loadXMLString("<routeslist></routeslist>");
+	}
+	else { // clone object to temp
+		temproutesxml = loadXMLString(rxml.getElementsByTagName("routeslist")[0].outerHTML);
+	}
+	
+	if (name == null || name == "") { // new route
+		name = "new route";
+		var routeslist = temproutesxml.getElementsByTagName("routeslist")[0];
+		var newroute = temproutesxml.createElement("route");
+
+		var newname = temproutesxml.createElement("rname");
+		var newtext = temproutesxml.createTextNode(name);
+		newname.appendChild(newtext);
+		
+		var newminbetween = temproutesxml.createElement("minbetween");
+		var newval = temproutesxml.createTextNode(60);
+		newminbetween.appendChild(newval);
+
+		newroute.appendChild(newname);
+		newroute.appendChild(newminbetween);
+		
+		routeslist.appendChild(newroute);
+	}
+	
+	var routes = temproutesxml.getElementsByTagName("route");
+
+	var route = null;
+	for (var r=0; r < routes.length; r++ ) {
+		if (routes[r].getElementsByTagName("rname")[0].childNodes[0].nodeValue == name) {
+			route = routes[r];
+			break;
+		}
+	}
+	if (route == null)  { debug("xmldom error"); return; } // something horribly wrong
+	
+	var str = document.getElementById("edit_route_menu").innerHTML;
+	popupmenu("menu","show",null,null,str);
+
+	// route name
+	var name = document.getElementById("routename");
+	name.value = route.getElementsByTagName("rname")[0].childNodes[0].nodeValue;
+	name.focus();
+	
+	// minutes between route end>start
+	var min = document.getElementById("routeminbetween");
+	min.value = route.getElementsByTagName("minbetween")[0].childNodes[0].nodeValue;
+	
+	// waypoints
+	var routewaypoints = route.getElementsByTagName("waypoint"); 
+	str = "";
+	for (var i=0; i < routewaypoints.length; i++ ) { 	// iterate thru waypoints
+		
+		// waypoint name (change to dropdown box)
+		str += "<table><tr><td style='height: 20px'></td></tr></table>";
+		str += "<b>Waypoint "+(i+1)+"</b>: <select id='waypointname"+i+"'>";
+		var name = routewaypoints[i].getElementsByTagName("wpname")[0].childNodes[0].nodeValue; 
+		for (var k = 0 ; k <= waypoints.length - 4 ; k += 4) {
+			str += "<option value='"+waypoints[k].replace(/&nbsp;/g, ' ') +"' ";
+//			str += "<option value='"+waypoints[k]+"' ";
+			if (name.replace(/(\s|_)/g, '&nbsp;')==waypoints[k]) str += "selected='selected' ";
+			str += ">"+waypoints[k]+"</option>";
+		}
+		
+		// delete, up, down
+		str += "</select> &nbsp; ";
+		str += "<a class='blackbg' href='javascript: routewaypointdelete("+r+", "+i+");'>delete</a> &nbsp; ";
+		if (i != 0) str += "<a class='blackbg' href='javascript: waypointreorder("+r+", "+i+", -1);'>up</a> &nbsp; ";
+		else str += "<span style='color: #444444'>up</span> &nbsp; ";
+		if (i != routewaypoints.length-1)
+			str += "<a class='blackbg' href='javascript: waypointreorder("+r+", "+i+", 1);'>down</a>";
+		else str += "<span style='color: #444444'>down</span>";
+		
+		// waypoint duration
+		var n = routewaypoints[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
+		str += "<br>stay here for (seconds): ";
+		str += "<input id='waypointseconds"+i+"' type='text' size='4' onKeyPress='if (keypress(event)==13) ";
+		str += "{ routesave(); }' class='inputbox' onfocus='keyboard(&quot;disable&quot;); ";
+		str += "this.style.backgroundColor=&quot;#000000&quot;;' onblur='keyboard(&quot;enable&quot;); ";
+		str += "this.style.backgroundColor=&quot;#151515&quot;;' value='"+n+"' ><br>";
+		
+		// waypoint actions
+		var availableactions = ["rotate", "email", "rss", "motion", "not motion", "sound", "not sound" ];
+		str += "<table><tr valign='top'><td>actions: </td><td>";
+		var actions = routewaypoints[i].getElementsByTagName("action");
+		if (actions.length == 0) str += "&nbsp; none";
+		for (var a=0; a<actions.length; a++) {
+			str += "&nbsp; <span style='white-space: nowrap'><span class='wpaction'>";
+			str += routewaypoints[i].getElementsByTagName("action")[a].childNodes[0].nodeValue+"</span>";
+			str += "<a style='border-left: 2px solid #000' href='javascript: waypointactiondel("+r+", "+i+", "+a+");'>";
+			str += "<span class='wpaction'><b>X</b></span></a></span>";
+			if ((a+1) % 3 == 0) str += "<br>";
+		}
+		str += "</td><td style='padding-left: 20px'>";
+		str += "<select id='waypointactionnew"+i+"' onchange='javascript: waypointactionaddnew("+r+", "+i+", this.id);'>";
+		str += "<option value='' selected='selected'>&lt; add action</option>";
+		for (var wpa=0; wpa < availableactions.length; wpa++) {
+			str += "<option value='"+availableactions[wpa]+"'>"+availableactions[wpa]+"</option>";
+		}
+		str += "</select></td></tr></table>";
+		
+		
+	}
+	
+	str += "<table><tr><td style='height: 15px'></td></tr></table>";
+	str += "<a class='blackbg' href='javascript: newroutewaypoint("+r+");'>+add waypoint</a><br>";
+	str += "<table><tr><td style='height: 10px'></td></tr></table>";
+	str += "<a class='blackbg' href='javascript: saveroutes("+r+")'>";
+	str += "<span class='cancelbox'>&#x2714;</span> SAVE ROUTE</a>";
+
+	
+	// save, dock between time
+
+	document.getElementById("edit_route_contents").innerHTML = str;
+	popupmenu('menu','resize');
+
+}
+
+function routewaypointdelete(routenum, waypointnum) {
+	saveeditrouteformprogress(routenum);
+ 
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	route.removeChild(route.getElementsByTagName("waypoint")[waypointnum]);
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+	
+}
+
+function saveeditrouteformprogress(routenum) {
+	// save route name 
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	route.getElementsByTagName("rname")[0].childNodes[0].nodeValue = document.getElementById("routename").value;
+	route.getElementsByTagName("minbetween")[0].childNodes[0].nodeValue = document.getElementById("routeminbetween").value;
+	
+	var routewaypoints = route.getElementsByTagName("waypoint");
+	for (i=0; i < routewaypoints.length; i++ ) { 	// iterate thru waypoints
+		// save waypoint name
+		var n = document.getElementById("waypointname"+i).value;
+		routewaypoints[i].getElementsByTagName("wpname")[0].childNodes[0].nodeValue = n;
+		
+		// save duration
+		n = document.getElementById("waypointseconds"+i).value;
+		routewaypoints[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue = n;
+	}
+}
+
+function waypointreorder(routenum, waypointnum, incr) {
+	saveeditrouteformprogress(routenum);
+	
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	var routewaypoints = route.getElementsByTagName("waypoint");
+	var tempwaypoint1 = routewaypoints[waypointnum].cloneNode(true);	
+	var tempwaypoint2 = routewaypoints[waypointnum+incr].cloneNode(true);
+	route.replaceChild(tempwaypoint1, routewaypoints[waypointnum+incr]);
+	route.replaceChild(tempwaypoint2, routewaypoints[waypointnum]);
+	
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+}
+
+
+function newroutewaypoint(routenum) {
+	saveeditrouteformprogress(routenum);
+	
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	
+	var newwaypoint = temproutesxml.createElement("waypoint");
+
+	var newwpname = temproutesxml.createElement("wpname");
+	var newtext = temproutesxml.createTextNode(waypoints[0]);
+	newwpname.appendChild(newtext);
+	newwaypoint.appendChild(newwpname);
+
+	var newduration = temproutesxml.createElement("duration");
+	var newtext2 = temproutesxml.createTextNode(0);
+	newduration.appendChild(newtext2);
+	newwaypoint.appendChild(newduration);
+	
+	route.appendChild(newwaypoint);
+	
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+}
+
+function waypointactiondel(routenum, waypointnum, actionnum) {
+	saveeditrouteformprogress(routenum);
+	
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	var waypoint = route.getElementsByTagName("waypoint")[waypointnum];
+	waypoint.removeChild(waypoint.getElementsByTagName("action")[actionnum]);
+	
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+}
+
+// 		str += "<select id='waypointactionnew"+i+"' onchange='javascript: waypointactionaddnew("+r+", "+i+", this.id);'>";
+function waypointactionaddnew(routenum, waypointnum, id) {
+	saveeditrouteformprogress(routenum);
+	
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	var waypoint = route.getElementsByTagName("waypoint")[waypointnum];
+	var newaction = temproutesxml.createElement("action");
+	var text = document.getElementById(id).value; 
+	var newtext = temproutesxml.createTextNode(text);
+	newaction.appendChild(newtext);
+	waypoint.appendChild(newaction);
+	
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+}
+
+
+function loadXMLString(txt) {
+	if (window.DOMParser) {
+		parser = new DOMParser();
+		xmlDoc = parser.parseFromString(txt, "text/xml");
+	} else { // old ie
+		xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+		xmlDoc.async = false;
+		xmlDoc.loadXML(txt);
+	}
+	alert(xmlDoc.outerHTML);
+	return xmlDoc;
+}
+
+function xmlToString(xmlElement) {
+    if (typeof XMLSerializer == 'function') {
+        var serializer = new XMLSerializer();
+        var strXml = serializer.serializeToString(xmlElement);
+    }
+    else
+        var strXml = xmlElement.xml;
+    
+	return strXml;
+}
+
+function saveroutes(routenum) {
+	saveeditrouteformprogress(routenum);
+	routesxml = loadXMLString(temproutesxml.getElementsByTagName("routeslist")[0].outerHTML);
+	
+	var str = "<?xml version='1.0' encoding='UTF-8'?>";
+	var routeslist = routesxml.getElementsByTagName("routeslist");
+	str += routeslist[0].outerHTML;
+	// send via socket
+	callServer("saveroute", str);
+	routesmenu();
 	
 }
 

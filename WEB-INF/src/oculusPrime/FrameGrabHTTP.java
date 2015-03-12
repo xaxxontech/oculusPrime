@@ -14,6 +14,7 @@ import javax.imageio.ImageIO;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import developer.Navigation;
 import developer.Ros;
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
@@ -88,6 +89,12 @@ public class FrameGrabHTTP extends HttpServlet {
         		res.setContentType("text/html");
         		PrintWriter out = res.getWriter();
         		out.print(Ros.mapinfo());
+        		out.close();
+            }
+            else if (mode.equals("routesload")) {
+        		res.setContentType("text/html");
+        		PrintWriter out = res.getWriter();
+        		out.print(Navigation.routesLoad());
         		out.close();
             }
         }

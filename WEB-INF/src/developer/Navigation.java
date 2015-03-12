@@ -1,5 +1,14 @@
 package developer;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.PlayerCommands;
@@ -12,10 +21,9 @@ import oculusPrime.commport.ArduinoPrime;
 public class Navigation {
 	protected Application app = null;
 	private static State state = State.getReference();
-//	private static final int linearspeed = 150;
-//	private static final long mspermeter = 3200; // calibration, automate? (do in java, faster)
 	private static final String DOCK = "dock"; // waypoint name
-
+	private static final String redhome = System.getenv("RED5_HOME");
+	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 
    /** Constructor */
 	public Navigation(Application a){ 
@@ -38,12 +46,7 @@ public class Navigation {
 			// undock if necessary
 			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				state.set(State.values.motionenabled, true);
-//				app.driverCallServer(PlayerCommands.speed, Integer.toString(linearspeed));
-//				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
-//				Util.delay((long) (mspermeter*0.7));
-//				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 				app.driverCallServer(PlayerCommands.forward, "0.7");
-		
 				Util.delay(1000);
 			}
 			
@@ -149,5 +152,36 @@ public class Navigation {
 	
 	public static void goalCancel() {
 		state.set(Ros.ROSGOALCANCEL, true);
+	}
+	
+	public static String routesLoad() {
+		String result = "";
+
+		BufferedReader reader;
+		try {
+			reader = new BufferedReader(new FileReader(navroutesfile));
+			String line = "";
+			while ((line = reader.readLine()) != null) 	result += line;
+			reader.close();
+
+		} catch (FileNotFoundException e) {
+			Util.debug("no navroutes file found");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return result;
+	}
+	
+	public void saveRoute(String str) {
+		try {
+			FileWriter fw = new FileWriter(navroutesfile);
+			fw.append(str);
+			fw.close();
+			app.driverCallServer(PlayerCommands.messageclients, "routes saved");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

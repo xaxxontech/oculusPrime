@@ -57,7 +57,7 @@ public enum PlayerCommands { // all valid commands
     
     // experimental (undocumented)
     opennisensor, clearmap, stereo, roslaunch, savewaypoints, loadwaypoints, gotowaypoint, startnav,
-    gotodock,
+    gotodock, saveroute,
     
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness,

@@ -22,6 +22,8 @@ a { color: #cccccc; background-color: transparent; text-decoration: none; }
 a:link { color: #cccccc; background-color: transparent; text-decoration: none; }
 a:visited { color: #cccccc; background-color: transparent; text-decoration: none; }
 a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /* #0711AF */
+select  { background-color: #cccccc; color: #000000; border: 1px solid #666666; padding-left: 3px;
+	margin-bottom: 1px; margin-top: 1px; font-size: 14px; }
 .keycmds { color: #666666; font-size: 11px; }
 .status { font-size: 11px; line-height: 15px; text-transform: uppercase}
 .status_title { font-size: 11px; line-height: 18px; text-transform: uppercase; color: #28872f;   }
@@ -47,7 +49,7 @@ a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /*
 .dkbluelink:visited { color: #484fcd; background-color: transparent; text-decoration: none; }
 .dkbluelink:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
 .inputbox { background-color: #151515; color: #ffffff; border: 1px solid #666666; padding-left: 3px;
-	margin-bottom: 1px; margin-top: 1px}
+	margin-bottom: 1px; margin-top: 1px; font-size: 14px; }
 /* .cancelbox { border: 1px solid #cccccc; padding-left: 3px; padding-right: 3px } */
 .cancelbox { color: #000000; background-color: #cccccc; padding-left: 3px; padding-right: 3px }
 .zoombutton { color: #cccccc; background-color: transparent; text-decoration: none; }
@@ -62,6 +64,7 @@ a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /*
 .forwardhighlitebox { width: 38px; height: 40px; z-index: -1; }
 .grey { color: #666666; }
 .slider { color: #cccccc; background-color: #111111; height: 26px; text-align: center; cursor: pointer; }
+.wpaction { color: #ffffff; background-color: #555555; padding-left: 3px; padding-right: 3px }
 </style>
 <script src="javascript/client.js" type="text/javascript"></script>
 <script src="javascript/map.js" type="text/javascript"></script>
@@ -638,8 +641,9 @@ onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vfps" typ
 quality <span style="font-size: 11px; color: #777777">(1-100)</span> 
 <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vquality" type="text" size="4" >
-<div><a class="blackbg" href="javascript: streamset('customupdate');">
+<div>
 <table><tr><td style="height: 7px"></td></tr></table>
+<a class="blackbg" href="javascript: streamset('customupdate');">
 <span class="cancelbox">&#x2714;</span> send values</a> </div>
 </div>
 
@@ -689,7 +693,7 @@ onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="medoffset
 
 steering comp <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="steeringcomp" type="text" size="4" >
-(format: L/R% eg. &quotL5&quot) <br>
+(format: L/R% eg. &quot;L5&quot;) <br>
 
 nudge delay ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="nudgedelay" type="text" size="4" ><br>
@@ -716,7 +720,7 @@ camera tilt reverse position: <input class="inputbox" onfocus="keyboard('disable
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="camreversepos" type="text" size="4" ><br>
 
 test tilt position: <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#151515';"" id="tilttestposition" type="text" size="4" >
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="tilttestposition" type="text" size="4" >
 <a class="blackbg" href="javascript: tilttest();">go</a>
 
 <table><tr><td style="height: 7px"></td></tr></table>
@@ -787,7 +791,7 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 Change password:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 username: <span id="user_name" style="color: #45F239; text-transform: uppercase;"></span><br>
-new password: <input id="userpass" class="inputbox" type="password" name="password"size="10" 
+new password: <input id="userpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 re-enter new password: <input id="userpass_again" class="inputbox" type="password" name="password" size="10"
@@ -808,7 +812,7 @@ onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 Change password:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 username: <span id="user_name_nonadmin" style="color: #45F239; text-transform: uppercase;"></span><br>
-new password: <input id="userpass" class="inputbox" type="password" name="password"size="10" 
+new password: <input id="userpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 re-enter new password: <input id="userpass_again" class="inputbox" type="password" name="password" size="10"
@@ -832,7 +836,7 @@ Add new user<br/>
 username: <input id="newusername" class="inputbox" type="text" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
-new password: <input id="newuserpass" class="inputbox" type="password" name="password"size="10" 
+new password: <input id="newuserpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 re-enter new password: <input id="newuserpass_again" class="inputbox" type="password" name="password" size="10"
@@ -1019,7 +1023,30 @@ Route List:
 <table><tr><td style="height: 10px"></td></tr></table>
 <div id="routeslist">no routes defined</div>
 <br>
-<a class="blackbg" href="javascript: createroute();">create new route</a><br>
+<a class="blackbg" href="javascript: editroute('', routesxml);">create new</a>  &gt;<br>
+</div>
+
+<!-- edit route menu -->
+<div id="edit_route_menu" style="display: none;">
+<a class="blackbg"
+href="javascript: routesmenu();">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Route Editor:
+<table><tr><td style="height: 10px"></td></tr></table>
+Name:
+<input id="routename" type="text" size="10" onKeyPress="if (keypress(event)==13) { routesave(); }"
+class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';">
+&nbsp; &nbsp;
+Minutes between runs:
+<input id="routeminbetween" type="text" size="4" onKeyPress="if (keypress(event)==13) { routesave(); }"
+class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';">
+
+<div id="edit_route_contents" style="line-height: 23px;"></div>
 </div>
 
 <!--  overlay -->
@@ -1045,7 +1072,7 @@ class="inputbox" onfocus="this.style.backgroundColor='#000000';" onblur="this.st
 <tr><td colspan="2" style="height: 3px"></td></tr>
 <tr>
 <td>password:</td>
-<td><input id="pass" type="password" name="password"size="10" onKeyPress="if (keypress(event)==13) { loginsend(); }"
+<td><input id="pass" type="password" name="password" size="10" onKeyPress="if (keypress(event)==13) { loginsend(); }"
 class="inputbox" onfocus="this.style.backgroundColor='#000000';" onblur="this.style.backgroundColor='#151515';"></td>
 </tr></table> 
 
