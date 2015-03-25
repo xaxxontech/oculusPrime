@@ -300,7 +300,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		Util.log("serial in: " + response, this);
+//		Util.log("serial in: " + response, this);
 
 		String s[] = response.split(" ");
 		

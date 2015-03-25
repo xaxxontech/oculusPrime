@@ -20,7 +20,6 @@
 		<load-on-startup>2</load-on-startup>
 	</servlet>
 	
-	<!-- start of added by colin adamson -->
 	<servlet>
 		<servlet-name>rtmpPortRequest</servlet-name>
 		<servlet-class>
@@ -46,18 +45,15 @@
 		<servlet-name>frameGrabHTTP</servlet-name>
 		<url-pattern>/frameGrabHTTP</url-pattern>
 	</servlet-mapping>
-	<!--end of added by colin adamson-->
 	
-	<!--  brad  -->
+	
 	<servlet>
-		<servlet-name>authGrab</servlet-name>
-		<servlet-class>
-			oculusPrime.AuthGrab
-		</servlet-class>
+		<servlet-name>DashboardServlet</servlet-name>
+		<servlet-class>oculusPrime.DashboardServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
-		<servlet-name>authGrab</servlet-name>
-		<url-pattern>/AuthGrab</url-pattern>
+		<servlet-name>DashboardServlet</servlet-name>
+		<url-pattern>/dashboard</url-pattern>
 	</servlet-mapping>
 	
 	

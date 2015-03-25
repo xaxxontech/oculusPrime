@@ -5,7 +5,7 @@ import java.util.Properties;
 /** place extensions to settings here */
 public enum ManualSettings {
 	
-	motorport, powerport, developer, debugenabled, diagnostic, telnetport, wheeldiameter,  
+	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,  
 	gyrocomp, alertsenabled,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
 	; 
@@ -15,7 +15,6 @@ public enum ManualSettings {
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
-		config.setProperty(diagnostic.name(), "false");
 		config.setProperty(developer.name(), "false");
 		config.setProperty(debugenabled.name(), "false");
 		config.setProperty(motorport.name(), Settings.ENABLED);
@@ -26,7 +25,6 @@ public enum ManualSettings {
 		config.setProperty(email_password.name(), Settings.DISABLED);
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
 		config.setProperty(email_to_address.name(), Settings.DISABLED);
-		// config.setProperty(commandport.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");

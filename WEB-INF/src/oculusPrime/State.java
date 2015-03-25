@@ -1,5 +1,6 @@
 package oculusPrime;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Properties;
@@ -9,6 +10,7 @@ import java.util.Vector;
 public class State {
 	
 	public enum values{ 
+		
 		motionenabled, moving, movingforward, motorport, cameratilt, motorspeed,   // motors
 
 		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics, // dock 
@@ -29,15 +31,79 @@ public class State {
 		odomturndpms,odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		
 		localaddress, externaladdress, // network things 
-		signalnoise, signalstrength, singlalquality, signalspeed, ssid, gateway, ethernetaddress,
+		signalnoise, signalstrength, signalquality, signalspeed, ssid, gateway, // ethernetaddress,
 		
 		;
 	};
+	
+	public String toDashboard(){	
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\">");
+		
+		str.append("<tr><td><b>ssid: </b>" + get(values.ssid) + " <b>address: </b>" + get(values.gateway)
+				+ "<td><b>lan: </b>" + get(values.localaddress) + " <b>wan: </b>" + get(values.externaladdress)
+				+ "</tr>");
+			
+		str.append("<tr><td><b>quality: </b>" + get(values.signalquality) + "% <b>speed: </b>" + get(values.signalspeed) 
+				+ "<td><b>noise: </b>" + get(values.signalnoise) + " dbm <b>strength: </b>" + get(values.signalstrength) 
+				+ "</tr>");
+		
+		str.append("<tr><td><b>video mode: </b>" + get(values.videosoundmode) + " <b>stream: </b>" + get(values.stream)
+				+ "<td><b>driverstream: </b>" + get(values.driverstream) + " <b>volume: </b>" + get(values.volume)
+			    + "<td><b>busy: </b>" + get(values.framegrabbusy)  
+				+ "</tr>");
+		
+		str.append("<tr>" 
+	       	    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
+			    + "<td><b>login: </b>" + new Date(getLong(values.logintime)) 
+		        + "<td><b>uptime: </b>" + (getUpTime()/1000)/60 + " min <b>driver: </b>" + get(values.driver) + " <b>telnet: </b>" + get(values.telnetusers) 
+				+ "</tr>");
+	
+		str.append("<tr><td><b>motor port: </b>" + get(values.motorport) 
+				+ "<td><b>motion: </b>" + get(values.motionenabled) + " <b>moving: </b>" + get(values.moving) 
+				+ "<td><b>direction: </b>" + get(values.direction) + " <b>speed: </b>" + get(values.motorspeed) 
+				+ "</tr>");
+		
+		str.append("<tr><td><b>power port: </b>" + get(values.powerport)
+				+ "<td><b>volts: </b>" + get(values.battvolts) + " <b>life:</b> " + get(values.batterylife) 
+				+ "<td><b>wall power: </b>" + get(values.wallpower) + " <b>status: </b>" + get(values.dockstatus)
+				+ "</tr>");
+		
+		/*
+		str.append("<tr><td><b>" + values.gateway    + "</b><td>" + get(values.gateway) 
+				+ "<td><b>" + values.localaddress    + "</b><td>" + get(values.localaddress) 
+				+ "<td><b>" + values.externaladdress + "</b><td>" + get(values.externaladdress)
+			//	+ "<td><b>" + values.ethernetaddress + "</b><td>" + get(values.ethernetaddress) 
+				+ "<td><b>" + values.ssid            + "</b><td>" + get(values.ssid) + "</tr>");
+		
+		str.append("<tr><td><b>" + values.signalquality + "</b><td>" + get(values.signalquality) 
+				+ "<td><b>" + values.signalnoise        + "</b><td>" + get(values.signalnoise) 
+				+ "<td><b>" + values.signalstrength     + "</b><td>" + get(values.signalstrength) 
+				+ "<td><b>" + values.signalspeed        + "</b><td>" + get(values.signalspeed) + "</tr>");
+		
+		str.append("<tr><td><b>" + values.powerport + "</b><td>" + get(values.powerport)
+				+ "<td><b>" + values.battvolts      + "</b><td>" + get(values.battvolts)  
+				+ "<td><b>" + values.batterylife    + "</b><td>" + get(values.batterylife)  
+		//		+ "<td><b>" + values.wallpower   + "</b><td>" + get(values.wallpower) 
+				+ "<td><b>" + values.batterylife    + "</b><td>" + get(values.batterylife) + "</tr>");
+		*/
+		
+		//str.append("\n<tr><td colspan=\"11\">" + get(values.batteryinfo) + "</tr>");
+		//if(exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
+		
+		// if(exists(values.)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
+
+		str.append("</table>\n");
+		return str.toString();
+	}
+	
+/*	
+	private boolean exists(values key) {
+		return exists(key.name());
+	}
+*/
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
-	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, 
-		odomturnpwm, odomupdated,  
-		;};	
+	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, odomturnpwm, odomupdatedz ;};	
 		
 	public static final int ERROR = -1;
 
@@ -58,7 +124,6 @@ public class State {
 	private State() {
 		props.put(values.boottime.name(), String.valueOf(System.currentTimeMillis()));	
 	}
-	
 	
 	public Properties getProperties(){
 		return (Properties) props.clone();
@@ -104,7 +169,7 @@ public class State {
 //		return
 //	}
 	
-	/** */
+	/**
 	@Override
 	public String toString(){	
 		String str = "";
@@ -114,19 +179,42 @@ public class State {
 			str += (key + " " + props.get(key) + "<br>");
 		}
 		return str;
+	} 
+	
+	public String toTable(){	
+		StringBuffer str = new StringBuffer("<table>");
+		Set<String> keys = props.keySet();
+		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
+			String key = i.next();
+			String value = props.get(key); 
+			str.append("<tr><td>" + key + "<td>" + value + "</tr>");
+		}
+		str.append("</table>\n");
+		return str.toString();
+	}
+	*/
+	
+	
+	public String toHTML(){ 
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\">");
+		for (values key : values.values()) { 
+			if(props.containsKey(key.name())) str.append("<tr><td> " + key.name() + "<td>" + props.get(key.name()));
+			else str.append("<tr><td> " + key.name() + "<td><b>NULL</b>");
+		}	
+		
+		str.append("</table>\n");
+		return str.toString();
 	}
 	
-//	public boolean block(final values member, final boolean target, int timeout){
-//		return block(member, Boolean.valueOf(target), timeout);
-//	}
+	
 	
 	/**
-	 * block until timout or until member == target
+	 * block until timeout or until member == target
 	 * 
 	 * @param member state key
 	 * @param target block until timeout or until member == target
-	 * @param timeout
-	 * @return
+	 * @param timeout is the ms to wait before giving up 
+	 * @return true if the member was set to the target in less than the given timeout 
 	 */
 	public boolean block(final values member, final String target, int timeout){
 		
@@ -136,22 +224,19 @@ public class State {
 			
 			// keep checking 
 			current = get(member); 
-			
 			if(current!=null){
 				if(target.equals(current)) return true;
 				if(target.startsWith(current)) return true;
 			}
 				
-			//
 			// TODO: FIX with a call back?? 
-			//
 			Util.delay(10);
 			if (System.currentTimeMillis()-start > timeout){ 
-//				Util.debug("block() timeout: " + member.name(), this);
+				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}
-	}
+	} 
 	
 	/** Put a name/value pair into the configuration */
 	public synchronized void set(final String key, final String value) {
