@@ -42,7 +42,7 @@ public class Client {
 		if(args.length==0) {	
 			
 			// force red5 path 
-			oculusPrime.Settings settings = new oculusPrime.Settings("../../");
+			oculusPrime.Settings settings = oculusPrime.Settings.getReference();
 			
 			// login info from settings
 			ip = "127.0.0.1";
