@@ -121,7 +121,7 @@ public class AutoDock { // implements Observer {
 					if (!state.getBoolean(State.values.controlsinverted)) { // need to face backwards
 									
 						app.message(null, "autodocklock", s);
-						state.set(State.values.autodocking, false);
+//						state.set(State.values.autodocking, false);
 						comport.clickSteer((x - imgwidth/2) * rescomp, 0);
 						
 						new Thread(new Runnable() {
@@ -137,7 +137,7 @@ public class AutoDock { // implements Observer {
 									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									comport.rotate(ArduinoPrime.direction.left, 180);
 									Thread.sleep(comport.fullrotationdelay/2+2000);
-									state.set(State.values.autodocking, true);
+//									state.set(State.values.autodocking, true);
 									dockGrab(dockgrabmodes.find, 0, 0);
 									
 								} catch (Exception e) { e.printStackTrace(); }
