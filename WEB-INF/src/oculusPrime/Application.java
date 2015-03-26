@@ -221,20 +221,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 		String videosoundmode=state.get(State.values.videosoundmode.name());
 		if (videosoundmode == null) { 
 			videosoundmode="high";  
-			if (Settings.os.equals("linux")) { // TODO: or motion/sound activity threshold enabled
+//			if (Settings.os.equals("linux")) { // TODO: or motion/sound activity threshold enabled
 //				videosoundmode="low";
-				videosoundmode="high";
-			}
+	
+			videosoundmode="high";
+//			}
 		}
 		setGrabberVideoSoundMode(videosoundmode);
 
 		docker = new AutoDock(this, grabber, comport, powerport);
 		loginRecords.setApplication(this);
 
-		if (Settings.os.equals("linux")) {
-			str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
-			Util.systemCall(str);
-		}
+//		if (Settings.os.equals("linux")) {
+	
+		str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
+		Util.systemCall(str);
 		
 	}
  
@@ -331,10 +332,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	/** */
 	public void playersignin() {		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode="high"; // windows, default
-		if (Settings.os.equals("linux")) {
-			videosoundmode="low";
-		}
+		String videosoundmode="low";
 
 		if (player != null) {
 			pendingplayer = Red5.getConnectionLocal();
@@ -1316,13 +1314,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		f = new File(Settings.redhome + Settings.sep + "restart"); // windows & linux
 		try {
-			if (!f.exists()) {
-				f.createNewFile();
-			}
-			if (Settings.os.equals("linux")) {
-				Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
-			}
-			else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
+			
+			if (!f.exists()) f.createNewFile();
+			
+			//if (Settings.os.equals("linux")) {
+				
+			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
+			
+			///else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -1336,10 +1335,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		
 		try {
-			if (Settings.os.equalsIgnoreCase("linux")) {
-				Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
-			}
-			else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
+			//if (Settings.os.equalsIgnoreCase("linux")) {
+				
+			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
+			
+			//}
+			//else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
 		} catch (Exception e) { e.printStackTrace(); }
 	}
 

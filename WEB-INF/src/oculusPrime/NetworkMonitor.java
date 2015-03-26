@@ -208,7 +208,7 @@ public class NetworkMonitor {
 			System.out.println("callNetworkTool: " + e.getLocalizedMessage());
 		}		
 		
-		Util.debug("callNetworkTool: lines copied: " + networkData.size(), this);
+		// Util.debug("callNetworkTool: lines copied: " + networkData.size(), this);
 	}
 	
 	private void disconnecteddWAN(){	
@@ -264,7 +264,7 @@ public class NetworkMonitor {
 
 	private void parseWLAN(){
 		
-		Util.debug("parseWLAN: " + wlanData.size(), this);
+		// Util.debug("parseWLAN: " + wlanData.size(), this);
 		
 		for(int i = 0 ; i < wlanData.size() ; i++){
 		
@@ -281,14 +281,14 @@ public class NetworkMonitor {
 			if(line.contains("Speed: ")){
 				String speed = line.substring(line.indexOf("Speed: ")+7).trim();
 				// Util.debug("parseWLAN: speed: " + speed, this);
-				if( ! state.equals(values.signalspeed, speed))
+				// if( ! state.equals(values.signalspeed, speed))
 					state.set(values.signalspeed, speed); 			
 			}
 			
 			if(wlanData.get(i).startsWith("Address: ")){
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
 				// Util.debug("parseWLAN: addr: " + addr, this);
-				if( ! state.equals(values.localaddress, addr))
+				// if( ! state.equals(values.localaddress, addr))
 					state.set(values.localaddress, addr);
 			}
 			
@@ -296,7 +296,7 @@ public class NetworkMonitor {
 			if(line.startsWith("Gateway: ")){
 				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
 				Util.debug("parseWLAN: gate: " + gate, this);
-				if(state.contains(values.gateway)) 
+				// if(state.contains(values.gateway)) 
 					// if( ! state.get(values.gateway).equals(gate))
 						state.set(values.gateway, gate);
 			}

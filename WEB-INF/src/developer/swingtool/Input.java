@@ -19,7 +19,7 @@ public class Input extends JTextField implements KeyListener {
 	private String userInput = null;
 	private int ptr, stateptr = 0;
 
-	public Input(Socket s, final String usr, final String pass) {
+	public Input(Socket s) {
 		super();
 		socket = s;
 
@@ -31,7 +31,7 @@ public class Input extends JTextField implements KeyListener {
 		}
 
 		// if connected, login now
-		out.println(usr + ":" + pass);
+		// out.println(usr + ":" + pass);
 
 		// listen for key input
 		addKeyListener(this);

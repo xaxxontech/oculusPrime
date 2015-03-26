@@ -1,16 +1,21 @@
 package oculusPrime.commport;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TooManyListenersException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jssc.SerialPort;
+import jssc.SerialPortEvent;
+import jssc.SerialPortEventListener;
+import jssc.SerialPortException;
+import jssc.SerialPortList;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;
@@ -18,13 +23,7 @@ import oculusPrime.ManualSettings;
 import oculusPrime.PlayerCommands;
 import oculusPrime.Settings;
 import oculusPrime.State;
-import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
-import jssc.SerialPort;
-import jssc.SerialPortEvent;
-import jssc.SerialPortEventListener;
-import jssc.SerialPortException;
-import jssc.SerialPortList;
 
 
 public class ArduinoPower implements SerialPortEventListener  {
@@ -37,7 +36,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
 	public static final int BAUD = 115200;
 	public static final String FIRMWARE_ID = "oculusPower";
-//	public static final String ENABLED = "enabled";
 	public static final byte INITIATESHUTDOWN= 'p';
 	public static final byte CONFIRMSHUTDOWN= 'w'; 
 	public static final byte GET_VERSION = '7';
@@ -49,6 +47,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte GET_PRODUCT = 'x';
 	public static final int COMM_LOST = -99;
 
+	private static final long ROLLOVER = 500; // max file size for logger 
 	
 	protected Application application = null;
 	protected State state = State.getReference();
@@ -64,6 +63,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected static Settings settings = Settings.getReference();
 	protected String portname = settings.readSetting(ManualSettings.powerport);
 	protected String version = null;
+	protected RandomAccessFile logger;
 	
 	// errors
 	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
@@ -112,14 +112,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 			pwrerr.put(entry.getValue(), entry.getKey());
 		}
 		
-		
 		if(!settings.readSetting(ManualSettings.powerport).equals(Settings.DISABLED)) connect();
 		
 		if (isconnected) { 
 			initialize();
 			new WatchDog().start();
 		}
-		
 	}
 	
 	public void initialize() {
@@ -127,12 +125,41 @@ public class ArduinoPower implements SerialPortEventListener  {
 		Util.debug("initialize", this);
 		sendCommand(READERROR);
 		lastReset = System.currentTimeMillis();
+			
+		File logfile = new File(Settings.powerlog);
+		if(logfile.exists()){
+			if(logfile.length() > ROLLOVER){
+				Util.log("file too larg, rolling over: "+Settings.powerlog, this);    
+				logfile.delete();
+			}
+		}
 		
+		try {
+			logger = new RandomAccessFile(Settings.powerlog, "rw");
+		} catch (Exception e) {
+			Util.log(e.getMessage(), this);
+		}
+	}
+	   
+	private void log(String data) {  
+		try {
+	
+			logger.seek(logger.length());
+			logger.writeBytes(new Date().toString() + " " + data + "\r\n");
+	    
+		} catch (Exception e) {
+			Util.log(e.getMessage(), this);    
+		}
 	}
 	
-	/**
-	 * port query and connect 
-	 */
+	private void closeLog(){
+		try {
+			logger.close();
+		} catch (IOException e) {
+			Util.log(e.getMessage(), this);    
+		}
+	}
+	
 	private void connect() {
 		isconnected = false;
 		
@@ -177,7 +204,7 @@ public class ArduinoPower implements SerialPortEventListener  {
     				if (device.equals(FIRMWARE_ID)) {
 
     					Util.log("power board connected to  "+portNames[i], this);
-    					
+    					log("power board connected to  "+portNames[i]);
     					lastRead = System.currentTimeMillis();
     					isconnected = true;
     					state.set(State.values.powerport, portNames[i]);
@@ -203,25 +230,25 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 		public void run() {
 			
-//			Util.delay(Util.ONE_MINUTE);
-//			lastReset = now;
 			lastHostHeartBeat = System.currentTimeMillis();
-			Util.debug("run", this);
+			// Util.debug("run", this);
 			
 			while (true) {
 				long now = System.currentTimeMillis();
 
-				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" past reset delay", this); 
+				if (now - lastReset > RESET_DELAY && isconnected) log(FIRMWARE_ID+" past reset delay"); 
 				
 				if (state.exists(oculusPrime.State.values.powererror.toString())) {
 					String msg = "power PCB code: " + state.get(oculusPrime.State.values.powererror);
 					application.message(msg, null, null);
-					application.messageGrabber(msg, "");
+					application.messageGrabber(msg, "");	
+					log(msg);
 				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
 					application.message("power PCB timeout", "battery", "timeout");
+					log("power PCB timeout");
 					reset();
 				}
 				
@@ -229,6 +256,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 						!state.getBoolean(oculusPrime.State.values.autodocking) ){  
 					application.message("power PCB periodic reset", "battery", "resetting");
 					Util.log("power PCB periodic reset", this);
+					log("power PCB periodic reset");
 					lastReset = now;
 					reset();
 				}
@@ -239,10 +267,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 				}
 				
 				if (now - lastRead > ERROR_TIME_OUT && !isconnected) { // comm with pcb lost!
-					if (state.exists(oculusPrime.State.values.powererror.toString())) {
+					if (state.exists(oculusPrime.State.values.powererror.toString())){ 
 						state.set(oculusPrime.State.values.powererror, ","+COMM_LOST);
+					} else { 
+						state.set(oculusPrime.State.values.powererror, COMM_LOST);
 					}
-					else state.set(oculusPrime.State.values.powererror, COMM_LOST);
 				}
 
 				Util.delay(WATCHDOG_DELAY);
@@ -251,7 +280,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 	}
 	
 	public void reset() {
-
 			new Thread(new Runnable() {
 				public void run() {
 					writeStatusToEeprom(); // this may throw error if port lost
@@ -263,7 +291,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 					initialize();
 				}
 			}).start();
-
 	}
 	
 		
@@ -290,7 +317,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 		} catch (SerialPortException e) {
 			e.printStackTrace();
 		}
-		
 	}
 	
 	
@@ -300,12 +326,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		Util.log("serial in: " + response, this);
-
+		log("serial in: " + response);
+		
 		String s[] = response.split(" ");
 		
 		if(s[0].equals("reset")) {
-//			application.message(this.getClass().getName() + "arduinOculusPower board reset", null, null);
 			version = null;
 			sendCommand(GET_VERSION); 
 			return;
@@ -332,6 +357,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (IGNORE_ERROR.contains(e) && !state.exists(State.values.powererror.toString())) {
 					sendCommand(CLEARALLWARNINGERRORS);
 					Util.log("Power warning "+e+", "+pwrerr.get(e)+", cleared"); 
+					log("Power warning "+e+", "+pwrerr.get(e)+", cleared"); 
 					return;
 				}
 			}
@@ -370,6 +396,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (!state.exists(State.values.driver.toString()) && state.getInteger(State.values.telnetusers) ==0 &&
 						settings.getBoolean(GUISettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) { 
 					Util.log("unplanned undock, trying redock",this);
+					log("unplanned undock, trying redock");
 					application.driverCallServer(PlayerCommands.redock, null);
 				}
 				
@@ -390,6 +417,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		else if (s[0].equals("shutdown")) {
 			sendCommand(CONFIRMSHUTDOWN);
 			Util.log("POWER BOARD CALLED SYSTEM SHUTDOWN");
+			log("POWER BOARD CALLED SYSTEM SHUTDOWN");
 			Util.shutdown();
 		}
 		
@@ -442,13 +470,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 			    
 			}
 		}
-			
-		
-
 	}
 	
 	protected void disconnect() {
 		try {
+			closeLog();
 			isconnected = false;
 			serialPort.closePort();
 			state.delete(State.values.powerport);
@@ -471,7 +497,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 		String text = "sendCommand(): " + (char)cmd[0] + " ";
 		for(int i = 1 ; i < cmd.length ; i++) 
 			text += ((byte)cmd[i] & 0xFF) + " ";   // & 0xFF converts to unsigned byte
-		Util.log(text, this);
+		
+		log(text);
 		
 		final byte[] command = cmd;
 		new Thread(new Runnable() {

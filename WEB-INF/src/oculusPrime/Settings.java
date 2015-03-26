@@ -12,12 +12,12 @@ public class Settings {
 	public final static String sep = System.getProperty("file.separator");
 	public static String redhome = System.getenv("RED5_HOME");
 	public static String framefile = System.getenv("RED5_HOME") + sep+"webapps"+sep+"oculus"+sep+"images"+sep+"framegrab.jpg";
-	public static String loginactivity = redhome+sep+"log"+sep+"loginactivity.txt";
+	// public static String loginactivity = redhome+sep+"log"+sep+"loginactivity.txt";
+	public static String powerlog = redhome+sep+"log"+sep+"power.log";
 	public static String settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
 	public static String stdout = redhome+sep+"log"+sep+"jvm.stdout";
 	public static String ftpconfig = redhome+sep+"conf"+sep+"ftp.properties";
 	
-	public static String os = "windows" ; 
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
 	public static final int ERROR = -1;
@@ -28,12 +28,12 @@ public class Settings {
 		return singleton;
 	}
 	
+//	private static String os = "windows" ; // 
 	private HashMap<String, String> settings = new HashMap<String, String>(); 
 	
-	/** only check for settings file once */ 
 	private Settings(){
 		
-		if (System.getProperty("os.name").matches("Linux")) { os = "linux"; }
+//		if (System.getProperty("os.name").matches("Linux")) { os = "linux"; }
 		
 		// be sure of basic configuration 
 		if(! new File(settingsfile).exists()) createFile(settingsfile); 
@@ -181,10 +181,8 @@ public class Settings {
 		}
 	}
 	
-	/**
-	 * Organize the settings file into 3 sections. Use Enums's to order the file
-	 */
-	public synchronized void writeFile(String path) {
+	/** Organize the settings file into 3 sections. Use Enums's to order the file */
+	public synchronized void writeFile(){ // String path) {
 		
 		try {
 			
@@ -222,30 +220,21 @@ public class Settings {
 					fw.append("pass" + j + " " + users[j][1] + "\r\n");
 				}
 			} 
-			
 			fw.close();
 			
 			// now swap temp for real file
-			new File(path).delete();
+			new File(settingsfile).delete();
 			new File(temp).renameTo(new File(settingsfile));
 			new File(temp).delete();
 
+			importFile();
+			
 		} catch (Exception e) {
 			Util.log("Settings.writeFile(): " + e.getMessage(), this);
 		}
 	}
 
-	/**
-	 * Organize the settings file into 3 sections. Use Enums's to order the file
-	 */
-	public synchronized void writeFile() {
-		writeFile(settingsfile);
-	}
-	
-	/**
-	 * @return a list of user/pass values from the existing settings file
-	 */
-	public String[][] getUsers() {
+	private String[][] getUsers() {
 
 		int i = 0; // count users
 		for (;; i++)
@@ -262,16 +251,7 @@ public class Settings {
 
 		return users;
 	}
-
-	/**
-	 * modify value of existing settings file
-	 * 
-	 * @param setting
-	 *            is the key to be written to file
-	 * @param value
-	 *            is the integer to parse into a string before being written to
-	 *            file
-	 */
+ 
 	public void writeSettings(String setting, int value) {
 
 		String str = null;
@@ -282,8 +262,7 @@ public class Settings {
 			return;
 		}
 
-		if (str != null)
-			writeSettings(setting, str);
+		if (str != null) writeSettings(setting, str);
 	}
 
 	/**

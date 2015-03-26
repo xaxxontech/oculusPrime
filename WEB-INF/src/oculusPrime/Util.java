@@ -325,16 +325,15 @@ public class Util {
 	 * @param percent
 	 */
 	public static void setSystemVolume(int percent, Application app){
-		String str;
-		if (Settings.os.equals("linux")) {
-			str = "amixer set Master "+percent+"%";
-		}
-		else  {
-			float vol = (float) percent / 100 * 65535;
-			str = "nircmdc.exe setsysvolume "+ (int) vol; //w in
-		}
+		String str = "amixer set Master "+percent+"%";
+		
+		//	float vol = (float) percent / 100 * 65535;
+		//	str = "nircmdc.exe setsysvolume "+ (int) vol; //w in
+		// }
+		
 		Util.systemCall(str);
 		Settings settings = Settings.getReference();
+		
 		//private static final boolean debug = settings.getBoolean(ManualSettings.debugenabled);
 		settings.writeSettings(GUISettings.volume.name(), percent);
 	}
@@ -379,7 +378,7 @@ public class Util {
 	    
 		return result;
 	}
-	
+		
 	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
         BufferedInputStream in = null;
         FileOutputStream fout = null;
@@ -441,19 +440,19 @@ public class Util {
 		Util.systemCall(str);
 	}
 	
-	public static Document loadXMLFromString(String xml)
-	{
+	public static Document loadXMLFromString(String xml){
 		try {
-	    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-	    DocumentBuilder builder;
+	    
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder builder;
 		
 			builder = factory.newDocumentBuilder();
 
-	    InputSource is = new InputSource(new StringReader(xml));
+			InputSource is = new InputSource(new StringReader(xml));
 
-	    return builder.parse(is);
+			return builder.parse(is);
+		
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
