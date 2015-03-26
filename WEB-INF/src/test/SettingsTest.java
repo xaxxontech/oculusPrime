@@ -15,7 +15,7 @@ import org.junit.Test;
 public class SettingsTest {
 
 	// force red5 path 
-	oculusPrime.Settings settings = new oculusPrime.Settings("../../");
+	oculusPrime.Settings settings = null; // new oculusPrime.Settings.getReference();// "../../");
 
 	@Before
 	public void setUp() {

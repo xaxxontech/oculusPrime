@@ -12,9 +12,9 @@ import oculusPrime.State.values;
 public class NetworkMonitor { 
 	
 	protected static final long WAN_POLL_DELAY_MS = Util.ONE_HOUR; // Util.ONE_DAY;
-	protected static final long POLL_DELAY_MS = 5000;
+	protected static final long POLL_DELAY_MS = Util.ONE_MINUTE;
 
-	protected static final String WLAN = "wlan2";
+	protected static final String WLAN = "wlan";
 	protected static final String ETH = "eth0";
 	
 	Vector<String> accesspoints = new Vector<String>();
