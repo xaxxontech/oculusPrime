@@ -1001,10 +1001,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	public void camCommand(cameramove move){ 
 
-		if (state.getBoolean(State.values.autodocking)) {
-			application.messageplayer("command dropped, autodocking", null, null);
-			return;
-		}
+// 		moved condition to application comman dswithch
+//		if (state.getBoolean(State.values.autodocking)) {
+//			application.messageplayer("command dropped, autodocking", null, null);
+//			return;
+//		}
 		
 		// no camera moves in reverse except horiz, which cancels reverse mode
 		if (state.getBoolean(State.values.controlsinverted) && !move.equals(cameramove.horiz)) {
@@ -1202,6 +1203,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			public void run() {
 				
 				int n = nudgedelay;
+				boolean movingforward = state.getBoolean(State.values.movingforward);
 				
 				switch (dir) {
 				case right: turnRight(); break;
@@ -1220,10 +1222,16 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay((int) voltsComp(n));
 				} 
 				else { // continuous comp using gyro
-					Util.delay((long) (10 / state.getDouble(State.values.odomturndpms.toString())) );
+					if (movingforward && (dir.equals(direction.right) || dir.equals(direction.left))) {
+						long stopwaiting = System.currentTimeMillis()+LINEAR_STOP_DELAY;
+						while( System.currentTimeMillis() < stopwaiting &&
+								state.get(State.values.direction).equals(direction.forward.toString())  ) {  } // wait for stop
+					}
+					Util.delay((long) (12.5 / state.getDouble(State.values.odomturndpms.toString())) );
+					if (movingforward)  state.set(State.values.movingforward, true);
 				}
 
-				if (state.getBoolean(State.values.movingforward)) goForward();
+				if (movingforward) goForward();
 				else stopGoing();
 				
 			}

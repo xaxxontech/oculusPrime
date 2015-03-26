@@ -105,7 +105,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		temp.put("ERROR_CONSISTENT_OVER_CHARGE",					83);
 		
 		// java only, not used by firmware:
-		temp.put("ERROR_NO_COMM_WITH_POWER_PCB",                    COMM_LOST); // 99, java only
+		temp.put("ERROR_NO_COMM_WITH_POWER_PCB",                    COMM_LOST); // -99, java only
 		
 		// inverse: 
 		for(Map.Entry<String, Integer> entry : temp.entrySet()){

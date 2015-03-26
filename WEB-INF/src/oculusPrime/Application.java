@@ -334,7 +334,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// set video, audio quality mode in grabber flash, depending on server/client OS
 		String videosoundmode="low";
 
-		if (player != null) {
+		if (player != null) { // pending connection
 			pendingplayer = Red5.getConnectionLocal();
 			pendingplayerisnull = false;
 
@@ -357,7 +357,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageGrabber(str, null);
 				sc.invoke("videoSoundMode", new Object[] { videosoundmode });
 			}
-		} else {
+		} else { // driver connected
 			player = Red5.getConnectionLocal();
 			state.set(State.values.driver.name(), state.get(State.values.pendinguserconnected));
 			state.delete(State.values.pendinguserconnected);
@@ -367,7 +367,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				authtoken = null;
 			}
 			str += " streamsettings " + streamSettings();
-			messageplayer(state.get(State.values.driver.name()) + " connected to OCULUS", "multiple", str);
+			messageplayer(state.get(State.values.driver.name()) + " connected to OCULUS PRIME", "multiple", str);
 			initialstatuscalled = false;
 			
 			str = state.get(State.values.driver.name()) + " connected from: " + player.getRemoteAddress();
@@ -383,7 +383,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			sc.invoke("videoSoundMode", new Object[] { videosoundmode });
 			Util.log("player video sound mode = "+videosoundmode, this);
 			
-			state.delete(State.values.controlsinverted);
+//			state.delete(State.values.controlsinverted);
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
 		}
 	}
@@ -468,11 +468,25 @@ public class Application extends MultiThreadedApplicationAdapter {
 					str.equals(ArduinoPrime.direction.stop.toString())) 
 				Navigation.goalCancel();
 
+			if (state.exists(Ros.NAVIGATIONROUTE) && !passengerOverride && 
+					str.equals(ArduinoPrime.direction.stop.toString())) {
+				messageplayer("navigation route "+state.get(Ros.NAVIGATIONROUTE)+" cancelled by stop", null, null);
+				state.delete(Ros.NAVIGATIONROUTE);
+				
+			}
+				
+			
 			move(str); 
 			break;
 		}
 		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
-		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
+		case cameracommand: 
+			if (state.getBoolean(State.values.autodocking)) {
+				messageplayer("command dropped, autodocking", null, null);
+				return;
+			}
+			comport.camCommand(ArduinoPrime.cameramove.valueOf(str));
+			break;
 		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
 		case camtilt: comport.cameraSlowToPosition(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;

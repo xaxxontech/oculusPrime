@@ -27,6 +27,7 @@ public class AutoDock { // implements Observer {
 	private String docktarget = settings.readSetting(GUISettings.docktarget);;
 	private State state = State.getReference();
 	private boolean autodockingcamctr = false;
+	private int lastcamctr = 0;
 	private ArduinoPrime comport = null;
 	private IConnection grabber = null;
 	private int autodockctrattempts = 0;
@@ -97,6 +98,23 @@ public class AutoDock { // implements Observer {
 						Util.debug("trying again higher res",this);
 					}
 					else {
+						
+						if (!autodockingcamctr) { // maybe occluded by frame, turn back the other way and try again 
+							comport.clickSteer(-lastcamctr , 0); 
+							autodockingcamctr = true;
+							new Thread(new Runnable() {
+								public void run() {
+									try {
+										comport.delayWithVoltsComp(allowforClickSteer);
+										dockGrab(dockgrabmodes.find, 0, 0);
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
+								}
+							}).start();
+							return;
+						}
+						
 						state.set(State.values.autodocking, false);
 						state.set(State.values.docking, false);
 						app.message("auto-dock target not found, try again", "multiple", "autodockcancelled blank");
@@ -121,7 +139,7 @@ public class AutoDock { // implements Observer {
 					if (!state.getBoolean(State.values.controlsinverted)) { // need to face backwards
 									
 						app.message(null, "autodocklock", s);
-						state.set(State.values.autodocking, false);
+//						state.set(State.values.autodocking, false);
 						comport.clickSteer((x - imgwidth/2) * rescomp, 0);
 						
 						new Thread(new Runnable() {
@@ -137,7 +155,7 @@ public class AutoDock { // implements Observer {
 									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									comport.rotate(ArduinoPrime.direction.left, 180);
 									Thread.sleep(comport.fullrotationdelay/2+2000);
-									state.set(State.values.autodocking, true);
+//									state.set(State.values.autodocking, true);
 									dockGrab(dockgrabmodes.find, 0, 0);
 									
 								} catch (Exception e) { e.printStackTrace(); }
@@ -439,9 +457,11 @@ public class AutoDock { // implements Observer {
 				} // approaching from left
 				autodockcompdir += x + (dockx - imgwidth/2);
 				// System.out.println("comp: "+autodockcompdir);
+				lastcamctr = 0;
 				if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125)) { // steer and go
-					comport.clickSteer((autodockcompdir - dockx) * rescomp,
-							(y - imgheight/2) * rescomp);
+					lastcamctr = (autodockcompdir - dockx) * rescomp;
+					
+					comport.clickSteer(lastcamctr , 0);
 					new Thread(new Runnable() {
 						public void run() {
 							try {
@@ -452,6 +472,10 @@ public class AutoDock { // implements Observer {
 								comport.delayWithVoltsComp(s2FWDmilliseconds);
 								comport.stopGoing();
 								Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+								if (Math.abs(lastcamctr) > imgwidth/4) { // correct in case dock occluded by frame after large move
+									comport.clickSteer(-lastcamctr , 0);
+									comport.delayWithVoltsComp(allowforClickSteer);
+								}
 								dockGrab(dockgrabmodes.find, 0, 0);
 							} catch (Exception e) {
 								e.printStackTrace();

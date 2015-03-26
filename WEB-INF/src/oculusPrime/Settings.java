@@ -263,6 +263,7 @@ public class Settings {
 		}
 
 		if (str != null) writeSettings(setting, str);
+
 	}
 
 	/**
@@ -274,6 +275,7 @@ public class Settings {
 	 */
 	public void writeSettings(String setting, String value) {
 		value = value.trim();
+		settings.put(setting, value);
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {

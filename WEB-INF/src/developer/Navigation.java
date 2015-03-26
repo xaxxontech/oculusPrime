@@ -79,6 +79,9 @@ public class Navigation {
 			return false;
 		}
 		
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED))
+			state.set(Ros.ROSINITIALPOSE, "0_0_0");
+		
 		return true;
 	}
 	
@@ -299,7 +302,7 @@ public class Navigation {
 			// delay 
 			String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
 	    	long timebetween = Long.parseLong(min) * 1000 * 60;
-			app.driverCallServer(PlayerCommands.messageclients, min+" until next route: "+name);
+			app.driverCallServer(PlayerCommands.messageclients, min+" min until next route: "+name);
 	    	start = System.currentTimeMillis();
 			while (System.currentTimeMillis() - start < timebetween) {
 				if (!state.exists(Ros.NAVIGATIONROUTE)) return;
@@ -307,7 +310,7 @@ public class Navigation {
 				Util.delay(100); 
 			}
 			
-			app.driverCallServer(PlayerCommands.messageclients, "restarting route "+name);
+//			app.driverCallServer(PlayerCommands.messageclients, "restarting route "+name);
 			runRoute(name);
 		
 		}  }).start();
