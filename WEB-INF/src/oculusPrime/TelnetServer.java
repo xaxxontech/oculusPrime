@@ -5,9 +5,6 @@ import java.net.*;
 import java.util.Vector;
 
 import oculusPrime.PlayerCommands.RequiresArguments;
-import oculusPrime.State.values;
-
-import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 
 
 /**
@@ -37,21 +34,21 @@ public class TelnetServer implements Observer {
 		private Socket clientSocket = null;
 		private BufferedReader in = null;
 		private PrintWriter out = null;
-		private String user, pass;
+		// private String user, pass;
 		
 		public ConnectionHandler(Socket socket) {
 		
 			clientSocket = socket;  
 			
 			// check if banned
-			if(! settings.getBoolean(ManualSettings.diagnostic)){
+			// if(! settings.getBoolean(ManualSettings.diagnostic)){
 				if (banlist.isBanned(clientSocket)){ 
 					try { socket.close(); } catch (Exception e) {
 						Util.log("ConnectionHandler(), banned IP error", e, this);
 					}		
 					return;
 				}
-			}
+			//}
 			
 			// connect 
 			try {
@@ -65,15 +62,18 @@ public class TelnetServer implements Observer {
 			}
 				
 			// send banner to terminal
-			if(settings.getBoolean(ManualSettings.diagnostic)){	
-				state.set(values.driver, ManualSettings.diagnostic.name());
-				user = ManualSettings.diagnostic.name();
-				state.delete(values.motionenabled);			
-			} else {
-				sendToSocket("Welcome to Oculus Prime v" + new Updater().getCurrentVersion(), out); 
+			sendToSocket("Welcome to Oculus Prime v" + new Updater().getCurrentVersion(), out); 
+			
+			
+			// if(settings.getBoolean(ManualSettings.diagnostic)){	
+			//	state.set(values.driver, ManualSettings.diagnostic.name());
+			//	user = ManualSettings.diagnostic.name();
+			// 	state.delete(values.motionenabled);			
+			// } else {
+			//	sendToSocket("Welcome to Oculus Prime v" + new Updater().getCurrentVersion(), out); 
 //				sendToSocket("LOGIN with admin user:password OR user:encrypted_password", out);
 //				if( ! authenticate(socket)) return; // failure 
-			}
+			// }
 			
 			printers.add(out);	
 			String ip_address = clientSocket.getInetAddress().toString().substring(1);
@@ -82,6 +82,7 @@ public class TelnetServer implements Observer {
 			this.start();
 		}
 		
+		/*
 		private boolean authenticate(Socket socket){
 			try {	
 				
@@ -125,6 +126,7 @@ public class TelnetServer implements Observer {
 	
 			return true;
 		}
+		*/
 		
 		/** do the client thread */
 		@Override
@@ -154,12 +156,10 @@ public class TelnetServer implements Observer {
 				str = str.trim();
 				if(str.length()>=1){
 					
-					Util.debug("socket user '"+user+"' sending from "+clientSocket.getInetAddress().toString() + " : " + str, this);	
+					Util.debug(/*"socket user '"+user+"' */ "sending from "+clientSocket.getInetAddress().toString() + " : " + str, this);	
 					if( ! manageCommand(str, out, in, clientSocket)) {			
-						
 						Util.debug("doPlayer(" + str + ")", this);	
 						doPlayer(str, out);
-						
 					}
 				}
 			}

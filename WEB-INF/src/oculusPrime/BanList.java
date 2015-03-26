@@ -49,7 +49,7 @@ public class BanList {
 			Util.log(e.getLocalizedMessage(), this);
 		}
 		
-		Util.log("..... Banned List: " + list.toString(), this);
+		Util.log(list.toString(), this);
 		
 		timer.scheduleAtFixedRate(new ClearTimer(), BAN_TIME_OUT, BAN_TIME_OUT);
 	}

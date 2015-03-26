@@ -1,13 +1,14 @@
 package oculusPrime;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.UUID;
 
 import oculusPrime.State.values;
 
 public class Settings {
 	
-	public static final int ERROR = -1;
+
 	public final static String sep = System.getProperty("file.separator");
 	public static String redhome = System.getenv("RED5_HOME");
 	public static String framefile = System.getenv("RED5_HOME") + sep+"webapps"+sep+"oculus"+sep+"images"+sep+"framegrab.jpg";
@@ -19,13 +20,15 @@ public class Settings {
 	public static String os = "windows" ; 
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
-	
-	/** reference to this singleton class */
+	public static final int ERROR = -1;
+		
 	private static Settings singleton = null;
 	public static Settings getReference() {
 		if (singleton == null) singleton = new Settings();
 		return singleton;
 	}
+	
+	private HashMap<String, String> settings = new HashMap<String, String>(); 
 	
 	/** only check for settings file once */ 
 	private Settings(){
@@ -33,53 +36,44 @@ public class Settings {
 		if (System.getProperty("os.name").matches("Linux")) { os = "linux"; }
 		
 		// be sure of basic configuration 
-		if(! new File(settingsfile).exists()) { createFile(settingsfile); }
-	}
-	
-	/** ONLY USE FOR JUNIT */
-	public Settings(String path){
+		if(! new File(settingsfile).exists()) createFile(settingsfile); 
 		
-		redhome = path;
-		settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
+		importFile();
 	}
 	
-	/**
-	 * lookup values from props file
-	 * 
-	 * @param key
-	 *            is the lookup value
-	 * @return the matching value from properties file (or false if not found)
-	 */
+	private void importFile(){
+		try {
+			String line;
+			FileInputStream filein = new FileInputStream(settingsfile);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
+			while ((line = reader.readLine()) != null) {
+				String items[] = line.split(" ");
+				settings.put(items[0], items[1]);
+			}
+			reader.close();
+			filein.close();
+		} catch (Exception e) {
+			Util.log("importFile: " + e.getMessage(), this);
+		}
+	}
+	
 	public boolean getBoolean(String key) {
-		if (key == null)
-			return false;
+		if (key == null) return false;
 		String str = readSetting(key);
-		if (str == null)
-			return false;
-		if (str.toUpperCase().equals("YES"))
-			return true;
-		else if (str.toUpperCase().equals("TRUE"))
-			return true;
+		if (str == null) return false;
+		if (str.toUpperCase().equals("YES")) return true;
+		else if (str.toUpperCase().equals("TRUE")) return true;
 		return false;
 	}
 
-	/**
-	 * lookup values from props file
-	 * 
-	 * @param key
-	 *            is the lookup value
-	 * @return the matching value from properties file (or zero if not found)
-	 */
 	public int getInteger(String key) {
 
 		String ans = null;
 		int value = ERROR;
 
 		try {
-
 			ans = readSetting(key);
 			value = Integer.parseInt(ans);
-
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -87,23 +81,14 @@ public class Settings {
 		return value;
 	}
 
-	/**
-	 * lookup values from props file
-	 * 
-	 * @param key
-	 *            is the lookup value
-	 * @return the matching value from properties file (or zero if not found)
-	 */
 	public double getDouble(String key) {
 
 		String ans = null;
 		double value = ERROR;
 
 		try {
-
 			ans = readSetting(key);
 			value = Double.parseDouble(ans);
-
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -111,14 +96,15 @@ public class Settings {
 		return value;
 	}
 
-	/**
-	 * read through whole file line by line, extract result
-	 * 
-	 * @param str
-	 *            this parameter we are looking for
-	 * @return a String value for this given parameter, or null if not found
-	 */
 	public String readSetting(String str) {
+		
+		if(settings.containsKey(str)) {
+			// Util.log("found in memory [" + str + "]", this);
+			return settings.get(str);
+		}
+		
+	// 	Util.log("... need to look in file [" + str + "]", this);
+		
 		FileInputStream filein;
 		String result = null;
 		try {
@@ -148,7 +134,7 @@ public class Settings {
 	}
 
 
-	/** Make a copy in order and "cleaned" of anything but valid settings */
+	/** Make a copy in order and "cleaned" of anything but valid settings 
 	public String toString(){
 		
 		String result = new String();
@@ -167,7 +153,7 @@ public class Settings {
 		}
 		
 		return result;
-	}
+	}*/
 	
 	public synchronized void createFile(String path) {
 		try {
@@ -445,11 +431,7 @@ public class Settings {
 		return result;
 	}
 
-	public void writeRed5Setting(String setting, String value) { // modify value
-																	// of
-																	// existing
-																	// setting
-		// read whole file, replace line while you're at it, write whole file
+	public void writeRed5Setting(String setting, String value) { 
 		String filenm = System.getenv("RED5_HOME") + sep+"conf"+sep+"red5.properties";
 		value = value.replaceAll("\\s+$", ""); // remove trailing whitespace
 		FileInputStream filein;
@@ -516,18 +498,7 @@ public class Settings {
 		return getDouble(setting.name());
 	}
 
-	public synchronized void incrementSettings(ManualSettings attempts) {
-		Util.log("_____ increment: " + readSetting(attempts), this);
-		Integer value = 0;
-		if(readSetting(attempts) != null){
-			value = Integer.valueOf(readSetting(attempts));
-			writeSettings(attempts.name(), String.valueOf(value+1));
-		}
-	}
-
 	public long getLong(ManualSettings setting) {
 		return Long.valueOf(readSetting(setting));
 	}
-
-
 }

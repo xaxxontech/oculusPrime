@@ -9,22 +9,18 @@ import java.util.Vector;
 
 import oculusPrime.State.values;
 
-public class NetworkMonitor implements Observer {
-
-	/// protected static final long FAST_POLL_DELAY_MS = 500;
+public class NetworkMonitor { 
 	
-	protected static final long HTTP_REFRESH_DELAY_SECONDS = 5;
-	protected static final long WAN_POLL_DELAY_MS = 90000; // Util.ONE_DAY;
-	// protected static final long WIFI_CONNECT_TIMEOUT_MS = 60000;
-	protected static final long WIFI_POLL_DELAY_MS = 9000;
+	protected static final long WAN_POLL_DELAY_MS = Util.ONE_HOUR; // Util.ONE_DAY;
+	protected static final long POLL_DELAY_MS = Util.ONE_MINUTE;
 
-	protected static final String WLAN = "wlan0";
+	protected static final String WLAN = "wlan";
 	protected static final String ETH = "eth0";
 	
-	private static Vector<String> accesspoints = new Vector<String>();
-	private Vector<String> networkData = new Vector<String>();
-	private Vector<String> wlanData = new Vector<String>();
-	private Vector<String> ethData = new Vector<String>();
+	Vector<String> accesspoints = new Vector<String>();
+	Vector<String> networkData = new Vector<String>();
+	Vector<String> wlanData = new Vector<String>();
+	Vector<String> ethData = new Vector<String>();
 
 	public static State state = State.getReference();
 	private static NetworkMonitor singleton = null;
@@ -35,15 +31,9 @@ public class NetworkMonitor implements Observer {
 	}
 
 	private NetworkMonitor(){
-		// getSSID();
-		
 		startNetworkTool();
-		//getSignalQuality();
-				
+		getSignalQuality();
 		pollExternalAddress();	
-		
-		state.addObserver(this);
-
 	}
 	
 	public void getSSID(){
@@ -78,7 +68,7 @@ public class NetworkMonitor implements Observer {
 						}
 						
 						proc.waitFor();
-						Thread.sleep(WIFI_POLL_DELAY_MS);
+						Thread.sleep(POLL_DELAY_MS);
 						
 					} catch (Exception e) {
 						Util.log("iw error: ", e, this);
@@ -115,13 +105,13 @@ public class NetworkMonitor implements Observer {
 								if(signalStrength.endsWith(".")) signalStrength = signalStrength.substring(0, signalStrength.length()-1);
 								
 								state.set(values.signalstrength, signalStrength);
-								state.set(values.singlalquality, signalQuality);
+								state.set(values.signalquality, signalQuality);
 								state.set(values.signalnoise, signalNoise);
 							}
 						}
 						
 						proc.waitFor();
-						Thread.sleep(WIFI_POLL_DELAY_MS); 
+						Thread.sleep(POLL_DELAY_MS); 
 						
 					} catch (Exception e) {
 						Util.log("getSignalQuality()" + e, this);
@@ -218,7 +208,7 @@ public class NetworkMonitor implements Observer {
 			System.out.println("callNetworkTool: " + e.getLocalizedMessage());
 		}		
 		
-		// Util.debug("callNetworkTool: lines copied: " + networkData.size(), this);
+		Util.debug("callNetworkTool: lines copied: " + networkData.size(), this);
 	}
 	
 	private void disconnecteddWAN(){	
@@ -236,10 +226,10 @@ public class NetworkMonitor implements Observer {
 				
 			if(line.contains("State: ")){
 				if(line.contains("unavailable")){
-					if(state.contains(values.ethernetaddress)){
+					// if(state.contains(values.ethernetaddress)){
 						Util.debug("\n .. parseETH: NOT available", this);
-						state.delete(values.ethernetaddress);
-					}
+					// 	state.delete(values.ethernetaddress);
+					// }
 					
 					// if(state.contains(values.externaladdress)){
 					//	Util.debug("... parseETH:.... has an exteral address ", this);
@@ -252,9 +242,9 @@ public class NetworkMonitor implements Observer {
 			
 			if(line.contains("Address: ") && !line.startsWith("HW")){
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
-				// Util.debug("parseETH: address: " + addr, this);
-				if( ! state.equals(values.ethernetaddress, addr))
-					state.set(values.ethernetaddress, addr); 			
+				Util.debug("parseETH: address: " + addr, this);
+				//if( ! state.equals(values.ethernetaddress, addr))
+				//	state.set(values.ethernetaddress, addr); 			
 			}
 
 			/*
@@ -274,7 +264,7 @@ public class NetworkMonitor implements Observer {
 
 	private void parseWLAN(){
 		
-		// Util.debug("parseWLAN: " + wlanData.size(), this);
+		Util.debug("parseWLAN: " + wlanData.size(), this);
 		
 		for(int i = 0 ; i < wlanData.size() ; i++){
 		
@@ -302,11 +292,12 @@ public class NetworkMonitor implements Observer {
 					state.set(values.localaddress, addr);
 			}
 			
+			// TODO:--------------------------------------------------------
 			if(line.startsWith("Gateway: ")){
 				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
-				// Util.debug("parseWLAN: gate: " + gate, this);
+				Util.debug("parseWLAN: gate: " + gate, this);
 				if(state.contains(values.gateway)) 
-					if( ! state.get(values.gateway).equals(gate))
+					// if( ! state.get(values.gateway).equals(gate))
 						state.set(values.gateway, gate);
 			}
 			
@@ -328,7 +319,7 @@ public class NetworkMonitor implements Observer {
 			
 		}			
 		
-		// getAccessPoints();
+		getAccessPoints();
 	}
 	
 	public String[] getAccessPoints(){
@@ -362,10 +353,10 @@ public class NetworkMonitor implements Observer {
 						readWAN();
 						parseWLAN();
 						
-						readETH();
-						parseETH();
+				//		readETH();
+				//		parseETH();
 						
-						Util.delay(WIFI_POLL_DELAY_MS);
+						Util.delay(POLL_DELAY_MS);
 						
 					} catch (Exception e) {
 						Util.log("startNetworkTool()", e, this);
@@ -386,14 +377,14 @@ public class NetworkMonitor implements Observer {
 			while ((i = in.read()) != -1) address += (char)i;
 			in.close();
 
-			// parse html file
+			// parse HTML file
 			address = address.substring(address.indexOf(": ") + 2);
 			address = address.substring(0, address.indexOf("</body>"));
 			
 			// TODO: Page could disappear, or change format ... should test valid IP  
 			state.put(values.externaladdress, address);
 			
-			validateNetwork();
+			// validateNetwork();
 		
 		} catch (Exception e) {
 			Util.log("updateExternalIPAddress()", e, this);
@@ -401,6 +392,7 @@ public class NetworkMonitor implements Observer {
 		}
 	}
 	
+	/*
 	private void validateNetwork(){
 		
 		if( ! state.contains(values.externaladdress)) {
@@ -433,6 +425,9 @@ public class NetworkMonitor implements Observer {
 		}		
 	}
 
+*/
+	
+	/*
 	@Override
 	public void updated(String key) {
 		
@@ -456,9 +451,5 @@ public class NetworkMonitor implements Observer {
 		}
 		
 	}
-	
-	public static void main(String[] args) {
-//		System.out.println("...... starting up.....");
-		new NetworkMonitor(); 
-	}
+	*/
 }

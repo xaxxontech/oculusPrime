@@ -33,16 +33,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private static final int STREAM_CONNECT_DELAY = 2000;
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
-	private String salt = null;
-	private String authtoken = null;
+	private boolean initialstatuscalled = false; 
+	private boolean pendingplayerisnull = true;
 	private IConnection grabber = null;
 	private IConnection player = null;
-	private boolean pendingplayerisnull = true;
-	private boolean initialstatuscalled = false; 
-
-	//	private ScriptRunner scriptRunner = new ScriptRunner();	
-	private NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
-	// TODO: added to jet is started, could be anywhere, not referenced in this file yet though.
+	private String authtoken = null;
+	private String salt = null;
+	
+	// private ScriptRunner scriptRunner = new ScriptRunner();	
+	NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
 	
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
