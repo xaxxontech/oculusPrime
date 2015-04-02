@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import oculusPrime.AutoDock;
 import oculusPrime.State;
 import oculusPrime.Util;
 
@@ -19,19 +20,7 @@ public class Ros {
 	private static State state = State.getReference();
 	
 	// State keys
-	public static final String ROSMAPINFO = "rosmapinfo";
-	public static final String ROSAMCL = "rosamcl";
-	public static final String ROSGLOBALPATH = "rosglobalpath";
-	public static final String ROSSCAN = "rosscan";
-	public static final String ROSCURRENTGOAL = "roscurrentgoal";
-	public static final String ROSMAPUPDATED = "rosmapupdated";
-	public static final String ROSMAPWAYPOINTS = "rosmapwaypoints";
-	public static final String NAVIGATIONENABLED ="navigationenabled";
-	public static final String ROSSETGOAL = "rossetgoal";
-	public static final String ROSGOALSTATUS = "rosgoalstatus";
-	public static final String ROSGOALCANCEL = "rosgoalcancel";
-	public static final String NAVIGATIONROUTE = "navigationroute";
-	public static final String ROSINITIALPOSE = "rosinitialpose";
+
 	
 	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
@@ -44,9 +33,9 @@ public class Ros {
 	public static File waypointsfile = new File(redhome+"/conf/waypoints.txt");
 	
 	public static BufferedImage rosmapImg() {	
-		if (!state.exists(ROSMAPINFO)) return null;
+		if (!state.exists(State.values.rosmapinfo)) return null;
 		
-		String mapinfo[] = state.get(ROSMAPINFO).split(",");
+		String mapinfo[] = state.get(State.values.rosmapinfo).split(",");
 
 		if (map == null || Double.parseDouble(mapinfo[6]) > lastmapupdate) {
 			Util.log("fetching new map");
@@ -59,7 +48,7 @@ public class Ros {
 	}
 	
 	private static BufferedImage updateMapImg() {
-		String mapinfo[] = state.get(ROSMAPINFO).split(",");
+		String mapinfo[] = state.get(State.values.rosmapinfo).split(",");
 		// width height res originx originy originth updatetime	
 		int width = Integer.parseInt(mapinfo[0]);
 		int height = Integer.parseInt(mapinfo[1]);
@@ -124,19 +113,24 @@ public class Ros {
 	public static String mapinfo() { // send info to javascript
 		String str = "";
 
-		if (state.exists(ROSMAPINFO)) str += ROSMAPINFO+"_" + state.get(ROSMAPINFO);
-		if (state.exists(ROSAMCL)) str += " " + ROSAMCL+"_" + state.get(ROSAMCL);
-		if (state.exists(ROSSCAN)) str += " " + ROSSCAN+"_" + state.get(ROSSCAN);
-		if (state.exists(ROSGLOBALPATH)) str += " " + ROSGLOBALPATH+"_" + state.get(ROSGLOBALPATH);
-		if (state.exists(ROSCURRENTGOAL)) str += " " + ROSCURRENTGOAL+"_" + state.get(ROSCURRENTGOAL);
-
-		if (state.exists(ROSMAPUPDATED)) {
-			str += " " + ROSMAPUPDATED +"_" + state.get(ROSMAPUPDATED);
-			state.delete(ROSMAPUPDATED);
+		if (state.exists(State.values.rosmapinfo)) str += State.values.rosmapinfo.toString()+"_" + state.get(State.values.rosmapinfo);
+		
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			str += " " + State.values.rosamcl.toString()+"_" + "0,0,0,0,0,0";
 		}
-		if (state.exists(ROSMAPWAYPOINTS)) {
-			str += " " + ROSMAPWAYPOINTS +"_" + state.get(ROSMAPWAYPOINTS);
-			state.delete(ROSMAPWAYPOINTS);
+		else if (state.exists(State.values.rosamcl)) str += " " + State.values.rosamcl.toString()+"_" + state.get(State.values.rosamcl);
+		
+		if (state.exists(State.values.rosscan)) str += " " + State.values.rosscan.toString()+"_" + state.get(State.values.rosscan);
+		if (state.exists(State.values.rosglobalpath)) str += " " + State.values.rosglobalpath.toString()+"_" + state.get(State.values.rosglobalpath);
+		if (state.exists(State.values.roscurrentgoal)) str += " " + State.values.roscurrentgoal.toString()+"_" + state.get(State.values.roscurrentgoal);
+
+		if (state.exists(State.values.rosmapupdated)) {
+			str += " " + State.values.rosmapupdated.toString() +"_" + state.get(State.values.rosmapupdated);
+			state.delete(State.values.rosmapupdated);
+		}
+		if (state.exists(State.values.rosmapwaypoints)) {
+			str += " " + State.values.rosmapwaypoints.toString() +"_" + state.get(State.values.rosmapwaypoints);
+			state.delete(State.values.rosmapwaypoints);
 		}
 		
 		return str;
@@ -160,8 +154,8 @@ public class Ros {
 	}
 	
 	public static void loadwaypoints() {
-			state.delete(ROSMAPWAYPOINTS);
-			if (!state.exists(ROSMAPINFO)) return;
+			state.delete(State.values.rosmapwaypoints);
+			if (!state.exists(State.values.rosmapinfo)) return;
 			
 			BufferedReader reader;
 			String str = "";
@@ -177,22 +171,22 @@ public class Ros {
 				e.printStackTrace();
 			}
 			str = str.trim();
-			if (!str.equals("")) state.set(ROSMAPWAYPOINTS, str.trim());			
+			if (!str.equals("")) state.set(State.values.rosmapwaypoints, str.trim());			
 	}
 	
 	public static boolean setWaypointAsGoal(String str) {
 		loadwaypoints();
-		if (!state.exists(ROSMAPWAYPOINTS)) return false;
+		if (!state.exists(State.values.rosmapwaypoints)) return false;
 		
 		boolean result = false;
 		
-		state.delete(ROSCURRENTGOAL);
+		state.delete(State.values.roscurrentgoal);
 		
 		// try matching name
-		String waypoints[] = state.get(ROSMAPWAYPOINTS).split(",");
+		String waypoints[] = state.get(State.values.rosmapwaypoints).split(",");
 		for (int i = 0 ; i < waypoints.length -3 ; i+=4) {
 			if (waypoints[i].replaceAll("&nbsp;", " ").equals(str)) {
-				state.set(ROSSETGOAL, waypoints[i+1]+","+waypoints[i+2]+","+waypoints[i+3]);
+				state.set(State.values.rossetgoal, waypoints[i+1]+","+waypoints[i+2]+","+waypoints[i+3]);
 				result = true;
 				break;
 			}
@@ -202,12 +196,12 @@ public class Ros {
 		if (!result) {
 			String coordinates[] = str.split(",");
 			if (coordinates.length == 3) {
-				state.set(ROSSETGOAL, coordinates[0]+","+coordinates[1]+","+coordinates[2]);
+				state.set(State.values.rossetgoal, coordinates[0]+","+coordinates[1]+","+coordinates[2]);
 				result = true;
 			}
 		}
 		
-		state.delete(ROSMAPWAYPOINTS);
+		state.delete(State.values.rosmapwaypoints);
 		return result;
 	}
 	

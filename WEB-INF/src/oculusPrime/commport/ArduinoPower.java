@@ -47,7 +47,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte GET_PRODUCT = 'x';
 	public static final int COMM_LOST = -99;
 
-	private static final long ROLLOVER = 500; // max file size for logger 
+	private static final long ROLLOVER = 250000000; // max file size for logger 
 	
 	protected Application application = null;
 	protected State state = State.getReference();
