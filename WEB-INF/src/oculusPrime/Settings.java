@@ -10,12 +10,12 @@ public class Settings {
 	
 
 	public final static String sep = System.getProperty("file.separator");
-	public static String redhome = System.getenv("RED5_HOME");
-	public static String framefile = System.getenv("RED5_HOME") + sep+"webapps"+sep+"oculus"+sep+"images"+sep+"framegrab.jpg";
+	public final static String redhome = System.getenv("RED5_HOME");
+	public final static String framefile = System.getenv("RED5_HOME") + sep+"webapps"+sep+"oculus"+sep+"images"+sep+"framegrab.jpg";
 	// public static String loginactivity = redhome+sep+"log"+sep+"loginactivity.txt";
-	public static String powerlog = redhome+sep+"log"+sep+"power.log";
-	public static String settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
-	public static String stdout = redhome+sep+"log"+sep+"jvm.stdout";
+	// public final static String powerlog = redhome+sep+"log"+sep+"power.log";
+	public final static String settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
+	public final static String stdout = redhome+sep+"log"+sep+"jvm.stdout";
 	public static String ftpconfig = redhome+sep+"conf"+sep+"ftp.properties";
 	
 	public final static String DISABLED= "disabled";

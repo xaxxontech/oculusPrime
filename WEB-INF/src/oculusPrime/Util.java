@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -18,6 +19,8 @@ import java.util.Vector;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+
+import oculusPrime.commport.PowerLogger;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -31,6 +34,10 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
+	
+	static final int MAX_HISTORY = 50;
+	static Vector<String> history = new Vector<String>();
+
 	
 	/**
 	 * Delays program execution for the specified delay.
@@ -353,6 +360,7 @@ public class Util {
 		// TODO: linux beep
 	}*/
 	
+	/*
 	public static String tail(int lines) {
 		Vector<String> alllines = new Vector<String>();
 		File file =new File(Settings.stdout);
@@ -378,7 +386,9 @@ public class Util {
 	    
 		return result;
 	}
-		
+		*/
+	
+	
 	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
         BufferedInputStream in = null;
         FileOutputStream fout = null;
@@ -400,14 +410,37 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 
+	//----------------------------------------------------------//
+	public static String tail(int lines){
+		
+	/// 	Util.log("PowerLogger(): " + history.size());
+		
+		int i = 0;
+		StringBuffer str = new StringBuffer();
+	 	if(history.size() > lines) i = history.size() - lines;
+		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
+		return str.toString();
+	}
+		
+	
 	public static void log(String str, Object c) {
+		
+		final String filter = c.getClass().getName().toLowerCase();
+		if(filter.contains("power") || filter.contains("dock")){
+			PowerLogger.getRefrence().append(str);
+			if(filter.contains("power")) return;	
+		}
+		
+		if(history.size() > MAX_HISTORY) history.remove(0);
+		history.add(getTime() + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + c.getClass().getName() + ", " +str);
 	}
 
-	public static void log(String str) {
+	public static void log(String str) {	
+		if(history.size() > MAX_HISTORY) history.remove(0);
+		history.add(getTime() + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + str);
 	}
-	
 	
     public static void debug(String str, Object c) {
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
@@ -418,6 +451,10 @@ public class Util {
     	if(Settings.getReference().getBoolean(ManualSettings.debugenabled))
     		System.out.println("DEBUG: " + getTime() + ", " +str);
     }
+    
+
+	//----------------------------------------------------------//
+	
 
 	public static String memory() {
     	String str = "";

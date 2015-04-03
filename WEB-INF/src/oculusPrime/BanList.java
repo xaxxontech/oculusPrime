@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Vector;
 import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -21,8 +22,11 @@ public class BanList {
 	private static final int BAN = 3; // how many log ins to add to bad 
 	private static final int BLOCK = 5; // how many log ins to add to block file 
 	private static final long BAN_TIME_OUT = 20000; // time to ban 
+
+	static final int MAX_HISTORY = 50;
+	static Vector<String> history = new Vector<String>();
 	
-	private HashMap<String, Integer> list = new HashMap<String, Integer>();
+	public HashMap<String, Integer> list = new HashMap<String, Integer>();
 	private static BanList singleton = new BanList();
 	private Timer timer = new Timer();
 	
@@ -43,7 +47,7 @@ public class BanList {
 		try {
 			String line = null; // import from file
 			BufferedReader br = new BufferedReader(new FileReader(new File(banfile)));
-			while((line = br.readLine()) != null) list.put(line.trim(), Integer.MAX_VALUE/2);		
+			while((line = br.readLine()) != null) list.put(line.trim(), 60000 ); // Integer.MAX_VALUE/2);		
 			br.close();		
 		} catch (Exception e) {
 			Util.log(e.getLocalizedMessage(), this);
@@ -54,6 +58,14 @@ public class BanList {
 		timer.scheduleAtFixedRate(new ClearTimer(), BAN_TIME_OUT, BAN_TIME_OUT);
 	}
 	
+	public String tail(int lines){
+		int i = 0;
+		StringBuffer str = new StringBuffer();
+	 	if(history.size() > lines) i = history.size() - lines;
+		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
+		return str.toString();
+	}
+		
 	public void addBlockedFile(String ip){
 		
 		// Util.log("....... adding to file: " + ip, this);
@@ -101,7 +113,7 @@ public class BanList {
 
 	public synchronized void remove(String address) {
 		
-		// Util.log("....... remove from file: " + address, this);
+		Util.log("....... remove from file: " + address, this);
 		
 		if(list.containsKey(address)) {
 		
@@ -123,11 +135,12 @@ public class BanList {
 	}
 	
 
-	public void failed(Socket socket) {
-		final String address = socket.getInetAddress().toString().substring(1);
-		failed(address);
-	}
+//	public void failed(Socket socket) {
+//		final String address = socket.getInetAddress().toString().substring(1);
+//		failed(address);
+//	}
 
+	/**/
 	public synchronized void failed(String remoteAddress) {
 		
 		if(remoteAddress.equals("127.0.0.1")) return;
@@ -141,11 +154,10 @@ public class BanList {
 		@Override
 		public void run() {
 			if(list.isEmpty()){
-				// Util.log("Banned list is empty..", this);
 				return;
 			}
 			
-			// Util.log("Banned list: " + list.toString(), this);
+			Util.log("Banned list: " + list.toString(), this);
 			
 			try {
 				Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 
@@ -155,7 +167,7 @@ public class BanList {
 				    if(list.get(key) == 0) list.remove(key);
 				}
 			} catch (Exception e) {
-				Util.log(".......deleted entry: " + e.getLocalizedMessage(), this);
+				Util.log("deleted entry: " + e.getLocalizedMessage(), this);
 			}		
 		}
 	}

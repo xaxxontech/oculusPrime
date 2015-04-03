@@ -37,31 +37,6 @@ public class Client {
 		String ip = args[0];
 		int port = Integer.parseInt(args[1]);
 		
-<<<<<<< HEAD
 		new Client(ip, port);
-=======
-		if(args.length==0) {	
-			
-			// force red5 path 
-			oculusPrime.Settings settings = oculusPrime.Settings.getReference();
-			
-			// login info from settings
-			ip = "127.0.0.1";
-			user = settings.readSetting("user0");
-			pass = settings.readSetting("pass0");
-			port = settings.getInteger(ManualSettings.telnetport); 
-		
-		}
-		
-		// use params off command line 
-		if(args.length==4){
-			ip = args[0];
-			port = Integer.parseInt(args[1]);
-			user = args[2];
-			pass = args[3];
-		} 
-		
-		new Client(ip, port, user, pass);
->>>>>>> b5da28e6782185644ce22f2ad9c94a4e4506ce95
 	}
 }
