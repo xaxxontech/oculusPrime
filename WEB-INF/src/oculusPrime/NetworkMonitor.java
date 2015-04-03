@@ -33,7 +33,9 @@ public class NetworkMonitor {
 	private NetworkMonitor(){
 		startNetworkTool();
 		getSignalQuality();
-		pollExternalAddress();	
+		
+		
+		// pollExternalAddress();	
 	}
 	
 	public void getSSID(){
