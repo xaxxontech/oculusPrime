@@ -464,14 +464,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		case move: {
 			// cancel nav if human remote client sends stop command
-			if (state.exists(State.values.roscurrentgoal) && !passengerOverride && 
+			if (state.exists(Ros.ROSCURRENTGOAL) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) 
 				Navigation.goalCancel();
 
-			if (state.exists(State.values.navigationroute) && !passengerOverride && 
+			if (state.exists(Ros.NAVIGATIONROUTE) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
-				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
-				state.delete(State.values.navigationroute);
+				messageplayer("navigation route "+state.get(Ros.NAVIGATIONROUTE)+" cancelled by stop", null, null);
+				state.delete(Ros.NAVIGATIONROUTE);
 				
 			}
 				
@@ -767,7 +767,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case loadwaypoints:
 			Ros.loadwaypoints();
-			if (state.exists(State.values.rosmapwaypoints)) messageplayer("waypoints loaded", null, null);
+			if (state.exists(Ros.ROSMAPWAYPOINTS)) messageplayer("waypoints loaded", null, null);
 			break;
 			
 		case gotowaypoint:

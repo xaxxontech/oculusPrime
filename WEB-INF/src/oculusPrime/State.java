@@ -30,9 +30,6 @@ public class State {
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms,odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		
-		rosmapinfo, rosamcl, rosglobalpath, rosscan, roscurrentgoal, rosmapupdated, rosmapwaypoints, // navigation
-		navigationenabled, rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		
 		localaddress, externaladdress, // network things 
 		signalnoise, signalstrength, signalquality, signalspeed, ssid, gateway, // ethernetaddress,
 		
@@ -356,11 +353,6 @@ public class State {
 	public synchronized void set(String key, boolean b) {
 		if(b) set(key, "true");
 		else set(key, "false");
-	}
-	
-	/** */
-	public synchronized boolean exists(values key) {
-		return props.containsKey(key.toString());
 	}
 	
 	/** */

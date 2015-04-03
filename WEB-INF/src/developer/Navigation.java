@@ -67,26 +67,26 @@ public class Navigation {
 	}
 	
 	private boolean waitForNavSystem() { // blocking
-		if (!state.exists(State.values.navigationenabled)) startNavigation();
-		else if (!state.getBoolean(State.values.navigationenabled)) startNavigation();
+		if (!state.exists(Ros.NAVIGATIONENABLED)) startNavigation();
+		else if (!state.getBoolean(Ros.NAVIGATIONENABLED)) startNavigation();
 		
 		long start = System.currentTimeMillis();
-		while (!state.getBoolean(State.values.navigationenabled) 
+		while (!state.getBoolean(Ros.NAVIGATIONENABLED) 
 				&& System.currentTimeMillis() - start < Util.ONE_MINUTE*2) { Util.delay(50);  } // wait
 		
-		if (!state.getBoolean(State.values.navigationenabled)) {
+		if (!state.getBoolean(Ros.NAVIGATIONENABLED)) {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation start failure");
 			return false;
 		}
 		
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED))
-			state.set(State.values.rosinitialpose, "0_0_0");
+			state.set(Ros.ROSINITIALPOSE, "0_0_0");
 		
 		return true;
 	}
 	
 	public void startNavigation() {
-		state.set(State.values.navigationenabled, false); // set true by ROS node when ready
+		state.set(Ros.NAVIGATIONENABLED, false); // set true by ROS node when ready
 //		app.driverCallServer(PlayerCommands.streamsettingsset, "med");  // do in ros python node instead
 		
 		new Thread(new Runnable() { public void run() {
@@ -104,30 +104,30 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped");
 			return;
 		}
-		else if (!state.exists(State.values.navigationenabled)) {
+		else if (!state.exists(Ros.NAVIGATIONENABLED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
-		else if (!state.getBoolean(State.values.navigationenabled)) {
+		else if (!state.getBoolean(Ros.NAVIGATIONENABLED)) {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
 		
 		Ros.setWaypointAsGoal(DOCK);
-		state.set(State.values.roscurrentgoal, "pending");
+		state.set(Ros.ROSCURRENTGOAL, "pending");
 		
 		new Thread(new Runnable() { public void run() {
 			
 			long start = System.currentTimeMillis();
-			while (state.exists(State.values.roscurrentgoal) 
+			while (state.exists(Ros.ROSCURRENTGOAL) 
 					&& System.currentTimeMillis() - start < Util.TEN_MINUTES) { Util.delay(100);  } // wait
 		
-			if (state.exists(State.values.roscurrentgoal) || !state.exists(State.values.rosgoalstatus)) { // this will probably never happen
+			if (state.exists(Ros.ROSCURRENTGOAL) || !state.exists(Ros.ROSGOALSTATUS)) { // this will probably never happen
 				app.driverCallServer(PlayerCommands.messageclients, "failed to reach dock");
 				return;
 			}
 			
-			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
+			if (!state.get(Ros.ROSGOALSTATUS).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "failed to reach dock");
 				return;
 			}
@@ -163,7 +163,7 @@ public class Navigation {
 	}
 	
 	public static void goalCancel() {
-		state.set(State.values.rosgoalcancel, true);
+		state.set(Ros.ROSGOALCANCEL, true);
 	}
 	
 	public static String routesLoad() {
@@ -223,7 +223,7 @@ public class Navigation {
 		}
 
 		final Element navroute = route;
-		state.set(State.values.navigationroute, name);
+		state.set(Ros.NAVIGATIONROUTE, name);
 		app.driverCallServer(PlayerCommands.messageclients, "activating route: "+name);
 		
 		new Thread(new Runnable() { public void run() {
@@ -244,8 +244,8 @@ public class Navigation {
 	    	
 	    	int wpnum = 0;
 	    	while (wpnum < waypoints.getLength()) {
-		    	if (!state.exists(State.values.navigationroute)) return;
-		    	if (!state.get(State.values.navigationroute).equals(name)) return;
+		    	if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+		    	if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
 
 	    		String wpname = 
 	    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
@@ -260,18 +260,18 @@ public class Navigation {
 					continue;
 	    		}
 
-	    		state.set(State.values.roscurrentgoal, "pending");
+	    		state.set(Ros.ROSCURRENTGOAL, "pending");
 	    		
 				long start = System.currentTimeMillis();
-				while (state.exists(State.values.roscurrentgoal) 
+				while (state.exists(Ros.ROSCURRENTGOAL) 
 						&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  } // wait
 			
-				if (state.exists(State.values.roscurrentgoal) || !state.exists(State.values.rosgoalstatus)) { // this will probably never happen
+				if (state.exists(Ros.ROSCURRENTGOAL) || !state.exists(Ros.ROSGOALSTATUS)) { // this will probably never happen
 					app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 					continue;
 				}
 				
-				if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
+				if (!state.get(Ros.ROSGOALSTATUS).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 					app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 					continue;
 				}
@@ -280,22 +280,22 @@ public class Navigation {
 				
 	    	}
 	    	
-	    	if (!state.exists(State.values.navigationroute)) return;
-	    	if (!state.get(State.values.navigationroute).equals(name)) return;
+	    	if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+	    	if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
 	    	
 			dock();
 			
 			// wait while autodocking does its thing 
 			long start = System.currentTimeMillis();
 			while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
-				if (!state.exists(State.values.navigationroute)) return;
-				if (!state.get(State.values.navigationroute).equals(name)) return;
+				if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+				if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
 				if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) break;
 				Util.delay(100); 
 			}
 				
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-				state.delete(State.values.navigationroute);
+				state.delete(Ros.NAVIGATIONROUTE);
 				return; 
 			}
 			
@@ -305,8 +305,8 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.messageclients, min+" min until next route: "+name);
 	    	start = System.currentTimeMillis();
 			while (System.currentTimeMillis() - start < timebetween) {
-				if (!state.exists(State.values.navigationroute)) return;
-				if (!state.get(State.values.navigationroute).equals(name)) return;
+				if (!state.exists(Ros.NAVIGATIONROUTE)) return;
+				if (!state.get(Ros.NAVIGATIONROUTE).equals(name)) return;
 				Util.delay(100); 
 			}
 			
