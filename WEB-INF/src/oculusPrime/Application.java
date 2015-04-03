@@ -465,12 +465,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case move: {
 			// cancel nav if human remote client sends stop command
 			if (state.exists(State.values.roscurrentgoal) && !passengerOverride && 
-					str.equals(ArduinoPrime.direction.stop.toString())) 
+					str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
+				messageplayer("navigation goal cancelled by stop", null, null);
+			}
 
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
+				Navigation.goalCancel();
 				state.delete(State.values.navigationroute);
 				
 			}
@@ -524,7 +527,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
-			if (str!=null) if (str.equals("highres")) docker.lowres = false;
+			if (str!=null) if (str.equals(AutoDock.HIGHRES))
+				docker.lowres = false;
 			docker.dockGrab(AutoDock.dockgrabmodes.start, 0, 0);
 			docker.lowres = true;
 			break;

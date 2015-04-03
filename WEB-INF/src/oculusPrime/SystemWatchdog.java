@@ -192,7 +192,7 @@ public class SystemWatchdog {
 				}
 				
 				if (rot == 16) { 
-					res = "highres";
+					res = AutoDock.HIGHRES;
 					application.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 				}
 				
@@ -215,14 +215,14 @@ public class SystemWatchdog {
 			start = System.currentTimeMillis();
 			while (state.getBoolean(State.values.autodocking) && System.currentTimeMillis() - start < AUTODOCKTIMEOUT)  
 				Util.delay(100); 
-				
-			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 
-				if (!state.exists(State.values.driver.toString()))  callForHelp(subject, body);
-				application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
-				application.driverCallServer(PlayerCommands.floodlight, "0");
-			}
+			application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+			application.driverCallServer(PlayerCommands.floodlight, "0");
 			
+			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+				if (!state.exists(State.values.driver.toString()))  callForHelp(subject, body);
+			}
+
 			redocking = false;
 		}  }).start();
 
