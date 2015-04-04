@@ -102,7 +102,7 @@ public class Downloader {
 						return true;
 		
 		// error state
-		Util.log("unzip and delete dirs - error");
+		Util.log("unzip and delete dirs - error", this);
 		return false;
 	}
 	

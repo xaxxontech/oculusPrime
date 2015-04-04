@@ -38,7 +38,7 @@ public class Ros {
 		String mapinfo[] = state.get(State.values.rosmapinfo).split(",");
 
 		if (map == null || Double.parseDouble(mapinfo[6]) > lastmapupdate) {
-			Util.log("fetching new map");
+			Util.log("fetching new map", "Ros");
 			map = updateMapImg();
 			lastmapupdate = Double.parseDouble(mapinfo[6]);
 		}

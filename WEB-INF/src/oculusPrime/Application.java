@@ -66,7 +66,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start===============\n");
+		Util.log("\n==============Oculus Prime Java Start===============\n",this);
+		Util.log("\n==============Oculus Prime Java Start===============\n","Application_power");
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		FrameGrabHTTP.setApp(this);
@@ -111,7 +112,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// TODO: record failure
 		banlist.failed(connection.getRemoteAddress());			
 		String str = "login from: " + connection.getRemoteAddress() + " failed";
-		Util.log("appConnect(): " + str);
+		Util.log("appConnect(): " + str,this);
 		messageGrabber(str, "");
 		return false;
 	}
@@ -122,7 +123,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (connection.equals(player)) {
 			String str = state.get(State.values.driver.name()) + " disconnected";
 			
-			Util.log("appDisconnect(): " + str); 
+			Util.log("appDisconnect(): " + str,this); 
 
 			messageGrabber(str, "connection awaiting&nbsp;connection");
 			loginRecords.signoutDriver();
@@ -353,7 +354,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				str = state.get(State.values.pendinguserconnected) + " pending connection from: "
 						+ pendingplayer.getRemoteAddress();
 				
-				Util.log("playersignin(): " + str);
+				Util.log("playersignin(): " + str,this);
 				messageGrabber(str, null);
 				sc.invoke("videoSoundMode", new Object[] { videosoundmode });
 			}
@@ -600,7 +601,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case righttimed: comport.turnRight(Integer.parseInt(str)); break;
 		
 		case systemcall:
-			Util.log("received: " + str);
+			Util.log("received: " + str,this);
 			messageplayer("system command received", null, null);
 			Util.systemCall(str);
 			break;
@@ -728,13 +729,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case erroracknowledged:
 			if (str.equals("true")) {
-				Util.log("power error acknowledged");
+				Util.log("power error acknowledged",this);
+				Util.log("power error acknowledged","Application_power");
+				
 				if (watchdog.powererrorwarningonly) { 
 					powerport.clearWarningErrors(); 
 					watchdog.lastpowererrornotify = null; 
 				}
 			}
-			else Util.log("power error purposefully dismissed");
+			else { 
+				Util.log("power error purposefully dismissed",this);
+				Util.log("power error purposefully dismissed","Application_power");
+			}
 			break;
 			
 		case block:
@@ -780,6 +786,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		case startnav:
 			if (navigation != null) navigation.startNavigation(); 
+			break;
+		
+		case stopnav:
+			if (navigation != null) navigation.stopNavigation();
 			break;
 		
 		case gotodock:
@@ -954,7 +964,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("publish: " + mode.toString(), this);
 			}
 		} catch (NumberFormatException e) {
-			Util.log("publish() " + e.getMessage());
+			Util.log("publish() " + e.getMessage(),this);
 			e.printStackTrace();
 		}
 		
@@ -1291,7 +1301,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
-		Util.log("stream changed to " + str);
+		Util.log("stream changed to " + str,this);
 	}
 
 	private void streamSettingsSet(String str) {
@@ -1302,7 +1312,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
-		Util.log("stream changed to " + str);
+		Util.log("stream changed to " + str,this);
 	}
 
 	private String streamSettings() {
@@ -1348,9 +1358,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public void quit() { 
 		messageplayer("server shutting down",null,null);
-		if(commandServer!=null) { commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); }
+		if(commandServer!=null) { 
+			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
+			// TODO: shutdown telnet connections and commandServer
+		}
 		
 		powerport.writeStatusToEeprom();
+		
+		if (navigation != null && state.exists(State.values.navigationenabled)) 
+			navigation.stopNavigation();
 		
 		try {
 			//if (Settings.os.equalsIgnoreCase("linux")) {
@@ -1360,6 +1376,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			//}
 			//else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
 		} catch (Exception e) { e.printStackTrace(); }
+		
 	}
 
 	@SuppressWarnings("incomplete-switch")
@@ -1518,7 +1535,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		String str = "connection connected streamsettings " + streamSettings();
 		messageplayer(state.get(State.values.driver) + " connected to OCULUS", "multiple", str);
 		str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
-		Util.log("assumeControl(), " + str);
+		Util.log("assumeControl(), " + str,this);
 		messageGrabber(str, null);
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
@@ -1535,7 +1552,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		pendingplayerisnull = true;
 		String str = user + " added as passenger";
 		messageplayer(str, null, null);
-		Util.log(str);
+		Util.log(str,this);
 		messageGrabber(str, null);
 		if (!stream.equals("stop")) {
 			Collection<Set<IConnection>> concollection = getConnections();
@@ -1847,7 +1864,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				}
 			}
 		}
-		Util.log("chat: " + str);
+		Util.log("chat: " + str,this);
 		messageGrabber("<CHAT>" + str, null);
 		if(str!=null) if (commandServer != null) { 
 			str = str.replaceAll("</?i>", "");
@@ -1863,7 +1880,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void saveAndLaunch(String str) {
-		Util.log("saveandlaunch: " + str);
+		Util.log("saveandlaunch: " + str,this);
 		String message = "";
 		Boolean oktoadd = true;
 		Boolean restartrequired = false;
@@ -2034,7 +2051,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				public void run() {
 					Updater up = new Updater();
 					final String fileurl = up.checkForUpdateFile();
-					Util.log("downloading url: " + fileurl);
+					Util.log("downloading url: " + fileurl,this);
 					Downloader dl = new Downloader();
 					if (dl.FileDownload(fileurl, "update.zip", "download")) {
 						messageplayer("update download complete, unzipping...",

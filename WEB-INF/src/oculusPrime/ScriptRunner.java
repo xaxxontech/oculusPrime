@@ -74,13 +74,13 @@ public class ScriptRunner {
 					String line = null;
 					while((line = in.readLine()) != null){
 						if(line.length() > 0){
-							Util.log("[" + script.getName() + "] output: " + line);
+							Util.log("[" + script.getName() + "] output: " + line, this);
 						}
 					}
 					
 					while((line = err.readLine()) != null){
 						if(line.length() > 0){
-							Util.log("[" + script.getName() + "] error: " + line);
+							Util.log("[" + script.getName() + "] error: " + line, this);
 						}
 					}
 					
@@ -88,7 +88,7 @@ public class ScriptRunner {
 					in.close();
 					
 				} catch (Exception e) {
-					Util.log("[" + script.getName() + "] exception: " + e.getLocalizedMessage());
+					Util.log("[" + script.getName() + "] exception: " + e.getLocalizedMessage(),this);
 				}		
 			} 	
 		}).start();
@@ -116,13 +116,13 @@ public class ScriptRunner {
 					String line = null;
 					while((line = in.readLine()) != null){
 						if(line.length() > 0){
-							Util.log("[" + script.getName() + "] output: " + line);
+							Util.log("[" + script.getName() + "] output: " + line,this);
 						}
 					}
 					
 					while((line = err.readLine()) != null){
 						if(line.length() > 0){
-							Util.log("[" + script.getName() + "] error: " + line);
+							Util.log("[" + script.getName() + "] error: " + line,this);
 						}
 					}
 					

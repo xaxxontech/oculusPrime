@@ -96,6 +96,7 @@ public class SystemWatchdog {
 	}
 	
 	private void notifyPowerError() {
+		Util.log("notifyPowerError()", this);
 		lastpowererrornotify = state.get(State.values.powererror);
 		boolean warningonly = true;
 		String longerror = "";
@@ -230,7 +231,7 @@ public class SystemWatchdog {
 	
 	private void callForHelp(String subject, String body) {
 		application.driverCallServer(PlayerCommands.messageclients, body);
-		Util.log("callForHelp() "+subject+" "+body);
+		Util.log("callForHelp() "+subject+" "+body, this);
 
 		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
 		

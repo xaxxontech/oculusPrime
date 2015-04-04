@@ -82,7 +82,7 @@ public class Updater {
 			  e.printStackTrace();
 			}
 		}
-		Util.log("update filename: "+filename);
+		Util.log("update filename: "+filename,this);
 		return filename; 
 	}
 	
@@ -100,7 +100,7 @@ public class Updater {
 			version = Double.parseDouble(mat.group());
 			break;
 		}
-		Util.log("update version: "+version);
+		Util.log("update version: "+version,this);
 		return version;
 	}
 }

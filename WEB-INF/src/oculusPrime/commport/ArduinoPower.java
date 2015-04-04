@@ -208,7 +208,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 					String msg = "power PCB code: " + state.get(oculusPrime.State.values.powererror);
 					application.message(msg, null, null);
 					application.messageGrabber(msg, "");	
-					Util.debug(msg, this);
+					Util.log(msg, this);
 				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
@@ -222,7 +222,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 						!state.getBoolean(oculusPrime.State.values.autodocking) ){  
 					application.message("power PCB periodic reset", "battery", "resetting");
 					Util.log("power PCB periodic reset", this);
-					Util.log("power PCB periodic reset");
+					Util.log("power PCB periodic reset", this);
 					lastReset = now;
 					reset();
 				}

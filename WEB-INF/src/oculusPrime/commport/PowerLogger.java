@@ -35,7 +35,7 @@ public class PowerLogger {
 		File logfile = new File(powerlog);
 		if (logfile.exists()) {
 			if (logfile.length() > ROLLOVER) {
-				Util.log("file too larg, rolling over: " + powerlog, this);
+				Util.log("file too large, rolling over: " + powerlog, this);
 				logfile.delete();
 			}
 		}
@@ -45,15 +45,15 @@ public class PowerLogger {
 		try {
 			logger = new RandomAccessFile(powerlog, "rw");
 		} catch (Exception e) {
-			Util.log("PowerLogger(): " + e.getMessage());
+			Util.log("PowerLogger(): " + e.getMessage(), this);
 		}
 	}
 
-	public void append(String data) {
+	public void append(String data, String classname) {
 		try {
 
 			logger.seek(logger.length());
-			logger.writeBytes(new Date().toString() + " " + data + "\r\n");
+			logger.writeBytes(new Date().toString() + ", " + classname + ", "+ data + "\r\n");
 			
 			if(history.size() > MAX_HISTORY) history.remove(0);
 			history.add(data);
@@ -61,7 +61,7 @@ public class PowerLogger {
 			// Util.log("PowerLogger(): size = " + history.size());
 			
 		} catch (Exception e) {
-			Util.log("PowerLogger(): " + e.getMessage());
+			Util.log("PowerLogger(): " + e.getMessage(), this);
 		}
 	}
 

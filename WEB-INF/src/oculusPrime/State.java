@@ -30,6 +30,7 @@ public class State {
 		
 		rosmapinfo, rosamcl, rosglobalpath, rosscan, roscurrentgoal, rosmapupdated, rosmapwaypoints, // navigation
 		navigationenabled, rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
+		navigationrouteid,
 		
 		localaddress, externaladdress, // network things 
 		signalnoise, signalstrength, signalquality, signalspeed, ssid, gateway, // ethernetaddress,

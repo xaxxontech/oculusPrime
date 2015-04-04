@@ -423,23 +423,22 @@ public class Util {
 	}
 		
 	
-	public static void log(String str, Object c) {
-		
-		final String filter = c.getClass().getName().toLowerCase();
-		if(filter.contains("power") || filter.contains("dock")){
-			PowerLogger.getRefrence().append(str);
+	public static void log(String str, String classname) {
+		final String filter = classname.toLowerCase();
+
+		if(filter.contains("power") || filter.contains("dock") || filter.contains("watchdog")){
+			PowerLogger.getRefrence().append(str, classname);
 			if(filter.contains("power")) return;	
 		}
 		
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + c.getClass().getName() + ", " +str);
+		System.out.println("OCULUS: " + getTime() + ", " + classname + ", " +str);
 	}
 
-	public static void log(String str) {	
-		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + str);
+	public static void log(String str, Object c) {
+		final String classname = c.getClass().getName();
+		log(str, classname);
 	}
 	
     public static void debug(String str, Object c) {

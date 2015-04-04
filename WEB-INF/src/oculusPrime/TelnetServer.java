@@ -530,7 +530,7 @@ public class TelnetServer implements Observer {
 				try {				
 					serverSocket.close();
 				} catch (IOException e1) {
-					Util.log("socket error: " + e1.getMessage());
+					Util.log("socket error: " + e1.getMessage(),this);
 					return;					
 				}	
 				
