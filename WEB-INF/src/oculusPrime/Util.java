@@ -406,15 +406,7 @@ public class Util {
         }
     }
 	
-	public static void log(String method, Exception e, Object c) {
-		log(method + ": " + e.getLocalizedMessage(), c);
-	}
-
-	//----------------------------------------------------------//
 	public static String tail(int lines){
-		
-	/// 	Util.log("PowerLogger(): " + history.size());
-		
 		int i = 0;
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
@@ -423,22 +415,38 @@ public class Util {
 	}
 		
 	
+	public static void log(String method, Exception e, Object c) {
+		log(method + ": " + e.getLocalizedMessage(), c);
+	}
+
+
 	public static void log(String str, Object c) {
-		
+			
 		final String filter = c.getClass().getName().toLowerCase();
-		if(filter.contains("power") || filter.contains("dock")){
-			PowerLogger.getRefrence().append(str);
+		if(filter.contains("power") || filter.contains("dock") 
+				|| str.toLowerCase().contains("dock")
+				|| str.toLowerCase().contains("autodock")){
+	
+			PowerLogger.append(str);
+			
+			// don't put into other files or history 
 			if(filter.contains("power")) return;	
 		}
 		
+	//	if(filter.contains("banned")) return;
+		
 		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + c.getClass().getName() + ", " +str);
+		history.add(getTime() + ", " + filter + ", " + str);
+		
+		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " +str);
+
 	}
 
 	public static void log(String str) {	
+		
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " +str);
+		
 		System.out.println("OCULUS: " + getTime() + ", " + str);
 	}
 	
@@ -452,10 +460,6 @@ public class Util {
     		System.out.println("DEBUG: " + getTime() + ", " +str);
     }
     
-
-	//----------------------------------------------------------//
-	
-
 	public static String memory() {
     	String str = "";
 		str += "memory : " +

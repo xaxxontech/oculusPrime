@@ -1,10 +1,6 @@
 package oculusPrime.commport;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +20,6 @@ import oculusPrime.PlayerCommands;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
-
 
 public class ArduinoPower implements SerialPortEventListener  {
 
@@ -62,7 +57,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected String portname = settings.readSetting(ManualSettings.powerport);
 	protected String version = null;
 	
-	// protected RandomAccessFile logger;
 	
 	// errors
 	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
@@ -266,6 +260,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 		try {
 			byte[] input = new byte[32];
 			
+			if(serialPort == null){
+				Util.log("serial port is null", this);
+				return;
+			}
+			
 			input = serialPort.readBytes();
 			for (int j = 0; j < input.length; j++) {
 				if ((input[j] == '>') || (input[j] == 13) || (input[j] == 10)) {
@@ -281,7 +280,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			}
 			
 		} catch (SerialPortException e) {
-			e.printStackTrace();
+			Util.log("serialEvent:" + e.getLocalizedMessage(), this);
 		}
 	}
 	
@@ -438,6 +437,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected void disconnect() {
 		try {
 			// TODO: closeLog();
+			PowerLogger.closeLog();
 			isconnected = false;
 			serialPort.closePort();
 			state.delete(State.values.powerport);
@@ -457,6 +457,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 		if (!isconnected) return;
 		
+		//TODO: BRAD...
+		if(cmd[0] == 'A'){
+			PowerLogger.append(this.getClass().getName() + " closing data logger");
+			PowerLogger.closeLog();
+		}
+		
 		String text = "sendCommand(): " + (char)cmd[0] + " ";
 		for(int i = 1 ; i < cmd.length ; i++) 
 			text += ((byte)cmd[i] & 0xFF) + " ";   // & 0xFF converts to unsigned byte
@@ -469,16 +475,13 @@ public class ArduinoPower implements SerialPortEventListener  {
 				try {
 
 					serialPort.writeBytes(command);  // byte array
-					serialPort.writeInt(13);  					// end of command
+					serialPort.writeInt(13);  		 // end of command
 		
 				} catch (Exception e) {
 					Util.log("ArduinoPower: sendCommand(), ERROR " + e.getMessage(), this);
 				}
 			}
 		}).start();
-		
-		// track last write
-//		lastSent = System.currentTimeMillis();
 	}
 	
 	private void sendCommand(final byte cmd){
@@ -531,6 +534,5 @@ public class ArduinoPower implements SerialPortEventListener  {
 		if (resetrequired) reset();
 		//  state.powererror gets cleared by firmware if command succeeds
 	}
-
 	
 }
