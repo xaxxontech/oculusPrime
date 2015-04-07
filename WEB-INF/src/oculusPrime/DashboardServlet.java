@@ -1,5 +1,6 @@
 package oculusPrime;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -51,7 +52,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		if(view != null){
 			if(view.equals("ban")){
-				out.println(ban.list.toString() + "\n");
+				out.println(ban.list.toString() + "<br />\n");
 				out.println(ban.tail(30) + "\n");
 			}
 			
@@ -60,18 +61,22 @@ public class DashboardServlet extends HttpServlet {
 			}
 			
 			if(view.equals("sysout")){
+				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
 				out.println(Util.tail(30) + "\n");
 			}
 			
-			if(view.equals("power")){
+			if(view.equals("power")){	
+				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
 				out.println(power.tail(30) + "\n");
 			}
 			
 			if(view.equals("log")){
 				out.println("\nsystem output: <hr>\n");
-				out.println(Util.tail(20) + "\n");
+				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
-				out.println("\n<br />" + power.tail(5) + "\n");
+				out.println("\n" + power.tail(10) + "\n");
+				out.println("\n<br />banned addresses: <hr>\n");
+				out.println("\n" + ban.list.toString() + "\n");
 			}
 		}
 		

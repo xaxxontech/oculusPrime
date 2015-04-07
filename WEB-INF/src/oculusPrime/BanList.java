@@ -19,9 +19,9 @@ public class BanList {
 	public static final  String sep = System.getProperty("file.separator");
 	public static String banfile = System.getenv("RED5_HOME") +sep+"conf"+sep+"banlist.txt";
 
-	private static final int BAN = 3; // how many log ins to add to bad 
-	private static final int BLOCK = 5; // how many log ins to add to block file 
-	private static final long BAN_TIME_OUT = 20000; // time to ban 
+	// private static final int BAN = 3; // how many log ins to add to bad 
+	private static final int BLOCK = 500; // how many log ins to add to block file 
+	private static final long BAN_TIME_OUT = 3000; // time to ban 
 
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>();
@@ -47,13 +47,11 @@ public class BanList {
 		try {
 			String line = null; // import from file
 			BufferedReader br = new BufferedReader(new FileReader(new File(banfile)));
-			while((line = br.readLine()) != null) list.put(line.trim(), 60000 ); // Integer.MAX_VALUE/2);		
+			while((line = br.readLine()) != null) list.put(line.trim(), BLOCK ); // Integer.MAX_VALUE/2);		
 			br.close();		
 		} catch (Exception e) {
 			Util.log(e.getLocalizedMessage(), this);
 		}
-		
-		Util.log(list.toString(), this);
 		
 		timer.scheduleAtFixedRate(new ClearTimer(), BAN_TIME_OUT, BAN_TIME_OUT);
 	}
@@ -65,10 +63,15 @@ public class BanList {
 		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
 		return str.toString();
 	}
+	
+	public void appendLog(String str){
+		if(history.size() > MAX_HISTORY) history.remove(0);
+		history.add(Util.getTime() + ", " +str);
+	}
 		
 	public void addBlockedFile(String ip){
 		
-		// Util.log("....... adding to file: " + ip, this);
+		appendLog("....... adding to file: " + ip);
 		
 		list.put(ip, Integer.MAX_VALUE/2);	
 		
@@ -81,7 +84,7 @@ public class BanList {
 				bw.close();
 						
 			} catch (Exception e) {
-				Util.log(e.getLocalizedMessage(), this);
+				Util.log("addBlockedFile(): ", e, this);
 			}
 		}	
 	}
@@ -97,15 +100,15 @@ public class BanList {
 	
 		if(list.containsKey(address)) {
 			
-			// Util.log("....... isBanned: " + address + " value: " + list.get(address), this);
+			appendLog("....... isBanned: " + address + " value: " + list.get(address));
 	
-			if(list.get(address) >= BLOCK) addBlockedFile(address);
+		//	if(list.get(address) >= BLOCK) addBlockedFile(address);
 			
-			if(list.get(address) >= BAN){
-				// Util.log("....... isBanned: failed: " + address, this);
-				failed(address);
-				return true; 
-			}
+		//	if(list.get(address) >= BAN){
+				// appendLog("....... isBanned: failed: " + address, this);
+		//		failed(address);
+		//		return true; 
+		//	}
 		}
 		
 		return false;
@@ -113,7 +116,7 @@ public class BanList {
 
 	public synchronized void remove(String address) {
 		
-		Util.log("....... remove from file: " + address, this);
+		appendLog("....... remove from file: " + address);
 		
 		if(list.containsKey(address)) {
 		
@@ -128,7 +131,7 @@ public class BanList {
 					bw.close();
 							
 				} catch (Exception e) {
-					Util.log(e.getLocalizedMessage(), this);
+					Util.log("remove()", e, this);
 				}
 			}		
 		}
@@ -153,11 +156,9 @@ public class BanList {
 	private class ClearTimer extends TimerTask {
 		@Override
 		public void run() {
-			if(list.isEmpty()){
-				return;
-			}
+			if(list.isEmpty()) return;
 			
-			Util.log("Banned list: " + list.toString(), this);
+			/// Util.log("Banned list: " + list.toString());
 			
 			try {
 				Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 

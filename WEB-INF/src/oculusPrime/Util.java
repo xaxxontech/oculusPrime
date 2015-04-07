@@ -406,15 +406,7 @@ public class Util {
         }
     }
 	
-	public static void log(String method, Exception e, Object c) {
-		log(method + ": " + e.getLocalizedMessage(), c);
-	}
-
-	//----------------------------------------------------------//
 	public static String tail(int lines){
-		
-	/// 	Util.log("PowerLogger(): " + history.size());
-		
 		int i = 0;
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
@@ -422,7 +414,10 @@ public class Util {
 		return str.toString();
 	}
 		
-	
+	public static void log(String method, Exception e, Object c) {
+		log(method + ": " + e.getLocalizedMessage(), c);
+	}
+
 	public static void log(String str, String classname) {
 		final String filter = classname.toLowerCase();
 
@@ -439,8 +434,7 @@ public class Util {
 	public static void log(String str, Object c) {
 		final String classname = c.getClass().getName();
 		log(str, classname);
-	}
-	
+	}	
     public static void debug(String str, Object c) {
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
 			System.out.println("DEBUG: " + getTime() + ", " + c.getClass().getName() +  ", " +str);
@@ -451,10 +445,6 @@ public class Util {
     		System.out.println("DEBUG: " + getTime() + ", " +str);
     }
     
-
-	//----------------------------------------------------------//
-	
-
 	public static String memory() {
     	String str = "";
 		str += "memory : " +

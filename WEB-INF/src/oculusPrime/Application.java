@@ -12,6 +12,7 @@ import java.util.Set;
 
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.PowerLogger;
 
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
@@ -1354,6 +1355,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		
 		powerport.writeStatusToEeprom();
+		
+		PowerLogger.closeLog();
 
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
