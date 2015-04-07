@@ -1327,56 +1327,42 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void restart() {
-//		if (Settings.os.equals("linux")) { 
-//			messageplayer("unsupported in linux",null,null);
-//			messageGrabber("unsupported in linux", null);
-//			return;
-//		}
-
 		messageplayer("restarting server application", null, null);
-		messageGrabber("restarting server application", null);
-		if(commandServer!=null) { commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); }
-		File f;
-		
-		powerport.writeStatusToEeprom();
 
-		f = new File(Settings.redhome + Settings.sep + "restart"); // windows & linux
-		try {
-			
-			if (!f.exists()) f.createNewFile();
-			
-			//if (Settings.os.equals("linux")) {
-				
-			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
-			
-			///else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// write file as restart flag for script
+		File f = new File(Settings.redhome + Settings.sep + "restart"); // windows & linux	
+		if (!f.exists())
+			try {
+				f.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+		shutdown();
 	}
 	
 	public void quit() { 
 		messageplayer("server shutting down",null,null);
+		shutdown();
+	}
+
+	private void shutdown() {
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
 			// TODO: shutdown telnet connections and commandServer
 		}
 		
 		powerport.writeStatusToEeprom();
-		
+
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
 		
 		try {
-			//if (Settings.os.equalsIgnoreCase("linux")) {
 				
 			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
 			
-			//}
-			//else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
 		} catch (Exception e) { e.printStackTrace(); }
-		
 	}
 
 	@SuppressWarnings("incomplete-switch")

@@ -150,13 +150,11 @@ public class AutoDock { // implements Observer {
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
-//									app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_REVERSE));
 									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
 									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									comport.rotate(ArduinoPrime.direction.left, 180);
 									Thread.sleep(comport.fullrotationdelay/2+2000);
-//									state.set(State.values.autodocking, true);
 									dockGrab(dockgrabmodes.find, 0, 0);
 									
 								} catch (Exception e) { e.printStackTrace(); }
