@@ -64,7 +64,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start===============\n",this);
-		PowerLogger.append("\n==============Oculus Prime Java Start===============\n", this);
+		PowerLogger.append(".................Oculus Prime Java Start.................", this);
+		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		NetworkMonitor.getReference();

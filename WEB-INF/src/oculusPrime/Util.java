@@ -417,13 +417,11 @@ public class Util {
 
 	public static void log(String str, Object c) {
 		
-		if(str==null || c==null){
-			debug("wtf: " + str);
-			return;
-		}
+		//if(str==null || c==null){debug("wtf: " + str);return;
 	
 		final String filter = c.getClass().getName().toLowerCase();
-		if(filter.contains("power")) return;	
+		
+		// if(filter.contains("power")) return;	
 		
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " + filter + ", " +str);

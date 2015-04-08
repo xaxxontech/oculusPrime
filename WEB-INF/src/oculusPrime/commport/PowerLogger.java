@@ -34,16 +34,13 @@ public class PowerLogger {
 			Util.debug("PowerLogger(): " + e.getMessage());
 		}
 		
-		append("------- log file opened ---------");
+		append(".....log file opened......");
 	}
 
 	public static void append(String data){
 		try {
 			
-			if(logger == null) {
-				init();
-				return;
-			}
+			if(logger == null) init();
 			
 			logger.seek(logger.length());
 			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
