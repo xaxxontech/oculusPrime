@@ -98,7 +98,7 @@ public class TelnetServer implements Observer {
 				str = str.trim();
 				if(str.length()>=1){
 					
-					Util.debug(/*"socket user '"+user+"' */ "sending from "+clientSocket.getInetAddress().toString() + " : " + str, this);	
+					Util.log("sending from "+clientSocket.getInetAddress().toString() + " : " + str, this);	
 					if( ! manageCommand(str, out, in, clientSocket)) {			
 						Util.debug("doPlayer(" + str + ")", this);	
 						doPlayer(str, out);
@@ -135,6 +135,8 @@ public class TelnetServer implements Observer {
 	}
 		
 	private void doPlayer(final String str, PrintWriter out){
+		
+		if(str == null || out == null) return;
 		
 		final String[] cmd = str.split(" ");
 		String args = new String(); 			

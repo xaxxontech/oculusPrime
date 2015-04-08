@@ -46,7 +46,7 @@ public class PowerLogger {
 			}
 			
 			logger.seek(logger.length());
-			logger.writeBytes(new Date().toString() + ", " /*+ classname + ", "+*/ + data + "\r\n");
+			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
 			
 			if(history.size() > MAX_HISTORY) history.remove(0);
 			history.add(data);
@@ -55,7 +55,11 @@ public class PowerLogger {
 			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data); 
 		}
 	}
-
+	
+	public static void append(String msg, Object c) {
+		append(c.getClass().getName().toLowerCase() + ", " + msg);
+	}
+	
 	public static String tail(int lines){
 		int i = 0;
 		StringBuffer str = new StringBuffer();
@@ -63,6 +67,9 @@ public class PowerLogger {
 		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
 		return str.toString();
 	}
+
+
+	
 	
 	/*	public static void closeLog() {	
 		

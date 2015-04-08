@@ -10,12 +10,13 @@ import javax.imageio.ImageIO;
 
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.PowerLogger;
 
 import org.red5.server.api.IConnection;
 import org.red5.server.api.service.IServiceCapableConnection;
 
-public class AutoDock { // implements Observer {
-
+public class AutoDock { 
+	
 	public static final String UNDOCKED = "un-docked";
 	public static final String DOCKED = "docked";
 	public static final String DOCKING = "docking";
@@ -41,7 +42,6 @@ public class AutoDock { // implements Observer {
 	private int imgwidth;
 	private int imgheight;
 	public boolean lowres = true;
-//	private ArduinoPower powerport = null;
 	public static final int FLHIGH = 25;
 	public static final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
@@ -50,14 +50,11 @@ public class AutoDock { // implements Observer {
 		this.app = theapp;
 		this.grabber = thegrab;
 		this.comport = com;
-//		this.powerport = powercom;
-		// state.addObserver(this);
-//		docktarget = settings.readSetting(GUISettings.docktarget);
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
 	}
 
-	public void autoDock(String str){//PlayerCommands.autodockargs arg) {
+	public void autoDock(String str){
 
 		String cmd[] = str.split(" ");
 		
@@ -82,7 +79,7 @@ public class AutoDock { // implements Observer {
 				dockattempts = 1;
 				app.message("auto-dock in progress", "motion", "moving");
 				Util.log("autodock go", this);
-				
+				PowerLogger.append("autodock go", this);
 			}
 			else { app.message("motion disabled","autodockcancelled", null); }
 		}
@@ -120,6 +117,7 @@ public class AutoDock { // implements Observer {
 						state.set(State.values.docking, false);
 						app.message("auto-dock target not found, try again", "multiple", "autodockcancelled blank");
 						Util.log("autoDock():  target lost", this);
+						PowerLogger.append("autoDock():  target lost", this);
 						lowres = true;
 					}
 				}
@@ -230,6 +228,7 @@ public class AutoDock { // implements Observer {
 		comport.speedset(ArduinoPrime.speeds.slow.toString());
 		state.set(State.values.movingforward, false);
 		Util.log("docking initiated", this);
+		PowerLogger.append("docking initiated", this);
 		
 		new Thread(new Runnable() {	
 			public void run() {
@@ -279,6 +278,7 @@ public class AutoDock { // implements Observer {
 					
 					app.message("docked successfully", "multiple", str);
 					Util.log(state.get(State.values.driver) + " docked successfully", this);
+					PowerLogger.append(state.get(State.values.driver) + " docked successfully", this);
 
 				} else { // dock fail
 					
@@ -287,6 +287,7 @@ public class AutoDock { // implements Observer {
 
 						app.message("docking timed out", null, null);
 						Util.log("dock(): " + state.get(State.values.driver) + " docking timed out", this);
+						PowerLogger.append("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 
 						// back up and retry
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
@@ -571,7 +572,10 @@ public class AutoDock { // implements Observer {
 							}
 						}
 					}).start();
+					
 					Util.log("autodock backup", this);
+					PowerLogger.append("autodock backup", this);
+					
 				} else { // all good, let er rip
 					// System.out.println("dock "+dockslopedeg+" "+slopedeg);
 					new Thread(new Runnable() {
@@ -656,10 +660,8 @@ public class AutoDock { // implements Observer {
 						}
 					}
 					avg = avg / n;
-					app.message("getlightlevel: " + Integer.toString(avg),
-							null, null);
+					app.message("getlightlevel: " + Integer.toString(avg), null, null);
 					
-
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

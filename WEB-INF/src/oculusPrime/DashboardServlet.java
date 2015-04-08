@@ -96,7 +96,7 @@ public class DashboardServlet extends HttpServlet {
 		out.close();	
 	}
 	
-	/*
+	/*System.out.println(System.getProperty("sun.arch.data.model") );
 	public String toHTML(){	
 		Properties props = state.getProperties();
 		StringBuffer str = new StringBuffer("\n<table>");

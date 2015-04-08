@@ -415,35 +415,20 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 
-//	public static void log(String str, String classname) {
-	
 	public static void log(String str, Object c) {
 		
-		if(str==null) return;
+		if(str==null || c==null){
+			debug("wtf: " + str);
+			return;
+		}
 	
 		final String filter = c.getClass().getName().toLowerCase();
-
-		if(filter.contains("power") || filter.contains("dock") || filter.contains("watchdog")){
-			
-			// power.append(str); // , classname);
-			
-			PowerLogger.append(str);
-			
-			// if(filter.contains("power")) return;	
-		}
+		if(filter.contains("power")) return;	
 		
 		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " +str);
-	
+		history.add(getTime() + ", " + filter + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " +str);
 	}
-
-	/*
-	public static void log(String str, Object c) {
-		final String classname = c.getClass().getName();
-		log(str, classname);
-	}	
-	*/
 	
     public static void debug(String str, Object c) {
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
