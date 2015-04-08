@@ -32,7 +32,7 @@ public class LiveSettingsTest {
 		Settings settings = Settings.getReference();
 			if(Settings.settingsfile != null)
 				if(Settings.settingsfile.contains("null"))
-					fail("no settings file found");
+					fail("no settings file found..");
 			
 		try {
 			socket = new Socket("127.0.0.1", settings.getInteger(ManualSettings.telnetport));

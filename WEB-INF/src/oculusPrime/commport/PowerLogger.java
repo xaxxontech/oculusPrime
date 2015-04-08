@@ -46,13 +46,13 @@ public class PowerLogger {
 		
 		
 		// timer.scheduleAtFixedRate(new ClearTimer(), BAN_TIME_OUT, BAN_TIME_OUT);
-		Util.log("log file opened", this);
+		append("log file opened");
 		
 		// Runtime.getRuntime().addShutdownHook(new JVMShutdownHook());
 		
 	}
 
-	public static void append(String data, String classname) {
+	public void append(String data){ //, String classname) {
 		try {
 			if(logger == null) {
 				Util.debug("PowerLogger(): null log file: "+ data);
@@ -60,7 +60,7 @@ public class PowerLogger {
 			}
 			
 			logger.seek(logger.length());
-			logger.writeBytes(new Date().toString() + ", " + classname + ", "+ data + "\r\n");
+			logger.writeBytes(new Date().toString() + ", " /*+ classname + ", "+*/ + data + "\r\n");
 			
 			if(history.size() > MAX_HISTORY) history.remove(0);
 			history.add(data);
@@ -91,10 +91,10 @@ public class PowerLogger {
 		}
 		
 		try {		
-			append("log file closed", "PowerLogger");
+			singleton.append("log file closed"); //, "PowerLogger");
 			logger.close();
 		} catch (IOException e) {
-			append("closeLog(): " + e.getMessage(), "PowerLogger");
+			singleton.append("closeLog(): " + e.getMessage()); // "PowerLogger");
 		}
 	}
 

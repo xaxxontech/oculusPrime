@@ -37,7 +37,7 @@ public class Util {
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>();
-
+	static PowerLogger power = PowerLogger.getRefrence();
 	
 	/**
 	 * Delays program execution for the specified delay.
@@ -422,7 +422,7 @@ public class Util {
 		final String filter = classname.toLowerCase();
 
 		if(filter.contains("power") || filter.contains("dock") || filter.contains("watchdog")){
-			PowerLogger.getRefrence().append(str, classname);
+			power.append(str); // , classname);
 			if(filter.contains("power")) return;	
 		}
 		

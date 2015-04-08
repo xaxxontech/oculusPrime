@@ -41,9 +41,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String authtoken = null;
 	private String salt = null;
 	
-	// private ScriptRunner scriptRunner = new ScriptRunner();	
-	NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
-	
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private BanList banlist = BanList.getRefrence();
@@ -62,15 +59,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private developer.Navigation navigation = null;
 
 	public static byte[] framegrabimg  = null;
-//	public static Boolean passengerOverride = false;
 	public static BufferedImage processedImage = null;
 	
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start===============\n",this);
-		Util.log("\n==============Oculus Prime Java Start===============\n","Application_power");
+		Util.log("\n======--=======Oculus Prime Java Start========--======\n","Application_power");
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
+		NetworkMonitor.getReference(); // just be sure it gets started 
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
 		initialize();
