@@ -17,7 +17,7 @@ public class DashboardServlet extends HttpServlet {
 	static final long serialVersionUID = 1L;	
 	static final long HTTP_REFRESH_DELAY_SECONDS = 2;
 	
-	PowerLogger power = PowerLogger.getRefrence();
+// 	PowerLogger power = PowerLogger.getRefrence();
 	Settings settings = Settings.getReference();
 	BanList ban = BanList.getRefrence();
 	State state = State.getReference();
@@ -72,7 +72,7 @@ public class DashboardServlet extends HttpServlet {
 			
 			if(view.equalsIgnoreCase("power")){	
 				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
-				out.println(power.tail(30) + "\n");
+				out.println(PowerLogger.tail(30) + "\n");
 			}
 			
 			if(view.equalsIgnoreCase("ros")){
@@ -83,7 +83,7 @@ public class DashboardServlet extends HttpServlet {
 				out.println("\nsystem output: <hr>\n");
 				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
-				out.println("\n" + power.tail(10) + "\n");
+				out.println("\n" + PowerLogger.tail(10) + "\n");
 				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
 				out.println("\n" + ban.tail(5) + "\n");
 			}

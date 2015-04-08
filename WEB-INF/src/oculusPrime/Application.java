@@ -64,10 +64,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start===============\n",this);
-		Util.log("\n======--=======Oculus Prime Java Start========--======\n","Application_power");
+		PowerLogger.append("\n==============Oculus Prime Java Start===============\n");
+		
+		//
+		// no need to do this here, but thats how you should 	
+		//
+		// Util.log("\n======--=======Oculus Prime Java Start========--======\n","Application_power");
+		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
-		NetworkMonitor.getReference(); // just be sure it gets started 
+		NetworkMonitor.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
 		initialize();
@@ -1348,12 +1354,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void shutdown() {
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
+			
+			// commandServer.close();
+			
 			// TODO: shutdown telnet connections and commandServer
 		}
 		
 		powerport.writeStatusToEeprom();
 		
-		PowerLogger.closeLog();
+	// TODO: takes time to write to port !! 
+	//	PowerLogger.closeLog();
 
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
@@ -1362,7 +1372,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
 			
-		} catch (Exception e) { e.printStackTrace(); }
+		} catch (Exception e) {
+			Util.log("shutdown(): " +e.getMessage(), this);
+			e.printStackTrace(); 
+		}
 	}
 
 	@SuppressWarnings("incomplete-switch")

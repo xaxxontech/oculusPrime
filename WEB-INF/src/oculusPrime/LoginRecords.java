@@ -140,7 +140,8 @@ public class LoginRecords {
 			}
 		}
 		if (app.commandServer!=null) {
-			result+="telnet connections: "+app.commandServer.printers.size(); 
+			// TODO: fix...... 
+			result+="telnet connections: brad will fix this.. "; // +app.commandServer.printers.size(); 
 		}
 
 		return result;

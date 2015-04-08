@@ -96,13 +96,13 @@ public class BanList {
 	
 	public synchronized boolean isBanned(String address) {
 		
-		appendLog("..... isBanned called: " + address); // + " value: " + list.get(address));
+		// appendLog("..... isBanned called: " + address); // + " value: " + list.get(address));
 		
 		if(list.isEmpty()) return false;
 	
 		if(list.containsKey(address)) {
 			
-			appendLog("....... isBanned: " + address + " value: " + list.get(address));
+		// 	appendLog("....... isBanned: " + address + " value: " + list.get(address));
 	
 		//	if(list.get(address) >= BLOCK) addBlockedFile(address);
 			
@@ -111,6 +111,8 @@ public class BanList {
 		//		failed(address);
 		//		return true; 
 		//	}
+			
+			return true;
 		}
 		
 		return false;
@@ -150,8 +152,16 @@ public class BanList {
 		
 		if(remoteAddress.equals("127.0.0.1")) return;
 	
-		if(list.containsKey(remoteAddress)) list.put(remoteAddress, list.get(remoteAddress)+1);
-		else list.put(remoteAddress, 1);
+		appendLog("failed: " + remoteAddress);
+		
+		// add to list if not there 
+		 list.put(remoteAddress, BLOCK);
+		 
+		 
+		// increment 
+		// if(list.containsKey(remoteAddress)) list.put(remoteAddress, list.get(remoteAddress)+1);
+		
+		// else list.put(remoteAddress, BLOCK);
 			
 	}
 	
