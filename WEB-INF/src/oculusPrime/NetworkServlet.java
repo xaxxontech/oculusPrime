@@ -1,6 +1,7 @@
 package oculusPrime;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -20,6 +21,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import oculusPrime.commport.PowerLogger;
+
 public class NetworkServlet extends HttpServlet {
 	
 	private static final long serialVersionUID = 1L;	
@@ -30,7 +33,7 @@ public class NetworkServlet extends HttpServlet {
 	protected static final long WLAN_TIMEOUT = 40000;
 
 	protected static final String PACKAGE = "accesspoint";
-	protected static final String AP_NAME = "oculusprime";
+	protected static final String AP_NAME = "oculusPrime";
 	protected static final String WLAN = "wlan0";
 	protected static final String ETH = "eth0";
 			
@@ -43,6 +46,8 @@ public class NetworkServlet extends HttpServlet {
 	private static String signalNoise = NONE;
 	private static String wlanAddress = NONE;
 	
+	NetworkMonitor monitor = NetworkMonitor.getReference();
+
 	private static Vector<String> accesspoints = new Vector<String>();
 	private static Vector<String> connections = new Vector<String>();
 	private Vector<String> networkData = new Vector<String>();
@@ -86,6 +91,7 @@ public class NetworkServlet extends HttpServlet {
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
+		/*
 		String action = null;
 		String router = null; 
 		String password = null;
@@ -131,11 +137,43 @@ public class NetworkServlet extends HttpServlet {
 				}
 			}
 		}
+		*/
 		
-		wifiSelection(request, response);
+		wifiInfo(request, response);
 	}
 	
-	public void wifiSelection(HttpServletRequest request, HttpServletResponse response) throws IOException{
+	public void wifiInfo(HttpServletRequest request, HttpServletResponse response) throws IOException{
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+	
+		/*
+		if ( ! settings.getBoolean(ManualSettings.developer.name())){
+			out.println("this service is for developers only, check settings..");
+			out.close();	
+			return;
+		}
+		
+		if(ban.isBanned(request.getRemoteAddr())){
+			out.println("this is a banned address: " + ban);
+			out.close();	
+			return;
+		}
+		*/
+		
+		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body> \n");
+/*
+		String view = null;	
+		try {
+			view = request.getParameter("view");
+		} catch (Exception e) {
+			System.out.println(e.getLocalizedMessage());
+		}
+	*/	
+		out.println(NetworkMonitor.getReference().wlanString() + "\n");
+		
+		out.println("\n</body></html> \n");
+		out.close();		
+		/*
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 			
@@ -177,7 +215,9 @@ public class NetworkServlet extends HttpServlet {
 		out.println("</table>");
 		
 		out.println("</body></html>");
-		out.close();	
+		out.close();
+		*/
+		
 	}
 	
 	public void sendLogin(HttpServletRequest request, HttpServletResponse response, String ssid) throws IOException{

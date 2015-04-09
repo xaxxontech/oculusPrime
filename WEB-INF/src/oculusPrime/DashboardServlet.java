@@ -17,7 +17,7 @@ public class DashboardServlet extends HttpServlet {
 	static final long serialVersionUID = 1L;	
 	static final long HTTP_REFRESH_DELAY_SECONDS = 2;
 	
-// 	PowerLogger power = PowerLogger.getRefrence();
+	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
 	BanList ban = BanList.getRefrence();
 	State state = State.getReference();
@@ -79,12 +79,20 @@ public class DashboardServlet extends HttpServlet {
 				out.println(state.rosDashboard() + "\n");
 			}
 			
+			if(view.equalsIgnoreCase("ap")){
+				String[] ap = monitor.getAccessPoints(); 
+				for(int i = 0 ; i < ap.length ; i++)
+					out.println(ap[i] + "<br />\n");
+			}
+			
 			if(view.equalsIgnoreCase("log")){
 				out.println("\nsystem output: <hr>\n");
 				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
 				out.println("\n" + PowerLogger.tail(10) + "\n");
-				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
+				out.println("\n<br />banned addresses: " +  ban + " telnet users [" 
+						+ state.get(State.values.telnetusers)+ "] " 
+						+ "<hr>\n");
 				out.println("\n" + ban.tail(5) + "\n");
 			}
 		}

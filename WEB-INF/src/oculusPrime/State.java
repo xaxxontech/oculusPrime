@@ -35,9 +35,7 @@ public class State {
 		navigationrouteid,
 		
 		localaddress, externaladdress, // network things 
-		signalnoise, signalstrength, signalquality, signalspeed, ssid, gateway, // ethernetaddress,
-		
-		;
+		signalnoise, signalstrength, signalquality, signalspeed, ssid, gateway, ethernetaddress;
 	};
 
 	public String rosDashboard(){	
