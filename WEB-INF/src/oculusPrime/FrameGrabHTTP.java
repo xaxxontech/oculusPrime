@@ -83,6 +83,8 @@ public class FrameGrabHTTP extends HttpServlet {
             }
             else if (mode.equals("rosmap")) {
             	Application.processedImage = Ros.rosmapImg();
+				if (!state.exists(State.values.rosmapinfo))
+					app.driverCallServer(PlayerCommands.messageclients, "map data unavailable, try starting navigation system");
             	processedImg(req,res);
             }
             else if (mode.equals("rosmapinfo")) { // xmlhttp text

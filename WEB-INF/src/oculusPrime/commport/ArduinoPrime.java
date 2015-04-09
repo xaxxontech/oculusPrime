@@ -444,7 +444,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	/**
 	 * Send a multiple byte command to send the device
 	 * 
-	 * @param command
+	 * @param cmd
 	 *            is a byte array of messages to send
 	 */
 	public void sendCommand(byte[] cmd) {

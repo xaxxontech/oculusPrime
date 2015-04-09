@@ -38,13 +38,12 @@ public class Ros {
 		String mapinfo[] = state.get(State.values.rosmapinfo).split(",");
 
 		if (map == null || Double.parseDouble(mapinfo[6]) > lastmapupdate) {
-			Util.log("fetching new map", "Ros");
+			Util.log("Ros.rosmapImg(): fetching new map", "");
 			map = updateMapImg();
 			lastmapupdate = Double.parseDouble(mapinfo[6]);
 		}
 		
 		return map;
-		
 	}
 	
 	private static BufferedImage updateMapImg() {
@@ -113,16 +112,21 @@ public class Ros {
 	public static String mapinfo() { // send info to javascript
 		String str = "";
 
-		if (state.exists(State.values.rosmapinfo)) str += State.values.rosmapinfo.toString()+"_" + state.get(State.values.rosmapinfo);
+		if (state.exists(State.values.rosmapinfo)) str += State.values.rosmapinfo.toString()+"_" +
+					state.get(State.values.rosmapinfo);
 		
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 			str += " " + State.values.rosamcl.toString()+"_" + "0,0,0,0,0,0";
 		}
-		else if (state.exists(State.values.rosamcl)) str += " " + State.values.rosamcl.toString()+"_" + state.get(State.values.rosamcl);
+		else if (state.exists(State.values.rosamcl)) str += " " + State.values.rosamcl.toString()+"_" +
+					state.get(State.values.rosamcl);
 		
-		if (state.exists(State.values.rosscan)) str += " " + State.values.rosscan.toString()+"_" + state.get(State.values.rosscan);
-		if (state.exists(State.values.rosglobalpath)) str += " " + State.values.rosglobalpath.toString()+"_" + state.get(State.values.rosglobalpath);
-		if (state.exists(State.values.roscurrentgoal)) str += " " + State.values.roscurrentgoal.toString()+"_" + state.get(State.values.roscurrentgoal);
+		if (state.exists(State.values.rosscan)) str += " " + State.values.rosscan.toString()+"_" +
+					state.get(State.values.rosscan);
+		if (state.exists(State.values.rosglobalpath)) str += " " + State.values.rosglobalpath.toString()+"_" +
+					state.get(State.values.rosglobalpath);
+		if (state.exists(State.values.roscurrentgoal)) str += " " + State.values.roscurrentgoal.toString()+"_" +
+					state.get(State.values.roscurrentgoal);
 
 		if (state.exists(State.values.rosmapupdated)) {
 			str += " " + State.values.rosmapupdated.toString() +"_" + state.get(State.values.rosmapupdated);
@@ -130,7 +134,7 @@ public class Ros {
 		}
 		if (state.exists(State.values.rosmapwaypoints)) {
 			str += " " + State.values.rosmapwaypoints.toString() +"_" + state.get(State.values.rosmapwaypoints);
-			state.delete(State.values.rosmapwaypoints);
+//			state.delete(State.values.rosmapwaypoints);
 		}
 		
 		return str;
@@ -144,6 +148,7 @@ public class Ros {
 	}
 	
 	public static void savewaypoints(String str) {
+		state.set(State.values.rosmapwaypoints, str);
 		try {
 			FileWriter fw = new FileWriter(waypointsfile);						
 			fw.append(str+"\r\n");
@@ -154,28 +159,28 @@ public class Ros {
 	}
 	
 	public static void loadwaypoints() {
-			state.delete(State.values.rosmapwaypoints);
-			if (!state.exists(State.values.rosmapinfo)) return;
-			
-			BufferedReader reader;
-			String str = "";
-			try {
-				reader = new BufferedReader(new FileReader(waypointsfile));
-				str = reader.readLine();
-				reader.close();
+		state.delete(State.values.rosmapwaypoints);
+//			if (!state.exists(State.values.rosmapinfo)) return;
 
-			} catch (FileNotFoundException e) {
-				Util.debug("no waypoints file yet");
-				return;
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			str = str.trim();
-			if (!str.equals("")) state.set(State.values.rosmapwaypoints, str.trim());			
+		BufferedReader reader;
+		String str = "";
+		try {
+			reader = new BufferedReader(new FileReader(waypointsfile));
+			str = reader.readLine();
+			reader.close();
+
+		} catch (FileNotFoundException e) {
+			Util.debug("no waypoints file yet");
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		str = str.trim();
+		if (!str.equals("")) state.set(State.values.rosmapwaypoints, str);
 	}
 	
 	public static boolean setWaypointAsGoal(String str) {
-		loadwaypoints();
+//		loadwaypoints();
 		if (!state.exists(State.values.rosmapwaypoints)) return false;
 		
 		boolean result = false;
@@ -201,7 +206,7 @@ public class Ros {
 			}
 		}
 		
-		state.delete(State.values.rosmapwaypoints);
+//		state.delete(State.values.rosmapwaypoints);
 		return result;
 	}
 	

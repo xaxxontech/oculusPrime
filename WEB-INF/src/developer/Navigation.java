@@ -33,6 +33,7 @@ public class Navigation {
    /** Constructor */
 	public Navigation(Application a){ 
 		app = a;
+		Ros.loadwaypoints();
 	}	
 	
 	public void gotoWaypoint(final String str) {
@@ -52,9 +53,16 @@ public class Navigation {
 			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				state.set(State.values.motionenabled, true);
 				app.driverCallServer(PlayerCommands.forward, "0.7");
+				Util.delay(3000);
+
+				// rotate to localize
+				app.driverCallServer(PlayerCommands.left, "360");
+				Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
 				Util.delay(1000);
+
 			}
-			
+
+
 			if (!Ros.setWaypointAsGoal(str))
 				app.driverCallServer(PlayerCommands.messageclients, "unable to set waypoint");
 
@@ -246,7 +254,6 @@ public class Navigation {
 			FileWriter fw = new FileWriter(navroutesfile);
 			fw.append(str);
 			fw.close();
-			app.driverCallServer(PlayerCommands.messageclients, "routes saved");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -312,7 +319,7 @@ public class Navigation {
 			
 			while (true) {
 				
-				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
 					app.driverCallServer(PlayerCommands.messageclients,
 							"Can't start route, location unknown");
@@ -330,6 +337,12 @@ public class Navigation {
 				if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					state.set(State.values.motionenabled, true);
 					app.driverCallServer(PlayerCommands.forward, "0.7");
+
+					Util.delay(3000);
+
+					// rotate to localize
+					app.driverCallServer(PlayerCommands.left, "360");
+					Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
 					Util.delay(1000);
 				}
 				
@@ -398,9 +411,9 @@ public class Navigation {
 
 				consecutiveroute ++;
 
-				String msg = " until next route: "+name+", run #"+consecutiveroute;
+				String msg = " min until next route: "+name+", run #"+consecutiveroute;
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) {
-					msg = " until app restart, max consecutive routes "+RESTARTAFTERCONSECUTIVEROUTES+ "reached";
+					msg = " min until app restart, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
 				}
 
 					// delay to next route

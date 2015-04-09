@@ -447,7 +447,7 @@ public class Util {
     	String str = "";
 		str += "memory : " +
 				((double)Runtime.getRuntime().freeMemory()
-						/ (double)Runtime.getRuntime().totalMemory())*100 + "% used<br>";
+						/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
 		
 		str += "memorytotal : "+Runtime.getRuntime().totalMemory()+"<br>";    
 	    str += "memoryfree : "+Runtime.getRuntime().freeMemory()+"<br>";
@@ -455,7 +455,7 @@ public class Util {
     }
 	
 	public static void reboot() {
-		String str  = Settings.redhome + Settings.sep + "systemreboot.sh"; 
+		String str  = Settings.redhome + Settings.sep + "systemreboot.sh";
 		Util.systemCall(str);
 	}
 	

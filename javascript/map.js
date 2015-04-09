@@ -32,12 +32,18 @@ var goalposesettime = 0;
 var waypoints = [];
 var pendingwaypoint = null;
 var mapshowwaypoints = true;
-
 var routesxml = null;
 var temproutesxml;
+var navmenuinit = false;
 
 function navigationmenu() {
-	popupmenu('menu', 'show', null, null, document.getElementById('navigation_menu').innerHTML);
+	if (navmenuinit) 
+		popupmenu('menu', 'show', null, null, document.getElementById('navigation_menu').innerHTML);
+	else { 		
+		var date = new Date().getTime();
+		// setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+date+"', rosinfo);", 1500);
+		openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
+	}
 }
 
 function rosmap(mode) {
@@ -51,7 +57,7 @@ function rosmap(mode) {
 	var img = new Image();
 	img.src = 'frameGrabHTTP?mode=rosmap&date='+ date;
 	
-	if (waypoints.length == 0) 	callServer("loadwaypoints","");
+	// if (waypoints.length == 0) 	callServer("loadwaypoints","");
 	
 	img.onload= function() {
 		// defaults
@@ -127,18 +133,14 @@ function rosmapImgReload() {
 }
 
 function rosinfo() {
-	if (document.getElementById("rosmap_menu_over").style.display != "") return;
+	// if (document.getElementById("rosmap_menu_over").style.display != "") return;
 	
 	if (xmlhttp.readyState==4) {// 4 = "loaded"
 		if (xmlhttp.status==200) {// 200 = OK
 			var str = xmlhttp.responseText;
-			//  width_height_res_originx_originy_originth_updatetime odomx_odomy_odomth
-			
 			var s = str.split(" ");
 			
 			var nukegoalpose = true;
-//			if (s.length == 0) nukegoalpose = false; // in case of empty xmlhttp
-			// to prevent cancellening right after setting:
 			var t = new Date().getTime();
 			if (t - goalposesettime < 5000) nukegoalpose = false;
 			
@@ -181,7 +183,8 @@ function rosinfo() {
 						var arr = ss[1].split(",");
 						var conv = fromrosmeters([arr[0], arr[1], arr[2]]);
 						mapgoalpose = [conv[0], conv[1], conv[2]];
-						str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;, &quot;rosgoalcancel true&quot;)'>";
+						str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;,"
+						str += " &quot;rosgoalcancel true&quot;)'>";
 						str += "<span class='cancelbox'><b>X</b></span> ";
 						str += "CANCEL GOAL</a>"; 
 						document.getElementById("rosmapinfobar").innerHTML = str; 
@@ -192,15 +195,24 @@ function rosinfo() {
 						var arr = ss[1].split(",");
 						for (var n = 0 ; n <= arr.length - 4 ; n += 4) {
 							waypoints[n] = arr[n];
-							var conv = fromrosmeters([arr[n+1], arr[n+2], arr[n+3]]);
-							waypoints[n+1] = conv[0];
-							waypoints[n+2] = conv[1];
-							waypoints[n+3] = conv[2];
+							if (document.getElementById("rosmap_menu_over").style.display == "") { // names only 
+								var conv = fromrosmeters([arr[n+1], arr[n+2], arr[n+3]]);
+								waypoints[n+1] = conv[0];
+								waypoints[n+2] = conv[1];
+								waypoints[n+3] = conv[2];
+							}
 						}
 						break;
 				
 				}
 			}
+			
+			if (!navmenuinit) {
+				popupmenu('menu', 'show', null, null, document.getElementById('navigation_menu').innerHTML);
+				navmenuinit = true;
+			}
+			
+			if (document.getElementById("rosmap_menu_over").style.display != "") return;
 			
 			if (mapgoalpose != null && nukegoalpose)  {
 				mapgoalpose = null;
@@ -700,7 +712,6 @@ function savewaypoint() {
 
 function writewaypointstofile() {
 	if (waypoints.length == 0) return;
-//	if (!confirm("Save Waypoints\n\nThis will overwrite any previous saves\nAre you Sure?")) return;
 	
 	var str = "";
 	for (var i = 0 ; i <= waypoints.length - 4 ; i += 4) {

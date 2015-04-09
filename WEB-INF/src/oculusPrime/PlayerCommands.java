@@ -59,7 +59,7 @@ public enum PlayerCommands { // all valid commands
     opennisensor, clearmap, stereo, error,
     
     // navigation
-    roslaunch, savewaypoints, loadwaypoints, gotowaypoint, startnav, stopnav,
+    roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,
     gotodock, saveroute, runroute, cancelroute,
     
     // deprecated (kept for mobile client compatibility, undocumented)

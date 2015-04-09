@@ -775,11 +775,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("waypoints saved", null, null);
 			break;
 			
-		case loadwaypoints:
-			Ros.loadwaypoints();
-			if (state.exists(State.values.rosmapwaypoints)) messageplayer("waypoints loaded", null, null);
-			break;
-			
 		case gotowaypoint:
 			if (navigation != null) navigation.gotoWaypoint(str);
 			break;
@@ -797,7 +792,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case saveroute: 
-			if (navigation != null) navigation.saveRoute(str); 
+			if (navigation != null) navigation.saveRoute(str);
+			messageplayer("route saved", null, null);
 			break;
 			
 		case runroute:
@@ -1359,12 +1355,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void shutdown() {
+		Util.log("shutting down application", this);
+		PowerLogger.append("shutting down application", this);
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
-			
-			// commandServer.close();
-			
-			// TODO: shutdown telnet connections and commandServer
 		}
 		
 		powerport.writeStatusToEeprom();
@@ -1374,15 +1368,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
-		
-		try {
-				
-			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
-			
-		} catch (Exception e) {
-			Util.log("shutdown(): " +e.getMessage(), this);
-			e.printStackTrace(); 
-		}
+
+		Util.systemCall("pkill chrome"); // stop google chrome
+
+		Util.systemCall(Settings.redhome+Settings.sep+"red5-shutdown.sh");
 	}
 
 	@SuppressWarnings("incomplete-switch")
