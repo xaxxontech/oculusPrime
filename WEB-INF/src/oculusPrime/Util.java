@@ -1,5 +1,18 @@
 package oculusPrime;
 
+import oculusPrime.commport.PowerLogger;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -10,6 +23,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
@@ -22,6 +36,7 @@ import oculusPrime.commport.PowerLogger;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+
 
 public class Util {
 	
@@ -190,7 +205,7 @@ public class Util {
 	/**
 	 * Run the given text string as a command on the host computer. 
 	 * 
-	 * @param str is the command to run, like: "restart
+	 * @param args is the command to run, like: "restart
 	 * 
 	 */
 	public static void systemCallBlocking(final String args) {
@@ -222,8 +237,8 @@ public class Util {
 	 *  
 	 */
 	public static void systemCall(final String str){
-		new Thread(new Runnable() { 
-			public void run() {
+//		new Thread(new Runnable() {
+//			public void run() {
 				try {
 					Runtime.getRuntime().exec(str);
 //					Process proc = Runtime.getRuntime().exec(str);
@@ -240,8 +255,8 @@ public class Util {
 				} catch (Exception e) {
 					e.printStackTrace();
 				}		
-			} 	
-		}).start();
+//			}
+//		}).start();
 	}
 
 
@@ -342,21 +357,6 @@ public class Util {
 		settings.writeSettings(GUISettings.volume.name(), percent);
 	}
 
-	/**
-	 * If enabled in settings with "notify", this method will turn up volume to max,
-	 * say the string, and then restore the volume to the original setting. 
-	 * 
-	 * 
-	 * @param str
-	 * 				is the phrase to turn from text to speech 
-	 
-	public static void beep() {
-		if(Settings.os.equals("windows")){
-			systemCall("nircmdc.exe beep 500 1000");
-		}else log("need linux beep"); 
-		// TODO: linux beep
-	}*/
-	
 	/*
 	public static String tail(int lines) {
 		Vector<String> alllines = new Vector<String>();
@@ -425,8 +425,12 @@ public class Util {
 		if(filter.contains("power") || filter.contains("arduinopower")) return;	
 		
 		if(history.size() > MAX_HISTORY) history.remove(0);
+//		history.add(getTime() + ", " +str);
+//		System.out.println("OCULUS: " + getTime() + ", " + classname + ", " + str);
+
 		history.add(getTime() + ", " + filter + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " +str);
+
 	}
 	
     public static void debug(String str, Object c) {
@@ -476,6 +480,22 @@ public class Util {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	public static String XMLtoString(Document doc) {
+		String output = null;
+		try {
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer = tf.newTransformer();
+			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+			StringWriter writer = new StringWriter();
+			transformer.transform(new DOMSource(doc), new StreamResult(writer));
+			output = writer.getBuffer().toString().replaceAll("\n|\r", "");
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return output;
 	}
 
 }

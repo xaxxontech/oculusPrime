@@ -238,10 +238,16 @@ public class AutoDock {
 				int inchforward = 0;
 				while (inchforward < 20 && !state.getBoolean(State.values.wallpower) && 
 						state.getBoolean(State.values.docking)) {
+
 					comport.goForward();
 					Util.delay(150);
 					comport.stopGoing();
-					
+
+					// pause in case of pcb reset while docking(fairly common)
+					long start = System.currentTimeMillis();
+					while (!app.powerport.isconnected && System.currentTimeMillis() - start < 10000)
+						Util.delay(50);
+
 					state.block(oculusPrime.State.values.wallpower, "true", 400);
 					inchforward ++;
 				}

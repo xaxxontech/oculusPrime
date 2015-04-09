@@ -77,6 +77,7 @@ public class PowerLogger {
 		try {		
 			// singleton.append("log file closed"); //, "PowerLogger");
 			logger.close();
+			logger = null;
 		} catch (IOException e) {
 			
 			

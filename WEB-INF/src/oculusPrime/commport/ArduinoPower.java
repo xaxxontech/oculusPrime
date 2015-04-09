@@ -46,7 +46,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected State state = State.getReference();
 	protected static SerialPort serialPort = null;	
 	
-	protected volatile boolean isconnected = false;
+	public volatile boolean isconnected = false;
 	protected static long lastRead;
 	protected long lastReset;
 	protected long lastHostHeartBeat;

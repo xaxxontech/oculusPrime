@@ -56,8 +56,8 @@ public class SystemWatchdog {
 			// regular reboot if set 
 			if ((state.getUpTime() > STALE) && !state.exists(State.values.driver.toString()) && 
 					!state.exists(State.values.powererror.toString()) && // why..? 
-//					state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN &&
-					(settings.getBoolean(GUISettings.reboot))){ 
+					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+					(settings.getBoolean(GUISettings.reboot))){
 				
 				String boot = new Date(state.getLong(State.values.boottime.name())).toString();				
 				Util.log("rebooting, last boot was: " + boot, this);
