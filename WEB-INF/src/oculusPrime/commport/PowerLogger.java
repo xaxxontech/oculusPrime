@@ -34,27 +34,39 @@ public class PowerLogger {
 			Util.debug("PowerLogger(): " + e.getMessage());
 		}
 		
-		append(".....log file opened......");
 	}
 
-	public static void append(String data){
-		try {
-			
-			if(logger == null) init();
-			
-			logger.seek(logger.length());
-			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
-			
-			if(history.size() > MAX_HISTORY) history.remove(0);
-			history.add(data);
-	
-		} catch (Exception e) {
-			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data); 
-		}
-	}
+//	public static void append(String data){
+//		try {
+//
+//			if(logger == null) init();
+//
+//			logger.seek(logger.length());
+//			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
+//
+//			if(history.size() > MAX_HISTORY) history.remove(0);
+//			history.add(data);
+//
+//		} catch (Exception e) {
+//			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data);
+//		}
+//	}
 	
 	public static void append(String msg, Object c) {
-		append(c.getClass().getName().toLowerCase() + ", " + msg);
+		String data = c.getClass().getName().toLowerCase() + ", " + msg;
+		try {
+
+			if(logger == null) init();
+
+			logger.seek(logger.length());
+			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
+
+			if(history.size() > MAX_HISTORY) history.remove(0);
+			history.add(data);
+
+		} catch (Exception e) {
+			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data);
+		}
 	}
 	
 	public static String tail(int lines){

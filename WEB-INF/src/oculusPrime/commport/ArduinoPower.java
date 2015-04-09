@@ -135,7 +135,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
     			try {
         			Util.log("querying port "+portNames[i], this);
-        			PowerLogger.append("querying port "+portNames[i]);
+        			PowerLogger.append("querying port "+portNames[i], this);
         			
         			serialPort = new SerialPort(portNames[i]);
         			serialPort.openPort();
@@ -165,7 +165,7 @@ public class ArduinoPower implements SerialPortEventListener  {
     				if (device.equals(FIRMWARE_ID)) {
 
     					Util.log("power board connected to  "+portNames[i], this);
-    					PowerLogger.append("power board connected to  "+portNames[i]);
+    					PowerLogger.append("power board connected to  "+portNames[i], this);
     					
     					lastRead = System.currentTimeMillis();
     					isconnected = true;
@@ -176,7 +176,7 @@ public class ArduinoPower implements SerialPortEventListener  {
     				}
     				serialPort.closePort();
 
-    			} catch (Exception e) {	Util.log("can't connect to port: " + e.getMessage(), this); }
+    			} catch (Exception e) {	PowerLogger.append("can't connect to port: " + e.getMessage(), this); }
         	}
         }
 		
@@ -199,7 +199,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				
 				Util.debug("run....", this);
 
-				if (now - lastReset > RESET_DELAY && isconnected) Util.log(FIRMWARE_ID+" past reset delay", this); 
+				if (now - lastReset > RESET_DELAY && isconnected) PowerLogger.append(FIRMWARE_ID+" past reset delay", this);
 				
 				//TODO: brad here ..............................................................
 				// if (state.exists(oculusPrime.State.values.powererror)) {
@@ -208,14 +208,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 					application.message(msg, null, null);
 					application.messageGrabber(msg, "");	
 					Util.log(msg, this);
-					PowerLogger.append(msg); 
+					PowerLogger.append(msg, this);
 				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
 					application.message("power PCB timeout", "battery", "timeout");
 					Util.log("power PCB timeout", this);
-					PowerLogger.append("power PCB timeout");
+					PowerLogger.append("power PCB timeout", this);
 					reset();
 				}
 				
@@ -223,7 +223,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 						!state.getBoolean(oculusPrime.State.values.autodocking) ){  
 					application.message("power PCB periodic reset", "battery", "resetting");
 					Util.log("power PCB periodic reset", this);
-					PowerLogger.append("power PCB periodic reset");
+					PowerLogger.append("power PCB periodic reset", this);
 					lastReset = now;
 					reset();
 				}
@@ -253,7 +253,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 					Util.delay(100); 
 					
 					Util.log("resetting Power board", this);
-					PowerLogger.append("resetting Power board");
+					PowerLogger.append("resetting Power board",this);
 					disconnect();
 					connect();
 					initialize();
@@ -289,7 +289,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			}
 			
 		} catch (SerialPortException e) {
-			Util.log("serialEvent:" + e.getLocalizedMessage(), this);
+			PowerLogger.append("serialEvent:" + e.getLocalizedMessage(), this);
 		}
 	}
 	
@@ -300,7 +300,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
 		
-		PowerLogger.append("serial in: " + response);
+		PowerLogger.append("serial in: " + response, this);
 		
 		String s[] = response.split(" ");
 		
@@ -460,7 +460,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	/**
 	 * Send a multiple byte command to send the device
 	 * 
-	 * @param command
+	 * @param cmd
 	 *            is a byte array of messages to send
 	 */
 	public void sendCommand(byte[] cmd) {
@@ -471,7 +471,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for(int i = 1 ; i < cmd.length ; i++) 
 			text += ((byte)cmd[i] & 0xFF) + " ";   // & 0xFF converts to unsigned byte
 		
-		Util.log(text, this);
 		PowerLogger.append(text, this);
 		
 		final byte[] command = cmd;

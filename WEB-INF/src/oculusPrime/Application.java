@@ -64,7 +64,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start===============\n",this);
-		PowerLogger.append(".................Oculus Prime Java Start.................", this);
+		PowerLogger.append("\n.................Oculus Prime Java Start.................\n", this);
 		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -854,7 +854,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	/**
 	 * distribute commands from grabber
 	 * 
-	 * @param fn
+	 * @param cmd
 	 *            is the function to call in xxxxxx.swf ???
 	 * @param str
 	 *            is the parameters to pass on to the function.

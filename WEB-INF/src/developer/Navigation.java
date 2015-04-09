@@ -233,9 +233,9 @@ public class Navigation {
 			reader.close();
 
 		} catch (FileNotFoundException e) {
-			Util.debug("no navroutes file found");
+			return "<routeslist></routeslist>";
 		} catch (IOException e) {
-			e.printStackTrace();
+			return "<routeslist></routeslist>";
 		}
 		
 		return result;
@@ -398,10 +398,15 @@ public class Navigation {
 
 				consecutiveroute ++;
 
-				// delay to next route
+				String msg = " until next route: "+name+", run #"+consecutiveroute;
+				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) {
+					msg = " until app restart, max consecutive routes "+RESTARTAFTERCONSECUTIVEROUTES+ "reached";
+				}
+
+					// delay to next route
 				String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
 		    	long timebetween = Long.parseLong(min) * 1000 * 60;
-				app.driverCallServer(PlayerCommands.messageclients, min+" min until next route: "+name+", run #"+consecutiveroute);
+				app.driverCallServer(PlayerCommands.messageclients, min +  msg);
 		    	start = System.currentTimeMillis();
 				while (System.currentTimeMillis() - start < timebetween) {
 					if (!state.exists(State.values.navigationroute)) return;
@@ -410,7 +415,6 @@ public class Navigation {
 				}
 
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
-					Util.log("max consecutive routes" +RESTARTAFTERCONSECUTIVEROUTES+" reached, restarting application", this);
 					app.restart();
 					return;
 				}

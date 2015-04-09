@@ -1,15 +1,13 @@
 package oculusPrime;
 
-import java.util.Date;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import oculusPrime.Settings;
-import oculusPrime.State;
-import oculusPrime.Util;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.PowerLogger;
+
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class SystemWatchdog {
 	
@@ -44,6 +42,7 @@ public class SystemWatchdog {
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				Util.log("System WatchDog, force undock", this);
+				PowerLogger.append("System WatchDog, force undock", this);
 				forceundock();
 			}
 			
@@ -73,6 +72,7 @@ public class SystemWatchdog {
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
 						settings.getBoolean(GUISettings.redock)) {
 					Util.log("abandoned logins, driver still connected, attempt redock", this);
+					PowerLogger.append("abandoned logins, driver still connected, attempt redock", this);
 					redock(NOFORWARD);
 				}
 			}
@@ -88,6 +88,7 @@ public class SystemWatchdog {
 					){
 				lowbattredock = true;
 				Util.log("abandonded, undocked, low battery, not redocking", this);
+				PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
 				redock(null);
 			}
 			else  lowbattredock = false; 
@@ -96,7 +97,7 @@ public class SystemWatchdog {
 	}
 	
 	private void notifyPowerError() {
-		Util.log("notifyPowerError()", this);
+		PowerLogger.append("notifyPowerError()", this);
 		lastpowererrornotify = state.get(State.values.powererror);
 		boolean warningonly = true;
 		String longerror = "";
@@ -231,7 +232,8 @@ public class SystemWatchdog {
 	
 	private void callForHelp(String subject, String body) {
 		application.driverCallServer(PlayerCommands.messageclients, body);
-		Util.log("callForHelp() "+subject+" "+body, this);
+		Util.log("callForHelp() " + subject + " " + body, this);
+		PowerLogger.append("callForHelp() " + subject + " " + body, this);
 
 		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
 		

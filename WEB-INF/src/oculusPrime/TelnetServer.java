@@ -98,8 +98,7 @@ public class TelnetServer implements Observer {
 				str = str.trim();
 				if(str.length()>=1){
 					
-					Util.log("sending from "+clientSocket.getInetAddress().toString() + " : " + str, this);	
-					if( ! manageCommand(str, out, in, clientSocket)) {			
+					if( ! manageCommand(str, out, in, clientSocket)) {
 						Util.debug("doPlayer(" + str + ")", this);	
 						doPlayer(str, out);
 					}

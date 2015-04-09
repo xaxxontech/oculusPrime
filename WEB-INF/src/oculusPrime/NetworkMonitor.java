@@ -78,7 +78,7 @@ public class NetworkMonitor {
 			
 				proc.waitFor();
 				 
-				Util.log("networkTask: lines copied: " + networkData.size(), this);
+				Util.debug("networkTask: lines copied: " + networkData.size(), this);
 				 
 				readETH();
 				readWAN();
@@ -86,7 +86,7 @@ public class NetworkMonitor {
 				parseETH();
 
 			} catch (Exception e) {
-				Util.log("networkTask: " + e.getLocalizedMessage(), this);
+				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
 			}		
 	    }    
 	}
@@ -205,7 +205,7 @@ public class NetworkMonitor {
 					if( ! state.equals(values.ssid, ss)) state.set(values.ssid, ss);
 				} catch (Exception e) {
 					// disconnecteddWAN();
-					Util.log("..... no wan addrsss", this);
+					Util.debug("..... no wan addrsss", this);
 				}
 								
 				wlanData.clear();
@@ -317,7 +317,7 @@ public class NetworkMonitor {
 
 	private void parseWLAN(){
 		
-		Util.log("parseWLAN: " + wlanData.size(), this);
+		Util.debug("parseWLAN: " + wlanData.size(), this);
 		
 		for(int i = 0 ; i < wlanData.size() ; i++){
 		
@@ -407,7 +407,7 @@ public class NetworkMonitor {
 		for(int j = 0 ; j < aps.size() ; j++) 
 			result[r++] = aps.get(j);
 				
-		Util.log("getAccessPoints: found [" + result.length + "] wifi routers", this);
+		Util.debug("getAccessPoints: found [" + result.length + "] wifi routers", this);
 		// for(int i = 0; i < result.length ; i++) Util.debug((i + "\t" + result[i]), this);
 		
 		return result;
