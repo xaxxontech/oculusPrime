@@ -12,10 +12,30 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.StringReader;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
 import java.util.Vector;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import oculusPrime.commport.PowerLogger;
+
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 
 public class Util {
@@ -31,7 +51,6 @@ public class Util {
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>();
 
-	
 	/**
 	 * Delays program execution for the specified delay.
 	 * 
@@ -396,23 +415,23 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 
-	public static void log(String str, String classname) {
-		final String filter = classname.toLowerCase();
-
-		if(filter.contains("power") || filter.contains("dock") || filter.contains("watchdog")){
-			PowerLogger.getRefrence().append(str, classname);
-			if(filter.contains("power")) return;	
-		}
+	public static void log(String str, Object c) {
+		
+		//if(str==null || c==null){debug("wtf: " + str);return;
+	
+		final String filter = c.getClass().getName().toLowerCase();
+		
+		// if(filter.contains("power")) return;	
 		
 		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + classname + ", " + str);
-	}
+//		history.add(getTime() + ", " +str);
+//		System.out.println("OCULUS: " + getTime() + ", " + classname + ", " + str);
 
-	public static void log(String str, Object c) {
-		final String classname = c.getClass().getName();
-		log(str, classname);
-	}	
+		history.add(getTime() + ", " + filter + ", " +str);
+		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " +str);
+
+	}
+	
     public static void debug(String str, Object c) {
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
 			System.out.println("DEBUG: " + getTime() + ", " + c.getClass().getName() +  ", " +str);

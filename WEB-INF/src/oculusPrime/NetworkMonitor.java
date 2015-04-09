@@ -337,7 +337,7 @@ public class NetworkMonitor {
 		for(int j = 0 ; j < aps.size() ; j++) 
 			result[r++] = aps.get(j);
 				
-		Util.debug("getAccessPoints: found [" + result.length + "] wifi routers", this);
+		Util.log("getAccessPoints: found [" + result.length + "] wifi routers", this);
 		// for(int i = 0; i < result.length ; i++) Util.debug((i + "\t" + result[i]), this);
 		
 		return result;
@@ -355,8 +355,8 @@ public class NetworkMonitor {
 						readWAN();
 						parseWLAN();
 						
-				//		readETH();
-				//		parseETH();
+						readETH();
+						parseETH();
 						
 						Util.delay(POLL_DELAY_MS);
 						

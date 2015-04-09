@@ -24,12 +24,11 @@ public class BanList {
 	private static final long BAN_TIME_OUT = 3000; // time to ban 
 
 	static final int MAX_HISTORY = 50;
-	static Vector<String> history = new Vector<String>();
-	
-	public HashMap<String, Integer> list = new HashMap<String, Integer>();
-	private static BanList singleton = new BanList();
+	private Vector<String> history = new Vector<String>();
+	private HashMap<String, Integer> list = new HashMap<String, Integer>();
 	private Timer timer = new Timer();
 	
+	static BanList singleton = new BanList();
 	public static BanList getRefrence(){
 		return singleton;
 	}
@@ -54,6 +53,7 @@ public class BanList {
 		}
 		
 		timer.scheduleAtFixedRate(new ClearTimer(), BAN_TIME_OUT, BAN_TIME_OUT);
+		appendLog("starting up..");
 	}
 	
 	public String tail(int lines){
@@ -95,12 +95,14 @@ public class BanList {
 	}
 	
 	public synchronized boolean isBanned(String address) {
-	
+		
+		// appendLog("..... isBanned called: " + address); // + " value: " + list.get(address));
+		
 		if(list.isEmpty()) return false;
 	
 		if(list.containsKey(address)) {
 			
-			appendLog("....... isBanned: " + address + " value: " + list.get(address));
+		// 	appendLog("....... isBanned: " + address + " value: " + list.get(address));
 	
 		//	if(list.get(address) >= BLOCK) addBlockedFile(address);
 			
@@ -109,6 +111,8 @@ public class BanList {
 		//		failed(address);
 		//		return true; 
 		//	}
+			
+			return true;
 		}
 		
 		return false;
@@ -148,9 +152,22 @@ public class BanList {
 		
 		if(remoteAddress.equals("127.0.0.1")) return;
 	
-		if(list.containsKey(remoteAddress)) list.put(remoteAddress, list.get(remoteAddress)+1);
-		else list.put(remoteAddress, 1);
+		appendLog("failed: " + remoteAddress);
+		
+		// add to list if not there 
+		 list.put(remoteAddress, BLOCK);
+		 
+		 
+		// increment 
+		// if(list.containsKey(remoteAddress)) list.put(remoteAddress, list.get(remoteAddress)+1);
+		
+		// else list.put(remoteAddress, BLOCK);
 			
+	}
+	
+	@Override
+	public String toString(){
+		return list.toString();
 	}
 	
 	private class ClearTimer extends TimerTask {

@@ -41,9 +41,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String authtoken = null;
 	private String salt = null;
 	
-	// private ScriptRunner scriptRunner = new ScriptRunner();	
-	NetworkMonitor networkMonitor = NetworkMonitor.getReference(); 
-	
 	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private BanList banlist = BanList.getRefrence();
@@ -62,15 +59,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private developer.Navigation navigation = null;
 
 	public static byte[] framegrabimg  = null;
-//	public static Boolean passengerOverride = false;
 	public static BufferedImage processedImage = null;
 	
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start===============\n",this);
-		Util.log("\n==============Oculus Prime Java Start===============\n","Application_power");
+		PowerLogger.append(".................Oculus Prime Java Start.................", this);
+		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
+		NetworkMonitor.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
 		initialize();
@@ -1363,12 +1361,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void shutdown() {
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
+			
+			// commandServer.close();
+			
 			// TODO: shutdown telnet connections and commandServer
 		}
 		
 		powerport.writeStatusToEeprom();
 		
-		PowerLogger.closeLog();
+	// TODO: takes time to write to port !! 
+	//	PowerLogger.closeLog();
 
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
@@ -1377,7 +1379,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 			Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
 			
-		} catch (Exception e) { e.printStackTrace(); }
+		} catch (Exception e) {
+			Util.log("shutdown(): " +e.getMessage(), this);
+			e.printStackTrace(); 
+		}
 	}
 
 	@SuppressWarnings("incomplete-switch")

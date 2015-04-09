@@ -26,10 +26,12 @@ public class State {
 		boottime, httpport, lastusercommand, // system
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
-		odomturndpms,odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
+		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		
-		rosmapinfo, rosamcl, rosglobalpath, rosscan, roscurrentgoal, rosmapupdated, rosmapwaypoints, // navigation
-		navigationenabled, rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
+		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
+		roscurrentgoal, rosmapupdated, rosmapwaypoints, navigationenabled, 
+		
+		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid,
 		
 		localaddress, externaladdress, // network things 
@@ -37,6 +39,69 @@ public class State {
 		
 		;
 	};
+
+	public String rosDashboard(){	
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>distanceangle</b><td>" + get(values.distanceangle)
+				+ "<td><b>direction</b><td>" + get(values.direction)
+				+ "<td><b>odometry</b><td>" + get(values.odometry) 
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>distanceanglettl</b><td>" + get(values.distanceanglettl) 
+				+ "<td><b>stopbetweenmoves</b><td>" + get(values.stopbetweenmoves) 
+				+ "<td><b>odometrybroadcast</b><td>" + get(values.odometrybroadcast) 
+				+ "<td><b>odomturndpms</b><td>" + get(values.odomturndpms) 
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>odomturnpwm</b><td>" + get(values.odomturnpwm) 
+				+ "<td><b>odomupdated</b><td>" + get(values.odomupdated) 
+				+ "<td><b>odomlinearmpms</b><td>" + get(values.odomlinearmpms) 
+				+ "<td><b>odomlinearpwm</b><td>" + get(values.odomlinearpwm) 
+				+ "</tr> \n");
+		
+		str.append("<tr>"
+				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + get(values.rosmapinfo) 
+			// 	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
+			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
+				+ "</tr> \n");
+			
+		str.append("<tr><td><b>roscurrentgoal</b><td>" + get(values.roscurrentgoal) 
+				+ "<td><b>rosmapupdated</b><td>" + get(values.rosmapupdated) 
+				+ "<td><b>rosmapwaypoints</b><td>" + get(values.rosmapwaypoints) 
+				+ "<td><b>navigationenabled</b><td>" + get(values.navigationenabled) 
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>rossetgoal</b><td>" + get(values.rossetgoal) 
+				+ "<td><b>rosgoalstatus</b><td>" + get(values.rosgoalstatus)
+				+ "<td><b>rosgoalcancel</b><td>" + get(values.rosgoalcancel) 
+				+ "<td><b>navigationroute</b><td>" + get(values.navigationroute)
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>rosinitialpose</b><td>" + get(values.rosinitialpose) 
+				+ "<td><b>navigationrouteid</b><td>" + get(values.navigationrouteid) 
+				+ "</tr> \n");
+		
+	//	str.append("<tr>"
+	//			+ "<td><b>rosmapinfo</b><td colspan\"3\">" + get(values.rosmapinfo) 
+			//	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
+			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
+	//			+ "</tr> \n");
+		
+		str.append("<tr>" // long line
+				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + get(values.rosglobalpath) 
+				+ "</tr> \n");
+				
+		
+		
+		str.append("\n</table>\n");
+		return str.toString();
+	}
 	
 	public String toDashboard(){	
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\">");

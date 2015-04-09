@@ -1,13 +1,9 @@
 package developer.swingtool;
 
-import java.io.*;
-import java.net.*;
-
-import oculusPrime.ManualSettings;
+import java.io.IOException;
+import java.net.Socket;
 
 public class Client {
-	
-	
 	public Client(String host, int port) throws IOException {
 		try {
 

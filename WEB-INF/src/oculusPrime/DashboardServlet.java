@@ -17,10 +17,9 @@ public class DashboardServlet extends HttpServlet {
 	static final long serialVersionUID = 1L;	
 	static final long HTTP_REFRESH_DELAY_SECONDS = 2;
 	
-	PowerLogger power = PowerLogger.getRefrence();
+// 	PowerLogger power = PowerLogger.getRefrence();
 	Settings settings = Settings.getReference();
 	BanList ban = BanList.getRefrence();
-	
 	State state = State.getReference();
 	
 	public void init(ServletConfig config) throws ServletException {
@@ -41,6 +40,12 @@ public class DashboardServlet extends HttpServlet {
 			return;
 		}
 		
+		if(ban.isBanned(request.getRemoteAddr())){
+			out.println("this is a banned address: " + ban);
+			out.close();	
+			return;
+		}
+		
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body> \n");
 
 		String view = null;	
@@ -51,32 +56,36 @@ public class DashboardServlet extends HttpServlet {
 		}
 		
 		if(view != null){
-			if(view.equals("ban")){
-				out.println(ban.list.toString() + "<br />\n");
+			if(view.equalsIgnoreCase("ban")){
+				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
 			}
 			
-			if(view.equals("state")){
+			if(view.equalsIgnoreCase("state")){
 				out.println(state.toHTML() + "\n");
 			}
 			
-			if(view.equals("sysout")){
+			if(view.equalsIgnoreCase("sysout")){
 				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
 				out.println(Util.tail(30) + "\n");
 			}
 			
-			if(view.equals("power")){	
+			if(view.equalsIgnoreCase("power")){	
 				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
-				out.println(power.tail(30) + "\n");
+				out.println(PowerLogger.tail(30) + "\n");
 			}
 			
-			if(view.equals("log")){
+			if(view.equalsIgnoreCase("ros")){
+				out.println(state.rosDashboard() + "\n");
+			}
+			
+			if(view.equalsIgnoreCase("log")){
 				out.println("\nsystem output: <hr>\n");
 				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
-				out.println("\n" + power.tail(10) + "\n");
-				out.println("\n<br />banned addresses: <hr>\n");
-				out.println("\n" + ban.list.toString() + "\n");
+				out.println("\n" + PowerLogger.tail(10) + "\n");
+				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
+				out.println("\n" + ban.tail(5) + "\n");
 			}
 		}
 		
@@ -87,7 +96,7 @@ public class DashboardServlet extends HttpServlet {
 		out.close();	
 	}
 	
-	/*
+	/*System.out.println(System.getProperty("sun.arch.data.model") );
 	public String toHTML(){	
 		Properties props = state.getProperties();
 		StringBuffer str = new StringBuffer("\n<table>");
