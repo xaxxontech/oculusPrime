@@ -57,6 +57,16 @@
 	</servlet-mapping>
 	
 	
+	<servlet>
+		<servlet-name>NetworkServlet</servlet-name>
+		<servlet-class>oculusPrime.NetworkServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>NetworkServlet</servlet-name>
+		<url-pattern>/network</url-pattern>
+	</servlet-mapping>
+	
+	
 	<servlet-mapping>
 		<servlet-name>gateway</servlet-name>
 		<url-pattern>/gateway</url-pattern>

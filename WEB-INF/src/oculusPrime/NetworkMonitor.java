@@ -5,6 +5,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
 
 import oculusPrime.State.values;
@@ -17,27 +19,78 @@ public class NetworkMonitor {
 	protected static final String WLAN = "wlan";
 	protected static final String ETH = "eth0";
 	
-	Vector<String> accesspoints = new Vector<String>();
-	Vector<String> networkData = new Vector<String>();
-	Vector<String> wlanData = new Vector<String>();
-	Vector<String> ethData = new Vector<String>();
+	private static Vector<String> wlanData = new Vector<String>();
+	private static Vector<String> ethData = new Vector<String>();
+	private static Vector<String> accesspoints = new Vector<String>();
+//	private static Vector<String> connections = new Vector<String>();
+	private static Vector<String> networkData = new Vector<String>();
+	
+	Timer networkTimer = new Timer();
+	/*
+	private static long last = System.currentTimeMillis();
+	private static float pingTime = 0;
+	private static int pingCount = 0;
+	private static int pingFail = 0;
+	
+	Timer pingTimer = new Timer();
+	Timer watchdogTimer = new Timer();
+	Timer stateTimer = new Timer();
+	
 
+	 */
+	
 	public static State state = State.getReference();
 	private static NetworkMonitor singleton = null;
-
 	public static NetworkMonitor getReference() {
 		if(singleton == null) singleton = new NetworkMonitor();
 		return singleton;
 	}
 
 	private NetworkMonitor(){
-		startNetworkTool();
-		getSignalQuality();
-		
-		
-		// pollExternalAddress();	
+	
+		//getSignalQuality();
+			
+		networkTimer.schedule(new networkTask(), 1000, POLL_DELAY_MS);
+	
 	}
 	
+	public class networkTask extends TimerTask {
+	    @Override
+	    public void run() {
+	    	try{ 
+	    			
+	    		networkData.clear();
+	    		wlanData.clear();
+	    		accesspoints.clear();
+	    		
+				Process proc = Runtime.getRuntime().exec(new String[]{"nm-tool"});
+				BufferedReader procReader = new BufferedReader(
+					new InputStreamReader(proc.getInputStream()));
+				
+				String line = null;
+				while ((line = procReader.readLine()) != null){
+					line = line.trim();
+					if(line.length()>0) 
+						if( ! networkData.contains(line))
+							if(line.contains(":"))
+								networkData.add(line);
+				}
+			
+				proc.waitFor();
+				 
+				Util.log("networkTask: lines copied: " + networkData.size(), this);
+				 
+				readETH();
+				readWAN();
+				parseWLAN();
+				parseETH();
+
+			} catch (Exception e) {
+				Util.log("networkTask: " + e.getLocalizedMessage(), this);
+			}		
+	    }    
+	}
+	/*
 	public void getSSID(){
 		new Thread(new Runnable() {
 			@Override
@@ -79,7 +132,9 @@ public class NetworkMonitor {
 			}
 		}).start();
 	}
-	
+
+*/
+	/*
 	public void getSignalQuality(){	
 		new Thread(new Runnable() {
 			@Override
@@ -122,19 +177,9 @@ public class NetworkMonitor {
 			}
 		}).start();
 	}
+	*/
 	
-	public void pollExternalAddress(){
-		new Thread(new Runnable() {
-			@Override
-			public void run() {		
-				while(true){				
-					updateExternalIPAddress();	
-					Util.delay(WAN_POLL_DELAY_MS);									
-				}
-			}
-		}).start();
-	}
-	
+
 	public static boolean isSSID(final String line){
 		return line.contains("Strength") && line.contains("Freq");
 	}
@@ -150,6 +195,7 @@ public class NetworkMonitor {
 		return line.startsWith("*");
 	}
 	
+	/*	*/
 	private void readWAN(){
 		for(int i = 0 ; i < networkData.size() ; i++){		
 			String line = networkData.get(i);
@@ -158,7 +204,8 @@ public class NetworkMonitor {
 					String ss = line.substring((line.indexOf('[')+1), line.indexOf(']'));
 					if( ! state.equals(values.ssid, ss)) state.set(values.ssid, ss);
 				} catch (Exception e) {
-					disconnecteddWAN();
+					// disconnecteddWAN();
+					Util.log("..... no wan addrsss", this);
 				}
 								
 				wlanData.clear();
@@ -182,10 +229,12 @@ public class NetworkMonitor {
 			}
 		}
 			
-		// Util.debug("readETH: " + ethData.size(), this);
+		Util.debug("readETH: " + ethData.size(), this);
 		// for(int i = 0 ; i < ethData.size() ; i++) Util.debug("readETH: " + i + " " + ethData.get(i), this);
 	}
+
 	
+	/*
 	private void callNetworkTool(){
 		try {
 								
@@ -212,6 +261,7 @@ public class NetworkMonitor {
 		
 		// Util.debug("callNetworkTool: lines copied: " + networkData.size(), this);
 	}
+
 	
 	private void disconnecteddWAN(){	
 		state.delete(values.ssid);
@@ -220,7 +270,8 @@ public class NetworkMonitor {
 		state.delete(values.signalspeed);
 		state.delete(values.signalstrength);
 	}
-
+	*/
+	
 	private void parseETH(){
 		for(int i = 0 ; i < ethData.size() ; i++){
 		
@@ -246,7 +297,7 @@ public class NetworkMonitor {
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
 				Util.debug("parseETH: address: " + addr, this);
 				//if( ! state.equals(values.ethernetaddress, addr))
-				//	state.set(values.ethernetaddress, addr); 			
+				state.set(values.ethernetaddress, addr); 			
 			}
 
 			/*
@@ -266,7 +317,7 @@ public class NetworkMonitor {
 
 	private void parseWLAN(){
 		
-		// Util.debug("parseWLAN: " + wlanData.size(), this);
+		Util.log("parseWLAN: " + wlanData.size(), this);
 		
 		for(int i = 0 ; i < wlanData.size() ; i++){
 		
@@ -324,6 +375,25 @@ public class NetworkMonitor {
 		getAccessPoints();
 	}
 	
+	public String wlanString(){
+		String text = new String("<table cellpadding=\"5\"border=\"1\">\n");
+		for(int j = 0 ; j < accesspoints.size() ; j++) {
+			String line = accesspoints.get(j);
+		
+			if(state.get(values.ssid) != null)
+				if(line.startsWith(state.get(values.ssid)))
+					line = line.replaceFirst(state.get(values.ssid), "<b>" + state.get(values.ssid) + "</b>");
+			
+			line = line.replaceAll(":", "<td>");
+			line = line.replaceAll(",", "<td>");
+			
+			text += "<tr><td>" + line + "<br />\n"; 
+		}
+		text += "</table>";
+		
+		return text;	
+	}
+	
 	public String[] getAccessPoints(){
 		Vector<String> aps = new Vector<String>();
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
@@ -343,32 +413,7 @@ public class NetworkMonitor {
 		return result;
 	}
 	
-	public void startNetworkTool(){
-		new Thread(new Runnable() {
-			@Override
-			public void run() {	
-				while(true){
-					try {
-						
-						callNetworkTool();
-						
-						readWAN();
-						parseWLAN();
-						
-						readETH();
-						parseETH();
-						
-						Util.delay(POLL_DELAY_MS);
-						
-					} catch (Exception e) {
-						Util.log("startNetworkTool()", e, this);
-					}
-				}
-			}
-		}).start();
-	}
-	
-	public void updateExternalIPAddress(){
+	private void updateExternalIPAddress(){
 		try {
 			
 			URLConnection connection = (URLConnection) new URL("http://checkip.dyndns.org/").openConnection();
