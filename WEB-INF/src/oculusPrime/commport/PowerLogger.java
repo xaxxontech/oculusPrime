@@ -93,6 +93,7 @@ public class PowerLogger {
 		try {		
 			append("log file closed", "PowerLogger");
 			logger.close();
+			logger = null;
 		} catch (IOException e) {
 			append("closeLog(): " + e.getMessage(), "PowerLogger");
 		}

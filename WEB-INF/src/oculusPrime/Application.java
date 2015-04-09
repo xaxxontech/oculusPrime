@@ -265,8 +265,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 		
-		if (settings.getBoolean(GUISettings.navigation))
+		if (settings.getBoolean(GUISettings.navigation)) {
 			navigation = new developer.Navigation(this);
+			navigation.runAnyActiveRoute();
+		}
 		
 		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
@@ -466,18 +468,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		case move: {
 			// cancel nav if human remote client sends stop command
-			if (state.exists(State.values.roscurrentgoal) && !passengerOverride && 
-					str.equals(ArduinoPrime.direction.stop.toString())) {
-				Navigation.goalCancel();
-				messageplayer("navigation goal cancelled by stop", null, null);
-			}
+
 
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
+				navigation.cancelRoute();
+			}
+			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride &&
+					str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
-				state.delete(State.values.navigationroute);
-				
+				messageplayer("navigation goal cancelled by stop", null, null);
 			}
 				
 			
@@ -805,7 +806,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null) navigation.runRoute(str); 
 			break;
 
+		case cancelroute:
+			if (navigation != null) navigation.cancelRoute();
+
 		case clearmap: Mapper.clearMap();
+			break;
+		
+		case error: 
+			try {
+				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			break;
 			
 		}

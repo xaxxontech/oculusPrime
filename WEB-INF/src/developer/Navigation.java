@@ -2,16 +2,10 @@ package developer;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -33,7 +27,8 @@ public class Navigation {
 	private static final String redhome = System.getenv("RED5_HOME");
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
-	public static final long NAVSTARTTIMEOUT = Util.ONE_MINUTE*2;
+	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
 
    /** Constructor */
 	public Navigation(Application a){ 
@@ -74,7 +69,13 @@ public class Navigation {
 		long start = System.currentTimeMillis();
 		while (!state.getBoolean(State.values.navigationenabled) 
 				&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT*3) { Util.delay(50);  } // wait
-		
+
+//		Util.delay(500);
+//
+//		start = System.currentTimeMillis();
+//		while (!state.getBoolean(State.values.navigationenabled)
+//				&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT*1.5) { Util.delay(50);  } // wait, again
+
 		if (!state.getBoolean(State.values.navigationenabled)) {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation start failure");
 			return false;
@@ -91,7 +92,6 @@ public class Navigation {
 			Util.log("can't start navigation, already running", this);
 			return;
 		}
-//		app.driverCallServer(PlayerCommands.streamsettingsset, "med");  // do in ros python node instead
 		
 		new Thread(new Runnable() { public void run() {
 			app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
@@ -108,24 +108,28 @@ public class Navigation {
 			if (state.getBoolean(State.values.navigationenabled)) return; // success
 			
 			// try again if needed, just once
-			stopNavigation();
+			Util.log("navigation start attempt #2",this);
+			stopNavigation(); // ros script deletes state navigationenabled after couple secs
 			state.set(State.values.navigationenabled, false); // false=pending, set true by ROS node when ready
 			Util.delay(10000);
 			Ros.launch(Ros.REMOTE_NAV);
-			Util.log("navigation start attempt #2",this);
-				
+
 		}  }).start();
 
 	}
 	
 	public void stopNavigation() {
-		Util.systemCall("pkill roslaunch");
 		state.delete(State.values.navigationenabled);
+		Util.systemCall("pkill roslaunch");
 	}
 	
 	public void dock() {
-		if (state.getBoolean(State.values.autodocking) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-			app.driverCallServer(PlayerCommands.messageclients, "command dropped");
+		if (state.getBoolean(State.values.autodocking)  ) {
+			app.driverCallServer(PlayerCommands.messageclients, "autodocking in progress, command dropped");
+			return;
+		}
+		else if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			app.driverCallServer(PlayerCommands.messageclients, "already docked, command dropped");
 			return;
 		}
 		else if (!state.exists(State.values.navigationenabled)) {
@@ -144,15 +148,15 @@ public class Navigation {
 			
 			long start = System.currentTimeMillis();
 			while (state.exists(State.values.roscurrentgoal) 
-					&& System.currentTimeMillis() - start < Util.TEN_MINUTES) { Util.delay(100);  } // wait
+					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  } // wait
 		
-			if (state.exists(State.values.roscurrentgoal) || !state.exists(State.values.rosgoalstatus)) { // this will probably never happen
-				app.driverCallServer(PlayerCommands.messageclients, "failed to reach dock");
-				return;
-			}
+//			if (state.exists(State.values.roscurrentgoal) || !state.exists(State.values.rosgoalstatus)) { // this will probably never happen
+//				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach goal");
+//				return;
+//			}
 			
 			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
-				app.driverCallServer(PlayerCommands.messageclients, "failed to reach dock");
+				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach dock");
 				return;
 			}
 			
@@ -248,6 +252,19 @@ public class Navigation {
 			e.printStackTrace();
 		}
 	}
+
+	public void runAnyActiveRoute() {
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		for (int i = 0; i< routes.getLength(); i++) {
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
+			if (isactive.equals("true")) {
+				runRoute(rname);
+				break;
+			}
+		}
+	}
 	
 	public void runRoute(final String name) {
 		// build error checking into this (ignore duplicate waypoints, etc)
@@ -263,8 +280,10 @@ public class Navigation {
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i< routes.getLength(); i++) {
-    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();  
-    		if (rname.equals(name)) {
+    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			// unflag any currently active routes. New active route gets flagged just below:
+			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
+			if (rname.equals(name)) {
     			route = (Element) routes.item(i);
     			break;
     		}
@@ -281,23 +300,29 @@ public class Navigation {
 		final String id = String.valueOf(System.currentTimeMillis());
 		state.set(State.values.navigationrouteid, id);
 
-		app.driverCallServer(PlayerCommands.messageclients, "activating route: "+name);
+		// flag route active, save to xml file
+		route.getElementsByTagName("active").item(0).setTextContent("true");
+		String xmlstring = Util.XMLtoString(document);
+		saveRoute(xmlstring);
+
+		app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
 		
 		new Thread(new Runnable() { public void run() {
+			int consecutiveroute = 1;
 			
 			while (true) {
 				
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
-					app.driverCallServer(PlayerCommands.messageclients, 
+					app.driverCallServer(PlayerCommands.messageclients,
 							"Can't start route, location unknown");
-					state.delete(State.values.navigationroute);
+					cancelRoute();
 					return;				
 				}
 
 				if (!waitForNavSystem()) {
 					app.driverCallServer(PlayerCommands.messageclients, "Unable to start navigation");
-					state.delete(State.values.navigationroute);
+					cancelRoute();
 					return;
 				}
 				
@@ -316,7 +341,7 @@ public class Navigation {
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 	
 		    		String wpname = 
-		    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+	    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
 	
 					wpnum ++;
 		    		
@@ -337,10 +362,10 @@ public class Navigation {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 				
-					if (state.exists(State.values.roscurrentgoal) || !state.exists(State.values.rosgoalstatus)) { // this will probably never happen
-						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
-						continue;
-					}
+//					if (state.exists(State.values.roscurrentgoal) || !state.exists(State.values.rosgoalstatus)) { // this will probably never happen
+//						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
+//						continue;
+//					}
 					
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
@@ -361,31 +386,57 @@ public class Navigation {
 				while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) break; // success
+					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+							!state.getBoolean(State.values.autodocking)) break; // success
 					Util.delay(100); 
 				}
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					state.delete(State.values.navigationroute);
+					cancelRoute();
 					return; 
 				}
-				
+
+				if (consecutiveroute >= RESTARTAFTERCONSECUTIVEROUTES)  {
+					Util.log("max consecutive routes" +consecutiveroute+" reached, restarting application", this);
+					app.restart();
+					return;
+				}
+
+				consecutiveroute ++;
+
 				// delay to next route
 				String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
 		    	long timebetween = Long.parseLong(min) * 1000 * 60;
-				app.driverCallServer(PlayerCommands.messageclients, min+" min until next route: "+name);
+				app.driverCallServer(PlayerCommands.messageclients, min+" min until next route: "+name+", run #"+consecutiveroute);
 		    	start = System.currentTimeMillis();
 				while (System.currentTimeMillis() - start < timebetween) {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 					Util.delay(100); 
 				}
-				
-	//			runRoute(name); // keep going forever
-			
+
 			}
 		
 		}  }).start();
 		
 	}
+
+	public void cancelRoute() {
+		state.delete(State.values.navigationroute); // this eventually stops currently running route
+		goalCancel();
+
+		// check for route name
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+
+		for (int i = 0; i< routes.getLength(); i++) {
+			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
+		}
+
+		String xmlString = Util.XMLtoString(document);
+		saveRoute(xmlString);
+
+		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
+	}
+
 }

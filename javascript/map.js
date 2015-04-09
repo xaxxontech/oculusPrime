@@ -36,6 +36,10 @@ var mapshowwaypoints = true;
 var routesxml = null;
 var temproutesxml;
 
+function navigationmenu() {
+	popupmenu('menu', 'show', null, null, document.getElementById('navigation_menu').innerHTML);
+}
+
 function rosmap(mode) {
 	
 	var v = document.getElementById("main_menu_over");
@@ -885,12 +889,32 @@ function routespopulate() {
 		str += "<td><b>"+name+"</b> &nbsp; &nbsp; </td>";
 		str += "<td><a class='blackbg' href='javascript: editroute(&quot;"+name+"&quot;, routesxml);'>edit</a></td>";
 		str += "<td> &nbsp; <a class='blackbg' href='javascript: deleteroute(&quot;"+i+"&quot;);'>delete</a></td>";
+
+		str += "<td> &nbsp; <a class='blackbg' href='javascript: ";
+		var active = routes[i].getElementsByTagName("active")[0].childNodes[0].nodeValue;
+		if (active == "true") 
+			str += "deactivateroute();'>de-activate</a></td><td> &nbsp; ACTIVE</td>";
+		else
+			str += "activateroute(&quot;"+name+"&quot;);'>activate</a></td><td></td>";
+
 		str += "</tr>";
 	}
 	str += "</table>";
 	
 	document.getElementById('routeslist').innerHTML = str;
 	popupmenu('menu','resize');
+}
+
+function activateroute(name) {
+	callServer("runroute", name);
+	routesxml = null;
+	setTimeout("routesmenu()", 500);
+}
+
+function deactivateroute() {
+	callServer("cancelroute", "");
+	routesxml = null;
+	setTimeout("routesmenu()", 500);
 }
 
 function editroute(name, rxml) {
@@ -914,9 +938,14 @@ function editroute(name, rxml) {
 		var newminbetween = temproutesxml.createElement("minbetween");
 		var newval = temproutesxml.createTextNode(60);
 		newminbetween.appendChild(newval);
+		
+		var newactive = temproutesxml.createElement("active");
+		var newtxt = temproutesxml.createTextNode("false");
+		newactive.appendChild(newtxt);
 
 		newroute.appendChild(newname);
 		newroute.appendChild(newminbetween);
+		newroute.appendChild(newactive);
 		
 		routeslist.appendChild(newroute);
 		

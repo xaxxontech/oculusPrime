@@ -49,18 +49,18 @@ public enum PlayerCommands { // all valid commands
     //undocumented (unused):
     fwdflood,
     
-	// uncategorized 
+	// un-categorized
 	speech, serverbrowser, email, state,   
     rssadd, getlightlevel,   
 	// undocumented    
     statuscheck, block, unblock, help, 
     
     // experimental (undocumented)
-    opennisensor, clearmap, stereo,  
+    opennisensor, clearmap, stereo, error,
     
     // navigation
     roslaunch, savewaypoints, loadwaypoints, gotowaypoint, startnav, stopnav,
-    gotodock, saveroute, runroute,
+    gotodock, saveroute, runroute, cancelroute,
     
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness,
