@@ -396,12 +396,6 @@ public class Navigation {
 					return; 
 				}
 
-				if (consecutiveroute >= RESTARTAFTERCONSECUTIVEROUTES)  {
-					Util.log("max consecutive routes" +consecutiveroute+" reached, restarting application", this);
-					app.restart();
-					return;
-				}
-
 				consecutiveroute ++;
 
 				// delay to next route
@@ -413,6 +407,12 @@ public class Navigation {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 					Util.delay(100); 
+				}
+
+				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
+					Util.log("max consecutive routes" +RESTARTAFTERCONSECUTIVEROUTES+" reached, restarting application", this);
+					app.restart();
+					return;
 				}
 
 			}
