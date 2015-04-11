@@ -21,7 +21,7 @@ var amcloffstth = 0;
 var rosodomx = 0;
 var rosodomy = 0;
 var rosodomth = 0;
-var mapinfo=[0,0,0,0,0,0];
+var mapinfo=[0,0,0,0,0,0]; // width, height, resolution m/px, originx, originy, originth
 var odom=[0,0,0];
 var globalpath = null;
 var maparrowpose = null;
@@ -35,15 +35,19 @@ var mapshowwaypoints = true;
 var routesxml = null;
 var temproutesxml;
 var navmenuinit = false;
+var navrouteavailableactions = ["rotate", "email", "rss", "motion", "not motion", "sound", "not sound" ];
 
 function navigationmenu() {
-	if (navmenuinit) 
-		popupmenu('menu', 'show', null, null, document.getElementById('navigation_menu').innerHTML);
-	else { 		
-		var date = new Date().getTime();
-		// setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+date+"', rosinfo);", 1500);
-		openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
+	if (navmenuinit) {
+		var str = document.getElementById('navigation_menu').innerHTML;
+		str += "<div id='navmenutest'> </div>";
+		popupmenu('menu', 'show', null, null, str);
 	}
+ 		
+	var date = new Date().getTime();
+//	rosmapinfotimer = setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+date+"', rosinfo);", 510);
+	clearTimeout(rosmapinfotimer);
+	openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
 }
 
 function rosmap(mode) {
@@ -115,6 +119,7 @@ function rosmap(mode) {
 			document.getElementById("rosmaprobot").onmousemove = null; }
 
 		rosmapupdate = null;
+		clearTimeout(rosmapinfotimer);
 		openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
 	}
 	
@@ -140,11 +145,15 @@ function rosinfo() {
 			var str = xmlhttp.responseText;
 			var s = str.split(" ");
 			
+//			debug(debugdelete);
+//			debugdelete ++;
+			
 			var nukegoalpose = true;
 			var t = new Date().getTime();
 			if (t - goalposesettime < 5000) nukegoalpose = false;
 			
 			var rosmaprezoom = false;
+			var systemstatustext = "STOPPED";
 			
 			for (var i=0; i<s.length; i++) {
 				var ss = s[i].split("_");
@@ -178,6 +187,7 @@ function rosinfo() {
 						break;
 						
 					case "roscurrentgoal":
+						if (!document.getElementById("rosmapimg")) break;
 						nukegoalpose = false;
 						if (mapgoalpose != null) break;
 						var arr = ss[1].split(",");
@@ -195,22 +205,47 @@ function rosinfo() {
 						var arr = ss[1].split(",");
 						for (var n = 0 ; n <= arr.length - 4 ; n += 4) {
 							waypoints[n] = arr[n];
-							if (document.getElementById("rosmap_menu_over").style.display == "") { // names only 
+							// if (document.getElementById("rosmap_menu_over").style.display == "") {
+							if (document.getElementById("rosmapimg")) { 
 								var conv = fromrosmeters([arr[n+1], arr[n+2], arr[n+3]]);
 								waypoints[n+1] = conv[0];
 								waypoints[n+2] = conv[1];
 								waypoints[n+3] = conv[2];
 							}
+							else { //dummy values
+								waypoints[n+1] = 0;
+								waypoints[n+2] = 0;
+								waypoints[n+3] = 0;
+							}
+
 						}
+						break;
+						
+					case "navigationenabled":
+						if (ss[1] == "true") systemstatustext = "RUNNING";
+						else if (ss[1] == "false") systemstatustext = "INITIALIZING";
 						break;
 				
 				}
 			}
 			
 			if (!navmenuinit) {
-				popupmenu('menu', 'show', null, null, document.getElementById('navigation_menu').innerHTML);
+		 		var str = document.getElementById('navigation_menu').innerHTML;
+				str += "<div id='navmenutest'> </div>";
+				popupmenu('menu', 'show', null, null, str);
 				navmenuinit = true;
 			}
+			
+			var sysstatus = document.getElementById("navsystemstatus");
+			sysstatus.innerHTML = systemstatustext;
+			popupmenu('menu','resize');
+
+			// test for refresh?
+			var r = false;
+			if (document.getElementById("navmenutest")) r = true;
+			if (document.getElementById("rosmapimg")) r = true;
+			if (r)
+				rosmapinfotimer = setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+t+"', rosinfo);", 510);
 			
 			if (document.getElementById("rosmap_menu_over").style.display != "") return;
 			
@@ -229,7 +264,7 @@ function rosinfo() {
 			}
 			rosmapupdate = updatetime;
 			
-			setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+t+"', rosinfo);", 510);
+			
 		}
 	}
 }
@@ -856,9 +891,13 @@ function renamewaypoint(i) {
 }
 
 function gotowaypoint(i) {
-//	if (!confirm("Drive to: "+waypoints[i]+"\n\nAre you sure?")) return;
-	var pose = [waypoints[i+1], waypoints[i+2], waypoints[i+3]];
-	rosmapsetgoal(pose);
+	if (document.getElementById("rosmapimg")) {
+		var pose = [waypoints[i+1], waypoints[i+2], waypoints[i+3]];
+		rosmapsetgoal(pose);
+	}
+	else {
+		callServer("gotowaypoint", waypoints[i].replace(/&nbsp;/g, ' '));
+	}
 }
 
 function routesmenu() {
@@ -866,13 +905,14 @@ function routesmenu() {
 		message("waypoints unavailble","orange");
 		return;
 	}
-	
-	str = document.getElementById("routes_menu").innerHTML;
-	popupmenu("menu","show",null,null,str);
 
 	var date = new Date().getTime();
 	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload&date="+date, routesload);
 	else routespopulate(routesxml);
+
+	str = document.getElementById("routes_menu").innerHTML;
+	popupmenu("menu","show",null,null,str);
+
 }
 
 function routesload() {
@@ -904,7 +944,7 @@ function routespopulate() {
 		str += "<td> &nbsp; <a class='blackbg' href='javascript: ";
 		var active = routes[i].getElementsByTagName("active")[0].childNodes[0].nodeValue;
 		if (active == "true") 
-			str += "deactivateroute();'>de-activate</a></td><td> &nbsp; ACTIVE</td>";
+			str += "deactivateroute();'>de-activate</a></td><td class='status_info'> &nbsp; ACTIVE</td>";
 		else
 			str += "activateroute(&quot;"+name+"&quot;);'>activate</a></td><td></td>";
 
@@ -1021,7 +1061,6 @@ function editroute(name, rxml) {
 		str += "this.style.backgroundColor=&quot;#151515&quot;;' value='"+n+"' ><br>";
 		
 		// waypoint actions
-		var availableactions = ["rotate", "email", "rss", "motion", "not motion", "sound", "not sound" ];
 		str += "<table><tr valign='top'><td>actions: </td><td>";
 		var actions = routewaypoints[i].getElementsByTagName("action");
 		if (actions.length == 0) str += "&nbsp; none";
@@ -1035,8 +1074,8 @@ function editroute(name, rxml) {
 		str += "</td><td style='padding-left: 20px'>";
 		str += "<select id='waypointactionnew"+i+"' onchange='javascript: waypointactionaddnew("+r+", "+i+", this.id);'>";
 		str += "<option value='' selected='selected'>&lt; add action</option>";
-		for (var wpa=0; wpa < availableactions.length; wpa++) {
-			str += "<option value='"+availableactions[wpa]+"'>"+availableactions[wpa]+"</option>";
+		for (var wpa=0; wpa < navrouteavailableactions.length; wpa++) {
+			str += "<option value='"+navrouteavailableactions[wpa]+"'>"+navrouteavailableactions[wpa]+"</option>";
 		}
 		str += "</select></td></tr></table>";
 		

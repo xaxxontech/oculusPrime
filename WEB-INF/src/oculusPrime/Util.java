@@ -237,26 +237,12 @@ public class Util {
 	 *  
 	 */
 	public static void systemCall(final String str){
-//		new Thread(new Runnable() {
-//			public void run() {
-				try {
-					Runtime.getRuntime().exec(str);
-//					Process proc = Runtime.getRuntime().exec(str);
-//					BufferedReader procReader = new BufferedReader(
-//							new InputStreamReader(proc.getInputStream()));
-//
-//					String line = null;
-//					System.out.println("OCULUS: process exit value = " + str);
-//					while ((line = procReader.readLine()) != null)
-//						System.out.println("OCULUS: systemCall(), " + line);
-//					
-//					System.out.println("OCULUS: process exit value = " + proc.exitValue());
-				
-				} catch (Exception e) {
-					e.printStackTrace();
-				}		
-//			}
-//		}).start();
+		try {
+			Runtime.getRuntime().exec(str);
+
+		} catch (Exception e) {
+			printError(e);
+		}
 	}
 
 
@@ -429,7 +415,7 @@ public class Util {
 //		System.out.println("OCULUS: " + getTime() + ", " + classname + ", " + str);
 
 		history.add(getTime() + ", " + filter + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " +str);
+		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " + str);
 
 	}
 	
@@ -449,8 +435,8 @@ public class Util {
 				((double)Runtime.getRuntime().freeMemory()
 						/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
 		
-		str += "memorytotal : "+Runtime.getRuntime().totalMemory()+"<br>";    
-	    str += "memoryfree : "+Runtime.getRuntime().freeMemory()+"<br>";
+		str += "memory total : "+Runtime.getRuntime().totalMemory()+"<br>";    
+	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
 	
@@ -482,6 +468,7 @@ public class Util {
 		return null;
 	}
 
+	// replaces standard e.printStackTrace();
 	public static String XMLtoString(Document doc) {
 		String output = null;
 		try {
@@ -496,6 +483,11 @@ public class Util {
 			e.printStackTrace();
 		}
 		return output;
+	}
+
+	public static void printError(Exception e) {
+		System.err.println("Error "+getTime()+ ":");
+		e.printStackTrace();
 	}
 
 }

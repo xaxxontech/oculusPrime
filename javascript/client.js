@@ -74,7 +74,12 @@ var maintopbarTimer = null;
 var subwindows = ["aux", "context", "menu", "main", "rosmap"];  // purposely skipped "error" window
 var windowpos = [null, null, null, null]; // needs same length as above
 
+var oculusPrimeplayerSWF;
+
+
 function loaded() {
+	oculusPrimeplayerSWF = document.getElementById("oculusPrime_player");
+	
 	loadwindowpositions();
 	loadrosmapwindowpos();
 	
@@ -136,7 +141,7 @@ function openxmlhttp(theurl, functionname) {
 function rtmpPortReturned() { //xmlhttp event handler
 	if (xmlhttp.readyState==4) {// 4 = "loaded"
 		if (xmlhttp.status==200) {// 200 = OK
-			getFlashMovie("oculusPrime_player").setRtmpPort(xmlhttp.responseText);
+			oculusPrimeplayerSWF.setRtmpPort(xmlhttp.responseText);
 			if (/auth=/.test(document.cookie)) { loginfromcookie(); }
 			else { login(); }
 		}
@@ -250,7 +255,7 @@ function callServer(fn, str) {
 		
 		var nowtime = new Date().getTime();
 		if (!(lastcommandsent == fn+str && nowtime - sendcommandtimelast < 200)) {
-			getFlashMovie("oculusPrime_player").flashCallServer(fn,str);
+			oculusPrimeplayerSWF.flashCallServer(fn,str);
 		}
 		else message("rapid succession command dropped",sentcmdcolor);
 		sendcommandtimelast = nowtime;
@@ -262,12 +267,13 @@ function play(str) { // called by javascript only?
 	streammode = str;
 	var num = 1;
 	if (streammode == "stop") { num =0 ; } 
-	getFlashMovie("oculusPrime_player").flashplay(num, videoscale);
+	oculusPrimeplayerSWF.flashplay(num, videoscale);
 }
 
 function getFlashMovie(movieName) {
 	var isIE = navigator.appName.indexOf("Microsoft") != -1;
 	return (isIE) ? window[movieName] : document[movieName];
+	// return document.getElementById(movieName);
 }
 
 function publish(str) { 
@@ -444,11 +450,11 @@ function setstatus(status, value) {
 	else if (status=="pushtotalk") {
 		if (value=="false") {
 			pushtotalk = false;
-			getFlashMovie("oculusPrime_player").unmutePlayerMic();
+			oculusPrimeplayerSWF.unmutePlayerMic();
 		}
 		else {
 			pushtotalk = true;
-			getFlashMovie("oculusPrime_player").mutePlayerMic();
+			oculusPrimeplayerSWF.mutePlayerMic();
 		}
 	}
 	else if (status=="loadpage") {
@@ -566,7 +572,7 @@ function keyBoardPressed(event) {
 		if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 		
 		if (keycode == 89 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // Y
-			getFlashMovie("oculusPrime_player").unmutePlayerMic();
+			oculusPrimeplayerSWF.unmutePlayerMic();
 			broadcastmicon = true;
 			setstatus("selfstream","mic ON");
 			//message("unmute player mic", "orange");
@@ -582,7 +588,7 @@ function keyBoardReleased(event) {
 	if (enablekeyboard) {
 		var keycode = event.keyCode;
 		if (keycode == 84 && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) {
-			getFlashMovie("oculusPrime_player").mutePlayerMic();
+			oculusPrimeplayerSWF.mutePlayerMic();
 			setstatus("selfstream",broadcasting);
 			broadcastmicon = false;
 			//message("mute player mic", "orange");
@@ -594,12 +600,12 @@ function pushtotalktoggle() {
 	var str;
 	if (pushtotalk) {
 		pushtotalk = false;
-		getFlashMovie("oculusPrime_player").unmutePlayerMic();
+		oculusPrimeplayerSWF.unmutePlayerMic();
 		str = "false";
 	}
 	else {
 		pushtotalk = true;
-		getFlashMovie("oculusPrime_player").mutePlayerMic();
+		oculusPrimeplayerSWF.mutePlayerMic();
 		str = "true";			
 	}
 	if (broadcasting=="mic" || broadcasting=="camandmic") {
@@ -1768,7 +1774,7 @@ function eraseCookie(name) {
 function loginfromcookie() {
 	var str = ""; 
 	str = readCookie("auth");
-	getFlashMovie("oculusPrime_player").connect(str);
+	oculusPrimeplayerSWF.connect(str);
 	logintimer = setTimeout("eraseCookie('auth'); window.location.reload()", logintimeout);
 }
 
@@ -1786,7 +1792,7 @@ function loginsend() {
 	var str3= document.getElementById("user_remember").checked;
 	if (str3 == true) { str3="remember"; }
 	else { eraseCookie("auth"); }
-	getFlashMovie("oculusPrime_player").connect(str1+" "+str2+" "+str3+" ");
+	oculusPrimeplayerSWF.connect(str1+" "+str2+" "+str3+" ");
 	logintimer = setTimeout("window.location.reload()", logintimeout);
 }
 

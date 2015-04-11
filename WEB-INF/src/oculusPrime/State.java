@@ -18,7 +18,7 @@ public class State {
 		driver, logintime, pendinguserconnected, telnetusers, // users
 		
 		streamactivityenabled, streamactivitythreshold, videosoundmode, stream, driverstream, //audio video
-		volume, framegrabbusy, controlsinverted, 
+		volume, framegrabbusy, controlsinverted, lightlevel,
 
 		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
 		powererror, forceundock, // power problems

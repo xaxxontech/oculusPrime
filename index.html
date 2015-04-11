@@ -1,5 +1,4 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<!--  9/30/2010 11:08pm -->
 <html>
 <head>
 <title>Oculus Prime</title>
@@ -27,6 +26,7 @@ select  { background-color: #cccccc; color: #000000; border: 1px solid #666666; 
 .keycmds { color: #666666; font-size: 11px; }
 .status { font-size: 11px; line-height: 15px; text-transform: uppercase}
 .status_title { font-size: 11px; line-height: 18px; text-transform: uppercase; color: #28872f;   }
+.status_info { color: #28872f; } /* 28872f 45F239 */
 .status_unknown { font-size: 11px; line-height: 15px; color: #666666; text-transform: lowercase;}
 .crosshair { border: 2px solid #61f383; 	filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; line-height: 0px}
 .videocursor { border: 1px solid #45F239; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; line-height: 0px}
@@ -110,7 +110,7 @@ style="width: 28px; height: 32px; background-image: url(images/wrench.png);">
 
 <table><tr valign="top"><td style="text-align: right">
 <div id="video" style="position: relative; z-index: 0; width: 640px; height: 480px;">
-<script language="JavaScript" type="text/javascript">
+<script type="text/javascript">
 
 // Version check based upon the values defined in globals
 var hasRequestedVersion = DetectFlashVer(requiredMajorVersion, requiredMinorVersion, requiredRevision);
@@ -146,7 +146,7 @@ if (hasRequestedVersion) {
 				"pluginspage", "http://www.adobe.com/go/getflashplayer"
 		);
   }
- </script>
+</script>
 
 </div>
 </td>
@@ -997,6 +997,8 @@ left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">
 <table><tr><td style="height: 10px"></td></tr></table>
 Navigation Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
+<span class="status_info">System <span id="navsystemstatus">STOPPED</span></span><br>
+<br>
 
 <a class="blackbg" href="javascript: callServer('startnav','');">start</a><br>
 <a class="blackbg" href="javascript: callServer('stopnav','');">stop</a><br>
@@ -1014,7 +1016,7 @@ set waypoint:<br>
 <!-- waypoints_menu -->
 <div id="waypoints_menu" style="display: none;">
 <a class="blackbg"
-href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;navigation_menu&quot;).innerHTML);">
+href="javascript: navigationmenu();">
 <span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
 &nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
@@ -1027,7 +1029,7 @@ Waypoints:
 <!--  routes menu -->
 <div id="routes_menu" style="display: none;">
 <a class="blackbg"
-href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;navigation_menu&quot;).innerHTML);">
+href="javascript: navigationmenu();">
 <span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
 &nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>

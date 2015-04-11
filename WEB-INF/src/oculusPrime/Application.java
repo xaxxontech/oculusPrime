@@ -30,7 +30,10 @@ import developer.depth.Mapper;
 public class Application extends MultiThreadedApplicationAdapter {
 
 	public enum streamstate { stop, camera, camandmic, mic };
+	public enum camquality { low, med, high, custom };
 	public enum driverstreamstate { stop, mic, pending };
+	public static final String VIDEOSOUNDMODELOW = "low";
+	public static final String VIDEOSOUNDMODEHIGH = "high";
 	private static final int STREAM_CONNECT_DELAY = 2000;
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
@@ -63,8 +66,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start===============\n",this);
-		PowerLogger.append("\n.................Oculus Prime Java Start.................\n", this);
+		Util.log("\n==============Oculus Prime Java Start===============",this);
+		PowerLogger.append("\n.................Oculus Prime Java Start.................", this);
+		System.err.println("\n========="+Util.getTime()+"===Oculus Prime Java Start=========");
 		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -174,7 +178,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 							grabberInitialize();
 						}
 					} catch (Exception e) {
-						e.printStackTrace();
+						Util.printError(e);
 					}
 				}
 			}).start();
@@ -220,12 +224,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// set video, audio quality mode in grabber flash, depending on server/client OS
 		String videosoundmode=state.get(State.values.videosoundmode.name());
 		if (videosoundmode == null) { 
-			videosoundmode="high";  
-//			if (Settings.os.equals("linux")) { // TODO: or motion/sound activity threshold enabled
-//				videosoundmode="low";
-	
-			videosoundmode="high";
-//			}
+			videosoundmode=VIDEOSOUNDMODEHIGH;  
 		}
 		setGrabberVideoSoundMode(videosoundmode);
 
@@ -308,7 +307,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/initialize.html");
 
 				} catch (Exception e) {
-					e.printStackTrace();
+					Util.printError(e);
 				}
 			}
 		}).start();
@@ -325,7 +324,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html"+str);
 
 				} catch (Exception e) {
-					e.printStackTrace();
+					Util.printError(e);
 				}
 			}
 		}).start();
@@ -334,7 +333,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	/** */
 	public void playersignin() {		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode="low";
+		String videosoundmode=VIDEOSOUNDMODELOW;
 
 		if (player != null) { // pending connection
 			pendingplayer = Red5.getConnectionLocal();
@@ -810,7 +809,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			try {
 				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
 			} catch (Exception e) {
-				e.printStackTrace();
+				Util.printError(e);
 			}
 			break;
 			
@@ -920,7 +919,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 						}
 					}
 				} catch (Exception e) {
-					e.printStackTrace();
+					Util.printError(e);
 				}
 			}
 		}).start();
@@ -972,7 +971,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		} catch (NumberFormatException e) {
 			Util.log("publish() " + e.getMessage(),this);
-			e.printStackTrace();
+			Util.printError(e);
 		}
 		
 		if (state.exists(State.values.controlsinverted.toString())) state.delete(State.values.controlsinverted);
@@ -1091,7 +1090,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			state.set(State.values.framegrabbusy.name(), false);
 
 			
-		} catch (Exception e) {  e.printStackTrace();  }
+		} catch (Exception e) {  Util.printError(e);  }
 
 //		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
 
@@ -1129,7 +1128,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			state.set(State.values.framegrabbusy.name(), false);
 			
-		} catch (Exception e) {			e.printStackTrace();		}
+		} catch (Exception e) {			Util.printError(e);		}
 
 //		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
 	}
@@ -1175,7 +1174,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		try {
 			String strarr[] = {"espeak",str};
 			Runtime.getRuntime().exec(strarr);
-		} catch (IOException e) { e.printStackTrace(); }
+		} catch (IOException e) { Util.printError(e); }
 	
 	}
 
@@ -1343,7 +1342,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				f.createNewFile();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Util.printError(e);
 			}
 		
 		shutdown();
@@ -1369,7 +1368,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
 
-		Util.systemCall("pkill chrome"); // stop google chrome
+		if (!(settings.getBoolean(ManualSettings.developer) || settings.getBoolean(ManualSettings.debugenabled)))
+			Util.systemCall("pkill chrome"); // stop google chrome (only if not dev or debug)
 
 		Util.systemCall(Settings.redhome+Settings.sep+"red5-shutdown.sh");
 	}
@@ -1623,7 +1623,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 							
 							
 						} catch (Exception e) {
-							e.printStackTrace();
+							Util.printError(e);
 						}
 					}
 				}).start();
@@ -1656,7 +1656,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 				
 						} catch (Exception e) {
-							e.printStackTrace();
+							Util.printError(e);
 						}
 					}
 				}).start();
@@ -2100,8 +2100,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.streamactivitythreshold.name(), str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
-			if (state.get(State.values.videosoundmode.name()).equals("high")) {
-				setGrabberVideoSoundMode("low"); // videosoundmode needs to be low to for activity threshold to work
+			if (state.get(State.values.videosoundmode.name()).equals(VIDEOSOUNDMODEHIGH)) {
+				setGrabberVideoSoundMode(VIDEOSOUNDMODELOW); // videosoundmode needs to be low to for activity threshold to work
 				if (stream != null) {
 					if (!stream.equals(streamstate.stop.toString())) { // if stream already running,
 						publish(streamstate.valueOf(stream)); // restart, in low mode

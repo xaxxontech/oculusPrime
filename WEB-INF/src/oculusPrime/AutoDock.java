@@ -38,7 +38,7 @@ public class AutoDock {
 	private int rescomp; // (multiplier - javascript sends clicksteer based on 640x480, autodock uses 320x240 images)
 	private final int allowforClickSteer = 500;
 	private int dockattempts = 0;
-	private final int maxdockattempts = 5;
+	private static final int maxdockattempts = 5;
 	private int imgwidth;
 	private int imgheight;
 	public boolean lowres = true;
@@ -667,6 +667,7 @@ public class AutoDock {
 					}
 					avg = avg / n;
 					app.message("getlightlevel: " + Integer.toString(avg), null, null);
+					state.set(State.values.lightlevel, avg);
 					
 				} catch (Exception e) {
 					e.printStackTrace();

@@ -77,7 +77,7 @@ public class SystemWatchdog {
 				}
 			}
 			
-			// TODO: deal with abandonded, undocked, low battery, not redocking, not already attempted redock
+			// deal with abandonded, undocked, low battery, not redocking, not already attempted redock
 			if (!state.exists(State.values.driver.toString()) && 
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
 					redocking == false && lowbattredock == false &&
@@ -147,7 +147,7 @@ public class SystemWatchdog {
 		final String option = str;
 		new Thread(new Runnable() { public void run() {
 			redocking = true;
-			long start; 
+			long start;
 			String subject = "Oculus Prime Unable to Dock";
 			String body = "Un-docked, battery draining";
 			
@@ -161,7 +161,7 @@ public class SystemWatchdog {
 			Util.delay(6000); // allow reaction
 			
 			// camera on
-			application.driverCallServer(PlayerCommands.streamsettingsset, "high");
+			application.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			application.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			// go forward momentarily
 			application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
@@ -200,13 +200,16 @@ public class SystemWatchdog {
 				
 				application.driverCallServer(PlayerCommands.dockgrab, res);
 				Util.delay(10); // thread safe
-				while (!state.exists(State.values.dockfound.toString()) ) {} // wait
+				start = System.currentTimeMillis();
+				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 5000) {} // wait
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit
 					application.driverCallServer(PlayerCommands.left, "25");
 					Util.delay(10); // thread safe
-					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) ) {} // wait
+					start = System.currentTimeMillis();
+					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
+							&& System.currentTimeMillis() - start < 5000) {} // wait
 					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
 				}
 				rot ++;

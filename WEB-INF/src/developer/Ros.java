@@ -112,30 +112,34 @@ public class Ros {
 	public static String mapinfo() { // send info to javascript
 		String str = "";
 
-		if (state.exists(State.values.rosmapinfo)) str += State.values.rosmapinfo.toString()+"_" +
-					state.get(State.values.rosmapinfo);
+		if (state.exists(State.values.rosmapinfo)) 
+			str += State.values.rosmapinfo.toString()+"_" +	state.get(State.values.rosmapinfo);
 		
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 			str += " " + State.values.rosamcl.toString()+"_" + "0,0,0,0,0,0";
 		}
-		else if (state.exists(State.values.rosamcl)) str += " " + State.values.rosamcl.toString()+"_" +
-					state.get(State.values.rosamcl);
+		else if (state.exists(State.values.rosamcl)) 
+			str += " " + State.values.rosamcl.toString()+"_" + state.get(State.values.rosamcl);
 		
-		if (state.exists(State.values.rosscan)) str += " " + State.values.rosscan.toString()+"_" +
-					state.get(State.values.rosscan);
-		if (state.exists(State.values.rosglobalpath)) str += " " + State.values.rosglobalpath.toString()+"_" +
-					state.get(State.values.rosglobalpath);
-		if (state.exists(State.values.roscurrentgoal)) str += " " + State.values.roscurrentgoal.toString()+"_" +
-					state.get(State.values.roscurrentgoal);
+		if (state.exists(State.values.rosscan)) 
+			str += " " + State.values.rosscan.toString()+"_" + state.get(State.values.rosscan);
+
+		if (state.exists(State.values.rosglobalpath)) 
+			str += " " + State.values.rosglobalpath.toString()+"_" + state.get(State.values.rosglobalpath);
+		
+		if (state.exists(State.values.roscurrentgoal)) 
+			str += " " + State.values.roscurrentgoal.toString()+"_" + state.get(State.values.roscurrentgoal);
 
 		if (state.exists(State.values.rosmapupdated)) {
 			str += " " + State.values.rosmapupdated.toString() +"_" + state.get(State.values.rosmapupdated);
 			state.delete(State.values.rosmapupdated);
 		}
-		if (state.exists(State.values.rosmapwaypoints)) {
+
+		if (state.exists(State.values.rosmapwaypoints)) 
 			str += " " + State.values.rosmapwaypoints.toString() +"_" + state.get(State.values.rosmapwaypoints);
-//			state.delete(State.values.rosmapwaypoints);
-		}
+
+		if (state.exists(State.values.navigationenabled)) 
+			str += " " + State.values.navigationenabled.toString() +"_"+ state.get(State.values.navigationenabled);
 		
 		return str;
 	}
