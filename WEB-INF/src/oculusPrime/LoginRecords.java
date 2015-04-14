@@ -7,16 +7,16 @@ public class LoginRecords {
 
 	public static final String PASSENGER = "passenger";
 	public static final String DRIVER = "driver";
-//	public static final int MAX_RECORDS = 50;
+	
+//	static final int MAX_HISTORY = 50;
+//	private Vector<String> history = new Vector<String>();
 	
 	public static Vector<Record> list = new Vector<Record>();
-	public static State state = State.getReference();
 	public static Settings settings = Settings.getReference();
+	public static State state = State.getReference();
 	private static Application app = null; 
 	
-	public LoginRecords(){}
-	
-	public void setApplication(Application a) {
+	public LoginRecords(Application a) {
 		app = a;
 	}
 	
@@ -88,34 +88,6 @@ public class LoginRecords {
 		return active;
 	}
 	
-//	/** @return a list of user names waiting in line */
-//	public String[] getPassengerList() {
-//		String[] passengers = new String[getPassengers()];
-//		for (int i = 0; i < list.size(); i++){
-//			Record rec = list.get(i);
-//			if(rec.isActive() && rec.getRole().equals(PASSENGER))
-//				passengers[i] = rec.getUser();
-//		}
-//
-//		return passengers;
-//	}
-	
-//	/** @return a list of user names */
-//	public String[] getActiveList() {
-//		String[] passengers = new String[getActive()];
-//		for (int i = 0; i < list.size(); i++){
-//			Record rec = list.get(i);
-//			if(rec.isActive())
-//				passengers[i] = rec.getUser();
-//		}
-//
-//		return passengers;
-//	}
-
-//	public int size() {
-//		return list.size();
-//	}
-
 	public String toString() {
 
 		String str = "RTMP users login records:<br>";
@@ -147,6 +119,16 @@ public class LoginRecords {
 		return result;
 	}
 
+	/*
+	public String tail(int lines){
+		int i = 0;
+		StringBuffer str = new StringBuffer();
+	 	if(history.size() > lines) i = history.size() - lines;
+		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
+		return str.toString();
+	}*/
+	
+	
 	/**
 	 * store each record in an object 
 	 */

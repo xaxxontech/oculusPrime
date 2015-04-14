@@ -33,25 +33,8 @@ public class PowerLogger {
 		} catch (Exception e) {
 			Util.debug("PowerLogger(): " + e.getMessage());
 		}
-		
 	}
 
-//	public static void append(String data){
-//		try {
-//
-//			if(logger == null) init();
-//
-//			logger.seek(logger.length());
-//			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
-//
-//			if(history.size() > MAX_HISTORY) history.remove(0);
-//			history.add(data);
-//
-//		} catch (Exception e) {
-//			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data);
-//		}
-//	}
-	
 	public static void append(String msg, Object c) {
 		String data = c.getClass().getName().toLowerCase() + ", " + msg;
 		try {
@@ -62,7 +45,7 @@ public class PowerLogger {
 			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
 
 			if(history.size() > MAX_HISTORY) history.remove(0);
-			history.add(data);
+			history.add(msg); // data);
 
 		} catch (Exception e) {
 			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data);
@@ -77,32 +60,13 @@ public class PowerLogger {
 		return str.toString();
 	}
 
-
-	
-	
-	/*	public static void closeLog() {	
-		
-		if(logger == null) {
-			Util.log("closeLog() logger is null", singleton);
-			return;
-		}
+	public static void close() {	
 		try {		
-			// singleton.append("log file closed"); //, "PowerLogger");
 			logger.close();
 			logger = null;
-		} catch (IOException e) {
-			
-			
-			// singleton.append("closeLog(): " + e.getMessage()); // "PowerLogger");
+		} catch (Exception e) {
+			Util.debug("PowerLogger.close(): " + e.getMessage());
 		}
-		
-	
-		try {		
-			singleton.append("log file closed"); //, "PowerLogger");
-			logger.close();
-		} catch (IOException e) {
-			singleton.append("closeLog(): " + e.getMessage()); // "PowerLogger");
-		}*/
-	//}
+	}
 
 }

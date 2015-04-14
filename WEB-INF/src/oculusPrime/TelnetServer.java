@@ -9,7 +9,7 @@ import java.util.Vector;
  */
 public class TelnetServer implements Observer {
 	
-	public static enum Commands {chat, exit, bye, quit};
+	public static enum Commands {state, settings, chat, exit, bye, quit};
 	
 	public static final boolean ADMIN_ONLY = true;
 	public static final String MSGPLAYERTAG = "<messageclient>";
@@ -38,16 +38,20 @@ public class TelnetServer implements Observer {
 		
 			clientSocket = socket;  
 			
-			// check if banned
-			if (banlist.isBanned(clientSocket)){ 
-				try { 
-					socket.close(); 
-				} catch (Exception e) {
-					Util.log("ConnectionHandler(), banned IP error", e, this);
-				}		
-				return;
+			// check if banned if not in developer mode 
+			if( ! settings.getBoolean(ManualSettings.developer)){
+				if (banlist.isBanned(clientSocket)){ 
+					try { 
+						Util.debug("banned ip: " + clientSocket.toString(), this);
+						socket.close();
+						return;
+					} catch (Exception e) {
+						Util.log("ConnectionHandler(), banned IP error", e, this);
+					}		
+				}
 			}
 		
+			
 			// connect 
 			try {
 			
@@ -177,13 +181,47 @@ public class TelnetServer implements Observer {
 		case chat: // overrides playercommands chat
 			String args = new String(); 		
 			for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
-			if(args.length()>1)
-				app.playerCallServer(PlayerCommands.chat, args);
+			if(args.length()>1) app.playerCallServer(PlayerCommands.chat, args);
 			return true;
 		
 		case bye:
 		case quit:
-		case exit: shutDown("user left", out, in, clientSocket); return true;
+		case exit: shutDown("user left", out, in, clientSocket); 
+			return true;
+		
+		case settings: 
+			out.println("<multiline>");
+			out.println(settings.toString()); 
+			out.println("</multiline>");
+			return true;
+			
+		case state:
+		
+			String s[] = str.split(" ");			
+			if (s.length == 3) { 
+				if (s[1].equals("delete")) state.delete(s[2]);
+				else state.set(s[1], s[2]); 
+			}
+			
+			if(s.length == 1){
+				out.println("<multiline>");
+				out.println(state.toString());
+				out.println("</multiline>");
+			}
+			
+		// removed from app lication
+		// doPlayer(str, out);
+		// this from Application, gui doesn't require this 
+		//	else {  
+		//		if (s[0].matches("\\S+")) { // one arg 
+		//			messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
+		//		} else {  // no args
+		//			//messageplayer("<state> "+state.toString(), null, null);
+		//		} 
+		//	}
+			
+			return true;
+			
 		}
 		
 		// command was not managed 
@@ -235,36 +273,14 @@ public class TelnetServer implements Observer {
 		}
 	}
 
-	/** constructor */
+	/**  register for updates, share state with all threads  */
 	public TelnetServer(oculusPrime.Application a) {
 		
 		if(app == null) app = a;
 		else return;
-		
-		/** register for updates, share state with all threads */  
+		  
 		state.addObserver(this);
 		
-		//TODO: doesn't seem to work???
-		/** register shutdown hook -------------------- 
-		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					
-					if(serverSocket!=null) serverSocket.close();
-					
-					if(printers!=null)
-						for(int i = 0 ; i < printers.size() ; i++)
-							printers.get(i).close();
-					
-				} catch (IOException e) {
-					Util.debug(e.getMessage(), this);
-				}
-			}
-		}));*/
-
-		state.set(oculusPrime.State.values.telnetusers, 0);
-
 		/** command connections*/
 		new Thread(new Runnable() {
 			@Override
@@ -302,7 +318,8 @@ public class TelnetServer implements Observer {
 					return;					
 				}	
 				
-				Util.debug("failed to open client socket: " + e.getMessage());
+				Util.log("failed to open client socket: " + e.getMessage(), this);
+				return;
 			}
 		}
 	}
@@ -321,13 +338,12 @@ public class TelnetServer implements Observer {
 				Util.log("failed to close client socket: " + e.getMessage(), this);
 			}
 		}
-		
+	
 		try {
 			serverSocket.close();
 		} catch (IOException e) {
 			Util.log("failed to close server socket: " + e.getMessage(), this);
 		}
-	
 	}
 }
 

@@ -32,8 +32,6 @@ public class Settings {
 	
 	private Settings(){
 		
-//		if (System.getProperty("os.name").matches("Linux")) { os = "linux"; }
-		
 		// be sure of basic configuration 
 		if(! new File(settingsfile).exists()) createFile(settingsfile); 
 		
@@ -132,27 +130,26 @@ public class Settings {
 		return result;
 	}
 
-
-	/** Make a copy in order and "cleaned" of anything but valid settings 
+	@Override
 	public String toString(){
 		
 		String result = new String();
 		for (GUISettings factory : GUISettings.values()) {
 			String val = readSetting(factory.toString());
 			if (val != null) // if( ! val.equals("null")) 
-				result += factory.toString() + " " + val + "<br>";
+				result += factory.toString() + " " + val + "\n\r";
 		}
 	
 		for (ManualSettings ops : ManualSettings.values()) {
 			String val = readSetting(ops.toString());
-			if (val != null)  { 
-				if(ops.equals(ManualSettings.email_password)) { val = "***"; }// never send out plain text passwords 
-				result += ops.toString() + " " + val + "<br>";
+			if (val != null)  { // never send out plain text passwords 
+				if( ! ops.equals(ManualSettings.email_password)) // { val = "***"; }
+					result += ops.toString() + " " + val + "\n\r";
 			}
 		}
 		
 		return result;
-	}*/
+	}
 	
 	public synchronized void createFile(String path) {
 		try {

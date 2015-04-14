@@ -24,7 +24,7 @@ import oculusPrime.Util;
 public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
-	public static final int DEAD_TIME_OUT = 10000; // was 15000 
+	public static final int DEAD_TIME_OUT = 10000; 
 	public static final int ERROR_TIME_OUT = (int) Util.ONE_MINUTE;
 	public static final int WATCHDOG_DELAY = 5000;
 	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
@@ -197,13 +197,13 @@ public class ArduinoPower implements SerialPortEventListener  {
 			while (true) {
 				long now = System.currentTimeMillis();
 				
-				Util.debug("run....", this);
+				// Util.debug("run....", this);
 
 				if (now - lastReset > RESET_DELAY && isconnected) PowerLogger.append(FIRMWARE_ID+" past reset delay", this);
 				
 				//TODO: brad here ..............................................................
-				// if (state.exists(oculusPrime.State.values.powererror)) {
-				if (state.exists(oculusPrime.State.values.powererror.toString())) {
+				if (state.exists(oculusPrime.State.values.powererror)) {
+				// if (state.exists(oculusPrime.State.values.powererror.toString())) {
 					final String msg = "power PCB code: " + state.get(oculusPrime.State.values.powererror);
 					application.message(msg, null, null);
 					application.messageGrabber(msg, "");	

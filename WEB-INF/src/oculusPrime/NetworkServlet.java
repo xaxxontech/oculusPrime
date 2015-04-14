@@ -1,15 +1,13 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -20,8 +18,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import oculusPrime.commport.PowerLogger;
 
 public class NetworkServlet extends HttpServlet {
 	
@@ -43,7 +39,6 @@ public class NetworkServlet extends HttpServlet {
 	
 	private static String signalQuality = NONE;
 	private static String connectedSSID = NONE;
-	private static String signalNoise = NONE;
 	private static String wlanAddress = NONE;
 	
 	NetworkMonitor monitor = NetworkMonitor.getReference();
@@ -53,7 +48,7 @@ public class NetworkServlet extends HttpServlet {
 	private Vector<String> networkData = new Vector<String>();
 	
 	private static long last = System.currentTimeMillis();
-	private static float pingTime = 0;
+//	private static float pingTime = 0;
 	private static int pingCount = 0;
 	private static int pingFail = 0;
 	
@@ -64,7 +59,7 @@ public class NetworkServlet extends HttpServlet {
 	
 	public HashMap<String, String> map = new HashMap<String, String>();
 
-	private State state = State.getReference();
+//	private State state = State.getReference();
 	
 	public void init(ServletConfig config) throws ServletException {
 		
@@ -402,7 +397,7 @@ public class NetworkServlet extends HttpServlet {
 						System.out.println("pingTask: WLAN_TIMEOUT: " + (System.currentTimeMillis() - last) + " ms");
 						pingCount = 0;
 						pingFail = 0;
-						pingTime = 0;
+					//	pingTime = 0;
 						
 					} else {
 						
@@ -418,7 +413,7 @@ public class NetworkServlet extends HttpServlet {
 								pingFail++;
 							}
 							if(line.contains("time=")){
-								pingTime = Float.parseFloat(line.substring(line.indexOf("time=")+5, line.indexOf(" ms")));
+								//pingTime = Float.parseFloat(line.substring(line.indexOf("time=")+5, line.indexOf(" ms")));
 								last = System.currentTimeMillis();
 							}	
 						}
@@ -601,7 +596,7 @@ public class NetworkServlet extends HttpServlet {
 								String[] results = line.split(" ");
 								signalStrength = results[7];
 								signalQuality = results[5]; 
-								signalNoise = results[9];
+								// signalNoise = results[9];
 								
 								// for(int i = 0 ; i < results.length; i++) if(! results[i].equals("")) System.out.println(i + " -- " + results[i]);
 								
