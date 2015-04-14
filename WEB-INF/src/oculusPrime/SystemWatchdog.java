@@ -56,6 +56,7 @@ public class SystemWatchdog {
 			if ((state.getUpTime() > STALE) && !state.exists(State.values.driver.toString()) && 
 					!state.exists(State.values.powererror.toString()) && // why..? 
 					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+					state.getInteger(State.values.telnetusers) == 0 &&
 					(settings.getBoolean(GUISettings.reboot))){
 				
 				String boot = new Date(state.getLong(State.values.boottime.name())).toString();				
@@ -152,7 +153,7 @@ public class SystemWatchdog {
 			String body = "Un-docked, battery draining";
 			
 			// warn
-			application.driverCallServer(PlayerCommands.speech, "warning, moving, in, 5, seconds");
+//			application.driverCallServer(PlayerCommands.speech, "warning, moving, in, 5, seconds");
 			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
 			Util.delay(1000); // including 500 delay 
 			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
@@ -201,7 +202,7 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.dockgrab, res);
 				Util.delay(10); // thread safe
 				start = System.currentTimeMillis();
-				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 5000) {} // wait
+				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000) {} // wait
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit

@@ -148,7 +148,12 @@ public class TelnetServer implements Observer {
 			sendToSocket("error: unknown command, " + cmd[0], out);
 			return;
 		}
-		
+
+		if (player.equals(PlayerCommands.systemcall)) {
+			sendToSocket("forbidden command, " + cmd[0], out);
+			return;
+		}
+
 		// check for null vs string("")
 		args = args.trim();
 		if(args.length()==0) args = "";
@@ -256,8 +261,10 @@ public class TelnetServer implements Observer {
 					Util.debug(e.getMessage(), this);
 				}
 			}
-		}));*/ 
-		
+		}));*/
+
+		state.set(oculusPrime.State.values.telnetusers, 0);
+
 		/** command connections*/
 		new Thread(new Runnable() {
 			@Override

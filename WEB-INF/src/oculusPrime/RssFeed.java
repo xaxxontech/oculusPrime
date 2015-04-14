@@ -112,17 +112,17 @@ public class RssFeed {
 	}
 	
 	private class Item {
-		
+
 		public String title = null;
 		public String description = null;
 		public String link = null;
 		public String pubDate = null; // eg Fri, 25 May 2012 12:05:32 +0000
 		public String guid = null;
-		
+
 		Item(String t, String d) {
 			this.title = t;
 			this.description = d;
-			
+
 			DateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
 			Calendar cal = Calendar.getInstance();
 			this.pubDate = dateFormat.format(cal.getTime());

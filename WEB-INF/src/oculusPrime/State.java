@@ -17,8 +17,9 @@ public class State {
 
 		driver, logintime, pendinguserconnected, telnetusers, // users
 		
-		streamactivityenabled, streamactivitythreshold, videosoundmode, stream, driverstream, //audio video
-		volume, framegrabbusy, controlsinverted, lightlevel,
+		streamactivityenabled, videosoundmode, stream, driverstream, volume, //audio video
+		framegrabbusy, controlsinverted, lightlevel, streamactivitythreshold, streamactivity,
+		motiondetectwatching,
 
 		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
 		powererror, forceundock, // power problems
@@ -29,8 +30,7 @@ public class State {
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
-		roscurrentgoal, rosmapupdated, rosmapwaypoints, navigationenabled, 
-		
+		roscurrentgoal, rosmapupdated, rosmapwaypoints, navigationenabled,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid,
 		

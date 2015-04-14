@@ -25,6 +25,7 @@ import developer.Navigation;
 import developer.UpdateFTP;
 import developer.Ros;
 import developer.depth.Mapper;
+import developer.image.motionDetect;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -39,7 +40,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
 	private boolean pendingplayerisnull = true;
-	private IConnection grabber = null;
+	public IConnection grabber = null;
 	private IConnection player = null;
 	private String authtoken = null;
 	private String salt = null;
@@ -66,9 +67,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start===============",this);
+		Util.log("\n==============Oculus Prime Java Start===============", this);
 		PowerLogger.append("\n.................Oculus Prime Java Start.................", this);
-		System.err.println("\n========="+Util.getTime()+"===Oculus Prime Java Start=========");
+		System.err.println("\n=========" + Util.getTime() + "===Oculus Prime Java Start=========");
 		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -228,7 +229,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		setGrabberVideoSoundMode(videosoundmode);
 
-		docker = new AutoDock(this, grabber, comport, powerport);
 		loginRecords.setApplication(this);
 
 //		if (Settings.os.equals("linux")) {
@@ -274,7 +274,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
 		grabberInitialize();
-				
+
+		docker = new AutoDock(this, comport, powerport);
+
 		state.put(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog? 
 		watchdog = new SystemWatchdog(this); 
 		
@@ -482,7 +484,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			move(str); 
 			break;
 		}
-		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
+		case battstats: messageplayer(state.get(State.values.batteryinfo), "battery", state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
 		case cameracommand: 
 			if (state.getBoolean(State.values.autodocking)) {
 				messageplayer("command dropped, autodocking", null, null);
@@ -524,7 +526,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
-		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
 			if (str!=null) if (str.equals(AutoDock.HIGHRES))
@@ -541,7 +542,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case nudge: nudge(str); break;
 		
 		case writesetting:
-			Util.debug("write setting: " + str, this);
 			if (settings.readSetting(cmd[0]) == null) {
 				settings.newSetting(cmd[0], cmd[1]);
 				messageplayer("new setting: " + cmd[1], null, null);
@@ -553,7 +553,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case readsetting:
-			Util.debug("read setting: " + cmd[0], this);
 			messageplayer("setting "+cmd[0]+" "+settings.readSetting(cmd[0]),null,null);
 			break;
 
@@ -812,7 +811,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.printError(e);
 			}
 			break;
-			
+
+		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
+		case motiondetectcancel: state.delete(State.values.motiondetectwatching); break;
+		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null);
+
 		}
 	}
 
@@ -867,7 +870,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case populatesettings:
 			populateSettings();
 			break;
-		case systemcall:
+			case systemcall:
 			Util.systemCall(str);
 			break;
 		case chat:
@@ -877,12 +880,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.autoDock("dockgrabbed " + str);
 			state.set(State.values.dockgrabbusy.name(), false);
 			break;
-		case autodock: 
+			case autodock:
 			docker.autoDock(str);
 			break;
-		case factoryreset:
+			case factoryreset:
 			factoryReset();
-			break;
+				break;
 		case restart:
 			restart();
 			break;
@@ -892,6 +895,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case streamactivitydetected:
 			streamActivityDetected(str);
 			break;
+
 		}
 	}
 
@@ -2097,6 +2101,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Integer videoThreshold = Integer.parseInt(val[0]);
 		Integer audioThreshold = Integer.parseInt(val[1]);
 
+		state.delete(State.values.streamactivity);
 		state.set(State.values.streamactivitythreshold.name(), str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
@@ -2111,8 +2116,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			if (stream != null) { 
 				if (stream.equals(streamstate.stop.toString())) {
-					if (audioThreshold == 0 && videoThreshold > 0) { publish(streamstate.camandmic); }
-					else if (audioThreshold > 0 && videoThreshold == 0) { publish(streamstate.mic); }
+					if (audioThreshold == 0 && videoThreshold != 0) { publish(streamstate.camera); }
+					else if (audioThreshold != 0 && videoThreshold == 0) { publish(streamstate.mic); }
 					else { publish(streamstate.camandmic); }
 				}
 			}
@@ -2130,9 +2135,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	private void streamActivityDetected(String str) {
-		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) { 
+		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) {
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable
+			state.set(State.values.streamactivity, str); // needs to be after disable, method deletes state val
 		}
 	}
 

@@ -906,12 +906,12 @@ function routesmenu() {
 		return;
 	}
 
+	str = document.getElementById("routes_menu").innerHTML;
+	popupmenu("menu","show",null,null,str);
+
 	var date = new Date().getTime();
 	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload&date="+date, routesload);
 	else routespopulate(routesxml);
-
-	str = document.getElementById("routes_menu").innerHTML;
-	popupmenu("menu","show",null,null,str);
 
 }
 
@@ -1183,6 +1183,13 @@ function waypointactionaddnew(routenum, waypointnum, id) {
 	
 	var route = temproutesxml.getElementsByTagName("route")[routenum];
 	var waypoint = route.getElementsByTagName("waypoint")[waypointnum];
+	
+	if (waypoint.getElementsByTagName("action").length == 0) {
+		var i = waypoint.getElementsByTagName("duration")[0].childNodes[0].nodeValue;
+		if (i == 0) 
+			waypoint.getElementsByTagName("duration")[0].childNodes[0].nodeValue = 10;
+	}
+	
 	var newaction = temproutesxml.createElement("action");
 	var text = document.getElementById(id).value; 
 	var newtext = temproutesxml.createTextNode(text);
