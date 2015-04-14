@@ -8,7 +8,7 @@ import java.awt.image.Kernel;
 public class ImageUtils {
 	
 	public final int matrixres = 10;
-	private int imgaverage;
+	public int imgaverage;
 	
 	public ImageUtils() {}
 	
@@ -43,7 +43,7 @@ public class ImageUtils {
 		}
 		return img;
 	}
-
+	
 	public int[][] convertToMatrix(int[] greyimg, int width, int height) {
 //		var result:Array = [];
 		int[][] matrix = new int[width/matrixres][height/matrixres]; //TODO: may need to add or subtract 1?
@@ -52,7 +52,6 @@ public class ImageUtils {
 		int yy;
 		int runningttl;
 		for (int x = 0; x < width; x += matrixres) {			
-
 			for (int y=0; y<height; y+=matrixres) {
 				
 				runningttl = 0;
@@ -80,8 +79,6 @@ public class ImageUtils {
 	 * @return x,y in pixels
 	 */
 	public int[] findCenter(int[][] matrix, int[][] ctrMatrix, int width, int height) {
-		
-		// dwg: https://docs.google.com/drawings/d/1mXlNnGVg62TUn8UnI9gv8bW4FxUaraerTErVoA_CFrU/edit
 		
 		int widthRes = width/matrixres;
 		int heightRes = height/matrixres;
@@ -159,5 +156,100 @@ public class ImageUtils {
         img = op.filter(img, new BufferedImage(320, 240, BufferedImage.TYPE_INT_ARGB));
         return img;
 	}
+	
+	public int[] convertToBW(int[] greypxls) {
+		int[] bwpxls = new int[greypxls.length];
+		int threshold = imgaverage;
+		for (int i=0; i<greypxls.length; i++) {
+			if (greypxls[i] < threshold) { bwpxls[i] = 0; }
+			else { bwpxls[i] = 255; }
+		}
+		return bwpxls;
+	}
+	
+//	public int[] middleMass(int[] bwpxls, int width, int height) {
+//		int[] ctrxy = new int[2];
+//		int xavg = (width/2)*width*height; // ctr
+//		int yavg = (height/2)*width*height; // ctr
+//
+//		for(int y=0; y<height; y++) {
+//			for (int x=0; x<width; x++) {
+//				if (bwpxls[x + y*width] != 0) { 
+//					xavg += x;
+//					yavg += y;
+//				}
+//				else { xavg -= x; yavg -= y; } 
+//			}
+//		}
+//		
+//		ctrxy[0]= xavg/(width*height);
+//		ctrxy[1]= yavg/(width*height);
+//		return ctrxy;
+//	}
+	
+	public int[] middleMass(int[] bwpxls, int width, int height, int sensitivty) {
+		int[] ctrxy = new int[2];
+		int xavg = (width/2) * width*height; // ctr
+		int yavg = (height/2) * width*height; // ctr
+
+		for(int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				if (bwpxls[x + y*width] != 0) { 
+					xavg += (x-(width/2))*sensitivty;
+					yavg += (y-(height/2))*sensitivty;
+				}
+
+			}
+		}
+		
+		ctrxy[0]= xavg /(width*height);
+		ctrxy[1]= yavg /(width*height);
+		return ctrxy;
+	}
+	
+	/* find ctr of overall average brightest, xy point
+	 * any frame of all single level would be width/2, height/2
+	 * for x: 
+	 * find intensity ctr for each row, average all (weighted by each average) to arrive at single x
+	 * 
+	 */
+	public int[] middleMassGrey(int[] greypxls, int width, int height) {
+		int[] restultxy = new int[2];
+		
+		// find intensity ctr and average for each row
+		int[] rowavg = new int[height];
+		int[] rowxpos = new int[height];
+		for(int y=0; y<height; y++) {
+			int avg = 0;
+			int max = 0;
+			int offset = 0;
+			for (int x=0; x<width; x++) {
+				int p = greypxls[x + y*width];
+				offset += (x-(width/2))*p;
+				if (p>max) { max = p; }
+				avg += p;
+			}
+			rowavg[y] = avg/width;
+			rowxpos[y] = (width/2)+(offset/max);
+		}
+		
+		// find weighted average of all rows for single x
+		int xavg=0;
+		for(int y=0; y<height; y++) {
+			
+		}
+		
+		restultxy[0]= 0;
+		restultxy[1]= 0;
+		return restultxy;
+	}
+	
+    public static void main(String[] args) { // scratch
+        System.out.println("Testing");
+        String s = Integer.toString(12288000/(320*240));
+		System.out.println(s);
+
+
+    }
 	
 }

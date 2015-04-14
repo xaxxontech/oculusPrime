@@ -247,24 +247,25 @@ public class NetworkMonitor {
 	}
 	
 	private void updateExternalIPAddress(){
-		try {
-			
-			URLConnection connection = (URLConnection) new URL("http://checkip.dyndns.org/").openConnection();
-			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+		new Thread(new Runnable() { public void run() {
+			try {
 
-			int i;			
-			String address = "";
-			while ((i = in.read()) != -1) address += (char)i;
-			in.close();
+				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
+				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 
-			// parse HTML file
-			address = address.substring(address.indexOf(": ") + 2);
-			address = address.substring(0, address.indexOf("</body>"));
-			state.put(values.externaladdress, address);
-		
-		} catch (Exception e) {
-			Util.log("updateExternalIPAddress()", e, this);
-			state.delete(values.externaladdress);
-		}
+				int i;
+				String address = "";
+				while ((i = in.read()) != -1) address += (char)i;
+				in.close();
+
+				state.put(values.externaladdress, address);
+
+			} catch (Exception e) {
+				Util.log("updateExternalIPAddress()", e, this);
+				state.delete(values.externaladdress);
+			}
+
+
+		} }).start();
 	}
 }

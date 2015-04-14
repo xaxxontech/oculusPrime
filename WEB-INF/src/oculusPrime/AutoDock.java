@@ -31,7 +31,7 @@ public class AutoDock {
 	private boolean autodockingcamctr = false;
 	private int lastcamctr = 0;
 	private ArduinoPrime comport = null;
-	private IConnection grabber = null;
+//	private IConnection grabber = null;
 	private int autodockctrattempts = 0;
 	private Application app = null;
 	private OculusImage oculusImage = new OculusImage();
@@ -46,9 +46,8 @@ public class AutoDock {
 	public static final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
 	
-	public AutoDock(Application theapp, IConnection thegrab, ArduinoPrime com, ArduinoPower powercom) {
+	public AutoDock(Application theapp, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
-		this.grabber = thegrab;
 		this.comport = com;
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
@@ -608,11 +607,11 @@ public class AutoDock {
 			return;
 		}
 
-		if (grabber instanceof IServiceCapableConnection) {
+		if (app.grabber instanceof IServiceCapableConnection) {
 			Application.framegrabimg = null;
 			Application.processedImage = null;
 			state.set(State.values.framegrabbusy.name(), true);
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
+			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
 			sc.invoke("framegrabMedium", new Object[] {});
 			app.message("getlightlevel command received", null, null);
 		}
@@ -689,11 +688,11 @@ public class AutoDock {
 			return;
 		}
 
-		if (grabber instanceof IServiceCapableConnection) {
+		if (app.grabber instanceof IServiceCapableConnection) {
 			state.set(State.values.framegrabbusy.name(), true);
 			Application.framegrabimg = null;
 			Application.processedImage = null;
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
+			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
 			String resolution; 
 			if (lowres) { resolution = "framegrabMedium"; }
 			else { resolution = "framegrab"; }
@@ -713,7 +712,7 @@ public class AutoDock {
 						}
 						n++;
 						if (n > 2000) { // give up after 10 seconds
-							Util.debug("frame grab timed out", this);
+							Util.log("frame grab timed out", this);
 							state.set(State.values.framegrabbusy, false);
 							break;
 						}

@@ -1,7 +1,16 @@
 package oculusPrime;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
+import developer.Navigation;
+import developer.Ros;
+import developer.depth.Mapper;
+import developer.depth.ScanUtils;
+
+import javax.imageio.ImageIO;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -9,21 +18,15 @@ import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-
-import javax.imageio.ImageIO;
-import javax.servlet.*;
-import javax.servlet.http.*;
-
-import developer.Navigation;
-import developer.Ros;
-import developer.depth.Mapper;
-import developer.depth.ScanUtils;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 @SuppressWarnings("serial")
 public class FrameGrabHTTP extends HttpServlet {
 	
 	private static Application app = null;
-	private State state = State.getReference();
+	private static State state = State.getReference();
 	
 	private static int var;
 	private static BufferedImage radarImage = null;
@@ -100,7 +103,7 @@ public class FrameGrabHTTP extends HttpServlet {
         		out.close();
             }
         }
-		else { frameGrab(req,res); }        
+		else { frameGrab(req, res); }
 	}
 	
 	private void frameGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
@@ -258,32 +261,28 @@ public class FrameGrabHTTP extends HttpServlet {
 
 	}
 
-//	public static void saveToFile(final String str) {
-//		
-//		final String urlString = "http://127.0.0.1:" + settings.readRed5Setting("http.port") + "/oculus/frameGrabHTTP";
-//		new Thread(new Runnable() {
-//			@Override
-//			public void run() {
-//				try {			
-//					int i = 1;
-//					if (!str.equals("")) { i = Integer.parseInt(str); }
-//					Downloader dl = new Downloader();
-//					String sep = Settings.sep;
-//					for(; i > 0 ; i--) {
-//						Util.debug(i + " framegrab save: " + urlString, this);
-//						DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
-//						Calendar cal = Calendar.getInstance();
-//						String datetime = dateFormat.format(cal.getTime());
-//
-//						dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculus"+sep+"framegrabs");
-////						Util.saveUrl("capture/" + System.currentTimeMillis() + ".jpg", urlString );
-//					}
-//				} catch (Exception e) {
-//					Util.log("can't get image: " + e.getLocalizedMessage(), this);
-//				}
-//			}
-//		}).start();
-//	}
+	/**
+	 *
+	 * @param args download url params, can be null
+	 * @return   returns download url of saved image
+	 */
+	public static String saveToFile(String args) {
+		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;
+
+		final Downloader dl = new Downloader();
+		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
+		Calendar cal = Calendar.getInstance();
+		final String datetime = dateFormat.format(cal.getTime());
+		new Thread(new Runnable() {
+			public void run() {
+				String sep = Settings.sep;
+				dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculusPrime"+sep+"framegrabs");
+			}
+		}).start();
+		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
+				"/oculusPrime/framegrabs/"+datetime+".jpg";
+
+	}
 	
 
 }

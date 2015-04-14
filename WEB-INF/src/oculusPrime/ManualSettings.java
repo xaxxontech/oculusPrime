@@ -8,6 +8,7 @@ public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,  
 	gyrocomp, alertsenabled,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
+	soundthreshold, motionthreshold,
 	; 
 	
 	 // new counter to see if constantly searching
@@ -29,6 +30,9 @@ public enum ManualSettings {
 		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , "true");
+		config.setProperty(soundthreshold.name(), "10");
+		config.setProperty(motionthreshold.name(), "10");
+
 		return config;
 	}
 	

@@ -3,7 +3,7 @@ package oculusPrime;
 public enum PlayerCommands { // all valid commands
 	    
     // server
-    uptime, restart, quitserver, showlog, writesetting, readsetting, // settings, 
+    uptime, restart, quitserver, showlog, writesetting, readsetting,
     //undocumented (not typically used by scripts):
     softwareupdate, 
     
@@ -28,7 +28,7 @@ public enum PlayerCommands { // all valid commands
     
     // video/audio (flash)
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
-    streamsettingsset,
+    streamsettingsset, motiondetectgo, motiondetectcancel, framegrabtofile,
     
     // malg board 
     motorsreset, cameracommand, camtilt, camtiltfast, getdrivingsettings, drivingsettingsupdate,
