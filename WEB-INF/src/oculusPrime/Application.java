@@ -148,7 +148,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 						comport.stopGoing();
 					}
 	
-					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop)) {
+					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())) {
 						state.set(State.values.driverstream, driverstreamstate.stop.toString());
 						grabberPlayPlayer(0);
 						messageGrabber("playerbroadcast", "0");

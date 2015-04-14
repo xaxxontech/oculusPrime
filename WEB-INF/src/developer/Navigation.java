@@ -410,7 +410,7 @@ public class Navigation {
 					NodeList actions = ((Element) waypoints.item(wpnum)).getElementsByTagName("action");
 					long duration = Long.parseLong(
 							((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
-					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name);
+					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name, id);
 		    		
 					Util.delay(1000);
 
@@ -472,7 +472,7 @@ public class Navigation {
 	 * @param actions
 	 * @param duration
 	 */
-	private void processWayPointActions(NodeList actions, long duration, String wpname, String name) {
+	private void processWayPointActions(NodeList actions, long duration, String wpname, String name, String id) {
 		
 		// TODO: actions here
 		//  <action>  
@@ -556,18 +556,24 @@ public class Navigation {
 		}
 
 		while (System.currentTimeMillis() - waypointstart < duration || turns < maxturns) {
+
+			if (!state.exists(State.values.navigationroute)) return;
+	    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
+			
 			// start stream(s)
 			if (camera && mic) {
 				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
 				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 "+settings.readSetting(ManualSettings.soundthreshold));
+				Util.delay(2000); // mic takes a while to start up
 			} else if (camera && !mic) {
 				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
 				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
 			} else if (!camera && mic) {
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 "+settings.readSetting(ManualSettings.soundthreshold));
+				Util.delay(2000); // mic takes a while to start up
 			}
 
 			long start = System.currentTimeMillis();

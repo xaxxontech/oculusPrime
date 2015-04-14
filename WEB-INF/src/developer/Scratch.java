@@ -7,7 +7,7 @@ public class Scratch {
     public static void main(String[] args) {
 
 
-        System.out.println("*"+"asdf9  asdf  ".replaceAll("\\D","")+"*");
+        System.out.println("asdf"+System.currentTimeMillis());
 
     }
 }
