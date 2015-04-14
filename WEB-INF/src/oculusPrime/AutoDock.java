@@ -31,7 +31,6 @@ public class AutoDock {
 	private boolean autodockingcamctr = false;
 	private int lastcamctr = 0;
 	private ArduinoPrime comport = null;
-//	private IConnection grabber = null;
 	private int autodockctrattempts = 0;
 	private Application app = null;
 	private OculusImage oculusImage = new OculusImage();

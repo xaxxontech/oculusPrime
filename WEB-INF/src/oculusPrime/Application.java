@@ -25,7 +25,7 @@ import developer.Navigation;
 import developer.UpdateFTP;
 import developer.Ros;
 import developer.depth.Mapper;
-// import developer.image.motionDetect;
+import developer.image.motionDetect;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -70,9 +70,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("\n==============Oculus Prime Java Start===============",this);
 		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
 		System.err.println("\n========="+Util.getTime() +" Oculus Prime Java Start=========");
-		Util.log("\n==============Oculus Prime Java Start===============", this);
-		PowerLogger.append("\n.................Oculus Prime Java Start.................", this);
-		System.err.println("\n=========" + Util.getTime() + "===Oculus Prime Java Start=========");
 		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -222,7 +219,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (videosoundmode == null)	videosoundmode=VIDEOSOUNDMODEHIGH;  
 		
 		setGrabberVideoSoundMode(videosoundmode);
-		// docker = new AutoDock(this, grabber, comport, powerport);
 		Util.systemCall(System.getenv("RED5_HOME")+"/flashsymlink.sh");		
 	}
  
@@ -774,7 +770,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			break;
 
-//		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
+		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
 		case motiondetectcancel: state.delete(State.values.motiondetectwatching); break;
 		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null);
 
