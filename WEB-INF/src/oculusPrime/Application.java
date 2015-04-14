@@ -44,10 +44,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String authtoken = null;
 	private String salt = null;
 	
-	private LoginRecords loginRecords = new LoginRecords();
 	private Settings settings = Settings.getReference();
 	private BanList banlist = BanList.getRefrence();
 	private State state = State.getReference();
+	private LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
 	private SystemWatchdog watchdog;
@@ -67,11 +67,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start===============",this);
-		PowerLogger.append("\n.................Oculus Prime Java Start.................", this);
-		System.err.println("\n========="+Util.getTime()+"===Oculus Prime Java Start=========");
+		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
+		System.err.println("\n========="+Util.getTime() +" Oculus Prime Java Start=========");
 		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
+		loginRecords = new LoginRecords(this);
 		NetworkMonitor.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
@@ -94,12 +95,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 		
-		// TODO: test if this IP is brute 
-		if(banlist.isBanned(connection.getRemoteAddress())){
-			Util.log("appConnect(): " + connection.getRemoteAddress() + " has been banned", this);
-			banlist.failed(connection.getRemoteAddress());
-			return false;
-		}
+		if(banlist.isBanned(connection.getRemoteAddress())) return false;
 		
 		if (logininfo.length > 1) { // test for user/pass/remember
 			String encryptedPassword = (passwordEncryptor.encryptPassword(logininfo[0] + salt + logininfo[1])).trim();
@@ -112,11 +108,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 		
-		// TODO: record failure
-		banlist.failed(connection.getRemoteAddress());			
-		String str = "login from: " + connection.getRemoteAddress() + " failed";
-		Util.log("appConnect(): " + str,this);
-		messageGrabber(str, "");
+		banlist.loginFailed(connection.getRemoteAddress(), logininfo[0]);			
 		return false;
 	}
 
@@ -223,18 +215,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
 		String videosoundmode=state.get(State.values.videosoundmode.name());
-		if (videosoundmode == null) { 
-			videosoundmode=VIDEOSOUNDMODEHIGH;  
-		}
+		if (videosoundmode == null)	videosoundmode=VIDEOSOUNDMODEHIGH;  
+		
 		setGrabberVideoSoundMode(videosoundmode);
-
 		docker = new AutoDock(this, grabber, comport, powerport);
-		loginRecords.setApplication(this);
-
-//		if (Settings.os.equals("linux")) {
 	
-		str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
-		Util.systemCall(str);
+		// str = System.getenv("RED5_HOME")+"/flashsymlink.sh";
+		Util.systemCall(System.getenv("RED5_HOME")+"/flashsymlink.sh");
 		
 	}
  
@@ -275,7 +262,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		grabberInitialize();
 				
-		state.put(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog? 
+		state.put(State.values.lastusercommand, System.currentTimeMillis());  
 		watchdog = new SystemWatchdog(this); 
 		
 		new Thread(new Runnable() { public void run() {
@@ -464,25 +451,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 		switch (fn) {
 	
 		case move: {
-			// cancel nav if human remote client sends stop command
-
-
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.cancelRoute();
 			}
-			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride &&
-					str.equals(ArduinoPrime.direction.stop.toString())) {
+			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
 			}
 				
-			
 			move(str); 
 			break;
 		}
-		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
+		case battstats: messageplayer(state.get(State.values.batteryinfo),"battery",state.get(State.values.batterylife)); break; 
 		case cameracommand: 
 			if (state.getBoolean(State.values.autodocking)) {
 				messageplayer("command dropped, autodocking", null, null);
@@ -519,12 +501,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
-		case help: messageplayer(PlayerCommands.help(str),null,null); break;
+// 		case help: messageplayer(PlayerCommands.help(str),null,null); break;
 //		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
-		case settings: messageplayer(settings.toString(), null, null); break;
+//		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
 			if (str!=null) if (str.equals(AutoDock.HIGHRES))
@@ -648,36 +630,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("left camera in use", null, null);
 				break;
 			}
-			if(str.equals("on")) { stereo.startCameras(); }
-			else { stereo.stopCameras(); }			
+			if(str.equals("on")) stereo.startCameras(); 
+			else stereo.stopCameras();
 			messageplayer("stereo cameras "+str, null, null);
 			break;
 			
 		case videosoundmode:
 			setGrabberVideoSoundMode(str);
-//			messageplayer("video/sound mode set to: "+str, null, null);
 			break;
 		
-//		case pushtotalktoggle:
-//			settings.writeSettings("pushtotalk", str);
-//			messageplayer("self mic push T to talk "+str, null, null);
-//			break;
-		
-		case state: 
-			String s[] = str.split(" ");
-			if (s.length == 2) { // two args
-				if (s[0].equals("delete")) state.delete(s[1]);
-				else state.set(s[0], s[1]); 
-			}
-			else {  
-				if (s[0].matches("\\S+")) { // one arg 
-					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
-				} else {  // no args
-					messageplayer("<state> "+state.toString(), null, null);
-				} 
-			}
-			break;
-
 		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
 		case spotlight: 
 			comport.setSpotLightBrightness(Integer.parseInt(str));
@@ -1354,17 +1315,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void shutdown() {
+		
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
+		
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
 		}
 		
+		// TODO: kills the eeprom details getting to log file?
 		powerport.writeStatusToEeprom();
+		commandServer.close();
+		PowerLogger.close();
 		
-	// TODO: takes time to write to port !! 
-	//	PowerLogger.closeLog();
-
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
 
@@ -1970,7 +1933,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			message = "launch server";
 			if (restartrequired) {
 				message = "shutdown";
-				// admin = true;
 				restart();
 			}
 		}
@@ -1982,39 +1944,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeSettings("skipsetup", "no");
 		String result = "populatevalues ";
 
-		// username
 		String str = settings.readSetting("user0");
 		if(str != null) result += "username " + str + " ";
 
-		// commport
-//		if(ArduinoPrime.motorsReady()) result += "comport " + state.get(State.values.motorport) + " ";
-//		else result += "comport nil ";
-		
-		// TODO: 
-		// lights
-		
-		// if(ArduinoPrime.motorsAvailable()) result += "lightport " + settings.readSetting(ManualSettings.lightport) + " ";
-//		result += "lightport nil ";
-
-		
-		// law and wan
-//		String lan = state.get(State.values.localaddress);
-//		if(lan == null) result += "lanaddress error ";
-//		else result += "lanaddress " + lan + " ";
-
-//		String wan = state.get(State.values.externaladdress);
-//		if(wan == null) result += "wanaddress error ";
-//		else result += "wanaddress " + wan + " ";
-
-		// http port
-//		result += "httpport " + settings.readRed5Setting("http.port") + " ";
-
-		// rtmp port
-//		result += "rtmpport " + settings.readRed5Setting("rtmp.port") + " ";
-
 		messageGrabber(result, null);
 		
-		Util.log("___populate settings: " + result, this);
+		Util.log("populate settings: " + result, this);
 		
 	}
 

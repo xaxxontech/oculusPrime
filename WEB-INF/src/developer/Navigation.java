@@ -13,7 +13,7 @@ import org.w3c.dom.NodeList;
 
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
-import oculusPrime.PlayerCommands;
+import oculusPrime.PlayerCommands; 
 import oculusPrime.State;
 import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
@@ -491,7 +491,7 @@ public class Navigation {
     	// setstreamactivitythreshold 30 0  -- tested fairly sensitive, video, run camera first
     	// takes 5-10 seconds to init if mic is on (mic only, or mic + camera)
 
-		long waypointstart = System.currentTimeMillis();
+//		long waypointstart = System.currentTimeMillis();
 		
 		boolean rotate = false;
 		boolean email = false;

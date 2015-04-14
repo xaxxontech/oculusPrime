@@ -1,18 +1,5 @@
 package oculusPrime;
 
-import oculusPrime.commport.PowerLogger;
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.*;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -23,7 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
-
+import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
@@ -31,8 +18,11 @@ import java.util.Vector;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
-import oculusPrime.commport.PowerLogger;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -489,5 +479,30 @@ public class Util {
 		System.err.println("Error "+getTime()+ ":");
 		e.printStackTrace();
 	}
+	
+	public static boolean validIP (String ip) {
+	    try {
+	    	
+	        if (ip == null || ip.isEmpty()) return false;
+	        
 
+	        String[] parts = ip.split( "\\." );
+	        if ( parts.length != 4 ) return false;
+	        
+
+	        for ( String s : parts ) {
+	            int i = Integer.parseInt( s );
+	            if ( (i < 0) || (i > 255) )
+	            	return false;
+	            
+	        }
+	        
+	        if(ip.endsWith(".")) return false;
+	        
+
+	        return true;
+	    } catch (NumberFormatException nfe) {
+	        return false;
+	    }
+	}
 }

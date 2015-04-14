@@ -1,8 +1,9 @@
 package oculusPrime;
 
-import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Properties;
+import java.util.Set;
 import java.util.Vector;
 
 public class State {
@@ -35,7 +36,7 @@ public class State {
 		navigationrouteid,
 		
 		localaddress, externaladdress, // network things 
-		signalnoise, signalstrength, signalquality, signalspeed, ssid, gateway, ethernetaddress;
+		signalspeed, ssid, gateway, ethernetaddress;
 	};
 
 	public String rosDashboard(){	
@@ -69,7 +70,7 @@ public class State {
 			
 		str.append("<tr><td><b>roscurrentgoal</b><td>" + get(values.roscurrentgoal) 
 				+ "<td><b>rosmapupdated</b><td>" + get(values.rosmapupdated) 
-				+ "<td><b>rosmapwaypoints</b><td>" + get(values.rosmapwaypoints) 
+			//	+ "<td><b>rosmapwaypoints</b><td>" + get(values.rosmapwaypoints) 
 				+ "<td><b>navigationenabled</b><td>" + get(values.navigationenabled) 
 				+ "</tr> \n");
 		
@@ -91,6 +92,8 @@ public class State {
 			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
 	//			+ "</tr> \n");
 		
+		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + get(values.rosmapwaypoints) );
+		
 		str.append("<tr>" // long line
 				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + get(values.rosglobalpath) 
 				+ "</tr> \n");
@@ -102,14 +105,15 @@ public class State {
 	}
 	
 	public String toDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\">");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\">");
 		
 		str.append("<tr><td><b>ssid: </b>" + get(values.ssid) + " <b>address: </b>" + get(values.gateway)
+				+ "<td><b>eth: </b>" + get(values.ethernetaddress)
 				+ "<td><b>lan: </b>" + get(values.localaddress) + " <b>wan: </b>" + get(values.externaladdress)
 				+ "</tr>");
 			
-		str.append("<tr><td><b>quality: </b>" + get(values.signalquality) + "% <b>speed: </b>" + get(values.signalspeed) 
-				+ "<td><b>noise: </b>" + get(values.signalnoise) + " dbm <b>strength: </b>" + get(values.signalstrength) 
+		str.append("<tr><td><b>speed: </b>" + get(values.signalspeed) 
+				// + "<td><b>noise: </b>" + get(values.signalnoise) + " dbm <b>strength: </b>" + get(values.signalstrength) 
 				+ "</tr>");
 		
 		str.append("<tr><td><b>video mode: </b>" + get(values.videosoundmode) + " <b>stream: </b>" + get(values.stream)
@@ -118,19 +122,20 @@ public class State {
 				+ "</tr>");
 		
 		str.append("<tr>" 
-	       	    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
-			    + "<td><b>login: </b>" + new Date(getLong(values.logintime)) 
-		        + "<td><b>uptime: </b>" + (getUpTime()/1000)/60 + " min <b>driver: </b>" + get(values.driver) + " <b>telnet: </b>" + get(values.telnetusers) 
+	       	//    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
+			//    + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
+		        + "<td><b>uptime: </b><td>" + (getUpTime()/1000)/60 + " min <td><b>driver: </b>" + get(values.driver) 
+		        + " <b>telnet: </b>" + get(values.telnetusers) 
 				+ "</tr>");
 	
 		str.append("<tr><td><b>motor port: </b>" + get(values.motorport) 
-				+ "<td><b>motion: </b>" + get(values.motionenabled) + " <b>moving: </b>" + get(values.moving) 
-				+ "<td><b>direction: </b>" + get(values.direction) + " <b>speed: </b>" + get(values.motorspeed) 
+				+ "<td><b>motion: </b>" + get(values.motionenabled) + " <td><b>moving: </b>" + get(values.moving) 
+				+ "<td><b>direction: </b>" + get(values.direction) + " <td><b>speed: </b>" + get(values.motorspeed) 
 				+ "</tr>");
 		
 		str.append("<tr><td><b>power port: </b>" + get(values.powerport)
-				+ "<td><b>volts: </b>" + get(values.battvolts) + " <b>life:</b> " + get(values.batterylife) 
-				+ "<td><b>wall power: </b>" + get(values.wallpower) + " <b>status: </b>" + get(values.dockstatus)
+				+ "<td><b>volts: </b>" + get(values.battvolts) + " <td><b>life:</b> " + get(values.batterylife) 
+				+ "<td><b>wall power: </b>" + get(values.wallpower) + "  <td><b>status: </b>" + get(values.dockstatus)
 				+ "</tr>");
 		
 		/*
@@ -214,38 +219,18 @@ public class State {
 		return equals(value.name(), b);
 	}
 	
-	
-	/** */
-//	public String dump(){
-////		System.out.println("state number of listeners: " + observers.size());
-////		for(int i = 0 ; i < observers.size() ; i++) 
-////			System.out.println(i + " " + observers.get(i).getClass().getName() + "\n");
-////		
-////		try {
-////			Set<String> keys = props.keySet();
-////			for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
-////				String key = i.next();
-////				System.out.println( key + "<> " + props.get(key));
-////			}
-////			
-////		} catch (Exception e) {
-////			Util.log(e.getLocalizedMessage(), this);
-////		}
-//		return
-//	}
-	
-	/**
 	@Override
 	public String toString(){	
 		String str = "";
 		Set<String> keys = props.keySet();
 		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			String key = i.next();
-			str += (key + " " + props.get(key) + "<br>");
+			str += (key + " " + props.get(key) + "\n\r");
 		}
 		return str;
 	} 
 	
+	/**
 	public String toTable(){	
 		StringBuffer str = new StringBuffer("<table>");
 		Set<String> keys = props.keySet();

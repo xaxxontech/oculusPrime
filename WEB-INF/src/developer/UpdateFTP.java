@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-
-import oculusPrime.LoginRecords;
 import oculusPrime.State;
 import oculusPrime.Util;
 
@@ -65,15 +63,6 @@ public class UpdateFTP {
 		}).start();
 	}
 	
-	/*
-	@Override
-	public void updated(final String key) {
-		
-		if( ! key.equals(ftpTimer)) return;
-		
-	}
-	*/
-		
 	public void updateServer() {
 		new Thread(new Runnable() {
 			@Override
@@ -87,7 +76,7 @@ public class UpdateFTP {
 					ftp.storString("last.php", new java.util.Date().toString());
 					ftp.storString("user.php", System.getProperty("user.name"));		
 					ftp.storString("state.php", state.toString());
-					ftp.storString("users.php",  new LoginRecords().toString());
+					// ftp.storString("users.php",  new LoginRecords().toString());
 					
 					ftp.disconnect();
 					

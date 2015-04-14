@@ -33,7 +33,7 @@ public class DashboardServlet extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		
+	
 		if ( ! settings.getBoolean(ManualSettings.developer.name())){
 			out.println("this service is for developers only, check settings..");
 			out.close();	
@@ -59,30 +59,42 @@ public class DashboardServlet extends HttpServlet {
 			if(view.equalsIgnoreCase("ban")){
 				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("state")){
 				out.println(state.toHTML() + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("sysout")){
 				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
 				out.println(Util.tail(30) + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("power")){	
 				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
 				out.println(PowerLogger.tail(30) + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("ros")){
 				out.println(state.rosDashboard() + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("ap")){
 				String[] ap = monitor.getAccessPoints(); 
 				for(int i = 0 ; i < ap.length ; i++)
 					out.println(ap[i] + "<br />\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("log")){
@@ -93,13 +105,14 @@ public class DashboardServlet extends HttpServlet {
 				out.println("\n<br />banned addresses: " +  ban + " telnet users [" 
 						+ state.get(State.values.telnetusers)+ "] " 
 						+ "<hr>\n");
-				out.println("\n" + ban.tail(5) + "\n");
+				out.println("\n" + ban.tail(10) + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
 			}
 		}
 		
 		// default
-		else out.println(state.toDashboard() + "\n");
-		
+		out.println(state.toDashboard() + "\n");
 		out.println("\n</body></html> \n");
 		out.close();	
 	}

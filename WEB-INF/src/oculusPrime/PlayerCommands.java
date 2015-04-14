@@ -1,17 +1,9 @@
 package oculusPrime;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Vector;
-
-
-/**
- * JUnit tests will validate the sub-sets player commands and the sub-sets. 
- */
 public enum PlayerCommands { // all valid commands
 	    
     // server
-    uptime, restart, quitserver, showlog, writesetting, readsetting, settings, 
+    uptime, restart, quitserver, showlog, writesetting, readsetting, // settings, 
     //undocumented (not typically used by scripts):
     softwareupdate, 
     
@@ -39,21 +31,21 @@ public enum PlayerCommands { // all valid commands
     streamsettingsset,
     
     // malg board 
-    // misc
     motorsreset, cameracommand, camtilt, camtiltfast, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
     // lights
     strobeflash, spotlight, floodlight,
-    //undocumented (unused):
+    // undocumented (unused):
     fwdflood,
     
 	// un-categorized
-	speech, serverbrowser, email, state,   
+	speech, serverbrowser, email,
     rssadd, getlightlevel,   
+    
 	// undocumented    
-    statuscheck, block, unblock, help, 
+    statuscheck, block, unblock, // help, 
     
     // experimental (undocumented)
     opennisensor, clearmap, stereo, error,
@@ -69,7 +61,7 @@ public enum PlayerCommands { // all valid commands
 	
 	/** get text for any player command */
 	public String getHelp(){
-		return HelpText.valueOf(this.name()).getText();
+		return "brad will fix"; // HelpText.valueOf(this.name()).getText();
 	}
 	
 	// sub-set that are restricted to "user0"
@@ -87,7 +79,30 @@ public enum PlayerCommands { // all valid commands
 
 	}
 	
+	// @return true if given command is in the sub-set
+	public static boolean requiresAdmin(final String str) {
+		try {
+			AdminCommands.valueOf(str);
+		} catch (Exception e) {return false;}
+		
+		return true; 
+	} 
+	
+	// @return true if given command is in the sub-set 
+	public static boolean requiresAdmin(final PlayerCommands cmd) {
+		try {
+			AdminCommands.valueOf(cmd.name());
+		} catch (Exception e) {return false;}
+		
+		return true; 
+	}
+	
+	public static String help(String command) {
+		return "brad will fix...";
+	}
+	
 	// sub-set that are require parameters 
+	/*
 	public enum RequiresArguments {
 	
 		publish("camera", "camandmic", "mic", "stop"), 
@@ -136,9 +151,10 @@ public enum PlayerCommands { // all valid commands
 		public List<String> getValues() {
 			return values;
 		}
+		*/
+	
+	/*
 		
-		
-			/*
 		public boolean vaildRange(final String target){
 			try {
 				
@@ -160,9 +176,9 @@ public enum PlayerCommands { // all valid commands
 			
 			return false;
 		}
-		*/
+		
 	
-		/** check if this command has complex formating */
+		// check if this command has complex formating 
 		public boolean requiresParse(){
 			String[] args = this.getArgumentList();
 			if(args.length == 1){
@@ -252,7 +268,7 @@ public enum PlayerCommands { // all valid commands
 			return (String[]) this.getValues().toArray(); 
 		}	
 		
-		/* get all the commands that require the given argument */
+		/// get all the commands that require the given argument 
 		public static Vector<String> find(String name) {
 			Vector<String> match = new Vector<String>();
 		    for (RequiresArguments lang : RequiresArguments.values())
@@ -267,7 +283,6 @@ public enum PlayerCommands { // all valid commands
 		    return match;
 		}
 		
-		/* get all that use range */
 		public static Vector<String> rangeList() {
 			Vector<String> match = new Vector<String>();
 		    for (RequiresArguments lang : RequiresArguments.values())
@@ -295,7 +310,7 @@ public enum PlayerCommands { // all valid commands
 		    return match;
 		}
 	}
-	
+
 	public enum HelpText{ 
 		
 		publish("Robot video/audio control"), 
@@ -367,14 +382,12 @@ public enum PlayerCommands { // all valid commands
         }
 	}
 	
-	/** */
 	public static boolean validBoolean(final String arg){
 		if(arg.equalsIgnoreCase("true") || arg.equalsIgnoreCase("false")) return true;
 		
 		return false;
 	}
 	
-	/** */
 	public static boolean validInt(final String arg){
 		try {
 			Integer.parseInt(arg);
@@ -384,7 +397,6 @@ public enum PlayerCommands { // all valid commands
 		return true;
 	}
 	
-	/** */
 	public static boolean validDouble(final String arg){
 		try {
 			Double.parseDouble(arg);
@@ -395,7 +407,6 @@ public enum PlayerCommands { // all valid commands
 		return true;
 	}
 	
-	/** */
 	public boolean requiresArgument() {
 		try {
 			RequiresArguments.valueOf(this.name());
@@ -406,7 +417,6 @@ public enum PlayerCommands { // all valid commands
 		return true; 
 	}
 	
-	/** */
 	public static boolean requiresArgument(final String cmd) {
 		try {
 			RequiresArguments.valueOf(cmd);
@@ -417,25 +427,9 @@ public enum PlayerCommands { // all valid commands
 		return true; 
 	}
 	
-	/** @return true if given command is in the sub-set */
-	public static boolean requiresAdmin(final String str) {
-		try {
-			AdminCommands.valueOf(str);
-		} catch (Exception e) {return false;}
-		
-		return true; 
-	}
 	
-	/** @return true if given command is in the sub-set */
-	public static boolean requiresAdmin(final PlayerCommands cmd) {
-		try {
-			AdminCommands.valueOf(cmd.name());
-		} catch (Exception e) {return false;}
-		
-		return true; 
-	}
 	
-	/** @return a formated list of the commands */
+	// @return a formated list of the commands 
 	public static String getCommands(){
 		
 		String help = new String();
@@ -459,7 +453,7 @@ public enum PlayerCommands { // all valid commands
 	
 		return help;
 	}
-		
+	
 	public static String help(String command) {
 		String result = "";
 		if(command.matches("\\S+")){ // isn't blank
@@ -498,4 +492,6 @@ public enum PlayerCommands { // all valid commands
 	}	
 		return result;
 	}
+	*/
+	
 }
