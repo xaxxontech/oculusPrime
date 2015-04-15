@@ -59,7 +59,7 @@ public class SystemWatchdog {
 					state.getInteger(State.values.telnetusers) == 0 &&
 					(settings.getBoolean(GUISettings.reboot))){
 				
-				String boot = new Date(state.getLong(State.values.boottime.name())).toString();				
+				String boot = new Date(state.getLong(State.values.javastartup.name())).toString();				
 				Util.log("rebooting, last boot was: " + boot, this);
 				application.driverCallServer(PlayerCommands.reboot, null);
 			}

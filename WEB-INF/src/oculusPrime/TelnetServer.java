@@ -207,6 +207,8 @@ public class TelnetServer implements Observer {
 				out.println("<multiline>");
 				out.println(state.toString());
 				out.println("</multiline>");
+				
+				// app.messageplayer("<state> "+state.toString(), null, null);
 			}
 			
 		// removed from app lication

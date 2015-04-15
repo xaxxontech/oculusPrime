@@ -15,7 +15,7 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1L;	
-	static final long HTTP_REFRESH_DELAY_SECONDS = 2;
+	static final String HTTP_REFRESH_DELAY_SECONDS = "2";
 	
 	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
@@ -45,16 +45,22 @@ public class DashboardServlet extends HttpServlet {
 			out.close();	
 			return;
 		}
-		
-		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body> \n");
-
+	
 		String view = null;	
+		String delay = null;	
+		String member = null;	
 		try {
 			view = request.getParameter("view");
+			delay = request.getParameter("delay");
+			member = request.getParameter("member");
 		} catch (Exception e) {
-			System.out.println(e.getLocalizedMessage());
+			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
 		}
+			
+		if(delay == null) delay =  HTTP_REFRESH_DELAY_SECONDS;
 		
+		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
+
 		if(view != null){
 			if(view.equalsIgnoreCase("ban")){
 				out.println(ban + "<br />\n");
@@ -64,7 +70,13 @@ public class DashboardServlet extends HttpServlet {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
-				out.println(state.toHTML() + "\n");
+				
+				if(member != null) {
+					Util.debug("member = " + member);
+					out.println(state.get(member.trim()));
+				}
+				else out.println(state.toHTML() + "\n");
+				
 				out.println("\n</body></html> \n");
 				out.close();
 			}

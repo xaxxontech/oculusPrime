@@ -1,7 +1,13 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
@@ -25,7 +31,7 @@ public class State {
 		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
 		powererror, forceundock, // power problems
 
-		boottime, httpport, lastusercommand, // system
+		javastartup, linuxboot, httpport, lastusercommand, // system
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
@@ -38,7 +44,71 @@ public class State {
 		localaddress, externaladdress, // network things 
 		signalspeed, ssid, gateway, ethernetaddress;
 	};
-
+	
+	public String toTableHTML(){	
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>distanceangle</b><td>" + get(values.distanceangle)
+				+ "<td><b>direction</b><td>" + get(values.direction)
+				+ "<td><b>odometry</b><td>" + get(values.odometry) 
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>distanceanglettl</b><td>" + get(values.distanceanglettl) 
+				+ "<td><b>stopbetweenmoves</b><td>" + get(values.stopbetweenmoves) 
+				+ "<td><b>odometrybroadcast</b><td>" + get(values.odometrybroadcast) 
+				+ "<td><b>odomturndpms</b><td>" + get(values.odomturndpms) 
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>odomturnpwm</b><td>" + get(values.odomturnpwm) 
+				+ "<td><b>odomupdated</b><td>" + get(values.odomupdated) 
+				+ "<td><b>odomlinearmpms</b><td>" + get(values.odomlinearmpms) 
+				+ "<td><b>odomlinearpwm</b><td>" + get(values.odomlinearpwm) 
+				+ "</tr> \n");
+		
+		str.append("<tr>"
+				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + get(values.rosmapinfo) 
+			// 	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
+			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
+				+ "</tr> \n");
+			
+		str.append("<tr><td><b>roscurrentgoal</b><td>" + get(values.roscurrentgoal) 
+				+ "<td><b>rosmapupdated</b><td>" + get(values.rosmapupdated) 
+			//	+ "<td><b>rosmapwaypoints</b><td>" + get(values.rosmapwaypoints) 
+				+ "<td><b>navigationenabled</b><td>" + get(values.navigationenabled) 
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>rossetgoal</b><td>" + get(values.rossetgoal) 
+				+ "<td><b>rosgoalstatus</b><td>" + get(values.rosgoalstatus)
+				+ "<td><b>rosgoalcancel</b><td>" + get(values.rosgoalcancel) 
+				+ "<td><b>navigationroute</b><td>" + get(values.navigationroute)
+				+ "</tr> \n");
+		
+		str.append("<tr>" 
+				+ "<td><b>rosinitialpose</b><td>" + get(values.rosinitialpose) 
+				+ "<td><b>navigationrouteid</b><td>" + get(values.navigationrouteid) 
+				+ "</tr> \n");
+		
+	//	str.append("<tr>"
+	//			+ "<td><b>rosmapinfo</b><td colspan\"3\">" + get(values.rosmapinfo) 
+			//	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
+			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
+	//			+ "</tr> \n");
+		
+		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + get(values.rosmapwaypoints) );
+		
+		str.append("<tr>" // long line
+				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + get(values.rosglobalpath) 
+				+ "</tr> \n");
+				
+		
+		
+		str.append("\n</table>\n");
+		return str.toString();
+	}
 	public String rosDashboard(){	
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
 		
@@ -110,12 +180,9 @@ public class State {
 		str.append("<tr><td><b>ssid: </b>" + get(values.ssid) + " <b>address: </b>" + get(values.gateway)
 				+ "<td><b>eth: </b>" + get(values.ethernetaddress)
 				+ "<td><b>lan: </b>" + get(values.localaddress) + " <b>wan: </b>" + get(values.externaladdress)
+				+ "<td><b>speed: </b>" + get(values.signalspeed) 
 				+ "</tr>");
-			
-		str.append("<tr><td><b>speed: </b>" + get(values.signalspeed) 
-				// + "<td><b>noise: </b>" + get(values.signalnoise) + " dbm <b>strength: </b>" + get(values.signalstrength) 
-				+ "</tr>");
-		
+				
 		str.append("<tr><td><b>video mode: </b>" + get(values.videosoundmode) + " <b>stream: </b>" + get(values.stream)
 				+ "<td><b>driverstream: </b>" + get(values.driverstream) + " <b>volume: </b>" + get(values.volume)
 			    + "<td><b>busy: </b>" + get(values.framegrabbusy)  
@@ -124,7 +191,7 @@ public class State {
 		str.append("<tr>" 
 	       	//    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
 			//    + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
-		        + "<td><b>uptime: </b><td>" + (getUpTime()/1000)/60 + " min <td><b>driver: </b>" + get(values.driver) 
+		        + "<td><b>uptime: </b>" + (getUpTime()/1000)/60 + " min <td><b>driver: </b>" + get(values.driver) 
 		        + " <b>telnet: </b>" + get(values.telnetusers) 
 				+ "</tr>");
 	
@@ -166,12 +233,6 @@ public class State {
 		return str.toString();
 	}
 	
-/*	
-	private boolean exists(values key) {
-		return exists(key.name());
-	}
-*/
-
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, odomturnpwm, odomupdatedz ;};	
 		
@@ -192,14 +253,40 @@ public class State {
 
 	/** private constructor for this singleton class */
 	private State() {
-		props.put(values.boottime.name(), String.valueOf(System.currentTimeMillis()));	
+		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
+		props.put(values.telnetusers.name(), "0");
+		getLinuxUptime();
 	}
 	
 	public Properties getProperties(){
 		return (Properties) props.clone();
 	}
 
-	/** */
+	public void getLinuxUptime(){
+		new Thread(new Runnable() {
+			@Override
+			public void run() {	
+				try {
+					
+					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+									
+					String line = procReader.readLine();
+					// Util.log("..............linux boot: "+ line, this);
+					
+					DateFormat format = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH);
+					Date date = format.parse(line);
+					// Util.log("....................linux boot: "+ date.toString(), this);
+					set(values.linuxboot, date.getTime());
+					
+					
+				} catch (Exception e) {
+					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
+				}										
+			}
+		}).start();
+	}
+	
 	public void addObserver(Observer obs){
 		observers.add(obs);
 	}
@@ -391,7 +478,7 @@ public class State {
 	
 	/** @return the ms since last boot */
 	public long getUpTime(){
-		return System.currentTimeMillis() - getLong(values.boottime);
+		return System.currentTimeMillis() - getLong(values.javastartup);
 	}
 	
 	/** @return the ms since last user log in */

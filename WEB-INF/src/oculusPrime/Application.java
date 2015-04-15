@@ -520,6 +520,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
 		case nudge: nudge(str); break;
 		
+		case state: 
+			String s[] = str.split(" ");
+			if (s.length == 2) { // two args
+				if (s[0].equals("delete")) state.delete(s[1]);
+				else state.set(s[0], s[1]); 
+			}
+			else {  
+				if (s[0].matches("\\S+")) { // one arg 
+					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
+				} else {  // no args
+					messageplayer("<state> "+state.toString(), null, null);
+				} 
+			}
+			break;
+		
 		case writesetting:
 			if (settings.readSetting(cmd[0]) == null) {
 				settings.newSetting(cmd[0], cmd[1]);
