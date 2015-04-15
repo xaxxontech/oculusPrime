@@ -85,8 +85,8 @@ public class motionDetect {
 						int[] ctrxy = imageUtils.middleMass(bwpxls, img.getWidth(), img.getHeight(), sensitivity);
 						if (frameno >= 1) { // ignore frames 0
 							int compared = Math.abs(ctrxy[0]-lastMassCtr[0])+Math.abs(ctrxy[1]-lastMassCtr[1]);
-//							app.message("compared = "+compared, null, null); // debug
-							if (compared> threshold) { //motion detected above noise level
+
+							if (compared> threshold && state.getBoolean(State.values.motiondetectwatching)) { //motion detected above noise level
 //								lastMassCtr[0] = -1;
 								state.set(State.values.streamactivity, "video "+compared); // System.currentTimeMillis());
 								app.driverCallServer(PlayerCommands.messageclients, "motion detected "+compared);

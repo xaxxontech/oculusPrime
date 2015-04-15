@@ -2034,7 +2034,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Integer audioThreshold = Integer.parseInt(val[1]);
 
 		state.delete(State.values.streamactivity);
-		state.set(State.values.streamactivitythreshold.name(), str);
+		state.set(State.values.streamactivitythreshold, str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
 			if (state.get(State.values.videosoundmode.name()).equals(VIDEOSOUNDMODEHIGH)) {
@@ -2067,6 +2067,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	private void streamActivityDetected(String str) {
+		if (! state.exists(State.values.streamactivity)) return;
+		if (state.get(State.values.streamactivity).equals("0 0"))  return; // already cancelled/disabled
 		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) {
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable

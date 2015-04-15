@@ -121,7 +121,7 @@ public class RssFeed {
 
 		Item(String t, String d) {
 			long id = System.currentTimeMillis();
-			this.title = t+" "+id;
+			this.title = t;
 			this.description = d;
 			DateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
 			Calendar cal = Calendar.getInstance();
@@ -129,10 +129,9 @@ public class RssFeed {
 			this.link = "http://"+state.get(State.values.externaladdress)+":"+
 					settings.readRed5Setting("http.port")+"/oculusPrime/rss.xml?"
 					+ id; // make link unique
-			this.guid = String.valueOf(id);
+			this.guid = this.link;
 		}
 	}
-
 	
 	// urltitle = params[:title].strip.downcase.gsub(/[^a-z0-9]+/i, '-')
     public static void main(String[] args) {
