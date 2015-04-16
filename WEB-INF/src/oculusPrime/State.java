@@ -258,9 +258,10 @@ public class State {
 		getLinuxUptime();
 	}
 	
+	/*
 	public Properties getProperties(){
 		return (Properties) props.clone();
-	}
+	}*/
 
 	public void getLinuxUptime(){
 		new Thread(new Runnable() {
@@ -269,17 +270,16 @@ public class State {
 				try {
 					
 					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
-					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-									
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
 					String line = procReader.readLine();
-					// Util.log("..............linux boot: "+ line, this);
-					
 					DateFormat format = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH);
 					Date date = format.parse(line);
-					// Util.log("....................linux boot: "+ date.toString(), this);
 					set(values.linuxboot, date.getTime());
 					
-					
+					Util.delay(5000); // testing 
+					Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
+				
+					 
 				} catch (Exception e) {
 					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
 				}										
