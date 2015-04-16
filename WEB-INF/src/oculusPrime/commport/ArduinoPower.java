@@ -24,7 +24,8 @@ import oculusPrime.Util;
 public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
-	public static final int DEAD_TIME_OUT = 10000; 
+	public static final int DEAD_TIME_OUT = 10000;
+	public static final int ALLOW_FOR_RESET = 10000;
 	public static final int ERROR_TIME_OUT = (int) Util.ONE_MINUTE;
 	public static final int WATCHDOG_DELAY = 5000;
 	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
@@ -46,7 +47,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected State state = State.getReference();
 	protected static SerialPort serialPort = null;	
 	
-	public volatile boolean isconnected = false;
+	protected volatile boolean isconnected = false;
 	protected static long lastRead;
 	protected long lastReset;
 	protected long lastHostHeartBeat;
@@ -456,6 +457,26 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 	}
 
+	public boolean isConnected() {
+		return isconnected;
+	}
+
+	/** utility for macros requiring movement
+	 *  BLOCKING
+	 * 	return true if connected, if not, wait for up to 10 seconds
+	 * @return   boolean isconnected
+	 */
+	public boolean checkisConnectedBlocking() {
+		if (isconnected) return true;
+		Util.log("power pcb not connected, waiting for reset", this);
+		long start = System.currentTimeMillis();
+		while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+			Util.delay(50);
+		if (isconnected) return true;
+		Util.log("power pcb not connected", this);
+		PowerLogger.append("power pcb not connected", this);
+		return false;
+	}
 	
 	/**
 	 * Send a multiple byte command to send the device

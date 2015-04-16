@@ -56,11 +56,10 @@ public class AutoDock {
 
 		String cmd[] = str.split(" ");
 		
-		if (cmd[0].equals(autodockmodes.cancel.toString())) {
+		if (cmd[0].equals(autodockmodes.cancel.toString())) { //used by javascript, don't nuke
 			autoDockCancel();
 		}
-		
-	
+
 		if (cmd[0].equals(autodockmodes.go.toString())) {
 			if (state.getBoolean(State.values.motionenabled)) { 
 				if(state.getBoolean(State.values.autodocking)){
@@ -96,11 +95,12 @@ public class AutoDock {
 					else {
 						
 						if (!autodockingcamctr) { // maybe occluded by frame, turn back the other way and try again 
-							comport.clickSteer(-lastcamctr , 0); 
-							autodockingcamctr = true;
 							new Thread(new Runnable() {
 								public void run() {
 									try {
+										comport.checkisConnectedBlocking();
+										comport.clickSteer(-lastcamctr , 0);
+										autodockingcamctr = true;
 										comport.delayWithVoltsComp(allowforClickSteer);
 										dockGrab(dockgrabmodes.find, 0, 0);
 									} catch (Exception e) {
@@ -110,20 +110,18 @@ public class AutoDock {
 							}).start();
 							return;
 						}
-						
-						state.set(State.values.autodocking, false);
-						state.set(State.values.docking, false);
-						app.message("auto-dock target not found, try again", "multiple", "autodockcancelled blank");
+						// autodock fail
+						app.message("auto-dock target not found, try again", null, null);
 						Util.log("autoDock():  target lost", this);
 						PowerLogger.append("autoDock():  target lost", this);
-						lowres = true;
+						autoDockCancel();
 					}
 				}
 				else { // found target!
 					state.set(State.values.dockfound, true);
 
-					int x = Integer.parseInt(cmd[2]);
-					int y = Integer.parseInt(cmd[3]);
+					final int x = Integer.parseInt(cmd[2]);
+					final int y = Integer.parseInt(cmd[3]);
 
 					int guix = Integer.parseInt(cmd[2])/(2/rescomp);
 					int guiy = Integer.parseInt(cmd[3])/(2/rescomp);
@@ -137,11 +135,12 @@ public class AutoDock {
 									
 						app.message(null, "autodocklock", s);
 //						state.set(State.values.autodocking, false);
-						comport.clickSteer((x - imgwidth/2) * rescomp, 0);
-						
+
 						new Thread(new Runnable() {
 							public void run() {
 								try {
+									comport.checkisConnectedBlocking();
+									comport.clickSteer((x - imgwidth/2) * rescomp, 0);
 									Util.delay(50);
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
@@ -203,12 +202,20 @@ public class AutoDock {
 		}	
 	}
 
-
 	public void autoDockCancel() {
 		state.set(State.values.autodocking, false);
-		app.message("auto-dock ended", "multiple", "cameratilt " + state.get(State.values.cameratilt) + " autodockcancelled blank motion stopped");
-	}
+		if (state.exists(State.values.driver)) {
+			app.message("auto-dock ended", "multiple", "cameratilt " + state.get(State.values.cameratilt) +
+					" autodockcancelled blank motion stopped");
+		}
+		state.set(State.values.docking, false);
+		lowres = true;
+		app.driverCallServer(PlayerCommands.floodlight, "0");
+		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+		if (!state.exists(State.values.driver))
+			app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 
+	}
 	
 	// drive the bot in to charger watching for battery change with a blocking thread 
 	public void dock() {
@@ -230,6 +237,7 @@ public class AutoDock {
 		
 		new Thread(new Runnable() {	
 			public void run() {
+				comport.checkisConnectedBlocking();
 				comport.goForward();
 				Util.delay(300);
 				comport.stopGoing();
@@ -237,20 +245,19 @@ public class AutoDock {
 				while (inchforward < 20 && !state.getBoolean(State.values.wallpower) && 
 						state.getBoolean(State.values.docking)) {
 
+					// pause in case of pcb reset while docking(fairly common)
+					app.powerport.checkisConnectedBlocking();
+
 					comport.goForward();
 					Util.delay(150);
 					comport.stopGoing();
-
-					// pause in case of pcb reset while docking(fairly common)
-					long start = System.currentTimeMillis();
-					while (!app.powerport.isconnected && System.currentTimeMillis() - start < 10000)
-						Util.delay(50);
 
 					state.block(oculusPrime.State.values.wallpower, "true", 400);
 					inchforward ++;
 				}
 				
 				if(state.getBoolean(State.values.wallpower)) { // dock maybe successful
+					comport.checkisConnectedBlocking();
 					comport.goForward(); // on more nudge
 					Util.delay(150);
 					comport.stopGoing();
@@ -275,9 +282,11 @@ public class AutoDock {
 							app.publish(Application.streamstate.stop); 
 						}
 						
-						comport.floodLight(0);	
-						comport.camCommand(ArduinoPrime.cameramove.horiz);
+//						comport.floodLight(0);
+//						comport.camCommand(ArduinoPrime.cameramove.horiz);
 //						app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_HORIZ));
+						app.driverCallServer(PlayerCommands.floodlight, "0");
+						app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
 					}
 					
 					app.message("docked successfully", "multiple", str);
@@ -296,7 +305,7 @@ public class AutoDock {
 						// back up and retry
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
 							dockattempts ++;
-							
+
 							comport.speedset(ArduinoPrime.speeds.fast.toString());
 							comport.goBackward();
 							try {
@@ -317,6 +326,7 @@ public class AutoDock {
 							}
 							
 							// back away from dock to avoid sketchy contact
+							Util.log("autodock failure, disengaging from dock", this);
 							comport.speedset(ArduinoPrime.speeds.med.toString());
 							comport.goBackward();
 							Util.delay(400);
@@ -358,243 +368,193 @@ public class AutoDock {
 	 * events: dockgrabbed_find => enter MODE1 dockgrabbed_findfromxy => enter
 	 * MODE1
 	 */
-	private void autoDockNav(int x, int y, int w, int h, float slope) {
+	private void autoDockNav(final int fx, final int fy, final int w, final int h, final float slope) {
 
-		x = x + (w / 2); // convert to center from upper left
-		y = y + (h / 2); // convert to center from upper left
-		String s[] = docktarget.split("_");
+		new Thread(new Runnable() { public void run() {
 
-		int dockw = (int) (Integer.parseInt(s[6])/(rescomp/2f));
-		int dockh = (int) (Integer.parseInt(s[7])/(rescomp/2f));
-		int dockx = (int) (Integer.parseInt(s[4])/(rescomp/2f)) + dockw / 2;
-		float dockslope = new Float(s[8]);
-		float slopedeg = (float) ((180 / Math.PI) * Math.atan(slope));
-		float dockslopedeg = (float) ((180 / Math.PI) * Math.atan(dockslope));
-		
-		// relative-to-calibration target sizes for modes, constants
-		// 6 in calibration:
-//		final int s1 = (int) (dockw * dockh * 0.12  * w / h);  // (area) medium range start
-//		final int s2 = (int) (dockw * dockh * 0.55 * w / h); // (area) close range start
-//		final double slopetolerance = 0.8; // +/-
-		// 2 in calibration:
-		final int s1 = (int) (dockw * dockh * 0.07  * w / h);  // (area) medium range start
-		final int s2 = (int) (dockw * dockh * 0.40 * w / h); // (area) close range start
-		final double s2slopetolerance = 1.2; // 1.2
-		final double s1slopetolerance = 1.3; // 1.3
-		
-		// optionally set breaking delay longer for fast bots
+			comport.checkisConnectedBlocking();
 
-		final int s1FWDmilliseconds = 500; // 400
-		final int s2FWDmilliseconds = 250; // 100
-		
-		if (w * h < s1) { // mode: quite far away yet, approach only
+			int x = fx;
+			int y = fy;
 
-			if (state.getInteger(State.values.spotlightbrightness) > 0) {
-				comport.setSpotLightBrightness(0);
-			} 
-			
-			if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
-//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
-			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer and go 
-				comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
-				new Thread(new Runnable() {
+			x = x + (w / 2); // convert to center from upper left
+			y = y + (h / 2); // convert to center from upper left
+			String s[] = docktarget.split("_");
 
-					public void run() {
-						try {
-//							Thread.sleep(allowforClickSteer); // was 1500 w/ dockgrab following
-							comport.delayWithVoltsComp(allowforClickSteer);
-							comport.speedset(ArduinoPrime.speeds.fast.toString());
-							comport.goForward();
-//							Thread.sleep(s1FWDmilliseconds);
-							comport.delayWithVoltsComp(s1FWDmilliseconds);
-							comport.stopGoing();
-							Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY);
-							dockGrab(dockgrabmodes.find, 0, 0);
+			int dockw = (int) (Integer.parseInt(s[6])/(rescomp/2f));
+			int dockh = (int) (Integer.parseInt(s[7])/(rescomp/2f));
+			int dockx = (int) (Integer.parseInt(s[4])/(rescomp/2f)) + dockw / 2;
+			float dockslope = new Float(s[8]);
+			float slopedeg = (float) ((180 / Math.PI) * Math.atan(slope));
+			float dockslopedeg = (float) ((180 / Math.PI) * Math.atan(dockslope));
 
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}).start();
-			} else { // go only
-				new Thread(new Runnable() {
-					public void run() {
-						try {
-							comport.speedset(ArduinoPrime.speeds.fast.toString());
-							comport.goForward();
-//							Thread.sleep(s1FWDmilliseconds);
-							comport.delayWithVoltsComp(s1FWDmilliseconds);
-							comport.stopGoing();
-							Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
-							dockGrab(dockgrabmodes.find, 0, 0);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}).start();
-			}
-		} // end of S1 check
-		
-		if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
-			int fl = state.getInteger(State.values.floodlightlevel);
-			if (fl > 0 && fl != 15) comport.floodLight(FLLOW); 
-			
-			
-			
-			if (autodockingcamctr) { // if cam centered do check and comps below
-				autodockingcamctr = false;
-				int autodockcompdir = 0;
+			// relative-to-calibration target sizes for modes, constants
+			// 6 in calibration:
+	//		final int s1 = (int) (dockw * dockh * 0.12  * w / h);  // (area) medium range start
+	//		final int s2 = (int) (dockw * dockh * 0.55 * w / h); // (area) close range start
+	//		final double slopetolerance = 0.8; // +/-
+			// 2 in calibration:
+			final int s1 = (int) (dockw * dockh * 0.07  * w / h);  // (area) medium range start
+			final int s2 = (int) (dockw * dockh * 0.40 * w / h); // (area) close range start
+			final double s2slopetolerance = 1.2; // 1.2
+			final double s1slopetolerance = 1.3; // 1.3
 
- 				final double slopeDiffMax = 7.0;
-				double slopeDiff = Math.abs(slopedeg - dockslopedeg);
-				if (slopeDiff > slopeDiffMax)   slopeDiff = slopeDiffMax;
+			// optionally set breaking delay longer for fast bots
 
-				if (slopeDiff > s1slopetolerance) {
-					final double magicRatioMin = 0.04;
-					final double magicRatioMax = 0.22;
-					double magicRatio = magicRatioMax - (slopeDiff/slopeDiffMax)*(magicRatioMax-magicRatioMin);
-					autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*magicRatio) - 
-								Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
-				}
-				
-				if (slope > dockslope) {
-					autodockcompdir *= -1;
-				} // approaching from left
-				autodockcompdir += x + (dockx - imgwidth/2);
-				// System.out.println("comp: "+autodockcompdir);
-				lastcamctr = 0;
-				if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125)) { // steer and go
-					lastcamctr = (autodockcompdir - dockx) * rescomp;
-					
-					comport.clickSteer(lastcamctr , 0);
-					new Thread(new Runnable() {
-						public void run() {
-							try {
-								comport.delayWithVoltsComp(allowforClickSteer);
-								comport.speedset(ArduinoPrime.speeds.fast.toString());
-								comport.goForward();
-//								Thread.sleep(s2FWDmilliseconds);
-								comport.delayWithVoltsComp(s2FWDmilliseconds);
-								comport.stopGoing();
-								Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
-								if (Math.abs(lastcamctr) > imgwidth/4) { // correct in case dock occluded by frame after large move
-									comport.clickSteer(-lastcamctr , 0);
-									comport.delayWithVoltsComp(allowforClickSteer);
-								}
-								dockGrab(dockgrabmodes.find, 0, 0);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}).start();
-				} else { // go only
-					new Thread(new Runnable() {
-						public void run() {
-							try {
-								comport.speedset(ArduinoPrime.speeds.fast.toString());
-								comport.goForward();
-//								Thread.sleep(s2FWDmilliseconds);
-								comport.delayWithVoltsComp(s2FWDmilliseconds);
-								comport.stopGoing();
-								Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
-								dockGrab(dockgrabmodes.find, 0, 0);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}).start();
-				}
-			} else { // !autodockingcamctr
-				autodockingcamctr = true;
-				if (Math.abs(x - dockx) > (int) (0.03125*imgwidth) ) { 
+			final int s1FWDmilliseconds = 500; // 400
+			final int s2FWDmilliseconds = 250; // 100
 
-					comport.clickSteer((x - dockx) * rescomp, (y - imgheight/2)
-							* rescomp);
-					new Thread(new Runnable() {
-						public void run() {
-							try {
-								comport.delayWithVoltsComp(allowforClickSteer);
-								dockGrab(dockgrabmodes.find, 0, 0);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}).start();
-				} else {
+			if (w * h < s1) { // mode: quite far away yet, approach only
+
+	//			if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
+				if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
+	//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
+				if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer and go
+					comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
+					comport.delayWithVoltsComp(allowforClickSteer);
+					comport.speedset(ArduinoPrime.speeds.fast.toString());
+					comport.goForward();
+					comport.delayWithVoltsComp(s1FWDmilliseconds);
+					comport.stopGoing();
+					Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 					dockGrab(dockgrabmodes.find, 0, 0);
-				}
-			}
-		} 
-		if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
-			if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
-				autodockctrattempts++;
+					return;
 
-//				comport.clickSteer((x - dockx) * rescomp, (y - 120) * rescomp);
-				int minimum_clicksteerMovement = (int) (0.025*imgwidth); //pixels out of 320 //TODO: this will vary with floor type, make settable
-				int movex = (x - dockx);
-				if (Math.abs(movex) < minimum_clicksteerMovement) {
-					if (movex > 0) { movex = minimum_clicksteerMovement; }
-					else { movex = -minimum_clicksteerMovement; }
+				} else { // go only
+
+					comport.speedset(ArduinoPrime.speeds.fast.toString());
+					comport.goForward();
+					comport.delayWithVoltsComp(s1FWDmilliseconds);
+					comport.stopGoing();
+					Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+					dockGrab(dockgrabmodes.find, 0, 0);
+					return;
 				}
-				comport.clickSteer(movex * rescomp, (y-imgheight/2) * rescomp); 
-				// 
-				new Thread(new Runnable() {
-					public void run() {
-						try {
+			} // end of S1 check
+
+			if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
+				int fl = state.getInteger(State.values.floodlightlevel);
+				if (fl > 0 && fl != 15) comport.floodLight(FLLOW);
+
+				if (autodockingcamctr) { // if cam centered do check and comps below
+					autodockingcamctr = false;
+					int autodockcompdir = 0;
+
+					final double slopeDiffMax = 7.0;
+					double slopeDiff = Math.abs(slopedeg - dockslopedeg);
+					if (slopeDiff > slopeDiffMax)   slopeDiff = slopeDiffMax;
+
+					if (slopeDiff > s1slopetolerance) {
+						final double magicRatioMin = 0.04;
+						final double magicRatioMax = 0.22;
+						double magicRatio = magicRatioMax - (slopeDiff/slopeDiffMax)*(magicRatioMax-magicRatioMin);
+						autodockcompdir = (int) (imgwidth/2 - w - (int) (imgwidth*magicRatio) -
+									Math.abs(imgwidth/2 - x)); // was 160 - w - 25 -Math.abs(160-x)
+					}
+
+					if (slope > dockslope) {
+						autodockcompdir *= -1;
+					} // approaching from left
+					autodockcompdir += x + (dockx - imgwidth/2);
+					// System.out.println("comp: "+autodockcompdir);
+					lastcamctr = 0;
+					if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125)) { // steer and go
+						lastcamctr = (autodockcompdir - dockx) * rescomp;
+
+						comport.clickSteer(lastcamctr , 0);
+						comport.delayWithVoltsComp(allowforClickSteer);
+						comport.speedset(ArduinoPrime.speeds.fast.toString());
+						comport.goForward();
+	//								Thread.sleep(s2FWDmilliseconds);
+						comport.delayWithVoltsComp(s2FWDmilliseconds);
+						comport.stopGoing();
+						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+						if (Math.abs(lastcamctr) > imgwidth/4) { // correct in case dock occluded by frame after large move
+							comport.clickSteer(-lastcamctr , 0);
 							comport.delayWithVoltsComp(allowforClickSteer);
-							dockGrab(dockgrabmodes.find, 0, 0);
-						} catch (Exception e) {
-							e.printStackTrace();
 						}
-					}
-				}).start();
-			} else {
-				if (Math.abs(slopedeg - dockslopedeg) > s2slopetolerance
-						|| autodockctrattempts > 10) { // rotate a bit, then backup and try again
-					// System.out.println("backup "+dockslopedeg+" "+slopedeg+" ctrattempts:"+autodockctrattempts);
-					autodockctrattempts = 0;
-					int comp = imgwidth/4;
-					if (slope < dockslope) {
-						comp = -comp;
-					}
-					x += comp;
+						dockGrab(dockgrabmodes.find, 0, 0);
+						return;
 
-					comport.clickSteer((x - dockx) * rescomp, (y - imgheight/2) * rescomp);
-					new Thread(new Runnable() {
-						public void run() {
-							try {
-								comport.delayWithVoltsComp(allowforClickSteer);
-								comport.speedset(ArduinoPrime.speeds.fast.toString());
-								comport.goBackward();
-//								Thread.sleep(s1FWDmilliseconds);
-								comport.delayWithVoltsComp(s1FWDmilliseconds);
-								comport.stopGoing();
-								Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
-								dockGrab(dockgrabmodes.find, 0, 0);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}).start();
-					
-					Util.log("autodock backup", this);
-					PowerLogger.append("autodock backup", this);
-					
-				} else { // all good, let er rip
-					// System.out.println("dock "+dockslopedeg+" "+slopedeg);
-					new Thread(new Runnable() {
-						public void run() {
-							try {
-								Thread.sleep(100);
-								dock();
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}).start();
+					} else { // go only
+
+						comport.speedset(ArduinoPrime.speeds.fast.toString());
+						comport.goForward();
+	//								Thread.sleep(s2FWDmilliseconds);
+						comport.delayWithVoltsComp(s2FWDmilliseconds);
+						comport.stopGoing();
+						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+						dockGrab(dockgrabmodes.find, 0, 0);
+						return;
+
+					}
+				} else { // !autodockingcamctr
+					autodockingcamctr = true;
+					if (Math.abs(x - dockx) > (int) (0.03125*imgwidth) ) {
+
+						comport.clickSteer((x - dockx) * rescomp, (y - imgheight/2) * rescomp);
+						comport.delayWithVoltsComp(allowforClickSteer);
+						dockGrab(dockgrabmodes.find, 0, 0);
+						return;
+
+					} else {
+						dockGrab(dockgrabmodes.find, 0, 0);
+						return;
+					}
 				}
 			}
-		}
+			if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
+				if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
+					autodockctrattempts++;
+
+	//				comport.clickSteer((x - dockx) * rescomp, (y - 120) * rescomp);
+					int minimum_clicksteerMovement = (int) (0.025*imgwidth); //pixels out of 320 //TODO: this will vary with floor type, make settable
+					int movex = (x - dockx);
+					if (Math.abs(movex) < minimum_clicksteerMovement) {
+						if (movex > 0) { movex = minimum_clicksteerMovement; }
+						else { movex = -minimum_clicksteerMovement; }
+					}
+					comport.clickSteer(movex * rescomp, (y-imgheight/2) * rescomp);
+					comport.delayWithVoltsComp(allowforClickSteer);
+					dockGrab(dockgrabmodes.find, 0, 0);
+					return;
+
+				} else {
+					if (Math.abs(slopedeg - dockslopedeg) > s2slopetolerance
+							|| autodockctrattempts > 10) { // rotate a bit, then backup and try again
+
+						Util.log("autodock backup", this);
+						PowerLogger.append("autodock backup", this);
+						autodockctrattempts = 0;
+						int comp = imgwidth/4;
+						if (slope < dockslope) {
+							comp = -comp;
+						}
+						x += comp;
+
+						comport.clickSteer((x - dockx) * rescomp, (y - imgheight / 2) * rescomp);
+
+						comport.delayWithVoltsComp(allowforClickSteer);
+						comport.speedset(ArduinoPrime.speeds.fast.toString());
+						comport.goBackward();
+	//								Thread.sleep(s1FWDmilliseconds);
+						comport.delayWithVoltsComp(s1FWDmilliseconds);
+						comport.stopGoing();
+						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+						dockGrab(dockgrabmodes.find, 0, 0);
+						return;
+
+					} else { // all good, let er rip
+
+						Util.delay(100);
+						dock();
+						return;
+
+					}
+				}
+			}
+
+		} }).start();
 	}
 
 	public void getLightLevel() {

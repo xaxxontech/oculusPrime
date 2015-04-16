@@ -27,13 +27,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
-	public static final long DEAD_TIME_OUT = 60000;
+	public static final long DEAD_TIME_OUT = 10000;
 	public static final int WATCHDOG_DELAY = 8000;	
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int BAUD = 115200;
-	
+	public static final long ALLOW_FOR_RESET = 10000;
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
@@ -178,6 +178,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
+						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
 						!state.getBoolean(oculusPrime.State.values.moving)) {
 					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
 					lastReset = now;
@@ -196,6 +197,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+					Util.log(FIRMWARE_ID + " PCB timeout, attempting reset", this);
 					lastRead = now;
 					reset();
 				}
@@ -391,6 +393,22 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		return isconnected;
 	}
 
+	/** utility for macros requiring movement
+	 *  BLOCKING
+	 * 	return true if connected, if not, wait for up to 10 seconds
+	 * @return   boolean isconnected
+	 */
+	public boolean checkisConnectedBlocking() {
+		if (isconnected) return true;
+		Util.log("malg not connected, waiting for reset", this);
+		long start = System.currentTimeMillis();
+		while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+			Util.delay(50);
+		if (isconnected) return true;
+		Util.log("malg not connected", this);
+		return false;
+	}
+
 	public void serialEvent(SerialPortEvent event) {
 		if (!event.isRXCHAR())  return;
 
@@ -418,16 +436,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	public void reset() {
-//		if (isconnected) {
-			new Thread(new Runnable() {
-				public void run() {
-					Util.log("resetting MALG board", this);
-					disconnect();
-					connect();
-					initialize();
-				}
-			}).start();
-//		}
+		new Thread(new Runnable() {
+			public void run() {
+			Util.log("resetting MALG board", this);
+			disconnect();
+			connect();
+			initialize();
+			}
+		}).start();
 	}
 
 	/** shutdown serial port */
@@ -473,15 +489,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final byte[] command = cmd;
 		new Thread(new Runnable() {
 			public void run() {
-				try {
+			try {
 
-					serialPort.writeBytes(command);  // byte array
-					serialPort.writeInt(13);  					// end of command
-		
-				} catch (Exception e) {
-					Util.log("OCULUS: sendCommand(), " + e.getMessage(), this);
-					e.printStackTrace(); // TODO: debugging
-				}
+				serialPort.writeBytes(command);  // byte array
+				serialPort.writeInt(13);  					// end of command
+
+			} catch (Exception e) {
+				Util.log("sendCommand() error, attempting reset", this);
+				Util.printError(e);
+				lastReset = System.currentTimeMillis();
+				reset(); // this will (help) resets happen quicker, not just on watchdog intervals
+			}
 			}
 		}).start();
 		

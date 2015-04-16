@@ -121,7 +121,8 @@ public class Navigation {
 
 			if (state.getBoolean(State.values.navigationenabled)) return; // success
 			
-			// try again if needed, just once
+			// ========try again if needed, just once======
+
 			Util.log("navigation start attempt #2", this);
 			stopNavigation(); // ros script deletes state navigationenabled after couple secs
 			state.set(State.values.navigationenabled, false); // false=pending, set true by ROS node when ready
@@ -187,6 +188,7 @@ public class Navigation {
 			// success, should be pointing at dock, shut down nav
 			stopNavigation();
 			Util.delay(5000);
+			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 			
 			// dock
@@ -212,6 +214,7 @@ public class Navigation {
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit
+					app.comport.checkisConnectedBlocking(); // just in case
 					app.driverCallServer(PlayerCommands.left, "25");
 					Util.delay(10); // thread safe
 
@@ -367,11 +370,13 @@ public class Navigation {
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
 					state.set(State.values.motionenabled, true);
+					app.comport.checkisConnectedBlocking(); // just in case
 					app.driverCallServer(PlayerCommands.forward, "0.7");
 
 					Util.delay(3000);
 
 					// rotate to localize
+					app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
 					app.driverCallServer(PlayerCommands.left, "360");
 					Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
 					Util.delay(1000);
@@ -389,6 +394,8 @@ public class Navigation {
 
 		    		String wpname = 
 	    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+
+					app.comport.checkisConnectedBlocking(); // just in case
 
 		    		if (wpname.equals(DOCK))  break;
 
