@@ -27,13 +27,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
-	public static final long DEAD_TIME_OUT = 60000;
+	public static final long DEAD_TIME_OUT = 10000;
 	public static final int WATCHDOG_DELAY = 8000;	
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int BAUD = 115200;
-	
+	public static final long ALLOW_FOR_RESET = 10000;
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
@@ -86,14 +86,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	// thread safety 
 	protected volatile boolean isconnected = false;
 //	public volatile boolean sliding = false;
-	protected volatile UUID currentMoveID;
-	protected volatile UUID currentCamMoveID;
+	protected volatile long currentMoveID;
+	protected volatile long currentCamMoveID;
 	private boolean camLimitOverride = false;
 	
 //	private boolean invertswap = false;
 	
 	// tracking motor moves 
-	private static Timer cameraTimer = null;
+	private Timer cameraTimer = null;
 	private double lastodomangle = 0; // degrees
 	private int lastodomlinear = 0; // mm
 	
@@ -178,6 +178,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
+						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
 						!state.getBoolean(oculusPrime.State.values.moving)) {
 					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
 					lastReset = now;
@@ -196,6 +197,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+					Util.log(FIRMWARE_ID + " PCB timeout, attempting reset", this);
 					lastRead = now;
 					reset();
 				}
@@ -391,6 +393,22 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		return isconnected;
 	}
 
+	/** utility for macros requiring movement
+	 *  BLOCKING
+	 * 	return true if connected, if not, wait for up to 10 seconds
+	 * @return   boolean isconnected
+	 */
+	public boolean checkisConnectedBlocking() {
+		if (isconnected) return true;
+		Util.log("malg not connected, waiting for reset", this);
+		long start = System.currentTimeMillis();
+		while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+			Util.delay(50);
+		if (isconnected) return true;
+		Util.log("malg not connected", this);
+		return false;
+	}
+
 	public void serialEvent(SerialPortEvent event) {
 		if (!event.isRXCHAR())  return;
 
@@ -418,16 +436,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	public void reset() {
-//		if (isconnected) {
-			new Thread(new Runnable() {
-				public void run() {
-					Util.log("resetting MALG board", this);
-					disconnect();
-					connect();
-					initialize();
-				}
-			}).start();
-//		}
+		new Thread(new Runnable() {
+			public void run() {
+			Util.log("resetting MALG board", this);
+			disconnect();
+			connect();
+			initialize();
+			}
+		}).start();
 	}
 
 	/** shutdown serial port */
@@ -473,15 +489,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final byte[] command = cmd;
 		new Thread(new Runnable() {
 			public void run() {
-				try {
+			try {
 
-					serialPort.writeBytes(command);  // byte array
-					serialPort.writeInt(13);  					// end of command
-		
-				} catch (Exception e) {
-					Util.log("OCULUS: sendCommand(), " + e.getMessage(), this);
-					e.printStackTrace(); // TODO: debugging
-				}
+				serialPort.writeBytes(command);  // byte array
+				serialPort.writeInt(13);  					// end of command
+
+			} catch (Exception e) {
+				Util.log("sendCommand() error, attempting reset", this);
+				Util.printError(e);
+				lastReset = System.currentTimeMillis();
+				reset(); // this will (help) resets happen quicker, not just on watchdog intervals
+			}
 			}
 		}).start();
 		
@@ -496,7 +514,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public void goForward() {
 		
-		final UUID moveID = UUID.randomUUID(); 
+		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 		
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
@@ -510,7 +528,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
 							System.currentTimeMillis() < stopwaiting) { } // wait
-					if (currentMoveID.equals(moveID))  goForward();
+					if (currentMoveID == moveID)  goForward();
 					
 				} }).start();
 				
@@ -567,7 +585,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					Util.delay(ACCEL_DELAY);
 					
-					if (!currentMoveID.equals(moveID))  return;
+					if (currentMoveID != moveID)  return;
 
 		// actual speed, un-comped
 					sendCommand(new byte[] { FORWARD, (byte) spd, (byte) spd});
@@ -581,7 +599,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				public void run() {
 					Util.delay(COMP_DELAY); 
 
-					if (!currentMoveID.equals(moveID))  return;
+					if (currentMoveID != moveID)  return;
 					
 					int[] comp = applyComp(spd); // actual speed, comped
 					int L,R;
@@ -615,7 +633,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public void goBackward() {
 	
-		final UUID moveID = UUID.randomUUID(); 
+		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
@@ -629,7 +647,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
 							System.currentTimeMillis() < stopwaiting) { } // wait
-					if (currentMoveID.equals(moveID))  goBackward();
+					if (currentMoveID == moveID)  goBackward();
 					
 				} }).start();
 				
@@ -683,7 +701,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					Util.delay(ACCEL_DELAY);
 					
-					if (!currentMoveID.equals(moveID))  return;
+					if (currentMoveID != moveID)  return;
 
 					// actual speed, un-comped
 					sendCommand(new byte[] { BACKWARD, (byte) spd, (byte) spd});
@@ -697,7 +715,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				public void run() {
 					Util.delay(COMP_DELAY); 
 
-					if (!currentMoveID.equals(moveID))  return;
+					if (currentMoveID != moveID)  return;
 					
 					int[] comp = applyComp(spd); // apply comp now that up to speed
 					int L = comp[1];
@@ -715,7 +733,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 	
 	public void turnRight(int delay) {
-		final UUID moveID = UUID.randomUUID(); 
+		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
@@ -731,7 +749,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
 							System.currentTimeMillis() < stopwaiting) { } // wait
-					if (currentMoveID.equals(moveID))  turnRight();
+					if (currentMoveID == moveID)  turnRight();
 					
 				} }).start();
 				
@@ -771,7 +789,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * @param delay milliseconds, then stop (timed directly by firmware). If 0, continuous movement
 	 */
 	public void turnLeft(int delay) {
-		final UUID moveID = UUID.randomUUID(); 
+		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 		
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
@@ -787,7 +805,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
 							System.currentTimeMillis() < stopwaiting) { } // wait
-					if (currentMoveID.equals(moveID))  turnLeft();
+					if (currentMoveID == moveID)  turnLeft();
 					
 				} }).start();
 				
@@ -838,7 +856,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * state odomlinearmpms
 	 * state odomturndpms
 	 */
-	private void trackturnrate(final UUID moveID) {
+	private void trackturnrate(final long moveID) {
 		
 		new Thread(new Runnable() {public void run() {
 			final long turnstart = System.currentTimeMillis();
@@ -848,7 +866,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			final int accel = 500;
 			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
 			
-			while (currentMoveID.equals(moveID))  {
+			while (currentMoveID == moveID)  {
 
 				if (state.getBoolean(State.values.odomupdated)) {
 					state.set(State.values.odomupdated, false);
@@ -901,7 +919,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * monitor with:
 	 * state odomlinearpwm
 	 */
-	private void tracklinearrate(final UUID moveID) {
+	private void tracklinearrate(final long moveID) {
 		
 		new Thread(new Runnable() {public void run() {
 			final long linearstart = System.currentTimeMillis();
@@ -911,7 +929,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			final int accel = 480;
 			final double targetrate = state.getDouble(State.values.odomlinearmpms.toString());
 			
-			while (currentMoveID.equals(moveID))  {
+			while (currentMoveID == moveID)  {
 
 				if (state.getBoolean(State.values.odomupdated)) {
 					state.set(State.values.odomupdated, false);
@@ -1014,7 +1032,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		int position;
 		
-		UUID camMoveID = UUID.randomUUID(); 
+//		UUID camMoveID = UUID.randomUUID();
+		long camMoveID = System.nanoTime();
 		
 		switch (move) {
 		
@@ -1091,7 +1110,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	public void cameraToPosition(int position) { // max movement speed
 		sendCommand(new byte[] { CAM, (byte) position} );
-		UUID camMoveID = UUID.randomUUID(); 
+//		UUID camMoveID = UUID.randomUUID();
+		long camMoveID = System.nanoTime();
 		currentCamMoveID = camMoveID;
 		camRelease(camMoveID);
 		state.set(State.values.cameratilt, position);
@@ -1101,14 +1121,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public void cameraSlowToPosition(final int position) { // slow movement speed
 		if (state.getInteger(State.values.cameratilt) == position) return;
 		
-		final UUID camMoveID = UUID.randomUUID();
+//		final UUID camMoveID = UUID.randomUUID();
+		final long camMoveID = System.nanoTime();
 		currentCamMoveID = camMoveID;
 		camLimitOverride = true;
-		
+
+		if (cameraTimer != null) cameraTimer.cancel();
 		cameraTimer = new java.util.Timer();
+
 		boolean temp = false;
-		final int timercode = cameraTimer.hashCode();
-			if (state.getInteger(State.values.cameratilt) > position)  { // up
+//		final int timercode = cameraTimer.hashCode();
+		if (state.getInteger(State.values.cameratilt) > position)  { // up
 			temp = true; 
 			cameraTimer.scheduleAtFixedRate(new cameraUpTask(), 0, CAM_SMOOTH_DELAY);
 		}
@@ -1120,7 +1143,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		new Thread(new Runnable() {
 			public void run() {				
 				
-				while (camMoveID.equals(currentCamMoveID)) {
+				while (camMoveID == currentCamMoveID) {
 					int currentpos = state.getInteger(State.values.cameratilt);
 					if ( (up && currentpos <= position) || (!up && currentpos >= position) ) { // position reached, stop
 						if(cameraTimer != null) cameraTimer.cancel();
@@ -1140,25 +1163,28 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 				}
 				
-				if (camMoveID.equals(currentCamMoveID)) {
+				if (camMoveID == currentCamMoveID) {
 					application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+//					if (cameraTimer.hashCode() == timercode) cameraTimer.cancel(); // cancel this if another cam command took over
+//					cameraTimer.cancel();
+					camLimitOverride = false;
 				}
-				else if (cameraTimer != null) {
-					if (cameraTimer.hashCode() == timercode) cameraTimer.cancel(); // cancel if another cam command took over
-				}
+//				else if (cameraTimer != null) {
+//					if (cameraTimer.hashCode() == timercode) cameraTimer.cancel(); // cancel this if another cam command took over
+//				}
 				
-				camLimitOverride = false;
+//				camLimitOverride = false;
 			}
 				
 		}).start();
 		
 	}
 	
-	private void camRelease(final UUID camMoveID) {
+	private void camRelease(final long camMoveID) {
 		new Thread(new Runnable() {
 			public void run() {				
 				Util.delay(CAM_RELEASE_DELAY);
-				if (camMoveID.equals(currentCamMoveID)) {
+				if (camMoveID == currentCamMoveID) {
 					application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
 					sendCommand(CAMRELEASE);  
 				}
@@ -1501,7 +1527,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 	
 	public void stopGoing() {
-		final UUID moveID = UUID.randomUUID();
+		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
 		state.put(State.values.moving, false);
@@ -1521,7 +1547,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //			state.set(State.values.direction, direction.unknown.toString()); // TODO: try omitting
 			new Thread(new Runnable() {public void run() {
 				Util.delay(1000);
-				if (currentMoveID.equals(moveID))  {
+				if (currentMoveID == moveID)  {
 					state.set(State.values.direction, direction.stop.toString());
 				}
 				
@@ -1539,11 +1565,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (n < CAM_MAX) { n= CAM_MAX; }
 		if (n == 13 || n== 10) { n=12; }
 		sendCommand(new byte[] { CAM, (byte) n });
-		UUID camMoveID = UUID.randomUUID(); 
+//		UUID camMoveID = UUID.randomUUID();
+		long camMoveID = System.nanoTime();
 		currentCamMoveID = camMoveID;
 		camRelease(camMoveID);
 		state.set(State.values.cameratilt, n);
-
 	}
 	
 	public void setSteeringComp(String str) {

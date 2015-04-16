@@ -67,9 +67,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start===============",this);
+		Util.log("\n==============Oculus Prime Java Start===============", this);
 		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
-		System.err.println("\n========="+Util.getTime() +" Oculus Prime Java Start=========");
+		System.err.println("\n=========" + Util.getTime() + " Oculus Prime Java Start=========");
 		
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -140,7 +140,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 						comport.stopGoing();
 					}
 	
-					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop)) {
+					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())) {
 						state.set(State.values.driverstream, driverstreamstate.stop.toString());
 						grabberPlayPlayer(0);
 						messageGrabber("playerbroadcast", "0");
@@ -728,11 +728,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case reboot:
 			powerport.writeStatusToEeprom();
+			Util.systemCall("pkill chrome"); // prevents error dialog on chrome startup
+			Util.delay(1000);
 			Util.reboot();
 			break;
 		
 		case systemshutdown:
 			powerport.writeStatusToEeprom();
+			Util.systemCall("pkill chrome"); // prevents error dialog on chrome startup
+			Util.delay(1000);
 			Util.shutdown();
 			break;
 		
@@ -1358,7 +1362,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		if (str.equals("stop")) {
 			if (state.getBoolean(State.values.autodocking))
-				docker.autoDock("cancel");
+				docker.autoDockCancel();
 
 			comport.stopGoing();
 			moveMacroCancel();
@@ -2049,7 +2053,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Integer audioThreshold = Integer.parseInt(val[1]);
 
 		state.delete(State.values.streamactivity);
-		state.set(State.values.streamactivitythreshold.name(), str);
+		state.set(State.values.streamactivitythreshold, str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
 			if (state.get(State.values.videosoundmode.name()).equals(VIDEOSOUNDMODEHIGH)) {
@@ -2070,7 +2074,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			state.set(State.values.streamactivityenabled.name(), System.currentTimeMillis());
 		}
-		else { 
+		else { // 0 0, disable streamActivityDetected()
 			state.delete(State.values.streamactivityenabled);
 			state.delete(State.values.streamactivitythreshold);
 		}
@@ -2082,6 +2086,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	private void streamActivityDetected(String str) {
+		if (! state.exists(State.values.streamactivityenabled)) return;
 		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) {
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable

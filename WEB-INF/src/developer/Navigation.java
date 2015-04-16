@@ -121,12 +121,21 @@ public class Navigation {
 
 			if (state.getBoolean(State.values.navigationenabled)) return; // success
 			
-			// try again if needed, just once
+			// ========try again if needed, just once======
+
 			Util.log("navigation start attempt #2", this);
 			stopNavigation(); // ros script deletes state navigationenabled after couple secs
 			state.set(State.values.navigationenabled, false); // false=pending, set true by ROS node when ready
 			Util.delay(ROSSHUTDOWNDELAY);
 			Ros.launch(Ros.REMOTE_NAV);
+
+			// wait
+			start = System.currentTimeMillis();
+			while (!state.getBoolean(State.values.navigationenabled)
+					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait, again
+
+			if (state.getBoolean(State.values.navigationenabled)) return; // success
+			else  stopNavigation();
 
 		}  }).start();
 
@@ -179,6 +188,7 @@ public class Navigation {
 			// success, should be pointing at dock, shut down nav
 			stopNavigation();
 			Util.delay(5000);
+			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 			
 			// dock
@@ -204,6 +214,7 @@ public class Navigation {
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit
+					app.comport.checkisConnectedBlocking(); // just in case
 					app.driverCallServer(PlayerCommands.left, "25");
 					Util.delay(10); // thread safe
 
@@ -323,7 +334,7 @@ public class Navigation {
 		// start route
 		final Element navroute = route;
 		state.set(State.values.navigationroute, name);
-		final String id = String.valueOf(System.currentTimeMillis());
+		final String id = String.valueOf(System.nanoTime());
 		state.set(State.values.navigationrouteid, id);
 
 		// flag route active, save to xml file
@@ -359,14 +370,17 @@ public class Navigation {
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
 					state.set(State.values.motionenabled, true);
+					app.comport.checkisConnectedBlocking(); // just in case
 					app.driverCallServer(PlayerCommands.forward, "0.7");
 
 					Util.delay(3000);
 
 					// rotate to localize
+					app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
 					app.driverCallServer(PlayerCommands.left, "360");
 					Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
 					Util.delay(1000);
+					app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
 				}
 				
 		    	// go to each waypoint
@@ -380,6 +394,8 @@ public class Navigation {
 
 		    		String wpname = 
 	    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+
+					app.comport.checkisConnectedBlocking(); // just in case
 
 		    		if (wpname.equals(DOCK))  break;
 
@@ -416,7 +432,7 @@ public class Navigation {
 					NodeList actions = ((Element) waypoints.item(wpnum)).getElementsByTagName("action");
 					long duration = Long.parseLong(
 							((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
-					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name);
+					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name, id);
 		    		
 					Util.delay(1000);
 
@@ -478,7 +494,7 @@ public class Navigation {
 	 * @param actions
 	 * @param duration
 	 */
-	private void processWayPointActions(NodeList actions, long duration, String wpname, String name) {
+	private void processWayPointActions(NodeList actions, long duration, String wpname, String name, String id) {
 		
 		// TODO: actions here
 		//  <action>  
@@ -529,6 +545,7 @@ public class Navigation {
     	
     	if (!camera) rotate = false; // if no camera, what's the point in rotating
 
+		// setup mic
     	// required for flash stream activity function to work
     	String previousvideosoundmode = state.get(State.values.videosoundmode);
     	if (mic) app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW);
@@ -536,10 +553,10 @@ public class Navigation {
 		// setup camera
 		if (camera) {
     		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-    		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
     		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
     	}
 
+		// turn on cam and or mic, allow delay for normalize
 		if (camera && mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
 			Util.delay(4000);
@@ -561,26 +578,34 @@ public class Navigation {
 			turns = maxturns;
 		}
 
+		// remain at waypoint looping and/or waiting, detection running if enabled
 		while (System.currentTimeMillis() - waypointstart < duration || turns < maxturns) {
+
+			if (!state.exists(State.values.navigationroute)) return;
+	    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
+			
 			// start stream(s)
 			if (camera && mic) {
 				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
 				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 "+settings.readSetting(ManualSettings.soundthreshold));
+				Util.delay(2000); // mic takes a while to start up
 			} else if (camera && !mic) {
 				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
 				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
 			} else if (!camera && mic) {
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 "+settings.readSetting(ManualSettings.soundthreshold));
+				Util.delay(2000); // mic takes a while to start up
 			}
 
 			long start = System.currentTimeMillis();
 			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay) {} // wait
 
+			// ALERT
 			if (state.exists(State.values.streamactivity)) {
-				// alert here
+
 				String streamactivity =  state.get(State.values.streamactivity);
 				String msg = "detected, level " + streamactivity.replaceAll("\\D","") + ", at waypoint: " + wpname + ", route: " + name;
 				Util.log(msg+" "+streamactivity, this);
@@ -588,12 +613,12 @@ public class Navigation {
 				if (email || rss) { // && settings.getBoolean(ManualSettings.alertsenabled) ) {
 
 					if (streamactivity.contains("video")) {
-						msg = "[Oculus Prime Detection] Motion " + msg;
+						msg = "[Oculus Prime Motion Detection] Motion " + msg;
 						msg += "\nimage link:\n" + FrameGrabHTTP.saveToFile("?mode=processedImg");
 						Util.delay(3000); // allow time for download thread to capture image before turning off camera
 					}
 					else if (streamactivity.contains("audio")) {
-						msg = "[Oculus Prime Detection] Sound " + msg;
+						msg = "[Oculus Prime Sound Detection] Sound " + msg;
 					}
 
 					if (email) {
@@ -612,20 +637,26 @@ public class Navigation {
 				break; // if rotating, stop
 			}
 			else  {
-				if (mic) app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+				if (mic)   app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 				if (camera) app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 			}
 
 			if (rotate) {
 				app.driverCallServer(PlayerCommands.left, "45");
-				Util.delay(3000);
+				long stopwaiting = System.currentTimeMillis()+10000; // timeout if error
+				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
+						System.currentTimeMillis() < stopwaiting) { Util.delay(10); } // wait for stop
+				Util.delay(2000); // allow cam to normalize
 				turns ++;
 			}
 
 		}
 
 		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
-		if (camera) app.driverCallServer(PlayerCommands.spotlight, "0");
+		if (camera) {
+			app.driverCallServer(PlayerCommands.spotlight, "0");
+			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+		}
 		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
 
 	}
