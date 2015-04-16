@@ -39,17 +39,7 @@ public class SystemWatchdog {
 	
 	private class Task extends TimerTask {
 		public void run() {
-	
-			// regular reboot based on Linux boot time
-			if((System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE) 
-					&& state.get(State.values.dockstatus).equals(AutoDock.DOCKED)){
-				
-				String boot = new Date(state.getLong(values.linuxboot)).toString();				
-				Util.log("rebooting, last boot was: " + boot, this);
-			 	application.driverCallServer(PlayerCommands.reboot, null);
-			}
-			
-			
+
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				Util.log("System WatchDog, force undock", this);
@@ -64,14 +54,15 @@ public class SystemWatchdog {
 			}
 			
 			// regular reboot if set 
-			if ((state.getUpTime() > STALE) && !state.exists(State.values.driver.toString()) && 
+			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
+					&& !state.exists(State.values.driver.toString()) &&
 					!state.exists(State.values.powererror.toString()) && // why..? 
 					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
 					state.getInteger(State.values.telnetusers) == 0 &&
 					(settings.getBoolean(GUISettings.reboot))){
 				
 				String boot = new Date(state.getLong(State.values.javastartup.name())).toString();				
-				Util.log("rebooting, last boot was: " + boot, this);
+				Util.log("regular reboot", this);
 				application.driverCallServer(PlayerCommands.reboot, null);
 			}
 			
