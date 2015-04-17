@@ -36,6 +36,7 @@ var routesxml = null;
 var temproutesxml;
 var navmenuinit = false;
 var navrouteavailableactions = ["rotate", "email", "rss", "motion", "not motion", "sound", "not sound" ];
+var activeroute = null;
 
 function navigationmenu() {
 	if (navmenuinit) {
@@ -154,6 +155,8 @@ function rosinfo() {
 			
 			var rosmaprezoom = false;
 			var systemstatustext = "STOPPED";
+			var activerouteisnull = true;
+			var secondstonextroute = null;
 			
 			for (var i=0; i<s.length; i++) {
 				var ss = s[i].split("_");
@@ -225,6 +228,19 @@ function rosinfo() {
 						if (ss[1] == "true") systemstatustext = "RUNNING";
 						else if (ss[1] == "false") systemstatustext = "INITIALIZING";
 						break;
+						
+					case "navigationroute":
+						activerouteisnull = false;
+						if (ss[1] != activeroute) {		// changed from active route to another route
+							activeroute = ss[1];
+							routesxml = null;  // force repopulate
+							if (document.getElementById("routesmenutest"))   routesmenu();
+							
+						}
+						break;
+						
+					case "secondstonextroute":
+						secondstonextroute = ss[1];
 				
 				}
 			}
@@ -238,12 +254,30 @@ function rosinfo() {
 			
 			var sysstatus = document.getElementById("navsystemstatus");
 			sysstatus.innerHTML = systemstatustext;
+			
+			if (activerouteisnull && activeroute != null) { // changed from active to null
+				activeroute = null;
+				routesxml = null;  // force repopulate
+				if (document.getElementById("routesmenutest"))   routesmenu();
+			}
+			var routestatus = document.getElementById("activeroutediv");
+			if (activeroute == null)  routestatus.style.display = "none";
+			else {
+				var routestatusinnerhtml = 
+				routestatusinnerhtml = "Active route: "+activeroute;
+				if (secondstonextroute != null) 
+					routestatusinnerhtml += "<br>next run in "+secondstonextroute+" seconds";	
+				routestatus.innerHTML = routestatusinnerhtml;
+				routestatus.style.display = "";
+			}
+			
 			popupmenu('menu','resize');
 
 			// test for refresh?
 			var r = false;
 			if (document.getElementById("navmenutest")) r = true;
 			if (document.getElementById("rosmapimg")) r = true;
+			if (document.getElementById("routesmenutest")) r = true;
 			if (r)
 				rosmapinfotimer = setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+t+"', rosinfo);", 510);
 			
@@ -907,6 +941,7 @@ function routesmenu() {
 	}
 
 	str = document.getElementById("routes_menu").innerHTML;
+	str += "<div id='routesmenutest'> </div>";
 	popupmenu("menu","show",null,null,str);
 
 	var date = new Date().getTime();
@@ -958,14 +993,14 @@ function routespopulate() {
 
 function activateroute(name) {
 	callServer("runroute", name);
-	routesxml = null;
-	setTimeout("routesmenu()", 500);
+	// routesxml = null;
+	// setTimeout("routesmenu()", 500); 
 }
 
 function deactivateroute() {
 	callServer("cancelroute", "");
-	routesxml = null;
-	setTimeout("routesmenu()", 500);
+	// routesxml = null;
+	// setTimeout("routesmenu()", 500);
 }
 
 function editroute(name, rxml) {

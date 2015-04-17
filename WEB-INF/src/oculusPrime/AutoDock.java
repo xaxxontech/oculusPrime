@@ -140,14 +140,14 @@ public class AutoDock {
 							public void run() {
 								try {
 									comport.checkisConnectedBlocking();
-									comport.clickSteer((x - imgwidth/2) * rescomp, 0);
-									Util.delay(50);
+									comport.clickSteer((x - imgwidth / 2) * rescomp, 0);
+//									Util.delay(50);
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
-									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
+//									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
-									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
+//									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									comport.rotate(ArduinoPrime.direction.left, 180);
 									Thread.sleep(comport.fullrotationdelay/2+2000);
 									dockGrab(dockgrabmodes.find, 0, 0);
@@ -406,7 +406,7 @@ public class AutoDock {
 
 			if (w * h < s1) { // mode: quite far away yet, approach only
 
-	//			if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
+				if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
 				if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
 	//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
 				if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer and go
@@ -433,6 +433,7 @@ public class AutoDock {
 			} // end of S1 check
 
 			if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
+				if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
 				int fl = state.getInteger(State.values.floodlightlevel);
 				if (fl > 0 && fl != 15) comport.floodLight(FLLOW);
 

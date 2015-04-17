@@ -140,7 +140,13 @@ public class Ros {
 
 		if (state.exists(State.values.navigationenabled)) 
 			str += " " + State.values.navigationenabled.toString() +"_"+ state.get(State.values.navigationenabled);
-		
+
+		if (state.exists(State.values.navigationroute))
+			str += " " + State.values.navigationroute.toString() + "_" + state.get(State.values.navigationroute);
+
+		if (state.exists(State.values.secondstonextroute))
+			str += " " + State.values.secondstonextroute.toString() + "_" + state.get(State.values.secondstonextroute);
+
 		return str;
 	}
 	

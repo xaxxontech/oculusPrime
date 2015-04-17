@@ -143,6 +143,7 @@ public class Navigation {
 	
 	public void stopNavigation() {
 		state.delete(State.values.navigationenabled);
+//		if (state.exists(State.values.navigationroute)) cancelRoute(); // don't do this
 		Util.systemCall("pkill roslaunch");
 	}
 	
@@ -196,9 +197,9 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
-			Util.delay(25);
+//			Util.delay(25);
 			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
-			Util.delay(25);
+//			Util.delay(25);
 			app.driverCallServer(PlayerCommands.left, "180");
 			Util.delay(app.comport.fullrotationdelay/2 + 2000);
 			
@@ -208,7 +209,7 @@ public class Navigation {
 			while (true) {
 				
 				app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
-				Util.delay(10); // thread safe
+//				Util.delay(10); // thread safe
 				start = System.currentTimeMillis();
 				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000) {} // wait
 
@@ -349,6 +350,8 @@ public class Navigation {
 			
 			while (true) {
 
+				state.delete(State.values.secondstonextroute);
+
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
 					app.driverCallServer(PlayerCommands.messageclients,
@@ -472,10 +475,13 @@ public class Navigation {
 				app.driverCallServer(PlayerCommands.messageclients, min +  msg);
 		    	start = System.currentTimeMillis();
 				while (System.currentTimeMillis() - start < timebetween) {
+					state.set(State.values.secondstonextroute, (int) ((timebetween - (System.currentTimeMillis()-start))/1000));
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-					Util.delay(100); 
+					Util.delay(1000);
 				}
+
+				state.delete(State.values.secondstonextroute);
 
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
 					app.restart();
@@ -682,6 +688,7 @@ public class Navigation {
 	public void cancelRoute() {
 		state.delete(State.values.navigationroute); // this eventually stops currently running route
 		goalCancel();
+		state.delete(State.values.secondstonextroute);
 
 		// check for route name
 		Document document = Util.loadXMLFromString(routesLoad());

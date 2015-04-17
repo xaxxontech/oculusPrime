@@ -39,7 +39,7 @@ public class State {
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navigationenabled,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		navigationrouteid,
+		navigationrouteid, secondstonextroute,
 		
 		localaddress, externaladdress, // network things 
 		signalspeed, ssid, gateway, ethernetaddress;
@@ -276,9 +276,8 @@ public class State {
 					Date date = format.parse(line);
 					set(values.linuxboot, date.getTime());
 					
-					Util.delay(5000); // testing 
+					Util.delay(5000); // testing
 					Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
-				
 					 
 				} catch (Exception e) {
 					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());

@@ -88,6 +88,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //	public volatile boolean sliding = false;
 	protected volatile long currentMoveID;
 	protected volatile long currentCamMoveID;
+	protected volatile boolean sendCommandLock = false;
 	private boolean camLimitOverride = false;
 	
 //	private boolean invertswap = false;
@@ -489,10 +490,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final byte[] command = cmd;
 		new Thread(new Runnable() {
 			public void run() {
-			try {
+			long start = System.currentTimeMillis();
+			while (sendCommandLock && System.currentTimeMillis() - start < 1000) {} // wait
 
+			try {
+				sendCommandLock = true;
 				serialPort.writeBytes(command);  // byte array
 				serialPort.writeInt(13);  					// end of command
+				sendCommandLock = false;
 
 			} catch (Exception e) {
 				Util.log("sendCommand() error, attempting reset", this);
@@ -1474,12 +1479,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * @return modified (typically extended) milliseconds
 	 */
 	private double voltsComp(double n) {
-		double volts = 12.0;
+		double volts = 12.0; // default
 		final double nominalvolts = 12.0;
 		final double exponent = 1.6;
 
 		if (state.exists(State.values.battvolts.toString())) {
-			volts = Double.parseDouble(state.get(State.values.battvolts));
+			if (Math.abs(state.getDouble(State.values.battvolts.toString()) - volts) > 2)
+				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.battvolts), this);
+			else  volts = Double.parseDouble(state.get(State.values.battvolts));
 		}
 		
 		n = n * Math.pow(nominalvolts/volts, exponent);
