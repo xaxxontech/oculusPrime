@@ -23,39 +23,39 @@ public class NetworkServlet extends HttpServlet {
 	
 	private static final long serialVersionUID = 1L;	
 		
-	protected static final long HTTP_REFRESH_DELAY_SECONDS = 3;
+	protected static final long HTTP_REFRESH_DELAY_SECONDS = 3; 
 	protected static final long FAST_POLL_DELAY_MS = 400;
 	protected static final long PING_DELAY_MS = 9000;
 	protected static final long WLAN_TIMEOUT = 40000;
 
-	protected static final String PACKAGE = "accesspoint";
-	protected static final String AP_NAME = "oculusPrime";
-	protected static final String WLAN = "wlan0";
-	protected static final String ETH = "eth0";
+//	protected static final String PACKAGE = "oculusPrime/dashboard";
+//	protected static final String AP_NAME = "oculusPrime";
+//	protected static final String WLAN = "wlan0";
+//	protected static final String ETH = "eth0";
 			
-	private static final String NONE = "none";
-	private static String signalStrength = NONE;
-	private static String gatewayAddress = NONE;
+//	private static final String NONE = "none";
+//	private static String signalStrength = NONE;
+//	private static String gatewayAddress = NONE;
 	
-	private static String signalQuality = NONE;
-	private static String connectedSSID = NONE;
-	private static String wlanAddress = NONE;
+//	private static String signalQuality = NONE;
+//	private static String connectedSSID = NONE;
+//	private static String wlanAddress = NONE;
 	
 	NetworkMonitor monitor = NetworkMonitor.getReference();
 
-	private static Vector<String> accesspoints = new Vector<String>();
+//	private static Vector<String> accesspoints = new Vector<String>();
 	private static Vector<String> connections = new Vector<String>();
-	private Vector<String> networkData = new Vector<String>();
+//	private Vector<String> networkData = new Vector<String>();
 	
-	private static long last = System.currentTimeMillis();
+//	private static long last = System.currentTimeMillis();
 //	private static float pingTime = 0;
-	private static int pingCount = 0;
-	private static int pingFail = 0;
+//	private static int pingCount = 0;
+//	private static int pingFail = 0;
 	
-	Timer pingTimer = new Timer();
-	Timer networkTimer = new Timer();
-	Timer watchdogTimer = new Timer();
-	Timer stateTimer = new Timer();
+//	Timer pingTimer = new Timer();
+//	Timer networkTimer = new Timer();
+//	Timer watchdogTimer = new Timer();
+//	Timer stateTimer = new Timer();
 	
 	public HashMap<String, String> map = new HashMap<String, String>();
 
@@ -65,18 +65,9 @@ public class NetworkServlet extends HttpServlet {
 		
 		super.init(config);
 		
-		// getSignalQuality();
-		// getWlanAddress();
-		
-		// connectionsNever();
-		// connectionUpdate();
-		
-		// networkTimer.schedule(new networkTask(), 100, PING_DELAY_MS);
 		// pingTimer.schedule(new pingTask(), 100, PING_DELAY_MS);
 		
-		// stateTimer.schedule(new TelnetTask(), 9000, PING_DELAY_MS);
-		
-		// System.out.println("..........."+state.toString());
+		connectionUpdate();
 		
 	}
 
@@ -86,7 +77,6 @@ public class NetworkServlet extends HttpServlet {
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
-		/*
 		String action = null;
 		String router = null; 
 		String password = null;
@@ -99,84 +89,104 @@ public class NetworkServlet extends HttpServlet {
 			System.out.println(e.getLocalizedMessage());
 		}
 		
-		if(password != null){
-			response.sendRedirect(PACKAGE); 
-			changeWIFI(router, password);
-			return;
-		}
+		//if(password != null){
+		//	response.sendRedirect("oculusPrime//network"); 
+		//	changeWIFI(router, password);
+		//	return;
+		//}
 		
+		/*
+		*/
+	
 		if(action != null){	
-			if(action.equals("shutdown")){	
-				response.sendRedirect(PACKAGE);
-				stopServer();
-			}
-			if(action.equals("adhoc")){	
-				response.sendRedirect(PACKAGE);
-				startAdhoc();
-			}
-			if(action.equals("disconnect")){
-				response.sendRedirect(PACKAGE);
-				disconnectWLAN();
-				return;
-			}
+			//if(action.equals("shutdown")){	
+			//	response.sendRedirect(PACKAGE);
+			//	stopServer();
+			//}
+			///if(action.equals("adhoc")){	
+			//	response.sendRedirect(PACKAGE);
+			//	startAdhoc();
+			//}
+			///if(action.equals("disconnect")){
+			///	response.sendRedirect(PACKAGE);
+			//	disconnectWLAN();
+			//	return;
+			//}
 			if(router != null){
 				if(action.equals("connect")){	
 					if(connectionExists(router, true)){
-						response.sendRedirect(PACKAGE);                              
+						response.sendRedirect("network");                              
 						changeWIFI(router);
 						return;
 					}
 				
-					sendLogin(request, response, router);
-					return;
+					//sendLogin(request, response, router);
+					//return;
 				}
 			}
-		}
-		*/
-		
-		wifiInfo(request, response);
+		}	
+		wifiSelection(request, response);
 	}
 	
+	public void sendLogin(HttpServletRequest request, HttpServletResponse response, String ssid) throws IOException{
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		out.println("<html><body>");
+		out.println("connect to: " + ssid);
+		out.println("<form method=\"post\">password: <input type=\"password\" name=\"password\"></form>");
+		out.println("</body></html>");
+		out.close();
+	}
+	
+	/*
 	public void wifiInfo(HttpServletRequest request, HttpServletResponse response) throws IOException{
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 	
-		/*
-		if ( ! settings.getBoolean(ManualSettings.developer.name())){
-			out.println("this service is for developers only, check settings..");
-			out.close();	
-			return;
-		}
-		
-		if(ban.isBanned(request.getRemoteAddr())){
-			out.println("this is a banned address: " + ban);
-			out.close();	
-			return;
-		}
-		*/
-		
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body> \n");
-/*
-		String view = null;	
-		try {
-			view = request.getParameter("view");
-		} catch (Exception e) {
-			System.out.println(e.getLocalizedMessage());
-		}
-	*/	
 		out.println(NetworkMonitor.getReference().wlanString() + "\n");
 		
 		out.println("\n</body></html> \n");
 		out.close();		
+	
+	}
+	*/
+	
+	public void wifiSelection(HttpServletRequest request, HttpServletResponse response) throws IOException{
+				
+		final String base = "<a href=\"http:\\\\"+request.getServerName()+":"+request.getServerPort() + "/oculusPrime/network";
+		
+		//final String disconnect = base + "?action=disconnect\">disconnect</a>";
+		//final String adhoc = base + "?action=adhoc\">adhoc</a>";
+		//final String shutdown = base + "?action=shutdown\">shutdown</a>";
+		
+		final String router = base + "?action=connect&router=";
+	
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body> \n");
+		
+		// out.println(monitor.wlanString() + "\n");	
+			
+		out.println("\n<br /><br /><table>");
+		// out.println("\n<table>");
+		
+		String result[] = monitor.getAccessPoints();
+		for(int i = 0; i < result.length ; i++)
+			 out.println("\n<tr><td>" + router + result[i] + "\">"+ result[i] +"</a>");
+		
+		out.println("\n</table>");
+		
+		out.println("\n <br />v:99</body></html> \n");
+		out.close();	
+		
+		// System.out.println("connectionUpdate(): " + router);
+	
+	}
+
 		/*
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-			
-		final String base = "<a href=\"http:\\\\"+request.getServerName()+":"+request.getServerPort() + "\\" + PACKAGE + "\\" + PACKAGE;
-		final String disconnect = base + "?action=disconnect\">disconnect</a>";
-		final String adhoc = base + "?action=adhoc\">adhoc</a>";
-		final String shutdown = base + "?action=shutdown\">shutdown</a>";
-		final String router = base + "?action=connect&router=";
 		
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body>");
 		out.println("<b>wifi:</b>" + wlanAddress + " ...  "+adhoc+ " " +shutdown+ "<hr>"); 
@@ -184,10 +194,6 @@ public class NetworkServlet extends HttpServlet {
 		if( ! connectedSSID.equals(NONE))
 			out.println(connectedSSID + " <i>(" + signalQuality + "%" + " " + signalStrength 
 					+ "dBm "+ signalNoise +" noise)</i> ... "+disconnect +"<hr>");
-		
-		// if(accesspoints.size() == 0) out.println("... fuck me... ...");
-		
-		
 		
 		for(int i = 0 ; i < accesspoints.size() ; i++) 
 			if( ! accesspoints.get(i).equals(connectedSSID))
@@ -211,20 +217,10 @@ public class NetworkServlet extends HttpServlet {
 		
 		out.println("</body></html>");
 		out.close();
-		*/
+	
 		
 	}
-	
-	public void sendLogin(HttpServletRequest request, HttpServletResponse response, String ssid) throws IOException{
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		out.println("<html><body>");
-		out.println("connect to: " + ssid);
-		out.println("<form method=\"post\">password: <input type=\"password\" name=\"password\"></form>");
-		out.println("</body></html>");
-		out.close();
-	}
-	
+
 	public class TelnetTask extends TimerTask {
 		
 		Socket socket = new Socket();
@@ -304,29 +300,7 @@ public class NetworkServlet extends HttpServlet {
 		}
 
 	}
-	
-	public class watchdogTask extends TimerTask {
-	    @Override
-	    public void run() {
-	    	try{ 
-	    
-	    		System.out.println("watchdogTask: " + (System.currentTimeMillis() - last) + " ms");
-	    		System.out.println("watchdogTask: " + wlanAddress);
-	    		
-	    		if(!connectedSSID.equals(NONE)) {
-	    			System.out.println("watchdogTask... exiting");
-	    			watchdogTimer.cancel();
-	    			return;
-	    		}
-	    		
-	    		//TODO: TIMEOUTif()
-
-			} catch (Exception e) {
-				System.out.println("watchdogTask: " + e.getLocalizedMessage());
-			}		
-	    }    
-	}
-	
+	/*
 	public class networkTask extends TimerTask {
 	    @Override
 	    public void run() {
@@ -354,29 +328,6 @@ public class NetworkServlet extends HttpServlet {
 	    }    
 	}
 
-	private void readWAN(){
-		accesspoints.clear();		
-		for(int i = 0 ; i < networkData.size() ; i++){	
-			String line = networkData.get(i);
-			
-			if(line.startsWith("- Device: " + WLAN)){	 
-				try {
-					connectedSSID = line.substring((line.indexOf('[')+1), line.indexOf(']'));					
-				} catch (Exception e) {		
-					connectedSSID = NONE;
-				}
-			}
-			
-			if(line.startsWith("Gateway: ")) gatewayAddress = line.substring(line.indexOf("Gateway: ")+9).trim();	
-			
-			if(line.contains("Freq") && line.contains("Rate")) 
-				if( ! line.startsWith("*"))
-					if( line.contains("Infra"))
-						if( ! accesspoints.contains(line.substring(0, line.indexOf(":"))))
-							accesspoints.add(line.substring(0, line.indexOf(":")));		
-		}
-	}
-	
 	public class pingTask extends TimerTask {		
 		@Override
 	    public void run() {
@@ -384,7 +335,7 @@ public class NetworkServlet extends HttpServlet {
 				
 				if( !gatewayAddress.equals("0.0.0.0")){ //  && !connectedSSID.equals(NONE)){  
 				
-					System.out.println("pingTask: [" + connectedSSID + "] gateway: " + gatewayAddress + " ping: " + pingCount);
+					/// System.out.println("pingTask: [" + connectedSSID + "] gateway: " + gatewayAddress + " ping: " + pingCount);
 					
 					if(wlanAddress.equals(NONE)) {
 						if(System.currentTimeMillis() - last > WLAN_TIMEOUT){	
@@ -395,13 +346,13 @@ public class NetworkServlet extends HttpServlet {
 						}
 						
 						System.out.println("pingTask: WLAN_TIMEOUT: " + (System.currentTimeMillis() - last) + " ms");
-						pingCount = 0;
-						pingFail = 0;
+					//	pingCount = 0;
+					//	pingFail = 0;
 					//	pingTime = 0;
 						
 					} else {
 						
-						pingCount++;
+					//	pingCount++;
 						final String[] PING = new String[]{"ping", "-c", "1", "-I", WLAN, gatewayAddress};
 						Process proc = Runtime.getRuntime().exec(PING);
 						BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -410,7 +361,7 @@ public class NetworkServlet extends HttpServlet {
 						while ((line = procReader.readLine()) != null){
 							if(line.contains("Unreachable")){
 								System.out.println("pingTask: Unreachable ip: " + gatewayAddress); 
-								pingFail++;
+						//		pingFail++;
 							}
 							if(line.contains("time=")){
 								//pingTime = Float.parseFloat(line.substring(line.indexOf("time=")+5, line.indexOf(" ms")));
@@ -431,7 +382,7 @@ public class NetworkServlet extends HttpServlet {
 		} catch (Exception e) {
 			System.out.println("disconnectWLAN: " + e.getLocalizedMessage());
 		}		
-	}
+	}*/
 	
 	public synchronized void connectionUpdate(){		
 		try {
@@ -442,18 +393,15 @@ public class NetworkServlet extends HttpServlet {
 							
 			String line = null;
 			while ((line = procReader.readLine()) != null){
-				if( ! line.startsWith("NAME")){								
-					if( ! line.endsWith("never")){
+			//	if( ! line.startsWith("NAME")){								
+			//		if( ! line.endsWith("never")){
 						connections.add(line);
-						System.out.println("connectionUpdate: "+line);
-					}
-				}
+			//			System.out.println("connectionUpdate(): "+line);
+			//		}
+			//	}
 			}
-			
-			proc.waitFor();
-				
 		} catch (Exception e) {
-			System.out.println("connectionExists: " + e.getLocalizedMessage());
+			System.out.println("connectionUpdate(): " + e.getLocalizedMessage());
 		}		
 	}
 
@@ -529,7 +477,7 @@ public class NetworkServlet extends HttpServlet {
 	
 	public void changeWIFI(final String ssid){	
 		
-		System.out.println("changeWIFI: start ssid = " + ssid);
+	//	System.out.println("changeWIFI: start ssid = " + ssid);
 		
 		try {
 			Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid});
@@ -537,9 +485,9 @@ public class NetworkServlet extends HttpServlet {
 			System.out.println("changeWIFI: " + e.getLocalizedMessage());
 		}		
 				
-		System.out.println("changeWIFI: end \n");
+	//	System.out.println("changeWIFI: end \n");
 	}
-	
+	/*
 	public void startAdhoc(){
 		
 		// TODO:...............
@@ -569,7 +517,8 @@ public class NetworkServlet extends HttpServlet {
 		
 		System.out.println("startAdhoc: end...........++........");
 	}
-
+	*/
+/*
 	public void stopServer(){	
 		try {
 			Runtime.getRuntime().exec(new String[]{"java", "-jar", "stop.jar", "&"});
@@ -615,7 +564,8 @@ public class NetworkServlet extends HttpServlet {
 			}
 		}).start();
 	}
-	
+	*/
+	/*
 	public void getWlanAddress(){
 		new Thread(new Runnable() {
 			@Override
@@ -647,5 +597,7 @@ public class NetworkServlet extends HttpServlet {
 				}
 			}
 		}).start();
-	}	
+	}
+	*/
+	
 }
