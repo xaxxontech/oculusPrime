@@ -191,8 +191,10 @@ public class State {
 		str.append("<tr>" 
 	       	//    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
 			//    + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
-		        + "<td><b>uptime: </b>" + (getUpTime()/1000)/60 + " min <td><b>driver: </b>" + get(values.driver) 
-		        + " <b>telnet: </b>" + get(values.telnetusers) 
+				+ "<td><b>linux uptime (minutes): </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
+		        + "<td><b>java uptime (minutes): </b>" + (getUpTime()/1000)/60 
+		        + "<td><b>driver: </b>" + get(values.driver) 
+		        + "<td><b>telnet: </b>" + get(values.telnetusers) 
 				+ "</tr>");
 	
 		str.append("<tr><td><b>motor port: </b>" + get(values.motorport) 
