@@ -42,6 +42,7 @@ public class NetworkMonitor {
 		updateExternalIPAddress();
 		connectionsNever();
 		connectionUpdate();
+		killApplet();
 	}
 	
 	public class pingTask extends TimerTask {			
@@ -60,6 +61,8 @@ public class NetworkMonitor {
 	    		
 	    		if( ! state.contains(values.externaladdress)) updateExternalIPAddress();
 	    		
+	    		
+	    		
 			} catch (Exception e) {
 				Util.debug("pingTask(): " + e.getLocalizedMessage(), this);
 			}		
@@ -67,7 +70,7 @@ public class NetworkMonitor {
 	}
 	
 	public static String pingWIFI(final String addr) throws Exception{
-		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/addr};
+		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/addr}; // TODO: force interface 
 		Process proc = Runtime.getRuntime().exec(PING);
 		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 							
@@ -176,6 +179,15 @@ public class NetworkMonitor {
 		}		
 	}
 	
+	private void killApplet(){
+		try {
+			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
+		//	Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+		} catch (Exception e) {
+			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
+		}		
+	}
+	
 	public void connectionUpdate(){		
 		try {
 			connections.clear();	
@@ -215,7 +227,9 @@ public class NetworkMonitor {
 
 	private void setSSID(final String line){
 		if(line.contains("[") && line.contains("]")){
-			state.set(values.ssid, line.substring(line.indexOf("[")+1, line.indexOf("]")));
+			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
+			if( ! state.equals(values.ssid, router))
+				state.set(values.ssid, router);
 		}
 	}
 	
@@ -342,7 +356,7 @@ public class NetworkMonitor {
 				
 				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
 				Util.debug("parseWLAN: State: " + gate, this);
-				
+				killApplet
 			}*/
 
 		}		

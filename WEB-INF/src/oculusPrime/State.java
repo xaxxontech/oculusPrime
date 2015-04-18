@@ -41,7 +41,7 @@ public class State {
 		navigationrouteid, secondstonextroute,
 		
 		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress, ethernetping, externalping, wifiping;
+		signalspeed, ssid, gateway, ethernetaddress, ethernetping, externalping, wifiping, temptest;
 		
 	};
 	

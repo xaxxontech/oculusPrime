@@ -70,7 +70,7 @@ public class NetworkServlet extends HttpServlet {
 		out.println("<html><body>");
 		out.println("connect to: " + ssid);
 		out.println("<form method=\"post\">password: <input type=\"password\" name=\"password\"></form>");
-		out.println("</body></html>");
+		out.println("\n\n</body></html>");
 		out.close();
 	}
 	
