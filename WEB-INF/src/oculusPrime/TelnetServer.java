@@ -320,8 +320,10 @@ public class TelnetServer implements Observer {
 					return;					
 				}	
 				
-				Util.log("failed to open client socket: " + e.getMessage(), this);
-				return;
+				Util.log(".............failed to open client socket: " + e.getMessage(), this);
+				Util.delay(1000);
+				
+				// return;
 			}
 		}
 	}

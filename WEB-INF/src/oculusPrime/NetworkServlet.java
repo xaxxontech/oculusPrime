@@ -47,8 +47,16 @@ public class NetworkServlet extends HttpServlet {
 			return;
 		}
 		
-		if(action != null && (router != null)){	
-			if(action.equals("connect")){	
+		if(action != null){ 
+			
+			if(action.equals("adhoc")){		
+				monitor.startAdhoc();
+				Util.log("..... start adhoc", this);
+				response.sendRedirect("dashboard"); 
+				return;
+			}
+			
+			if(action.equals("connect")  && (router != null)){	
 				if(monitor.connectionExists(router)){
 					
 					response.sendRedirect("dashboard");                              
@@ -67,10 +75,10 @@ public class NetworkServlet extends HttpServlet {
 	public void sendLogin(HttpServletRequest request, HttpServletResponse response, String ssid) throws IOException{
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println("<html><body>");
+		out.println("<html><body> \n\n");
 		out.println("connect to: " + ssid);
 		out.println("<form method=\"post\">password: <input type=\"password\" name=\"password\"></form>");
-		out.println("\n\n</body></html>");
+		out.println("\n\n </body></html>");
 		out.close();
 	}
 	
@@ -90,18 +98,20 @@ public class NetworkServlet extends HttpServlet {
 	
 	public void wifiSelection(HttpServletRequest request, HttpServletResponse response) throws IOException{
 				
-		final String base = "<a href=\"http://"+request.getServerName()+":"+request.getServerPort() + "/oculusPrime/network";
+		final String base = "<a href=\"http://"+request.getServerName()+":"+request.getServerPort() + "/oculusPrime/network";	
+		final String adhoc = base + "?action=adhoc\">start adhoc mode</a>";
 		final String router = base + "?action=connect&router=";
-		
-		//final String disconnect = base + "?action=disconnect\">disconnect</a>";
-		//final String adhoc = base + "?action=adhoc\">adhoc</a>";
-		//final String shutdown = base + "?action=shutdown\">shutdown</a>";
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ HTTP_REFRESH_DELAY_SECONDS + "\"></head><body> \n");
 		out.println("<table cellpadding=\"5\" >");
-		out.println("\n<tr><td colspan=\"15\"><b>available access points </b><hr></td></tr>");
+		out.println("\n<tr><td colspan=\"15\"><center><b>available access points </b></center><hr></td></tr>");
+		
+		if(state.equals(values.ssid, "ap"))  out.println("\n<tr><td colspan=\"15\"><i>ah-Hoc mode enabled</i></td></tr>");
+		else out.println("\n<tr><td colspan=\"15\">"+ adhoc +"</td></tr>");
+		
+		out.println("\n<tr>");
 		String[] result = monitor.getAccessPoints();
 		for(int i = 0; i < result.length ; i++){
 			if( ! state.equals(values.ssid, result[i])) 

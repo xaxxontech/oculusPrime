@@ -40,7 +40,7 @@ public class NetworkMonitor {
 		networkTimer.schedule(new networkTask(), 2000, POLL_DELAY_MS);
 		pingTimer.schedule(new pingTask(), 4000, POLL_DELAY_MS);
 		updateExternalIPAddress();
-		connectionsNever();
+		// connectionsNever();
 		connectionUpdate();
 		killApplet();
 	}
@@ -150,7 +150,8 @@ public class NetworkMonitor {
 			
 		return false;
 	}
-	
+
+	/*
 	private void connectionsNever(){	
 		try {
 					
@@ -178,11 +179,12 @@ public class NetworkMonitor {
 			Util.debug("removeConnection: " + e.getLocalizedMessage(), this);
 		}		
 	}
+	*/
 	
 	private void killApplet(){
 		try {
 			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-		//	Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}		
@@ -220,7 +222,11 @@ public class NetworkMonitor {
 			Util.debug("changeWIFI(): " + e.getLocalizedMessage(), this);
 		}		
 	}
-	
+
+	public void startAdhoc(){		
+		changeWIFI("ap");
+	}
+
 	private static boolean isSSID(final String line){
 		return line.contains("Strength") && line.contains("Freq");
 	}
@@ -442,7 +448,7 @@ public class NetworkMonitor {
 				state.put(values.externaladdress, address);
 
 			} catch (Exception e) {
-				Util.log("updateExternalIPAddress()", e, this);
+				Util.log("updateExternalIPAddress():", e, this);
 				state.delete(values.externaladdress);
 			}
 		} }).start();
