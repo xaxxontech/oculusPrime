@@ -29,7 +29,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 9999;
 	public static final long ROSSHUTDOWNDELAY = 20000;
 	private final Settings settings = Settings.getReference();
 
@@ -422,6 +422,7 @@ public class Navigation {
 					if (!state.exists(State.values.rosgoalstatus)) {
 						Util.log("error, state rosgoalstatus null", this);
 						cancelRoute();
+						return;
 					}
 					
 					// failed, try next waypoint
@@ -565,13 +566,13 @@ public class Navigation {
 		// turn on cam and or mic, allow delay for normalize
 		if (camera && mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
-			Util.delay(4000);
+			Util.delay(5000);
 		} else if (camera && !mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
-			Util.delay(4000);
+			Util.delay(5000);
 		} else if (!camera && mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.mic.toString());
-			Util.delay(4000);
+			Util.delay(5000);
 		}
 
 		long waypointstart = System.currentTimeMillis();
@@ -606,14 +607,15 @@ public class Navigation {
 				Util.delay(2000); // mic takes a while to start up
 			}
 
+			// WAIT
 			long start = System.currentTimeMillis();
-			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay) {} // wait
+			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay) {}
 
 			// ALERT
 			if (state.exists(State.values.streamactivity)) {
 
 				String streamactivity =  state.get(State.values.streamactivity);
-				String msg = "detected, level " + streamactivity.replaceAll("\\D","") + ", at waypoint: " + wpname + ", route: " + name;
+				String msg = "detected "+Util.getTime()+", level " + streamactivity.replaceAll("\\D","") + ", at waypoint: " + wpname + ", route: " + name;
 				Util.log(msg+" "+streamactivity, this);
 
 				if (email || rss) { // && settings.getBoolean(ManualSettings.alertsenabled) ) {

@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.image.OpenCVUtils;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -77,6 +78,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		NetworkMonitor.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
+
+//		developer.image.OpenCVUtils cv = new OpenCVUtils(); // TODO: testing
+
 		initialize();
 	}
 

@@ -17,7 +17,7 @@ public class Scratch {
         System.out.println("asdf"+System.currentTimeMillis());
         System.out.println("asdf"+System.currentTimeMillis());
         System.out.println("asdf"+System.currentTimeMillis());
-        System.out.println("asdf"+System.currentTimeMillis());
+        System.out.println("asdf"+Util.getTime());
 
 
 
