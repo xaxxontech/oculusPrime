@@ -6,10 +6,10 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
+// TODO: more responsive to be a state observer and use timer as a watchdog
 public class SystemWatchdog {
 	
 	private final Settings settings = Settings.getReference();

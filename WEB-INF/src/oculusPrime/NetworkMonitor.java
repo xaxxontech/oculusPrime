@@ -14,28 +14,95 @@ import oculusPrime.State.values;
 public class NetworkMonitor { 
 	
 	protected static final long WAN_POLL_DELAY_MS = Util.ONE_HOUR; // Util.ONE_DAY;
-	protected static final long POLL_DELAY_MS = Util.ONE_MINUTE;
+	protected static final long POLL_DELAY_MS = 15000; //  Util.ONE_MINUTE;
 
-	protected static final String WLAN = "wlan";
+	// TODO: discover and keep in static vars here 
+	protected static final String WLAN = "wlan2";
 	protected static final String ETH = "eth0";
 	
 	private static Vector<String> wlanData = new Vector<String>();
 	private static Vector<String> ethData = new Vector<String>();
 	private static Vector<String> accesspoints = new Vector<String>();
 	private static Vector<String> networkData = new Vector<String>();
-	
+
+	public static Vector<String> connections = new Vector<String>();
+
 	Timer networkTimer = new Timer();
+	Timer pingTimer = new Timer();
 	
 	public static State state = State.getReference();
-	private static NetworkMonitor singleton = null;
+	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static NetworkMonitor getReference() {
-		if(singleton == null) singleton = new NetworkMonitor();
 		return singleton;
 	}
 
 	private NetworkMonitor(){
-		networkTimer.schedule(new networkTask(), 1000, POLL_DELAY_MS);
+		networkTimer.schedule(new networkTask(), 2000, POLL_DELAY_MS);
+		pingTimer.schedule(new pingTask(), 4000, POLL_DELAY_MS);
 		updateExternalIPAddress();
+		// connectionsNever();
+		connectionUpdate();
+		killApplet();
+	}
+	
+	public class pingTask extends TimerTask {			
+	    @Override
+	    public void run() {
+	    	try{ 
+	    	
+	    		if(state.contains(values.gateway)) 
+	    			state.put(values.ethernetping, pingETH(state.get(values.gateway)));
+
+	    		if(state.contains(values.localaddress)) 
+	    			state.put(values.wifiping, pingWIFI(state.get(values.gateway)));
+
+	    		if(state.contains(values.externaladdress)) 
+	    			state.put(values.externalping, pingWIFI("www.xaxxon.com")); // state.get(values.externaladdress)));
+	    		
+	    		if( ! state.contains(values.externaladdress)) updateExternalIPAddress();
+	    		
+	    		
+	    		
+			} catch (Exception e) {
+				Util.debug("pingTask(): " + e.getLocalizedMessage(), this);
+			}		
+	    }    
+	}
+	
+	public static String pingWIFI(final String addr) throws Exception{
+		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/addr}; // TODO: force interface 
+		Process proc = Runtime.getRuntime().exec(PING);
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+							
+		String line = null;
+		while ((line = procReader.readLine()) != null){
+			if(line.contains("Unreachable")){
+				System.out.println("pingTask: Unreachable ip: " + state.get(values.gateway)); 
+				return null;
+			}
+			if(line.contains("time=")){
+				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+			}	
+		}
+		return line;	
+	}
+	
+	public static String pingETH(final String addr) throws Exception{
+		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/ addr};
+		Process proc = Runtime.getRuntime().exec(PING);
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+							
+		String line = null;
+		while ((line = procReader.readLine()) != null){
+			if(line.contains("Unreachable")){
+				System.out.println("pingTask: Unreachable ip: " + state.get(values.gateway)); 
+				return null;
+			}
+			if(line.contains("time=")){
+				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+			}	
+		}
+		return line;	
 	}
 	
 	public class networkTask extends TimerTask {
@@ -60,10 +127,10 @@ public class NetworkMonitor {
 								networkData.add(line);
 				}
 			
-				proc.waitFor();
-				 
+				
 				// Util.debug("networkTask: lines copied: " + networkData.size(), this);
-				 
+				
+				proc.waitFor();
 				readETH();
 				readWAN();
 				parseWLAN();
@@ -76,44 +143,123 @@ public class NetworkMonitor {
 	    }    
 	}
 	
-	public static boolean isSSID(final String line){
-		return line.contains("Strength") && line.contains("Freq");
+	public boolean connectionExists(final String ssid){	
+		for(int i = 0 ; i < (connections.size()) ; i++)
+			if(connections.get(i).startsWith(ssid.trim())) 
+				return true;
+			
+		return false;
+	}
+
+	/*
+	private void connectionsNever(){	
+		try {
+					
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "list"});
+			BufferedReader procReader = new BufferedReader(
+				new InputStreamReader(proc.getInputStream()));
+							
+			String line = null;
+			while ((line = procReader.readLine()) != null){
+				line = line.trim();						
+				if(line.endsWith("never")){
+					Util.debug("connectionsNever: " + line, this);
+					removeConnection(line.substring(0, 8).trim());
+				}
+			}
+		} catch (Exception e) {
+			Util.debug("connectionsNever: " + e.getLocalizedMessage(), this);
+		}		
 	}
 	
-	public static boolean isCurrentSSID(String line){
-		if( ! isSSID(line)) return false;
+	private void removeConnection(final String ssid){
+		try {
+			Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
+		} catch (Exception e) {
+			Util.debug("removeConnection: " + e.getLocalizedMessage(), this);
+		}		
+	}
+	*/
 	
-		line = line.trim();
-		if(line.startsWith("*")) return line.contains(state.get(values.ssid));
+	private void killApplet(){
+		try {
+			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
+			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+		} catch (Exception e) {
+			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
+		}		
+	}
 	
-		return line.startsWith("*");
+	public void connectionUpdate(){		
+		try {
+			connections.clear();	
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "list"});
+			BufferedReader procReader = new BufferedReader(
+				new InputStreamReader(proc.getInputStream()));
+							
+			String line = null;
+			while ((line = procReader.readLine()) != null){
+				if( !line.startsWith("NAME") && line.contains("wireless"))							
+					connections.add(line);
+			}
+		} catch (Exception e) {
+			Util.debug("connectionUpdate(): " + e.getLocalizedMessage(), this);
+		}		
+	}
+	
+	public void changeWIFI(final String ssid, final String password){	
+		try {
+			Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
+		} catch (Exception e) { 
+			Util.debug("changeWIFI: " + e.getLocalizedMessage(), this); 
+		}		
+	}
+	
+	public void changeWIFI(final String ssid){		
+		try {
+			Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid});
+		} catch (Exception e) { 
+			Util.debug("changeWIFI(): " + e.getLocalizedMessage(), this);
+		}		
+	}
+
+	public void startAdhoc(){		
+		changeWIFI("ap");
+	}
+
+	private static boolean isSSID(final String line){
+		return line.contains("Strength") && line.contains("Freq");
+	}
+
+	private void setSSID(final String line){
+		if(line.contains("[") && line.contains("]")){
+			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
+			if( ! state.equals(values.ssid, router))
+				state.set(values.ssid, router);
+		}
 	}
 	
 	private void readWAN(){
 		for(int i = 0 ; i < networkData.size() ; i++){		
 			String line = networkData.get(i);
-			if(line.startsWith("- Device: " + WLAN)){	
-				try { // fails on [xxxxx] if disconnected 
-					String ss = line.substring((line.indexOf('[')+1), line.indexOf(']'));
-					if( ! state.equals(values.ssid, ss)) state.set(values.ssid, ss);
-				} catch (Exception e) {
-					disconnecteddWAN();
-					Util.debug("..... no wan addrsss", this);
-				}
-								
+			if(line.startsWith("- Device: " + WLAN)) {	
+				setSSID(line);
 				wlanData.clear();
 				for(int j = i+1 ; j < networkData.size() ; j++){
 					if(networkData.get(j).contains("- Device")) return;
 					else wlanData.add(networkData.get(j));
 				}
-			}	
+			}
 		}
+		
+	//	Util.debug("readWAN(): " + wlanData.size(), this);
+	//	for(int i = 0 ; i < wlanData.size() ; i++) Util.debug("wlanData: " + i + " " + wlanData.get(i));
 	}
 	
 	private void readETH() { 
 		for(int i = 0 ; i < networkData.size() ; i++){		
 			String line = networkData.get(i);
-			if(line.startsWith("- Device: " + ETH)) {				
+			if(line.startsWith("- Device: " + ETH)) {	
 				ethData.clear();
 				for(int j = i+1 ; j < networkData.size() ; j++){
 					if(networkData.get(j).contains("- Device")) return;
@@ -122,24 +268,30 @@ public class NetworkMonitor {
 			}
 		}
 			
-		// Util.debug("readETH: " + ethData.size(), this);
-		// for(int i = 0 ; i < ethData.size() ; i++) Util.debug("readETH: " + i + " " + ethData.get(i), this);
+	//	Util.debug("readETH: " + ethData.size(), this);
+	//	for(int i = 0 ; i < ethData.size() ; i++) Util.debug("readETH: " + i + " " + ethData.get(i), this);
 	}
-	
+
 	private void disconnecteddWAN(){	
 		state.delete(values.ssid);
 		state.delete(values.localaddress);
 		state.delete(values.signalspeed);
+		
+		// TODO: just make those ping times get bigger?
+		
+		state.delete(values.wifiping);
+		state.delete(values.ethernetping);
+		state.delete(values.externaladdress);
 	}
-
+	
 	private void parseETH(){
 		for(int i = 0 ; i < ethData.size() ; i++){
 		
-			String line = ethData.get(i);
+			String line = ethData.get(i).trim();
 				
 			if(line.contains("State: ")){
 				if(line.contains("unavailable")){		
-					Util.debug("...parseETH: NOT available", this);
+					// Util.debug("...parseETH: NOT available", this);
 					state.delete(values.ethernetaddress);
 					return;
 				}
@@ -147,7 +299,7 @@ public class NetworkMonitor {
 			
 			if(line.contains("Address: ") && !line.startsWith("HW")){
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
-				Util.debug("parseETH: address: " + addr, this);
+				// Util.debug("parseETH: address: " + addr, this);
 				if( ! state.contains(values.ethernetaddress)) state.set(values.ethernetaddress, addr); 	
 				if( state.contains(values.ethernetaddress))
 					if( ! state.equals(values.ethernetaddress, addr))
@@ -160,23 +312,25 @@ public class NetworkMonitor {
 		
 	// 	Util.debug("parseWLAN: " + wlanData.size(), this);
 		
+		boolean star = false;
+		
 		for(int i = 0 ; i < wlanData.size() ; i++){
 		
-			String line = wlanData.get(i);
+			String line = wlanData.get(i).trim();
 			
-			if(isCurrentSSID(line)) 
-				if( ! accesspoints.contains(line)) 
-					accesspoints.add(line.substring(1));
+			if(line.startsWith("*")) {
+				line = line.substring(1);
+				star = true;
+			}
 			
-			if(isSSID(line) && !isCurrentSSID(line)) 
+			if(isSSID(line))
 				if( ! accesspoints.contains(line)) 
 					accesspoints.add(line);
 			
 			if(line.contains("Speed: ")){
 				
 				String speed = line.substring(line.indexOf("Speed: ")+7).trim();
-				Util.debug("parseWLAN: speed: " + speed, this);
-				
+				// Util.debug("parseWLAN: speed: " + speed, this);
 				if( ! state.contains(values.signalspeed)) state.set(values.signalspeed, speed); 			
 				if(state.contains(values.signalspeed)) 
 					if( ! state.equals(values.signalspeed, speed)) 
@@ -186,8 +340,7 @@ public class NetworkMonitor {
 			if(wlanData.get(i).startsWith("Address: ")){
 				
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
-				Util.debug("parseWLAN: addr: " + addr, this);
-				
+				// Util.debug("parseWLAN: addr: " + addr, this);			
 				if( ! state.contains(values.localaddress)) state.set(values.localaddress, addr);
 				if(state.contains(values.localaddress))
 					if( ! state.equals(values.localaddress, addr))
@@ -197,18 +350,28 @@ public class NetworkMonitor {
 			if(line.startsWith("Gateway: ")){
 				
 				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
-				Util.debug("parseWLAN: gate: " + gate, this);
-				
+				// Util.debug("parseWLAN: gate: " + gate, this);
 				if( ! state.contains(values.gateway)) state.set(values.gateway, gate);
 				if(state.contains(values.gateway))
 					if( ! state.get(values.gateway).equals(gate))
 						state.set(values.gateway, gate);
 				
 			}
-		}			
+			
+			/*if(line.startsWith("State: ")){
+				
+				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
+				Util.debug("parseWLAN: State: " + gate, this);
+				killApplet
+			}*/
+
+		}		
+		
+		if( !star ) disconnecteddWAN();
 	}
 	
-	public String wlanString(){
+	/*
+	public String wlanHTMLi(){
 		String text = new String("<table cellpadding=\"5\"border=\"1\">\n");
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
 			String line = accesspoints.get(j);
@@ -226,12 +389,35 @@ public class NetworkMonitor {
 		
 		return text;	
 	}
+	*/
 	
 	public String[] getAccessPoints(){
 		Vector<String> aps = new Vector<String>();
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
+			if(accesspoints.get(j).contains(":")){
+				String ssid = accesspoints.get(j).substring(0, accesspoints.get(j).indexOf(":")).trim();
+				if( ! aps.contains(ssid)) 
+					aps.add(ssid);
+			}
+		}
+		
+		int r = 0; // copy results
+		String[] result = new String[aps.size()];
+		for(int j = 0 ; j < aps.size() ; j++) 
+			result[r++] = aps.get(j);
+				
+		// Util.debug("getAccessPoints(): found [" + result.length + "] wifi routers", this);
+		// for(int i = 0; i < result.length ; i++) Util.debug((result[i]));
+		
+		return result;
+	}
+
+	/*
+	public String[] getKnownAccessPoints() {
+		Vector<String> aps = new Vector<String>();
+		for(int j = 0 ; j < accesspoints.size() ; j++) {
 			String ssid = accesspoints.get(j).substring(0, accesspoints.get(j).indexOf(":")).trim();
-			if( ! aps.contains(ssid)) 
+			if(connectionExists(ssid))
 				aps.add(ssid);
 		}
 		
@@ -240,11 +426,12 @@ public class NetworkMonitor {
 		for(int j = 0 ; j < aps.size() ; j++) 
 			result[r++] = aps.get(j);
 				
-		// Util.debug("getAccessPoints: found [" + result.length + "] wifi routers", this);
-		// for(int i = 0; i < result.length ; i++) Util.debug((i + "\t" + result[i]), this);
+		//Util.debug("getAccessPoints: found [" + result.length + "] wifi routers", this);
+		//for(int i = 0; i < result.length ; i++) Util.debug((i + "\t" + result[i]), this);
 		
 		return result;
 	}
+	*/
 	
 	private void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
@@ -261,11 +448,9 @@ public class NetworkMonitor {
 				state.put(values.externaladdress, address);
 
 			} catch (Exception e) {
-				Util.log("updateExternalIPAddress()", e, this);
+				Util.log("updateExternalIPAddress():", e, this);
 				state.delete(values.externaladdress);
 			}
-
-
 		} }).start();
 	}
 }

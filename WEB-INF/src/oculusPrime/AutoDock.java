@@ -12,7 +12,6 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import org.red5.server.api.IConnection;
 import org.red5.server.api.service.IServiceCapableConnection;
 
 public class AutoDock { 

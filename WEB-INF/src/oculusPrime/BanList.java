@@ -171,10 +171,6 @@ public class BanList {
 		// increment if there 
 		if(list.containsKey(remoteAddress)) list.put(remoteAddress, list.get(remoteAddress)+1);
 		else list.put(remoteAddress, BLOCK);
-		
-		//TODO: add to file
-		// list.put(remoteAddress, BLOCK);
-			
 	}
 	
 	@Override
@@ -198,6 +194,7 @@ public class BanList {
 				}
 			} catch (Exception e) {
 				Util.log("deleted entry: " + e.getLocalizedMessage(), this);
+				Util.log("deleted entry: Banned list: " + list.toString(), this);
 			}		
 		}
 	}

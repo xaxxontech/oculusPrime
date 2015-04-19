@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
-import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
@@ -42,7 +41,8 @@ public class State {
 		navigationrouteid, secondstonextroute,
 		
 		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress;
+		signalspeed, ssid, gateway, ethernetaddress, ethernetping, externalping, wifiping, temptest;
+		
 	};
 	
 	public String toTableHTML(){	
@@ -175,36 +175,45 @@ public class State {
 	}
 	
 	public String toDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\">");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">");
 		
-		str.append("<tr><td><b>ssid: </b>" + get(values.ssid) + " <b>address: </b>" + get(values.gateway)
-				+ "<td><b>eth: </b>" + get(values.ethernetaddress)
-				+ "<td><b>lan: </b>" + get(values.localaddress) + " <b>wan: </b>" + get(values.externaladdress)
-				+ "<td><b>speed: </b>" + get(values.signalspeed) 
-				+ "</tr>");
+		str.append("<tr><td><b>ssid </b>" + get(values.ssid) 
+				+ "<"
+				+ "td><b>ip</b> " + get(values.gateway)
+				+ "<td><b>eth </b>" + get(values.ethernetaddress)
+				+ "<td><b>lan </b>" + get(values.localaddress) 
+				+ "<td><b>wan </b>" + get(values.externaladdress)
+				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
+				+ "<td><b>wifi ping </b>" + get(values.wifiping)
+				+ "<td><b>external ping </b>" + get(values.externalping)
+				+ "<td><b>eth ping </b>" + get(values.ethernetping)
 				
-		str.append("<tr><td><b>video mode: </b>" + get(values.videosoundmode) + " <b>stream: </b>" + get(values.stream)
-				+ "<td><b>driverstream: </b>" + get(values.driverstream) + " <b>volume: </b>" + get(values.volume)
-			    + "<td><b>busy: </b>" + get(values.framegrabbusy)  
+			
 				+ "</tr>");
+	/*			
+		str.append("<tr><td><b>video mode </b>" + get(values.videosoundmode) + " <b>stream </b>" + get(values.stream)
+				+ "<td><b>driverstream </b>" + get(values.driverstream) + " <b>volume </b>" + get(values.volume)
+			    + "<td><b>busy </b>" + get(values.framegrabbusy)    
+			    + "<td><b>driver </b>" + get(values.driver) 
+		        + "<td><b>telnet </b>" + get(values.telnetusers) 
+				+ "</tr>");
+	*/
 		
-		str.append("<tr>" 
 	       	//    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
 			//    + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
-				+ "<td><b>linux uptime (minutes): </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
-		        + "<td><b>java uptime (minutes): </b>" + (getUpTime()/1000)/60 
-		        + "<td><b>driver: </b>" + get(values.driver) 
-		        + "<td><b>telnet: </b>" + get(values.telnetusers) 
-				+ "</tr>");
+			//	+ "<td><b>linux uptime (minutes) </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
+		    //    + "<td><b>java uptime (minutes) </b>" + (getUpTime()/1000)/60 
 	
-		str.append("<tr><td><b>motor port: </b>" + get(values.motorport) 
-				+ "<td><b>motion: </b>" + get(values.motionenabled) + " <td><b>moving: </b>" + get(values.moving) 
-				+ "<td><b>direction: </b>" + get(values.direction) + " <td><b>speed: </b>" + get(values.motorspeed) 
+		str.append("<tr><td><b>motor port </b>" + get(values.motorport) 
+				+ "<td><b>linux uptime [</b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) / 60) + "] <b>minutes</b>"
+				+ "<td><b>motion </b>" + get(values.motionenabled) + " <b>moving </b>" + get(values.moving)
+				// + " <b>direction </b>" + get(values.direction) // + " <td><b>speed </b>" + get(values.motorspeed) 
 				+ "</tr>");
-		
-		str.append("<tr><td><b>power port: </b>" + get(values.powerport)
-				+ "<td><b>volts: </b>" + get(values.battvolts) + " <td><b>life:</b> " + get(values.batterylife) 
-				+ "<td><b>wall power: </b>" + get(values.wallpower) + "  <td><b>status: </b>" + get(values.dockstatus)
+				
+		str.append("<tr><td><b>power port </b>" + get(values.powerport)
+				+ "<td><b>java uptime [</b>" + (getUpTime()/1000)/60  + "] <b>minutes</b>"
+				+ "<td><b>volts </b>" + get(values.battvolts) + " <b>life </b> " + get(values.batterylife) 
+			//	+ "<td><b>wall power </b>" + get(values.wallpower) + " <b>status </b>" + get(values.dockstatus)
 				+ "</tr>");
 		
 		/*
