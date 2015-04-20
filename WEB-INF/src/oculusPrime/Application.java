@@ -79,7 +79,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
 
-//		developer.image.OpenCVUtils cv = new OpenCVUtils(); // TODO: testing
+		Util.log("loading opencv native lib", this);
+		developer.image.OpenCVUtils cv = new OpenCVUtils(); // TODO: testing
 
 		initialize();
 	}
@@ -1344,12 +1345,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		PowerLogger.append("shutting down application", this);
 		
 		if(commandServer!=null) { 
-			commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); 
+			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
+			commandServer.close();
 		}
 		
 		// TODO: kills the eeprom details getting to log file?
 		powerport.writeStatusToEeprom();
-		commandServer.close();
 		PowerLogger.close();
 		
 		if (navigation != null && state.exists(State.values.navigationenabled)) 

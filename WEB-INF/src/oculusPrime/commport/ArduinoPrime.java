@@ -482,10 +482,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			public void run() {
 
 			long start = System.currentTimeMillis();
-			while (sendCommandLock && System.currentTimeMillis() - start < 1000) {} // wait
+			while (sendCommandLock && System.currentTimeMillis() - start < 100) {} // wait
 
 			if (sendCommandLock) { // TODO: testing
-				Util.log("error sendCommadLock still locked after timeout", this);
+				Util.log("error sendCommandLock still locked after timeout", this);
 				return;
 			}
 

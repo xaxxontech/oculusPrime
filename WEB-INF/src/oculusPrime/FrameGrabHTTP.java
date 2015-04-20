@@ -26,13 +26,14 @@ import java.util.Calendar;
 public class FrameGrabHTTP extends HttpServlet {
 	
 	private static Application app = null;
-	private static State state = State.getReference();
+	private static State state;
 	
 	private static int var;
 	private static BufferedImage radarImage = null;
 	
 	public static void setApp(Application a) {
 		if(app != null) return;
+		state = State.getReference();
 		app = a;
 		var = 0;
 	}

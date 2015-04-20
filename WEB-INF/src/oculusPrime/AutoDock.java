@@ -431,7 +431,7 @@ public class AutoDock {
 				}
 			} // end of S1 check
 
-			if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
+			else if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
 				if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
 				int fl = state.getInteger(State.values.floodlightlevel);
 				if (fl > 0 && fl != 15) comport.floodLight(FLLOW);
@@ -503,7 +503,7 @@ public class AutoDock {
 					}
 				}
 			}
-			if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
+			else if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
 				if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
 					autodockctrattempts++;
 
