@@ -20,7 +20,7 @@ import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
 import org.jasypt.util.password.*;
-import org.red5.io.amf3.ByteArray;
+//import org.red5.io.amf3.ByteArray;
 
 import developer.Navigation;
 import developer.UpdateFTP;
@@ -53,7 +53,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
 	private SystemWatchdog watchdog;
-	
+
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
 	public TelnetServer commandServer = null;
@@ -79,8 +79,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
 
-		Util.log("loading opencv native lib", this);
-		developer.image.OpenCVUtils cv = new OpenCVUtils(); // TODO: testing
+//		Util.log("loading opencv native lib", this);
+//		developer.image.OpenCVUtils cv = new OpenCVUtils(); // TODO: testing
 
 		initialize();
 	}
@@ -1020,19 +1020,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 	/** called by Flash oculusPrime_grabber.swf 
 	 * is NOT blocking for some reason ?
 	 * */
-	public void frameGrabbed(ByteArray _RAWBitmapImage) { 
-
-		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
-		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
-													// into a standard Java
-													// array of bytes
-		byte c[] = new byte[BWholeSize];
-		_RAWBitmapImage.readBytes(c);
-		if (BCurrentlyAvailable > 0) {
-			state.set(State.values.framegrabbusy.name(), false);
-			framegrabimg = c;
-		}
-	}
+//	public void frameGrabbed(ByteArray _RAWBitmapImage) {
+//
+//		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
+//		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
+//													// into a standard Java
+//													// array of bytes
+//		byte c[] = new byte[BWholeSize];
+//		_RAWBitmapImage.readBytes(c);
+//		if (BCurrentlyAvailable > 0) {
+//			state.set(State.values.framegrabbusy.name(), false);
+//			framegrabimg = c;
+//		}
+//	}
 	
 	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
 	 * linux only for now

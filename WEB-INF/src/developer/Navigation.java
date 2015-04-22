@@ -122,6 +122,7 @@ public class Navigation {
 			if (state.getBoolean(State.values.navigationenabled)) return; // success
 			
 			// ========try again if needed, just once======
+			if (!state.exists(State.values.navigationenabled)) return; // in case cancelled
 
 			Util.log("navigation start attempt #2", this);
 			stopNavigation(); // ros script deletes state navigationenabled after couple secs
@@ -243,9 +244,10 @@ public class Navigation {
 					System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT)  
 				Util.delay(100); 
 				
-			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) 
+			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				Util.delay(2000);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+			} else  Util.log("dock() - unable to dock", this);
 			
 			
 		}  }).start();
@@ -460,6 +462,9 @@ public class Navigation {
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					cancelRoute();
+					// try docking one more time, sending alert if fail
+					Util.log("calling redock()", this);
+					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 					return; 
 				}
 

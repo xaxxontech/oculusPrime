@@ -946,7 +946,7 @@ function routesmenu() {
 
 	var date = new Date().getTime();
 	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload&date="+date, routesload);
-	else routespopulate(routesxml);
+	else routespopulate();
 
 }
 

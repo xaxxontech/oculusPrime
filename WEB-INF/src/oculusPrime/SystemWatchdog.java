@@ -242,7 +242,9 @@ public class SystemWatchdog {
 		PowerLogger.append("callForHelp() " + subject + " " + body, this);
 
 		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
-		
+
+		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
+				settings.readRed5Setting("http.port")+"/oculusPrime/";
 		String emailto = settings.readSetting(ManualSettings.email_to_address);
 		if (!emailto.equals(Settings.DISABLED))
 			application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);

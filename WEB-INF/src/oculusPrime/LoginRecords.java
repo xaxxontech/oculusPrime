@@ -112,8 +112,7 @@ public class LoginRecords {
 			}
 		}
 		if (app.commandServer!=null) {
-			// TODO: fix...... 
-			result+="telnet connections: brad will fix this.. "; // +app.commandServer.printers.size(); 
+			result+="telnet connections: "+state.get(State.values.telnetusers); // +app.commandServer.printers.size();
 		}
 
 		return result;
