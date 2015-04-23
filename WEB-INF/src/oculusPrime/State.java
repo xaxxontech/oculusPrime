@@ -41,7 +41,7 @@ public class State {
 		navigationrouteid, nextroutetime,
 		
 		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress, ethernetping, externalping, wifiping, temptest
+		signalspeed, ssid, gateway, ethernetaddress, // ethernetping, externalping, //wifiping, temptest
 		
 	}
 
@@ -189,9 +189,9 @@ public class State {
 				+ "<td><b>lan </b>" + get(values.localaddress) 
 				+ "<td><b>wan </b>" + get(values.externaladdress)
 				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
-				+ "<td><b>wifi ping </b>" + get(values.wifiping)
-				+ "<td><b>external ping </b>" + get(values.externalping)
-				+ "<td><b>eth ping </b>" + get(values.ethernetping)
+//				+ "<td><b>wifi ping </b>" + get(values.wifiping)
+//				+ "<td><b>external ping </b>" + get(values.externalping)
+	//			+ "<td><b>eth ping </b>" + get(values.ethernetping)
 				
 			
 				+ "</tr>");

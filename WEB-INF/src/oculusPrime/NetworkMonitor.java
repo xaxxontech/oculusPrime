@@ -13,22 +13,25 @@ import oculusPrime.State.values;
 
 public class NetworkMonitor { 
 	
-	protected static final long WAN_POLL_DELAY_MS = Util.ONE_HOUR; // Util.ONE_DAY;
-	protected static final long POLL_DELAY_MS = 15000; //  Util.ONE_MINUTE;
+	protected static final long POLL_DELAY_MS = 1000; //  Util.ONE_MINUTE;
 
-	// TODO: discover and keep in static vars here 
-	protected static final String WLAN = "wlan2";
-	protected static final String ETH = "eth0";
 	
 	private static Vector<String> wlanData = new Vector<String>();
 	private static Vector<String> ethData = new Vector<String>();
 	private static Vector<String> accesspoints = new Vector<String>();
 	private static Vector<String> networkData = new Vector<String>();
+	private static Vector<String> connections = new Vector<String>();
 
-	public static Vector<String> connections = new Vector<String>();
-
+	// TODO: discover and keep in static vars here 
+	protected static final String WLAN = "wlan2";
+	protected static final String ETH = "eth0";
+	
 	Timer networkTimer = new Timer();
 	Timer pingTimer = new Timer();
+	
+	public static String pingValue = null;
+	public static String pingLast = null;
+	// public static String ping = null;
 	
 	public static State state = State.getReference();
 	private static NetworkMonitor singleton = new NetworkMonitor();
@@ -38,9 +41,9 @@ public class NetworkMonitor {
 
 	private NetworkMonitor(){
 		networkTimer.schedule(new networkTask(), 2000, POLL_DELAY_MS);
-		pingTimer.schedule(new pingTask(), 4000, POLL_DELAY_MS);
+		pingTimer.schedule(new pingTask(), 9000, POLL_DELAY_MS);
 		updateExternalIPAddress();
-		// connectionsNever();
+		connectionsNever();
 		connectionUpdate();
 		killApplet();
 	}
@@ -50,58 +53,76 @@ public class NetworkMonitor {
 	    public void run() {
 	    	try{ 
 	    	
-	    		if(state.contains(values.gateway)) 
-	    			state.put(values.ethernetping, pingETH(state.get(values.gateway)));
+	    	//if(state.contains(values.ethernetping)) 
+	    		//	state.put(values.ethernetping, pingETH(state.get(values.gateway)));
 
-	    		if(state.contains(values.localaddress)) 
-	    			state.put(values.wifiping, pingWIFI(state.get(values.gateway)));
+	    	//	if(state.contains(values.localaddress)) 
+	    	//		state.put(values.wifiping, pingWIFI(state.get(values.gateway)));
 
-	    		if(state.contains(values.externaladdress)) 
-	    			state.put(values.externalping, pingWIFI("www.xaxxon.com")); // state.get(values.externaladdress)));
+	    		if(state.contains(values.externaladdress)) {
+	    			pingValue = pingWIFI("www.xaxxon.com");
+	    			if(pingValue == null){
+	    				
+	    				// try twice 
+	    				Util.delay(5000);
+	    				pingValue = pingWIFI("www.xaxxon.com");
+		    			if(pingValue == null){
+		    				
+		    				startAdhoc();
+	    					return;
+		    			}
+	    			}
+	    			
+	    	//		state.put(values.externalping, ping); 
+	    			
+	    		}
 	    		
 	    		if( ! state.contains(values.externaladdress)) updateExternalIPAddress();
-	    		
-	    		
-	    		
+	    			
 			} catch (Exception e) {
-				Util.debug("pingTask(): " + e.getLocalizedMessage(), this);
+				Util.debug("pingTask(): " + e, this);
 			}		
 	    }    
 	}
 	
 	public static String pingWIFI(final String addr) throws Exception{
+		long start = System.currentTimeMillis();
 		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/addr}; // TODO: force interface 
 		Process proc = Runtime.getRuntime().exec(PING);
 		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 							
 		String line = null;
 		while ((line = procReader.readLine()) != null){
-			if(line.contains("Unreachable")){
-				System.out.println("pingTask: Unreachable ip: " + state.get(values.gateway)); 
-				return null;
-			}
+		//	if(line.contains("Unreachable")){
+		//		System.out.println("pingTask: Unreachable ip: " + state.get(values.gateway)); 
+		//		return null;
+		//	}
 			if(line.contains("time=")){
 				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 			}	
 		}
+		Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
 		return line;	
 	}
 	
 	public static String pingETH(final String addr) throws Exception{
+		long start = System.currentTimeMillis();
 		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/ addr};
 		Process proc = Runtime.getRuntime().exec(PING);
 		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 							
 		String line = null;
 		while ((line = procReader.readLine()) != null){
-			if(line.contains("Unreachable")){
-				System.out.println("pingTask: Unreachable ip: " + state.get(values.gateway)); 
-				return null;
-			}
+			//if(line.contains("Unreachable")){
+			//	System.out.println("pingTask: Unreachable ip: " + state.get(values.gateway)); 
+			//	return null;
+			//}
 			if(line.contains("time=")){
 				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 			}	
 		}
+		
+		Util.debug("pingETH(): ping took: " + (System.currentTimeMillis()-start));
 		return line;	
 	}
 	
@@ -151,11 +172,10 @@ public class NetworkMonitor {
 		return false;
 	}
 
-	/*
 	private void connectionsNever(){	
 		try {
 					
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "list"});
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", /*"list"*/ });
 			BufferedReader procReader = new BufferedReader(
 				new InputStreamReader(proc.getInputStream()));
 							
@@ -175,16 +195,16 @@ public class NetworkMonitor {
 	private void removeConnection(final String ssid){
 		try {
 			Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
+			Util.debug("removeConnection: " + ssid, this);
 		} catch (Exception e) {
 			Util.debug("removeConnection: " + e.getLocalizedMessage(), this);
 		}		
 	}
-	*/
 	
 	private void killApplet(){
 		try {
 			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+		//	Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}		
@@ -193,7 +213,7 @@ public class NetworkMonitor {
 	public void connectionUpdate(){		
 		try {
 			connections.clear();	
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "list"});
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", /* "list"*/ });
 			BufferedReader procReader = new BufferedReader(
 				new InputStreamReader(proc.getInputStream()));
 							
@@ -279,8 +299,8 @@ public class NetworkMonitor {
 		
 		// TODO: just make those ping times get bigger?
 		
-		state.delete(values.wifiping);
-		state.delete(values.ethernetping);
+//		state.delete(values.wifiping);
+//		state.delete(values.ethernetping);
 //		state.delete(values.externaladdress); // TODO: need this
 	}
 	
