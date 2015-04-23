@@ -139,7 +139,7 @@ public class NetworkMonitor {
 				}
 			
 				
-				Util.log("networkTask: lines copied: " + networkData.size(), this);
+				// Util.log("networkTask: lines copied: " + networkData.size(), this);
 				
 				proc.waitFor();
 				readETH();
@@ -248,7 +248,7 @@ public class NetworkMonitor {
 		Util.debug("ssid: " + line, this);
 		if(line.contains("[") && line.contains("]")){
 			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
-			// if( ! state.equals(values.ssid, router))
+			 if( ! state.equals(values.ssid, router))
 				state.set(values.ssid, router);
 		}
 	}
