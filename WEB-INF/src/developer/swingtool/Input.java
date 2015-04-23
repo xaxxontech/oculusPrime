@@ -100,7 +100,7 @@ public class Input extends JTextField implements KeyListener {
 			
 			if (stateptr++ >= (state.length-1)) stateptr = 0;
 
-			setText("state " + state[stateptr].name() + " ");
+			setText("state delete " + state[stateptr].name() + " ");
 
 			setCaretPosition(getText().length());
 		
@@ -108,7 +108,7 @@ public class Input extends JTextField implements KeyListener {
 			
 			if (stateptr-- <= 0) stateptr = (state.length-1);
 			
-			setText("state " + state[stateptr].name() + " ");
+			setText("state delete " + state[stateptr].name() + " ");
 
 			setCaretPosition(getText().length());
 			

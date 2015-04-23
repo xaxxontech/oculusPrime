@@ -11,6 +11,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
 
+import oculusPrime.State.values;
+
 public class State {
 	
 	public enum values{ 
@@ -189,7 +191,7 @@ public class State {
 				+ "<td><b>lan </b>" + get(values.localaddress) 
 				+ "<td><b>wan </b>" + get(values.externaladdress)
 				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
-//				+ "<td><b>wifi ping </b>" + get(values.wifiping)
+				+ "<td><b>external ping </b>" + NetworkMonitor.pingValue
 //				+ "<td><b>external ping </b>" + get(values.externalping)
 	//			+ "<td><b>eth ping </b>" + get(values.ethernetping)
 				
@@ -504,18 +506,18 @@ public class State {
 		else set(key, "false");
 	}
 	
-	/** */
 	public synchronized boolean exists(values key) {
-		return props.containsKey(key.toString());
+		return props.containsKey(key.toString().trim());
 	}
 	
-	/** */
 	public synchronized boolean exists(String key) {
-		return props.containsKey(key);
+		return props.containsKey(key.trim());
 	}
 	
-	/** */ 
 	public synchronized void delete(String key) {
+		
+		if( ! props.containsKey(key)) return;
+		
 		props.remove(key);
 		for(int i = 0 ; i < observers.size() ; i++)
 			observers.get(i).updated(key);	
@@ -526,7 +528,7 @@ public class State {
 	}
 
 	public void delete(values key) {
-		delete(key.name());
+		if(exists(key)) delete(key.name());
 	}
 
 	public int getInteger(values key) {
@@ -576,7 +578,11 @@ public class State {
 	public void put(values value, double b) {
 		put(value, String.valueOf(b));
 	}
-
+	
+	public void put(values key, values update) {
+		put(key, update.name());
+	}
+	
 	public double getDouble(String key) {
 		double value = ERROR;
 		
@@ -598,15 +604,4 @@ public class State {
 		return true; 
 	}
 
-	public boolean contains(values arg) {
-		
-		boolean exist = false;
-		if(get(arg) != null) exist = true;
-		
-
-		return exist;
-		
-	}
-
-	
 }

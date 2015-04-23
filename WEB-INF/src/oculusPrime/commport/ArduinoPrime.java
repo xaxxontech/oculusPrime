@@ -133,7 +133,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
 
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
-		state.put(State.values.direction, direction.stop.toString());
+		state.put(State.values.direction, direction.stop.name()); // .toString());
 
 		state.put(State.values.odomturnpwm, speedmed);
 		state.put(State.values.odomlinearpwm, speedmed);
@@ -328,7 +328,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        if (portNames.length == 0) return;
 	        
 	        String otherdevice = "";
-	        if (state.exists(State.values.powerport.toString())) 
+	        if (state.exists(State.values.powerport)) 
 	        	otherdevice = state.get(State.values.powerport);
 	        
 	        for (int i=0; i<portNames.length; i++) {
