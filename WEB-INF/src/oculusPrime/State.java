@@ -38,14 +38,19 @@ public class State {
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navigationenabled,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		navigationrouteid, secondstonextroute,
+		navigationrouteid, nextroutetime,
 		
 		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress, ethernetping, externalping, wifiping, temptest;
+		signalspeed, ssid, gateway, ethernetaddress, ethernetping, externalping, wifiping, temptest
 		
-	};
-	
-	public String toTableHTML(){	
+	}
+
+	/** not to be broadcast over telnet channel when updated, to reduce chatter */
+	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
+		odomturnpwm, odomlinearpwm}
+
+
+	public String toTableHTML(){
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
 		
 		str.append("<tr>" 
@@ -193,7 +198,7 @@ public class State {
 	/*			
 		str.append("<tr><td><b>video mode </b>" + get(values.videosoundmode) + " <b>stream </b>" + get(values.stream)
 				+ "<td><b>driverstream </b>" + get(values.driverstream) + " <b>volume </b>" + get(values.volume)
-			    + "<td><b>busy </b>" + get(values.framegrabbusy)    
+			    + "<td><b>busy </b>" + get(values.framegrabbusy)    odomturnpwm
 			    + "<td><b>driver </b>" + get(values.driver) 
 		        + "<td><b>telnet </b>" + get(values.telnetusers) 
 				+ "</tr>");
@@ -244,9 +249,6 @@ public class State {
 		return str.toString();
 	}
 	
-	/** not to be broadcast over telnet channel when updated, to reduce chatter */
-	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, odomturnpwm, odomupdatedz ;};	
-		
 	public static final int ERROR = -1;
 
 	/** notify these on change events */

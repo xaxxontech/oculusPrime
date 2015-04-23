@@ -46,7 +46,6 @@ function navigationmenu() {
 	}
  		
 	var date = new Date().getTime();
-//	rosmapinfotimer = setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+date+"', rosinfo);", 510);
 	clearTimeout(rosmapinfotimer);
 	openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
 }
@@ -239,7 +238,7 @@ function rosinfo() {
 						}
 						break;
 						
-					case "secondstonextroute":
+					case "nextroutetime":
 						secondstonextroute = ss[1];
 				
 				}
@@ -276,8 +275,8 @@ function rosinfo() {
 			// test for refresh?
 			var r = false;
 			if (document.getElementById("navmenutest")) r = true;
-			if (document.getElementById("rosmapimg")) r = true;
-			if (document.getElementById("routesmenutest")) r = true;
+			else if (document.getElementById("rosmapimg")) r = true;
+			else if (document.getElementById("routesmenutest")) r = true;
 			if (r)
 				rosmapinfotimer = setTimeout("openxmlhttp('frameGrabHTTP?mode=rosmapinfo&date="+t+"', rosinfo);", 510);
 			
@@ -946,8 +945,7 @@ function routesmenu() {
 
 	var date = new Date().getTime();
 	if (routesxml == null) openxmlhttp("frameGrabHTTP?mode=routesload&date="+date, routesload);
-	else routespopulate();
-
+	else routespopulate();	
 }
 
 function routesload() {
@@ -989,6 +987,10 @@ function routespopulate() {
 	
 	document.getElementById('routeslist').innerHTML = str;
 	popupmenu('menu','resize');
+		
+	var date = new Date().getTime();
+	clearTimeout(rosmapinfotimer);
+	openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
 }
 
 function activateroute(name) {

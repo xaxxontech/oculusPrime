@@ -144,8 +144,14 @@ public class Ros {
 		if (state.exists(State.values.navigationroute))
 			str += " " + State.values.navigationroute.toString() + "_" + state.get(State.values.navigationroute);
 
-		if (state.exists(State.values.secondstonextroute))
-			str += " " + State.values.secondstonextroute.toString() + "_" + state.get(State.values.secondstonextroute);
+		if (state.exists(State.values.nextroutetime)) {
+			long now = System.currentTimeMillis();
+			if (state.getLong(State.values.nextroutetime) > now) {
+				str += " " + State.values.nextroutetime.toString() + "_" +
+						String.valueOf((int) ((state.getLong(State.values.nextroutetime)-now)/1000));
+			}
+			else state.delete(State.values.nextroutetime);
+		}
 
 		return str;
 	}

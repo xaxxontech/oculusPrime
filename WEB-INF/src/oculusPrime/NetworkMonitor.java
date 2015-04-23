@@ -281,7 +281,7 @@ public class NetworkMonitor {
 		
 		state.delete(values.wifiping);
 		state.delete(values.ethernetping);
-		state.delete(values.externaladdress);
+//		state.delete(values.externaladdress); // TODO: need this
 	}
 	
 	private void parseETH(){

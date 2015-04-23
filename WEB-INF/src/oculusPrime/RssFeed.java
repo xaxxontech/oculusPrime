@@ -132,13 +132,5 @@ public class RssFeed {
 			this.guid = this.link;
 		}
 	}
-	
-	// urltitle = params[:title].strip.downcase.gsub(/[^a-z0-9]+/i, '-')
-    public static void main(String[] args) {
-        System.out.println("Testing");
 
-
-    }
-
-	
 }

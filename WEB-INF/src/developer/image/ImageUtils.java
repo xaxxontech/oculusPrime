@@ -1,5 +1,6 @@
 package developer.image;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.awt.image.ConvolveOp;
@@ -166,27 +167,7 @@ public class ImageUtils {
 		}
 		return bwpxls;
 	}
-	
-//	public int[] middleMass(int[] bwpxls, int width, int height) {
-//		int[] ctrxy = new int[2];
-//		int xavg = (width/2)*width*height; // ctr
-//		int yavg = (height/2)*width*height; // ctr
-//
-//		for(int y=0; y<height; y++) {
-//			for (int x=0; x<width; x++) {
-//				if (bwpxls[x + y*width] != 0) { 
-//					xavg += x;
-//					yavg += y;
-//				}
-//				else { xavg -= x; yavg -= y; } 
-//			}
-//		}
-//		
-//		ctrxy[0]= xavg/(width*height);
-//		ctrxy[1]= yavg/(width*height);
-//		return ctrxy;
-//	}
-	
+
 	public int[] middleMass(int[] bwpxls, int width, int height, int sensitivty) {
 		int[] ctrxy = new int[2];
 		int xavg = (width/2) * width*height; // ctr
@@ -207,12 +188,6 @@ public class ImageUtils {
 		return ctrxy;
 	}
 	
-	/* find ctr of overall average brightest, xy point
-	 * any frame of all single level would be width/2, height/2
-	 * for x: 
-	 * find intensity ctr for each row, average all (weighted by each average) to arrive at single x
-	 * 
-	 */
 	public int[] middleMassGrey(int[] greypxls, int width, int height) {
 		int[] restultxy = new int[2];
 		
@@ -243,13 +218,32 @@ public class ImageUtils {
 		restultxy[1]= 0;
 		return restultxy;
 	}
-	
-    public static void main(String[] args) { // scratch
-        System.out.println("Testing");
-        String s = Integer.toString(12288000/(320*240));
-		System.out.println(s);
 
+	/*
+	public static BufferedImage toBufferedImageOfType(BufferedImage original, int type) {
+		if (original == null) {
+			throw new IllegalArgumentException("original == null");
+		}
 
-    }
-	
+		// Don't convert if it already has correct type
+		if (original.getType() == type) {
+			return original;
+		}
+
+		// Create a buffered image
+		BufferedImage image = new BufferedImage(original.getWidth(), original.getHeight(), type);
+
+		// Draw the image onto the new buffer
+		Graphics2D g = image.createGraphics();
+		try {
+			g.setComposite(AlphaComposite.Src);
+			g.drawImage(original, 0, 0, null);
+		}
+		finally {
+			g.dispose();
+		}
+
+		return image;
+	}
+	*/
 }

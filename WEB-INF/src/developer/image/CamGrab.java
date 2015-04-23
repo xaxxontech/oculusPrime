@@ -35,7 +35,7 @@ public class CamGrab extends Component {
     public CamGrab() {
        try {
 //           img = ImageIO.read(new File("strawberry.jpg"));
-    	   img = ImageIO.read(new URL("http://127.0.0.1:5080/oculus/frameGrabHTTP"));
+    	   img = ImageIO.read(new URL("http://127.0.0.1:5080/oculusPrime/frameGrabHTTP"));
        } catch (IOException e) {
        }
  

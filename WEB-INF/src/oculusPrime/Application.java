@@ -10,7 +10,6 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
-import developer.image.OpenCVUtils;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -20,7 +19,6 @@ import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
 import org.jasypt.util.password.*;
-//import org.red5.io.amf3.ByteArray;
 
 import developer.Navigation;
 import developer.UpdateFTP;
@@ -37,6 +35,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final String VIDEOSOUNDMODELOW = "low";
 	public static final String VIDEOSOUNDMODEHIGH = "high";
 	private static final int STREAM_CONNECT_DELAY = 2000;
+	private static final int GRABBERRELOADTIMEOUT = 5000;
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
@@ -922,7 +921,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("stream control unavailable, server may be in setup mode", null, null);
 			return;
 		}
-		
+
+		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
+		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) {}
+		if (!(grabber instanceof IServiceCapableConnection))
+			Util.log("setGrabberVideoSoundMode() grabber reload timeout", this);
+
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 		sc.invoke("videoSoundMode", new Object[] { str });
 		state.set(State.values.videosoundmode.name(), str);
@@ -943,18 +947,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		try {
 			// commands: camandmic camera mic stop
-			if (grabber instanceof IServiceCapableConnection) {
-				IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-				String current = settings.readSetting("vset");
-				String vals[] = (settings.readSetting(current)).split("_");
-				int width = Integer.parseInt(vals[0]);
-				int height = Integer.parseInt(vals[1]);
-				int fps = Integer.parseInt(vals[2]);
-				int quality = Integer.parseInt(vals[3]);
-				sc.invoke("publish", new Object[] { mode.toString(), width, height, fps, quality });
-				messageplayer("command received: publish " + mode.toString(), null, null);
-				Util.log("publish: " + mode.toString(), this);
-			}
+
+			long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
+			while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) {}
+			if (!(grabber instanceof IServiceCapableConnection)) Util.log("publish() grabber reload timeout", this);
+
+			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
+			String current = settings.readSetting("vset");
+			String vals[] = (settings.readSetting(current)).split("_");
+			int width = Integer.parseInt(vals[0]);
+			int height = Integer.parseInt(vals[1]);
+			int fps = Integer.parseInt(vals[2]);
+			int quality = Integer.parseInt(vals[3]);
+			sc.invoke("publish", new Object[] { mode.toString(), width, height, fps, quality });
+			messageplayer("command received: publish " + mode.toString(), null, null);
+			Util.log("publish: " + mode.toString(), this);
+
 		} catch (NumberFormatException e) {
 			Util.log("publish() " + e.getMessage(),this);
 			Util.printError(e);
@@ -1012,7 +1020,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			sc.invoke("framegrab", new Object[] {});
 			state.set(State.values.framegrabbusy.name(), true);
 		}
-		
+
 //		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
@@ -1365,7 +1373,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	@SuppressWarnings("incomplete-switch")
 	public void move(final String str) {
 
-		if (str.equals("stop")) {
+		if (str.equals(ArduinoPrime.direction.stop.toString())) {
 			if (state.getBoolean(State.values.autodocking))
 				docker.autoDockCancel();
 
@@ -1382,7 +1390,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 		
-		if (str.equals("forward")) {
+		if (str.equals(ArduinoPrime.direction.forward.toString())) {
 			if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
 			comport.goForward();
 		}
@@ -1551,7 +1559,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		loginRecords.bePassenger(user);
 		
 		if (settings.getBoolean(GUISettings.loginnotify)) {
-			saySpeech("passenger lawg inn " + user);
+			saySpeech("passenger lawg inn f" + user);
 		}
 	}
 
@@ -2083,6 +2091,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			state.delete(State.values.streamactivityenabled);
 			state.delete(State.values.streamactivitythreshold);
 		}
+
+		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
+		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) {}
+		if (!(grabber instanceof IServiceCapableConnection))
+			Util.log("setStreamActivityThreshold() grabber reload timeout", this);
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 		sc.invoke("setActivityThreshold", new Object[] { videoThreshold, audioThreshold });

@@ -2,22 +2,12 @@ package developer.image;
 
 
 import java.awt.image.BufferedImage;
-
-
-
-
-
+import java.awt.image.DataBufferByte;
 
 
 import oculusPrime.Util;
 
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfRect;
-import org.opencv.core.Point;
-import org.opencv.core.Rect;
-import org.opencv.core.Scalar;
-import org.opencv.core.Size;
+import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 import org.opencv.imgproc.Imgproc;
@@ -58,27 +48,16 @@ public class OpenCVUtils {
 		image.getRaster().setDataElements(0, 0, cols, rows, data);
 		return image;
 	}
-    
-    
-//    public BufferedImage webcamCapture(int camnum) {
-//    	BufferedImage img = null;
-//    	Mat webcam_image=getWebCamImg(camnum); 
-//    	if( webcam_image != null) {
-//    		Imgproc.cvtColor(webcam_image, webcam_image, Imgproc.COLOR_BGR2GRAY);
-//    		Imgproc.equalizeHist(webcam_image, webcam_image);
-//    		Imgproc.blur(webcam_image, webcam_image, new Size(3,3));
-//    		Imgproc.cvtColor(webcam_image, webcam_image, Imgproc.COLOR_GRAY2BGR);
-////    		Mat resizeimage = new Mat();
-////    		Size sz = new Size(320,240);
-////    		Imgproc.resize( blurimg, resizeimage, sz );
-//    		img = matToBufferedImage(webcam_image);
-//    	}
-//    	else {
-//    		System.out.println("no camera image available");
-//    	}
-//    	return img;
-//    }
-    
+
+	public Mat bufferedImageToMat(BufferedImage img) {
+//		img = ImageUtils.toBufferedImageOfType(img, BufferedImage.TYPE_3BYTE_BGR);
+
+		byte[] pixels = ((DataBufferByte) img.getRaster().getDataBuffer()).getData();
+		Mat m = new Mat(img.getHeight(), img.getWidth(), CvType.CV_8UC3);
+		m.put(0,0,pixels);
+		return m;
+	}
+
     public Mat getWebCamImg(VideoCapture capture) {
 //    	VideoCapture capture =new VideoCapture(camnum); 
     	capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 320);

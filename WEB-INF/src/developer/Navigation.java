@@ -29,7 +29,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 9999;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
 	public static final long ROSSHUTDOWNDELAY = 20000;
 	private final Settings settings = Settings.getReference();
 
@@ -352,7 +352,7 @@ public class Navigation {
 			
 			while (true) {
 
-				state.delete(State.values.secondstonextroute);
+				state.delete(State.values.nextroutetime);
 
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
@@ -478,16 +478,16 @@ public class Navigation {
 					// delay to next route
 				String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
 		    	long timebetween = Long.parseLong(min) * 1000 * 60;
+				state.set(State.values.nextroutetime, System.currentTimeMillis()+timebetween);
 				app.driverCallServer(PlayerCommands.messageclients, min +  msg);
 		    	start = System.currentTimeMillis();
 				while (System.currentTimeMillis() - start < timebetween) {
-					state.set(State.values.secondstonextroute, (int) ((timebetween - (System.currentTimeMillis()-start))/1000));
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 					Util.delay(1000);
 				}
 
-				state.delete(State.values.secondstonextroute);
+				state.delete(State.values.nextroutetime);
 
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
 					app.restart();
@@ -655,10 +655,13 @@ public class Navigation {
 			}
 
 			if (rotate) {
+				if (camera) Util.delay(2000); // TODO: need this due to motiondetect cpu 100%
 				app.driverCallServer(PlayerCommands.left, "45");
-				long stopwaiting = System.currentTimeMillis()+10000; // timeout if error
+
+				long stopwaiting = System.currentTimeMillis()+5000; // timeout if error
 				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
 						System.currentTimeMillis() < stopwaiting) { Util.delay(10); } // wait for stop
+
 				Util.delay(2000); // allow cam to normalize
 				turns ++;
 			}
@@ -695,7 +698,7 @@ public class Navigation {
 	public void cancelRoute() {
 		state.delete(State.values.navigationroute); // this eventually stops currently running route
 		goalCancel();
-		state.delete(State.values.secondstonextroute);
+		state.delete(State.values.nextroutetime);
 
 		// check for route name
 		Document document = Util.loadXMLFromString(routesLoad());
