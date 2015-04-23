@@ -2,10 +2,11 @@ package oculusPrime.commport;
 
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 
+import jssc.SerialPort;
+import jssc.SerialPortEvent;
+import jssc.SerialPortException;
 import jssc.SerialPortList;
-import developer.depth.Mapper;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;
@@ -13,9 +14,7 @@ import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
-import jssc.SerialPort;
-import jssc.SerialPortEvent;
-import jssc.SerialPortException;
+import developer.depth.Mapper;
 
 /**
  *  Communicate with the MALG board 
@@ -1211,6 +1210,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	}
 
+	@SuppressWarnings("incomplete-switch")
 	public void nudge(final direction dir) {
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
@@ -1267,6 +1267,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public void rotate(final direction dir, final int degrees) {
 		new Thread(new Runnable() {
+			@SuppressWarnings("incomplete-switch")
 			public void run() {
 				
 				final int tempspeed = state.getInteger(State.values.motorspeed);
@@ -1399,7 +1400,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	    					}
 						}
                         
-						goBackward(); 
+						goBackward();
+				case left:
+					break;
+				case right:
+					break;
+				case stop:
+					break;
+				case unknown:
+					break;
+				default:
+					break; 
 				}
 				
 				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal

@@ -13,7 +13,7 @@ import oculusPrime.State.values;
 
 public class NetworkMonitor { 
 	
-	protected static final long POLL_DELAY_MS = 1000; //  Util.ONE_MINUTE;
+	protected static final long POLL_DELAY_MS = 3000; //  Util.ONE_MINUTE;
 
 	
 	private static Vector<String> wlanData = new Vector<String>();
@@ -31,8 +31,7 @@ public class NetworkMonitor {
 	Timer pingTimer = new Timer();
 	
 	public static String pingValue = null;
-	public static String pingLast = null;
-	// public static String ping = null;
+	public static long pingLast = System.currentTimeMillis();
 	
 	public static State state = State.getReference();
 	private static NetworkMonitor singleton = new NetworkMonitor();
@@ -41,11 +40,11 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-		networkTimer.schedule(new networkTask(), 2000, POLL_DELAY_MS);
-		pingTimer.schedule(new pingTask(), 9000, POLL_DELAY_MS);
+		networkTimer.schedule(new networkTask(), 3000, POLL_DELAY_MS);
+		pingTimer.schedule(new pingTask(), 3000, POLL_DELAY_MS);
 		updateExternalIPAddress();
+		connectionUpdate();	
 		connectionsNever();
-		connectionUpdate();
 		killApplet();
 	}
 	
@@ -53,17 +52,10 @@ public class NetworkMonitor {
 	    @Override
 	    public void run() {
 	    	try{ 
-	    	
 	    		
 	    	//	Util.debug("pingWIFI().....");
 	    		
-	    	//if(state.contains(values.ethernetping)) 
-	    		//	state.put(values.ethernetping, pingETH(state.get(values.gateway)));
-
-	    	//	if(state.contains(values.localaddress)) 
-	    	//		state.put(values.wifiping, pingWIFI(state.get(values.gateway)));
-
-	    		if(state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) {
+	    		if(state.exists(values.externaladdress)) { // && !state.equals(values.ssid, AP)) {
 	    			pingValue = pingWIFI("www.xaxxon.com");
 	    			if(pingValue == null){
 	    				
@@ -71,17 +63,16 @@ public class NetworkMonitor {
 	    				Util.delay(5000);
 	    				pingValue = pingWIFI("www.xaxxon.com");
 		    			if(pingValue == null){
-		    				
-		    				startAdhoc();
+		    				Util.debug("pingWIFI(): ..... start adhoc .....");
+		    				// startAdhoc();
 	    					return;
 		    			}
+	    			} else {
+	    				pingLast = System.currentTimeMillis();
 	    			}
-	    			
-	    	//		state.put(values.externalping, ping); 
-	    			
 	    		}
 	    		
-	    		if( !state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) 
+	    		if( !state.exists(values.externaladdress)) //  && !state.equals(values.ssid, AP)) 
 	    				updateExternalIPAddress();
 	    			
 			} catch (Exception e) {
@@ -148,7 +139,7 @@ public class NetworkMonitor {
 				}
 			
 				
-				// Util.debug("networkTask: lines copied: " + networkData.size(), this);
+				Util.log("networkTask: lines copied: " + networkData.size(), this);
 				
 				proc.waitFor();
 				readETH();
@@ -245,6 +236,7 @@ public class NetworkMonitor {
 	}
 
 	public void startAdhoc(){		
+		disconnecteddWAN();
 		changeWIFI(AP);
 	}
 
@@ -253,9 +245,10 @@ public class NetworkMonitor {
 	}
 
 	private void setSSID(final String line){
+		Util.debug("ssid: " + line, this);
 		if(line.contains("[") && line.contains("]")){
 			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
-			if( ! state.equals(values.ssid, router))
+			// if( ! state.equals(values.ssid, router))
 				state.set(values.ssid, router);
 		}
 	}
