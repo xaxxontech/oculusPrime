@@ -11,8 +11,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
 
-import oculusPrime.State.values;
-
 public class State {
 	
 	public enum values{ 
@@ -192,7 +190,7 @@ public class State {
 				+ "<td><b>wan </b>" + get(values.externaladdress)
 				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
 				+ "<td><b>external ping </b>" + NetworkMonitor.pingValue
-//				+ "<td><b>external ping </b>" + get(values.externalping)
+				+ "<td><b>last ping ping </b>" + (System.currentTimeMillis()-NetworkMonitor.pingLast)
 	//			+ "<td><b>eth ping </b>" + get(values.ethernetping)
 				
 			
@@ -272,11 +270,6 @@ public class State {
 		props.put(values.telnetusers.name(), "0");
 		getLinuxUptime();
 	}
-	
-	/*
-	public Properties getProperties(){
-		return (Properties) props.clone();
-	}*/
 
 	public void getLinuxUptime(){
 		new Thread(new Runnable() {

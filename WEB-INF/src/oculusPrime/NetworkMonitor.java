@@ -55,7 +55,7 @@ public class NetworkMonitor {
 	    		
 	    	//	Util.debug("pingWIFI().....");
 	    		
-	    		if(state.exists(values.externaladdress)) { // && !state.equals(values.ssid, AP)) {
+	    		if(state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) {
 	    			pingValue = pingWIFI("www.xaxxon.com");
 	    			if(pingValue == null){
 	    				
@@ -82,18 +82,22 @@ public class NetworkMonitor {
 	}
 	
 	public static String pingWIFI(final String addr) throws Exception{
-	//	long start = System.currentTimeMillis();
-		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/addr}; // TODO: force interface 
+		long start = System.currentTimeMillis();
+		final String[] PING = new String[]{"ping", "-c1", "-W1", addr}; // TODO: force interface 
 		Process proc = Runtime.getRuntime().exec(PING);
 		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 							
 		String line = null;
+		String time = null;
 		while ((line = procReader.readLine()) != null){
 			if(line.contains("time=")){
-				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+				time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+				Util.debug("ping time: "+ time);
+				if(time.equals("0")) return null;
+				return time;
 			}	
 		}
-	//	Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
+		Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
 		return line;	
 	}
 	

@@ -14,7 +14,7 @@ import oculusPrime.State.values;
 public class NetworkServlet extends HttpServlet {
 	
 	private static final long serialVersionUID = 1L;	
-	protected static final long HTTP_REFRESH_DELAY_SECONDS = 3; 	
+	protected static final long HTTP_REFRESH_DELAY_SECONDS = 5; 	
 	NetworkMonitor monitor = NetworkMonitor.getReference();
 	State state = oculusPrime.State.getReference();
 
@@ -52,8 +52,8 @@ public class NetworkServlet extends HttpServlet {
 			if(action.equals("adhoc")){		
 				monitor.startAdhoc();
 				Util.log("..... start adhoc called", this);
-				Util.delay(5000);
-				response.sendRedirect("http://10.42.0.1:" + ":"+request.getServerPort() + "/oculusPrime/network"); 
+				Util.delay(500);
+				response.sendRedirect("http://10.42.0.1:" +request.getServerPort() + "/oculusPrime/network"); 
 				return;
 			}
 			
