@@ -177,7 +177,10 @@ public class ArduinoPower implements SerialPortEventListener  {
     				}
     				serialPort.closePort();
 
-    			} catch (Exception e) {	PowerLogger.append("can't connect to port: " + e.getMessage(), this); }
+    			} catch (Exception e) {
+					PowerLogger.append("can't connect to port: " + e.getMessage(), this);
+					Util.log("can't connect to port: " + e.getMessage(), this);
+				}
         	}
         }
 		
@@ -398,10 +401,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 		
 		else if (s[0].equals("redock")) {
 			application.driverCallServer(PlayerCommands.redock, null);
+			PowerLogger.append("redock", this);
+			Util.log("redock", this);
 		}
 		
 		else if (s[0].equals("force_undock")) {
 			state.set(State.values.forceundock, true);
+			Util.log("force undock", this);
+			PowerLogger.append("force undock", this);
 		}
 		
 		if (s.length>2) {

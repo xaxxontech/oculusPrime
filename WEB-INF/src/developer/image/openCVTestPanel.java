@@ -1,7 +1,12 @@
 package developer.image;
 
+import oculusPrime.Util;
+
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.net.URL;
 
 /**
  * Created by colin on 21/04/15.
@@ -21,10 +26,6 @@ public class openCVTestPanel extends JFrame{
                 try {
                     openCVTestPanel frame = new openCVTestPanel();
                     frame.setVisible(true);
-
-                    OpenCVMotionDetect ocvmd = new OpenCVMotionDetect();
-                    lblNewLabel.setIcon(new ImageIcon(ocvmd.getImage()));
-
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -48,6 +49,30 @@ public class openCVTestPanel extends JFrame{
         contentPane.add(panel);
         lblNewLabel.setBounds(0, 0, 640, 480);
         panel.add(lblNewLabel);
+
+
+        // do stuff
+
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    OpenCVMotionDetect ocvmd = new OpenCVMotionDetect();
+                    Util.delay(2000);
+                    ocvmd.motionDetectGo();
+
+                    while(true) {
+                        if (ocvmd.imageupdated) {
+                            lblNewLabel.setIcon(new ImageIcon(ocvmd.cv.matToBufferedImage(ocvmd.detect)));
+                            ocvmd.imageupdated = false;
+                        }
+                        Util.delay(10);
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
 
     }
 }

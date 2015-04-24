@@ -31,7 +31,7 @@ public enum ManualSettings {
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , "true");
 		config.setProperty(soundthreshold.name(), "10");
-		config.setProperty(motionthreshold.name(), "10");
+		config.setProperty(motionthreshold.name(), "0.003");
 
 		return config;
 	}

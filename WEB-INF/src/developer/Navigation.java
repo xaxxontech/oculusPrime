@@ -29,10 +29,9 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 555;
 	public static final long ROSSHUTDOWNDELAY = 20000;
 	private final Settings settings = Settings.getReference();
-
 
 	/** Constructor */
 	public Navigation(Application a){ 
@@ -189,11 +188,12 @@ public class Navigation {
 			
 			// success, should be pointing at dock, shut down nav
 			stopNavigation();
-			Util.delay(5000);
+			Util.delay(7000); // 5000 too low, massive cpu sometimes here
 			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 			
 			// dock
+			app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
 			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			app.driverCallServer(PlayerCommands.spotlight, "0");
@@ -210,9 +210,9 @@ public class Navigation {
 			while (true) {
 				
 				app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
-//				Util.delay(10); // thread safe
 				start = System.currentTimeMillis();
-				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000) {} // wait
+				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000)
+					Util.delay(10);  // wait
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit
@@ -222,7 +222,7 @@ public class Navigation {
 
 					start = System.currentTimeMillis();
 					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
-							&& System.currentTimeMillis() - start < 5000) {} // wait
+							&& System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
 					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
 				}
 				rot ++;
@@ -557,10 +557,9 @@ public class Navigation {
     	
     	if (!camera) rotate = false; // if no camera, what's the point in rotating
 
-		// setup mic
-    	// required for flash stream activity function to work
+    	// VIDEOSOUNDMODELOW required for flash stream activity function to work, saves cpu for camera
     	String previousvideosoundmode = state.get(State.values.videosoundmode);
-    	if (mic) app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW);
+    	if (mic || camera) app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW);
 
 		// setup camera
 		if (camera) {
@@ -599,13 +598,15 @@ public class Navigation {
 			// start stream(s)
 			if (camera && mic) {
 				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
-				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
+//				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
+				app.driverCallServer(PlayerCommands.motiondetectgo, null);
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 "+settings.readSetting(ManualSettings.soundthreshold));
 				Util.delay(2000); // mic takes a while to start up
 			} else if (camera && !mic) {
 				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
-				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
+//				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
+				app.driverCallServer(PlayerCommands.motiondetectgo, null);
 			} else if (!camera && mic) {
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 "+settings.readSetting(ManualSettings.soundthreshold));
@@ -614,7 +615,7 @@ public class Navigation {
 
 			// WAIT
 			long start = System.currentTimeMillis();
-			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay) {}
+			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay) { Util.delay(10); }
 
 			// ALERT
 			if (state.exists(State.values.streamactivity)) {
@@ -655,14 +656,14 @@ public class Navigation {
 			}
 
 			if (rotate) {
-				if (camera) Util.delay(2000); // TODO: need this due to motiondetect cpu 100%
+				if (camera) Util.delay(500); // TODO: need this due to motiondetect cpu 100%?
 				app.driverCallServer(PlayerCommands.left, "45");
 
 				long stopwaiting = System.currentTimeMillis()+5000; // timeout if error
 				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
 						System.currentTimeMillis() < stopwaiting) { Util.delay(10); } // wait for stop
 
-				Util.delay(2000); // allow cam to normalize
+				Util.delay(3000); // allow cam to normalize
 				turns ++;
 			}
 
