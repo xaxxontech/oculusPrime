@@ -245,7 +245,7 @@ public class NetworkMonitor {
 	}
 
 	private void setSSID(final String line){
-		Util.debug("ssid: " + line, this);
+		// Util.debug("ssid: " + line, this);
 		if(line.contains("[") && line.contains("]")){
 			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
 			 if( ! state.equals(values.ssid, router))
