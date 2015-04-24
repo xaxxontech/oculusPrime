@@ -2,10 +2,11 @@ package oculusPrime.commport;
 
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 
+import jssc.SerialPort;
+import jssc.SerialPortEvent;
+import jssc.SerialPortException;
 import jssc.SerialPortList;
-import developer.depth.Mapper;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.GUISettings;
@@ -13,9 +14,7 @@ import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
-import jssc.SerialPort;
-import jssc.SerialPortEvent;
-import jssc.SerialPortException;
+import developer.depth.Mapper;
 
 /**
  *  Communicate with the MALG board 
@@ -133,7 +132,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.put(State.values.batterylife, AutoDock.UNKNOWN);
 
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
-		state.put(State.values.direction, direction.stop.toString());
+		state.put(State.values.direction, direction.stop.name()); // .toString());
 
 		state.put(State.values.odomturnpwm, speedmed);
 		state.put(State.values.odomlinearpwm, speedmed);
@@ -328,7 +327,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        if (portNames.length == 0) return;
 	        
 	        String otherdevice = "";
-	        if (state.exists(State.values.powerport.toString())) 
+	        if (state.exists(State.values.powerport)) 
 	        	otherdevice = state.get(State.values.powerport);
 	        
 	        for (int i=0; i<portNames.length; i++) {
@@ -1214,6 +1213,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	}
 
+	@SuppressWarnings("incomplete-switch")
 	public void nudge(final direction dir) {
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
@@ -1270,6 +1270,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public void rotate(final direction dir, final int degrees) {
 		new Thread(new Runnable() {
+			@SuppressWarnings("incomplete-switch")
 			public void run() {
 				
 				final int tempspeed = state.getInteger(State.values.motorspeed);
@@ -1402,7 +1403,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	    					}
 						}
                         
-						goBackward(); 
+						goBackward();
+				case left:
+					break;
+				case right:
+					break;
+				case stop:
+					break;
+				case unknown:
+					break;
+				default:
+					break; 
 				}
 				
 				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
