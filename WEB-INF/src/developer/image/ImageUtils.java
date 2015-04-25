@@ -1,17 +1,31 @@
 package developer.image;
 
+import oculusPrime.Settings;
+
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
+import java.io.IOException;
+import java.net.URL;
 
 public class ImageUtils {
 	
 	public final int matrixres = 10;
 	public int imgaverage;
-	
+
 	public ImageUtils() {}
+
+	public static BufferedImage getImageFromStream() {
+		BufferedImage img = null;
+		try {
+//            img = ImageIO.read(new URL("http://127.0.0.1:5080/oculusPrime/frameGrabHTTP"));
+			img = ImageIO.read(new URL("http://192.168.0.107:5080/oculusPrime/frameGrabHTTP"));
+		} catch (IOException e) { e.printStackTrace(); }
+		return img;
+	}
 	
 	public int[] convertToGrey(BufferedImage img) { // convert image to 8bit greyscale int array
 		int[] pixelRGB = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());

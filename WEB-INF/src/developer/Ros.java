@@ -66,6 +66,7 @@ public class Ros {
     			Util.debug("lockfile timeout");
     			return null; // 5 sec timeout
     		}
+			Util.delay(1);
 		}
 		
     	try {

@@ -481,7 +481,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			public void run() {
 
 			long start = System.currentTimeMillis();
-			while (sendCommandLock && System.currentTimeMillis() - start < 100) {} // wait
+			while (sendCommandLock && System.currentTimeMillis() - start < 100) { Util.delay(1); } // wait
 
 			if (sendCommandLock) { // TODO: testing
 				Util.log("error sendCommandLock still locked after timeout", this);
@@ -527,7 +527,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				new Thread(new Runnable() {public void run() {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) { } // wait
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
 					if (currentMoveID == moveID)  goForward();
 					
 				} }).start();
@@ -646,7 +646,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				new Thread(new Runnable() {public void run() {
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) { } // wait
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
 					if (currentMoveID == moveID)  goBackward();
 					
 				} }).start();
@@ -748,7 +748,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) { } // wait
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
 					if (currentMoveID == moveID)  turnRight();
 					
 				} }).start();
@@ -804,7 +804,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
-							System.currentTimeMillis() < stopwaiting) { } // wait
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
 					if (currentMoveID == moveID)  turnLeft();
 					
 				} }).start();
@@ -903,6 +903,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					start = now;
 					
 				}
+				Util.delay(1);
 				
 			}
 		} }).start();
@@ -979,6 +980,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					start = now;
 				}
+
+				Util.delay(1);
 
 			}
 		} }).start();
@@ -1160,7 +1163,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						if (state.getBoolean(State.values.controlsinverted)) 
 								state.set(State.values.controlsinverted, false);
 					}
-					
+					Util.delay(1);
 				}
 				
 				if (camMoveID == currentCamMoveID) {
@@ -1252,7 +1255,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					if (movingforward && (dir.equals(direction.right) || dir.equals(direction.left))) {
 						long stopwaiting = System.currentTimeMillis()+LINEAR_STOP_DELAY;
 						while( System.currentTimeMillis() < stopwaiting &&
-								state.get(State.values.direction).equals(direction.forward.toString())  ) {  } // wait for stop
+								state.get(State.values.direction).equals(direction.forward.toString())  ) {  Util.delay(1);  } // wait for stop
 					}
 					Util.delay((long) (12.5 / state.getDouble(State.values.odomturndpms.toString())) );
 					if (movingforward)  state.set(State.values.movingforward, true);
@@ -1314,7 +1317,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						Util.delay(500); // allow for slow to stop
 						short[] depthFrameAfter = Application.openNIRead.readFullFrame();
 	
-						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
 						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 						Mapper.addMove(depthFrameAfter, 0, angle);
 						msg += "angle moved via gyro: "+angle;
@@ -1323,7 +1326,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					if (Application.stereo.stereoCamerasOn) {
 						Util.delay(700); // allow extra 200ms for latest frame 	
 	
-						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
 						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 						msg += "angle moved via gyro: "+angle;
 						
@@ -1430,7 +1433,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					if (depthFrameBefore != null) { // went forward, openni
 						Util.delay(750); // allow for slow to stop
 	
-						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
 						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 						
 						depthFrameAfter = Application.openNIRead.readFullFrame();
@@ -1442,7 +1445,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					else if (depthFrameAfter != null) { // went backward, openni
 						Util.delay(750);
 						
-						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(10); } //wait TODO: add timer
 						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 						
 						depthFrameBefore = Application.openNIRead.readFullFrame();
@@ -1455,7 +1458,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	                else if (Application.stereo.stereoCamerasOn) {
 	                    Util.delay(750); // might need bit extra to get latest frame?
 	
-						while (!state.exists(State.values.distanceanglettl.toString())) { } //wait TODO: add timer
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(10); } //wait TODO: add timer
 						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
 	                    
@@ -1491,7 +1494,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final double exponent = 1.6;
 
 		if (state.exists(State.values.battvolts.toString())) {
-			if (Math.abs(state.getDouble(State.values.battvolts.toString()) - volts) > 2)
+			if (Math.abs(state.getDouble(State.values.battvolts.toString()) - volts) > 2) // sanity check
 				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.battvolts), this);
 			else  volts = Double.parseDouble(state.get(State.values.battvolts));
 		}

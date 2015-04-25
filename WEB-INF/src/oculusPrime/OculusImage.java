@@ -256,13 +256,13 @@ public class OculusImage {
 		ArrayList<Integer> blobstarts = new ArrayList<Integer>();
 		for (pixel=0; pixel<width*height; pixel++) { // zero to end, find all blobs
 			if (parr[pixel]==1) { // finds a white one 
-					Boolean[] temp = floodFill(parr, pixel);
-					if (temp.length > minimumsize) { // discard tiny blobs  was 150
-						blobs.add(temp);
-						blobstarts.add(pixel);
-					}
-					
+				Boolean[] temp = floodFill(parr, pixel);
+				if (temp.length > minimumsize) { // discard tiny blobs  was 150
+					blobs.add(temp);
+					blobstarts.add(pixel);
 				}
+					
+			}
 		}		
 		
 		ArrayList<Integer> rejectedBlobs = new ArrayList<Integer>();
@@ -315,8 +315,8 @@ public class OculusImage {
 
 				rejectedBlobs.add(winner);
 				winner = -1;
-			
-				
+
+
 			}
 		}
 

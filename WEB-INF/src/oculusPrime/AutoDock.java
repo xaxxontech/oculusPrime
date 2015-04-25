@@ -5,6 +5,7 @@ import java.awt.image.BufferedImageOp;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
@@ -43,6 +44,7 @@ public class AutoDock {
 	public static final int FLHIGH = 25;
 	public static final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
+	private volatile boolean autodocknavrunning = false;
 	
 	public AutoDock(Application theapp, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
@@ -368,6 +370,11 @@ public class AutoDock {
 	 * MODE1
 	 */
 	private void autoDockNav(final int fx, final int fy, final int w, final int h, final float slope) {
+		if (autodocknavrunning) {
+			Util.log("error, autodocknavrunning", this);
+			return;
+		}
+		autodocknavrunning = true;
 
 		new Thread(new Runnable() { public void run() {
 
@@ -409,13 +416,15 @@ public class AutoDock {
 				if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH);
 	//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
 				if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer and go
-					comport.clickSteer((x - imgwidth/2) * rescomp, (y - imgheight/2) * rescomp);
+					comport.clickSteer((x - imgwidth / 2) * rescomp, (y - imgheight / 2) * rescomp);
 					comport.delayWithVoltsComp(allowforClickSteer);
 					comport.speedset(ArduinoPrime.speeds.fast.toString());
 					comport.goForward();
 					comport.delayWithVoltsComp(s1FWDmilliseconds);
 					comport.stopGoing();
 					Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
+
+					autodocknavrunning = false;
 					dockGrab(dockgrabmodes.find, 0, 0);
 					return;
 
@@ -426,6 +435,8 @@ public class AutoDock {
 					comport.delayWithVoltsComp(s1FWDmilliseconds);
 					comport.stopGoing();
 					Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+					autodocknavrunning = false;
 					dockGrab(dockgrabmodes.find, 0, 0);
 					return;
 				}
@@ -460,12 +471,10 @@ public class AutoDock {
 					lastcamctr = 0;
 					if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125)) { // steer and go
 						lastcamctr = (autodockcompdir - dockx) * rescomp;
-
-						comport.clickSteer(lastcamctr , 0);
+						comport.clickSteer(lastcamctr, 0);
 						comport.delayWithVoltsComp(allowforClickSteer);
 						comport.speedset(ArduinoPrime.speeds.fast.toString());
 						comport.goForward();
-	//								Thread.sleep(s2FWDmilliseconds);
 						comport.delayWithVoltsComp(s2FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
@@ -473,32 +482,47 @@ public class AutoDock {
 							comport.clickSteer(-lastcamctr , 0);
 							comport.delayWithVoltsComp(allowforClickSteer);
 						}
+
+						autodocknavrunning = false;
 						dockGrab(dockgrabmodes.find, 0, 0);
 						return;
 
 					} else { // go only
-
 						comport.speedset(ArduinoPrime.speeds.fast.toString());
 						comport.goForward();
-	//								Thread.sleep(s2FWDmilliseconds);
 						comport.delayWithVoltsComp(s2FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+						autodocknavrunning = false;
 						dockGrab(dockgrabmodes.find, 0, 0);
 						return;
-
 					}
 				} else { // !autodockingcamctr
 					autodockingcamctr = true;
 					if (Math.abs(x - dockx) > (int) (0.03125*imgwidth) ) {
 
-						comport.clickSteer((x - dockx) * rescomp, (y - imgheight/2) * rescomp);
+						comport.clickSteer((x - dockx) * rescomp, (y - imgheight / 2) * rescomp);
 						comport.delayWithVoltsComp(allowforClickSteer);
+
+						autodocknavrunning = false;
 						dockGrab(dockgrabmodes.find, 0, 0);
 						return;
 
-					} else {
-						dockGrab(dockgrabmodes.find, 0, 0);
+					} else { // centered, onward!
+//						autodockingcamctr = false;
+//						comport.speedset(ArduinoPrime.speeds.fast.toString());
+//						comport.goForward();
+//						comport.delayWithVoltsComp(s2FWDmilliseconds);
+//						comport.stopGoing();
+//						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+//
+//						dockGrab(dockgrabmodes.find, 0, 0);
+//						autodocknavrunning = false;
+//						return;
+
+						autodocknavrunning = false;
+						autoDockNav(fx, fy, w, h, slope);
 						return;
 					}
 				}
@@ -514,8 +538,10 @@ public class AutoDock {
 						if (movex > 0) { movex = minimum_clicksteerMovement; }
 						else { movex = -minimum_clicksteerMovement; }
 					}
-					comport.clickSteer(movex * rescomp, (y-imgheight/2) * rescomp);
+					comport.clickSteer(movex * rescomp, (y - imgheight / 2) * rescomp);
 					comport.delayWithVoltsComp(allowforClickSteer);
+
+					autodocknavrunning = false;
 					dockGrab(dockgrabmodes.find, 0, 0);
 					return;
 
@@ -541,6 +567,8 @@ public class AutoDock {
 						comport.delayWithVoltsComp(s1FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+						autodocknavrunning = false;
 						dockGrab(dockgrabmodes.find, 0, 0);
 						return;
 
@@ -548,6 +576,7 @@ public class AutoDock {
 
 						Util.delay(100);
 						dock();
+						autodocknavrunning = false;
 						return;
 
 					}
@@ -635,6 +664,11 @@ public class AutoDock {
 	}
 
 	public void dockGrab(final dockgrabmodes mode, final int x, final int y) {
+
+		if (state.getBoolean(State.values.dockgrabbusy)) {
+			Util.log("dockGrab() error, dockgrabbusy", this);
+			return;
+		}
 		
 		state.set(oculusPrime.State.values.dockgrabbusy, true);
 		state.delete(oculusPrime.State.values.dockfound);
@@ -661,103 +695,105 @@ public class AutoDock {
 
 		new Thread(new Runnable() {
 			public void run() {
-				try {
-					int n = 0;
-					while (state.getBoolean(State.values.framegrabbusy)) {
-						try {
-							Thread.sleep(5);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-						n++;
-						if (n > 2000) { // give up after 10 seconds
-							Util.log("frame grab timed out", this);
-							state.set(State.values.framegrabbusy, false);
-							break;
-						}
+				int n = 0;
+				while (state.getBoolean(State.values.framegrabbusy)) {
+					Util.delay(5);
+					n++;
+					if (n > 2000) { // give up after 10 seconds
+						Util.log("error, frame grab timed out", this);
+						state.set(State.values.framegrabbusy, false);
+						break;
 					}
+				}
 
-					BufferedImage img = null;
-					if (Application.framegrabimg != null) {
+				BufferedImage img = null;
+				if (Application.framegrabimg != null) { // TODO: unused?
 
-						// convert bytes to image
-						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
+					// convert bytes to image
+					ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
+
+					try {
 						img = ImageIO.read(in);
 						in.close();
-						
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
-						
-					else if (Application.processedImage != null) {
-						img = Application.processedImage;
-					}
-					
-					else { Util.log("dockgrab failure", this); return; }
-						
-					imgwidth= img.getWidth();
-					imgheight= img.getHeight();
-					rescomp = 640/imgwidth; // for clicksteer gui 640 window
 
-					float[] matrix = { 0.111f, 0.111f, 0.111f, 0.111f,
-							0.111f, 0.111f, 0.111f, 0.111f, 0.111f, };
+				}
 
-					BufferedImageOp op = new ConvolveOp(new Kernel(3, 3, matrix));
-					img = op.filter(img, new BufferedImage(imgwidth, imgheight, BufferedImage.TYPE_INT_ARGB));
-					
-					int[] argb = img.getRGB(0, 0, imgwidth, imgheight, null, 0, imgwidth);
-					
-		
-					if (mode.equals(dockgrabmodes.calibrate)) {
-						String[] results = oculusImage.findBlobStart(x, y, img.getWidth(), img.getHeight(), argb);
-						autoDock(autodockmodes.dockgrabbed.toString()+" "+dockgrabmodes.calibrate.toString()+" " + results[0]
+				else if (Application.processedImage != null) {
+					img = Application.processedImage;
+				}
+
+				else { Util.log("dockgrab failure", this); return; }
+
+				imgwidth= img.getWidth();
+				imgheight= img.getHeight();
+				rescomp = 640/imgwidth; // for clicksteer gui 640 window
+
+				float[] matrix = { 0.111f, 0.111f, 0.111f, 0.111f,
+						0.111f, 0.111f, 0.111f, 0.111f, 0.111f, };
+
+				BufferedImageOp op = new ConvolveOp(new Kernel(3, 3, matrix));
+				img = op.filter(img, new BufferedImage(imgwidth, imgheight, BufferedImage.TYPE_INT_ARGB));
+
+				int[] argb = img.getRGB(0, 0, imgwidth, imgheight, null, 0, imgwidth);
+
+				String[] results;
+				String str;
+
+				switch (mode) {
+					case calibrate:
+						results = oculusImage.findBlobStart(x, y, img.getWidth(), img.getHeight(), argb);
+						autoDock(autodockmodes.dockgrabbed.toString() + " " + dockgrabmodes.calibrate.toString() + " " + results[0]
 								+ " " + results[1] + " " + results[2] + " "
 								+ results[3] + " " + results[4] + " "
 								+ results[5] + " " + results[6] + " "
 								+ results[7] + " " + results[8]);
-					}
-					if (mode.equals(dockgrabmodes.start)) {
+						break;
+
+					case start:
 						oculusImage.lastThreshhold = -1;
-					}
-					if (mode.equals(dockgrabmodes.find) || mode.equals(dockgrabmodes.start)) {
-						String results[] = oculusImage.findBlobs(argb, imgwidth, imgheight);
-                        String str = results[0] + " " + results[1] + " " + results[2] + " " +
-                        		results[3] + " " + results[4];
+						// break; purposefully omitted
+
+					case find:
+						results = oculusImage.findBlobs(argb, imgwidth, imgheight);
+						str = results[0] + " " + results[1] + " " + results[2] + " " +
+								results[3] + " " + results[4];
 						// results = x,y,width,height,slope
-                        int width = Integer.parseInt(results[2]);
+						int width = Integer.parseInt(results[2]);
 
-                        // interpret results
-                        if (width < (int) (0.02*imgwidth) || width > (int) (0.875*imgwidth) || results[3].equals("0")) 
-        					state.set(State.values.dockfound, false); // failed to find target! unrealistic widths
-        				else { 
-        					state.set(State.values.dockfound, true); // success!
-        					state.set(State.values.dockmetrics, str);
-        				}
+						state.set(State.values.dockgrabbusy.name(), false); // also here because nav timer relys on dockfound
 
-                        if (state.getBoolean(State.values.autodocking))
-//                        	autoDock("dockgrabbed find " + str);
-                        	autoDock(autodockmodes.dockgrabbed.toString()+" "+dockgrabmodes.find.toString()+" "+str);
-					}
+						// interpret results
+						if (width < (int) (0.02*imgwidth) || width > (int) (0.875*imgwidth) || results[3].equals("0"))
+							state.set(State.values.dockfound, false); // failed to find target! unrealistic widths
+						else {
+							state.set(State.values.dockfound, true); // success!
+							state.set(State.values.dockmetrics, str);
+						}
 
-					if (mode.equals(dockgrabmodes.test)) {
+						if (state.getBoolean(State.values.autodocking))
+							autoDock(autodockmodes.dockgrabbed.toString()+" "+dockgrabmodes.find.toString()+" "+str);
+
+						break;
+
+					case test:
 						oculusImage.lastThreshhold = -1;
-						String results[] = oculusImage.findBlobs(argb, imgwidth, imgheight);
+						results = oculusImage.findBlobs(argb, imgwidth, imgheight);
 						int guix = Integer.parseInt(results[0])/(2/rescomp);
 						int guiy = Integer.parseInt(results[1])/(2/rescomp);
 						int guiw = Integer.parseInt(results[2])/(2/rescomp);
 						int guih = Integer.parseInt(results[3])/(2/rescomp);
-						String str = guix + " " + guiy + " " + guiw + " " + guih + " " + results[4];
+						str = guix + " " + guiy + " " + guiw + " " + guih + " " + results[4];
 						// results = x,y,width,height,slope
-						
+
 						app.message(str, "autodocklock", str);
-//						app.sendplayerfunction("processedImg", "load");
-
-					}
-
-					state.set(State.values.dockgrabbusy.name(), false);
-
-					
-				} catch (Exception e) {
-					e.printStackTrace();
+						break;
 				}
+
+				state.set(State.values.dockgrabbusy, false);
+
 			}
 		}).start();
 	}

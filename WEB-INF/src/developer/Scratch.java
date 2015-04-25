@@ -7,18 +7,11 @@ public class Scratch {
     public static void main(String[] args) {
 
 
-        System.out.println("asdf"+System.nanoTime());
-        System.out.println("asdf"+System.nanoTime());
-        System.out.println("asdf"+System.nanoTime());
-        System.out.println("asdf"+System.nanoTime());
 
-        System.out.println("");
-
-        System.out.println("asdf"+System.currentTimeMillis());
-        System.out.println("asdf"+System.currentTimeMillis());
-        System.out.println("asdf"+System.currentTimeMillis());
-        System.out.println("asdf"+Util.getTime());
-
+        while (true) {
+//            System.out.println("asdf" + Util.getTime());
+            Util.delay(1); // 100% cpu without this
+        }
 
 
 

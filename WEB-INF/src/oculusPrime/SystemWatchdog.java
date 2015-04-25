@@ -204,7 +204,7 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.dockgrab, res);
 				Util.delay(10); // thread safe
 				start = System.currentTimeMillis();
-				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000) {} // wait
+				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
 
 				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 				else { // rotate a bit
@@ -212,7 +212,7 @@ public class SystemWatchdog {
 					Util.delay(10); // thread safe
 					start = System.currentTimeMillis();
 					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
-							&& System.currentTimeMillis() - start < 5000) {} // wait
+							&& System.currentTimeMillis() - start < 5000) {  Util.delay(10); } // wait
 					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
 				}
 				rot ++;

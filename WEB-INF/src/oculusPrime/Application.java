@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.image.OpenCVMotionDetect;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -793,7 +794,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			break;
 
-		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
+//		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
+		case motiondetectgo: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetectwatching); break;
 		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null);
 
@@ -923,9 +925,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
-		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) {}
+		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
 		if (!(grabber instanceof IServiceCapableConnection))
-			Util.log("setGrabberVideoSoundMode() grabber reload timeout", this);
+			Util.log("setGrabberVideoSoundMode() error grabber reload timeout", this);
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 		sc.invoke("videoSoundMode", new Object[] { str });
@@ -949,8 +951,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			// commands: camandmic camera mic stop
 
 			long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
-			while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) {}
-			if (!(grabber instanceof IServiceCapableConnection)) Util.log("publish() grabber reload timeout", this);
+			while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
+			if (!(grabber instanceof IServiceCapableConnection))
+				Util.log("publish() error grabber reload timeout", this);
 
 			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 			String current = settings.readSetting("vset");
@@ -964,7 +967,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.log("publish: " + mode.toString(), this);
 
 		} catch (NumberFormatException e) {
-			Util.log("publish() " + e.getMessage(),this);
+			Util.log("publish() error " + e.getMessage(),this);
 			Util.printError(e);
 		}
 		
@@ -1364,8 +1367,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (navigation != null && state.exists(State.values.navigationenabled)) 
 			navigation.stopNavigation();
 
-		if (!(settings.getBoolean(ManualSettings.developer) || settings.getBoolean(ManualSettings.debugenabled)))
-			Util.systemCall("pkill chrome"); // stop google chrome (only if not dev or debug)
+		if (! settings.getBoolean(ManualSettings.debugenabled))
+			Util.systemCall("pkill chrome");  // TODO: use PID
 
 		Util.systemCall(Settings.redhome+Settings.sep+"red5-shutdown.sh");
 	}
@@ -2093,9 +2096,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
-		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) {}
+		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
 		if (!(grabber instanceof IServiceCapableConnection))
-			Util.log("setStreamActivityThreshold() grabber reload timeout", this);
+			Util.log("setStreamActivityThreshold() error grabber reload timeout", this);
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 		sc.invoke("setActivityThreshold", new Object[] { videoThreshold, audioThreshold });
