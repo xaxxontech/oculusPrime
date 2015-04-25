@@ -56,14 +56,14 @@ public class NetworkMonitor {
 	    public void run() {
 	    	try{ 
 	    		
-	    		Util.debug("checkRouterTask().....");
+	    		/// Util.debug("checkRouterTask().....");
 	    		
 	    		//if((System.currentTimeMillis()-NetworkMonitor.pingLast)>POLL_DELAY_MS*2){
-	    			Util.log("checkRouterTask .... time to start ap mode??", this);
+	    			Util.log("checkRouterTask .... check prefered router??", this);
 	    			if(connectionExists(DEFAULT_ROUTER)){
 	    				Util.log("checkRouterTask: "+ state.get(values.ssid) + " " + DEFAULT_ROUTER, this);
-	    				//if( ! state.equals(values.ssid, DEFAULT_ROUTER)) 
-	    				//	changeWIFI(DEFAULT_ROUTER);
+	    				if( ! state.equals(values.ssid, DEFAULT_ROUTER)) 
+	    					changeWIFI(DEFAULT_ROUTER);
 	    			}
 	    		//}
 	    		
