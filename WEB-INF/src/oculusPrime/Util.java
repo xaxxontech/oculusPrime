@@ -397,8 +397,8 @@ public class Util {
 	
 		final String filter = c.getClass().getName().toLowerCase();
 		
-		// use dedicated logger class  
-		if(filter.contains("power") || filter.contains("arduinopower")) return;	
+		// use dedicated logger class - NO, call specific logger from within classes
+//		if(filter.contains("power") || filter.contains("arduinopower")) return;
 		
 		if(history.size() > MAX_HISTORY) history.remove(0);
 //		history.add(getTime() + ", " +str);

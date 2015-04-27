@@ -29,8 +29,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 555;
-	public static final long ROSSHUTDOWNDELAY = 20000;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
 	private final Settings settings = Settings.getReference();
 
 	/** Constructor */
@@ -126,7 +125,7 @@ public class Navigation {
 			Util.log("navigation start attempt #2", this);
 			stopNavigation(); // ros script deletes state navigationenabled after couple secs
 			state.set(State.values.navigationenabled, false); // false=pending, set true by ROS node when ready
-			Util.delay(ROSSHUTDOWNDELAY);
+			Util.delay(Ros.ROSSHUTDOWNDELAY);
 			Ros.launch(Ros.REMOTE_NAV);
 
 			// wait
@@ -188,7 +187,7 @@ public class Navigation {
 			
 			// success, should be pointing at dock, shut down nav
 			stopNavigation();
-			Util.delay(7000); // 5000 too low, massive cpu sometimes here
+			Util.delay(Ros.ROSSHUTDOWNDELAY/2); // 5000 too low, massive cpu sometimes here
 			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 			
@@ -472,7 +471,7 @@ public class Navigation {
 
 				String msg = " min until next route: "+name+", run #"+consecutiveroute;
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) {
-					msg = " min until app restart, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
+					msg = " min until reboot, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
 				}
 
 					// delay to next route
@@ -490,7 +489,8 @@ public class Navigation {
 				state.delete(State.values.nextroutetime);
 
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
-					app.restart();
+//					app.restart();
+					app.driverCallServer(PlayerCommands.reboot, null);
 					return;
 				}
 
@@ -583,7 +583,7 @@ public class Navigation {
 		long delay = 10000;
  		if (duration < delay) duration = delay;
 		int turns = 0;
-		int maxturns = 8;
+		int maxturns = 9;
 		if (!rotate) {
 			delay = duration;
 			turns = maxturns;

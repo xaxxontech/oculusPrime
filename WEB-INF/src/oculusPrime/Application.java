@@ -15,6 +15,7 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
+import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
@@ -252,7 +253,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		
 		if (settings.getBoolean(GUISettings.navigation)) {
-			navigation = new developer.Navigation(this);
+			System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
+			navigation =
+					new developer.Navigation(this);
 			navigation.runAnyActiveRoute();
 		}
 		

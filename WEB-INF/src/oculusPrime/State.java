@@ -374,9 +374,9 @@ public class State {
 			}
 				
 			// TODO: FIX with a call back?? 
-			Util.delay(10);
+			Util.delay(1); // no higher, used by motion, odometry
 			if (System.currentTimeMillis()-start > timeout){ 
-//				Util.debug("block() timeout: " + member.name(), this);
+				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}

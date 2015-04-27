@@ -21,7 +21,8 @@ public class Ros {
 	
 	// State keys
 
-	
+	public static final long ROSSHUTDOWNDELAY = 20000;
+
 	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
 

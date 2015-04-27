@@ -1,5 +1,7 @@
 package oculusPrime.commport;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -26,7 +28,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
-	public static final long DEAD_TIME_OUT = 10000;
+	public static final long DEAD_TIME_OUT = 20000;
 	public static final int WATCHDOG_DELAY = 8000;	
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
@@ -87,7 +89,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //	public volatile boolean sliding = false;
 	protected volatile long currentMoveID;
 	protected volatile long currentCamMoveID;
-	protected volatile boolean sendCommandLock = false;
 	private boolean camLimitOverride = false;
 	
 //	private boolean invertswap = false;
@@ -116,7 +117,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
 
-	
+	private volatile List<Byte> commandList = new ArrayList<>();
+
 	public ArduinoPrime(Application app) {	
 		
 		application = app;	
@@ -139,7 +141,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.set(State.values.odomupdated, false);
 		
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
-		
+
+		new CommandSender().start();
+
 		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) connect();
 		initialize();
 		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
@@ -474,42 +478,70 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			
 			Util.log("DEBUG: "+ text, this);
 		}   // */
-		
-		
-		final byte[] command = cmd;
-		new Thread(new Runnable() {
-			public void run() {
 
-			long start = System.currentTimeMillis();
-			while (sendCommandLock && System.currentTimeMillis() - start < 100) { Util.delay(1); } // wait
+		for (byte b : cmd)   commandList.add(b);
+		commandList.add((byte) 13); // EOF
 
-			if (sendCommandLock) { // TODO: testing
-				Util.log("error sendCommandLock still locked after timeout", this);
-				return;
-			}
-
-			try {
-				sendCommandLock = true;
-				serialPort.writeBytes(command);  // byte array
-				serialPort.writeInt(13);  					// end of command
-				sendCommandLock = false;
-
-			} catch (Exception e) {
-				Util.log("sendCommand() error, attempting reset", this);
-				Util.printError(e);
-				lastReset = System.currentTimeMillis();
-				reset(); // this will (help) resets happen quicker, not just on watchdog intervals
-			}
-			}
-		}).start();
-		
-		// track last write
-		lastSent = System.currentTimeMillis();
 	}
 	
 	
 	public void sendCommand(final byte cmd){
 		sendCommand(new byte[]{cmd});
+	}
+
+
+	/** inner class to send commands to port in sequential order */
+	public class CommandSender extends Thread {
+		oculusPrime.State state = oculusPrime.State.getReference();
+
+		public CommandSender() {
+			this.setDaemon(true);
+		}
+
+		public void run() {
+
+			while (true) {
+				if (commandList.size() > 0 && isconnected) {
+					if (commandList.get(commandList.size()-1) == (byte) 13) {
+
+						if (commandList.size() > 15) {
+							commandList.clear();
+							Util.log("error, command stack up, all dropped", this);
+							continue;
+						}
+
+						Byte[] commands = new Byte[commandList.size()];
+						commandList.toArray(commands);
+						commandList.clear();
+
+						try {
+
+							byte c[] = new byte[commands.length];
+							for (int i = 0; i < commands.length; i++) c[i]=commands[i];
+
+							// track last write
+							lastSent = System.currentTimeMillis();
+
+							serialPort.writeBytes(c); // writing as array ensures goes at baud rate?
+
+
+						} catch (Exception e) {
+							for (int i = commands.length-1; i>=0; i--) commandList.add(0, commands[i]); //save command for after reset
+							Util.log("sendCommand() error, attempting reset", this);
+							Util.printError(e);
+							lastReset = System.currentTimeMillis();
+							reset(); // this will (help) resets happen quicker, not just on watchdog intervals
+						}
+
+					}
+					else Util.log("error, warning no EOF char", this);
+				}
+
+				Util.delay(1);
+
+
+			}
+		}
 	}
 
 	public void goForward() {

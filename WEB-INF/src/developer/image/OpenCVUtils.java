@@ -17,7 +17,8 @@ import org.opencv.objdetect.CascadeClassifier;
 public class OpenCVUtils {
 
 	public OpenCVUtils() {  	// constructor
-		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+//		System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // moved to Application so only loaded once
+
 	}
     
     public BufferedImage matToBufferedImage(Mat matrix) { // type_intRGB
