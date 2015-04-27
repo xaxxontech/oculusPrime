@@ -4,7 +4,7 @@ import java.util.Properties;
 
 /** place extensions to settings here */
 public enum ManualSettings {
-	
+	prefered_router,
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,  
 	gyrocomp, alertsenabled,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
@@ -16,6 +16,7 @@ public enum ManualSettings {
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
+		config.setProperty(prefered_router.name(), NetworkMonitor.AP);
 		config.setProperty(developer.name(), "false");
 		config.setProperty(debugenabled.name(), "false");
 		config.setProperty(motorport.name(), Settings.ENABLED);
@@ -31,8 +32,8 @@ public enum ManualSettings {
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , "true");
 		config.setProperty(soundthreshold.name(), "10");
+		config.setProperty(motionthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "0.003");
-
 		return config;
 	}
 	

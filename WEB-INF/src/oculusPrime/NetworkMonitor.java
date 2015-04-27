@@ -12,9 +12,9 @@ import java.util.Vector;
 import oculusPrime.State.values;
 
 public class NetworkMonitor { 
-	
-	protected static final long POLL_DELAY_MS = 3000; //  Util.ONE_MINUTE;
 
+	protected static final long POLL_ROUTER = Util.ONE_MINUTE;
+	protected static final long POLL_DELAY_MS = 3000; 
 	
 	private static Vector<String> wlanData = new Vector<String>();
 	private static Vector<String> ethData = new Vector<String>();
@@ -23,11 +23,13 @@ public class NetworkMonitor {
 	private static Vector<String> connections = new Vector<String>();
 
 	// TODO: discover and keep in static vars here 
+	protected static final String DEFAULT_ROUTER = Settings.getReference().readSetting(ManualSettings.prefered_router); 
 	protected static final String WLAN = "wlan2";
 	protected static final String ETH = "eth0";
 	protected static final String AP = "ap";
 	
 	Timer networkTimer = new Timer();
+	Timer routerTimer = new Timer();
 	Timer pingTimer = new Timer();
 	
 	public static String pingValue = null;
@@ -40,12 +42,36 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-		networkTimer.schedule(new networkTask(), 3000, POLL_DELAY_MS);
-		pingTimer.schedule(new pingTask(), 3000, POLL_DELAY_MS);
+		networkTimer.schedule(new networkTask(), 1000, POLL_DELAY_MS);
+		routerTimer.schedule(new checkRouterTask(), 5000, POLL_ROUTER);
+		pingTimer.schedule(new pingTask(), 5000, POLL_DELAY_MS);
 		updateExternalIPAddress();
 		connectionUpdate();	
 		connectionsNever();
 		killApplet();
+	}
+	
+	public class checkRouterTask extends TimerTask {			
+	    @Override
+	    public void run() {
+	    	try{ 
+	    		
+	    		/// Util.debug("checkRouterTask().....");
+	    		
+	    		//if((System.currentTimeMillis()-NetworkMonitor.pingLast)>POLL_DELAY_MS*2){
+	    			Util.log("checkRouterTask .... check prefered router??", this);
+	    			if(connectionExists(DEFAULT_ROUTER)){
+	    				Util.log("checkRouterTask: "+ state.get(values.ssid) + " " + DEFAULT_ROUTER, this);
+	    				if( ! state.equals(values.ssid, DEFAULT_ROUTER)) 
+	    					changeWIFI(DEFAULT_ROUTER);
+	    			}
+	    		//}
+	    		
+	    		
+			} catch (Exception e) {
+				Util.debug("checkRouterTask(): " + e, this);
+			}		
+	    }    
 	}
 	
 	public class pingTask extends TimerTask {			
@@ -53,27 +79,21 @@ public class NetworkMonitor {
 	    public void run() {
 	    	try{ 
 	    		
-	    	//	Util.debug("pingWIFI().....");
+	    		// Util.debug("pingWIFI().....");
 	    		
 	    		if(state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) {
 	    			pingValue = pingWIFI("www.xaxxon.com");
-	    			if(pingValue == null){
-	    				
-	    				// try twice 
-	    				Util.delay(5000);
-	    				pingValue = pingWIFI("www.xaxxon.com");
-		    			if(pingValue == null){
-		    				Util.debug("pingWIFI(): ..... start adhoc .....");
-		    				// startAdhoc();
-	    					return;
-		    			}
-	    			} else {
-	    				pingLast = System.currentTimeMillis();
-	    			}
+	    			if(pingValue != null) pingLast = System.currentTimeMillis();
 	    		}
 	    		
-	    		if( !state.exists(values.externaladdress)) //  && !state.equals(values.ssid, AP)) 
-	    				updateExternalIPAddress();
+	    		if((System.currentTimeMillis()-NetworkMonitor.pingLast)>POLL_DELAY_MS){
+	    			Util.log("... time to start ap mode??", this);
+	    			//	startAdhoc();
+	    		}
+	    		
+	    		
+	    		if( !state.exists(values.externaladdress)  && !state.equals(values.ssid, AP)) 
+	    			updateExternalIPAddress();
 	    			
 			} catch (Exception e) {
 				Util.debug("pingTask(): " + e, this);
@@ -82,7 +102,7 @@ public class NetworkMonitor {
 	}
 	
 	public static String pingWIFI(final String addr) throws Exception{
-		long start = System.currentTimeMillis();
+		// long start = System.currentTimeMillis();
 		final String[] PING = new String[]{"ping", "-c1", "-W1", addr}; // TODO: force interface 
 		Process proc = Runtime.getRuntime().exec(PING);
 		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -92,12 +112,12 @@ public class NetworkMonitor {
 		while ((line = procReader.readLine()) != null){
 			if(line.contains("time=")){
 				time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
-				Util.debug("ping time: "+ time);
+				// Util.debug("ping time: "+ time);
 				if(time.equals("0")) return null;
 				return time;
 			}	
 		}
-		Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
+		// Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
 		return line;	
 	}
 	
@@ -199,8 +219,9 @@ public class NetworkMonitor {
 	
 	private void killApplet(){
 		try {
-			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-		//	Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+			//Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
+			//Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+			Util.debug("killApplet(): called... do nada ", this);
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}		
@@ -225,6 +246,8 @@ public class NetworkMonitor {
 	
 	public void changeWIFI(final String ssid, final String password){	
 		try {
+			killApplet();
+			Util.log("changeWIFI: (with password): " + ssid, this); 
 			Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
 		} catch (Exception e) { 
 			Util.debug("changeWIFI: " + e.getLocalizedMessage(), this); 
@@ -233,13 +256,15 @@ public class NetworkMonitor {
 	
 	public void changeWIFI(final String ssid){		
 		try {
-			Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid});
+			killApplet();
+			Util.log("changeWIFI: " + ssid, this); 
+			Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid, "&"});
 		} catch (Exception e) { 
 			Util.debug("changeWIFI(): " + e.getLocalizedMessage(), this);
 		}		
 	}
 
-	public void startAdhoc(){		
+	public void startAdhoc(){	
 		disconnecteddWAN();
 		changeWIFI(AP);
 	}
@@ -294,6 +319,8 @@ public class NetworkMonitor {
 		state.delete(values.ssid);
 		state.delete(values.localaddress);
 		state.delete(values.signalspeed);
+		state.delete(values.gateway);
+		//killApplet();
 		
 		// TODO: just make those ping times get bigger?
 		
