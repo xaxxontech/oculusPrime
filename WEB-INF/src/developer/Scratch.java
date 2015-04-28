@@ -7,11 +7,12 @@ public class Scratch {
     public static void main(String[] args) {
 
 
+            byte[] b = new byte[] {(byte) 155, (byte) 200, 13};
+        String str = "";
+        for (int i = 0; i < b.length; i++) str += String.valueOf((int) b[i] );
 
-        while (true) {
-//            System.out.println("asdf" + Util.getTime());
-            Util.delay(1); // 100% cpu without this
-        }
+        System.out.println(str);
+
 
 
 

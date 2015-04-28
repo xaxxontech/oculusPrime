@@ -29,7 +29,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum mode { on, off };
 
 	public static final long DEAD_TIME_OUT = 20000;
-	public static final int WATCHDOG_DELAY = 8000;	
+	public static final int WATCHDOG_DELAY = 8000;
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
@@ -79,7 +79,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	protected static Settings settings = Settings.getReference();
 	
-	protected static SerialPort serialPort = null;
+	protected SerialPort serialPort = null;
 	// data buffer 
 	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
@@ -118,6 +118,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static final int speedfast = 255;
 
 	private volatile List<Byte> commandList = new ArrayList<>();
+	private volatile boolean commandlock = false;
 
 	public ArduinoPrime(Application app) {	
 		
@@ -343,12 +344,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
         			serialPort.openPort();
         			serialPort.setParams(BAUD, 8, 1, 0);
         			Thread.sleep(DEVICEHANDSHAKEDELAY);
-        			byte[] buffer = new byte[99];
-        			buffer = serialPort.readBytes(); // clear serial buffer
+        			serialPort.readBytes(); // clear serial buffer
         			
         			serialPort.writeBytes(new byte[] { GET_PRODUCT, 13 }); // query device
         			Thread.sleep(100); // some delay is required
-        			buffer = serialPort.readBytes();
+					byte[] buffer = serialPort.readBytes();
         			
         			if (buffer == null) break;
         			
@@ -407,9 +407,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (!event.isRXCHAR())  return;
 
 		try {
-			byte[] input = new byte[32];
-			
-			input = serialPort.readBytes();
+			byte[] input = serialPort.readBytes();
 			for (int j = 0; j < input.length; j++) {
 				if ((input[j] == '>') || (input[j] == 13) || (input[j] == 10)) {
 					if (buffSize > 0) execute();
@@ -459,8 +457,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 */
 	public void sendCommand(byte[] cmd) {
 
-		if (!isconnected) return;
-		
 		if (state.getBoolean(State.values.controlsinverted)) {
 			switch (cmd[0]) {
 			case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
@@ -479,8 +475,15 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			Util.log("DEBUG: "+ text, this);
 		}   // */
 
-		for (byte b : cmd)   commandList.add(b);
-		commandList.add((byte) 13); // EOF
+		long timeout = System.currentTimeMillis() + 2000;
+		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
+		if (commandlock) Util.log("error, commandlock timeout, command dropped", this);
+		else {
+			commandlock = true;
+			for (byte b : cmd) commandList.add(b);
+			commandList.add((byte) 13); // EOF
+			commandlock = false;
+		}
 
 	}
 	
@@ -492,7 +495,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	/** inner class to send commands to port in sequential order */
 	public class CommandSender extends Thread {
-		oculusPrime.State state = oculusPrime.State.getReference();
 
 		public CommandSender() {
 			this.setDaemon(true);
@@ -501,44 +503,52 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		public void run() {
 
 			while (true) {
-				if (commandList.size() > 0 && isconnected) {
-					if (commandList.get(commandList.size()-1) == (byte) 13) {
+				if (commandList.size() > 0 &! commandlock) {
 
-						if (commandList.size() > 15) {
-							commandList.clear();
-							Util.log("error, command stack up, all dropped", this);
-							continue;
-						}
+					commandlock = true;
 
-						Byte[] commands = new Byte[commandList.size()];
-						commandList.toArray(commands);
+					if (!isconnected) { // redundant
+						Util.log("error, not connected", this);
 						commandList.clear();
-
-						try {
-
-							byte c[] = new byte[commands.length];
-							for (int i = 0; i < commands.length; i++) c[i]=commands[i];
-
-							// track last write
-							lastSent = System.currentTimeMillis();
-
-							serialPort.writeBytes(c); // writing as array ensures goes at baud rate?
-
-
-						} catch (Exception e) {
-							for (int i = commands.length-1; i>=0; i--) commandList.add(0, commands[i]); //save command for after reset
-							Util.log("sendCommand() error, attempting reset", this);
-							Util.printError(e);
-							lastReset = System.currentTimeMillis();
-							reset(); // this will (help) resets happen quicker, not just on watchdog intervals
-						}
-
+						continue;
 					}
-					else Util.log("error, warning no EOF char", this);
+
+					if (commandList.size() > 15) {
+						commandList.clear();
+						Util.log("error, command stack up, all dropped", this);
+						continue;
+					}
+
+					if (commandList.get(commandList.size() - 1) != (byte) 13) {
+						String str = "";
+						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
+						Util.log("error, warning no EOF char: "+str, this); // nuke this, triggers sometimes as expected
+						continue;
+					}
+
+					byte c[] = new byte[commandList.size()];
+					for (int i = 0; i < commandList.size(); i++) c[i]=commandList.get(i);
+					commandList.clear();
+
+					commandlock = false;
+
+					try {
+
+						// track last write
+						lastSent = System.currentTimeMillis();
+						serialPort.writeBytes(c); // writing as array ensures goes at baud rate?
+
+					} catch (Exception e) {
+//							for (int i = commands.length-1; i>=0; i--) commandList.add(0, commands[i]); //save command for after reset
+						Util.log("sendCommand() error", this); // , attempting reset", this);
+						Util.printError(e);
+//							lastReset = System.currentTimeMillis();
+//							reset(); // this will (help) resets happen quicker, not just on watchdog intervals
+					}
+
 				}
 
 				Util.delay(1);
-
 
 			}
 		}
