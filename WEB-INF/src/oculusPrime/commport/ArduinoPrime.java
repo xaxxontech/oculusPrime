@@ -475,9 +475,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			Util.log("DEBUG: "+ text, this);
 		}   // */
 
-		long timeout = System.currentTimeMillis() + 2000;
+		long timeout = System.currentTimeMillis() + 5000;
 		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
-		if (commandlock) Util.log("error, commandlock timeout, command dropped", this);
+		if (commandlock) {
+			String str = "";
+			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
+			Util.log("error, commandlock timeout, command dropped: "+str, this);
+		}
 		else {
 			commandlock = true;
 			for (byte b : cmd) commandList.add(b);
