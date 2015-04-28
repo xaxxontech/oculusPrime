@@ -55,19 +55,12 @@ public class NetworkMonitor {
 	    @Override
 	    public void run() {
 	    	try{ 
-	    		
-	    		/// Util.debug("checkRouterTask().....");
-	    		
-	    		//if((System.currentTimeMillis()-NetworkMonitor.pingLast)>POLL_DELAY_MS*2){
-	    			Util.log("checkRouterTask .... check prefered router??", this);
-	    			if(connectionExists(DEFAULT_ROUTER)){
-	    				Util.log("checkRouterTask: "+ state.get(values.ssid) + " " + DEFAULT_ROUTER, this);
-	    				if( ! state.equals(values.ssid, DEFAULT_ROUTER)) 
-	    					changeWIFI(DEFAULT_ROUTER);
-	    			}
-	    		//}
-	    		
-	    		
+    			if(connectionExists(DEFAULT_ROUTER)){
+    				if( ! state.equals(values.ssid, DEFAULT_ROUTER)) {
+    					Util.log("checkRouterTask: current = "+ state.get(values.ssid) + " prefered = " + DEFAULT_ROUTER, this);
+    					changeWIFI(DEFAULT_ROUTER);
+    				}
+    			}
 			} catch (Exception e) {
 				Util.debug("checkRouterTask(): " + e, this);
 			}		
@@ -79,18 +72,15 @@ public class NetworkMonitor {
 	    public void run() {
 	    	try{ 
 	    		
-	    		// Util.debug("pingWIFI().....");
-	    		
 	    		if(state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) {
 	    			pingValue = pingWIFI("www.xaxxon.com");
 	    			if(pingValue != null) pingLast = System.currentTimeMillis();
 	    		}
 	    		
-	    		if((System.currentTimeMillis()-NetworkMonitor.pingLast)>POLL_DELAY_MS){
-	    			Util.log("... time to start ap mode??", this);
-	    			//	startAdhoc();
+	    		if((System.currentTimeMillis()-NetworkMonitor.pingLast) > POLL_DELAY_MS){
+	    			Util.log("... starting ap mode now", this);
+	    			startAdhoc();
 	    		}
-	    		
 	    		
 	    		if( !state.exists(values.externaladdress)  && !state.equals(values.ssid, AP)) 
 	    			updateExternalIPAddress();
