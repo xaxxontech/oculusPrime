@@ -8,13 +8,12 @@ import java.net.URLConnection;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
-
 import oculusPrime.State.values;
 
 public class NetworkMonitor { 
 
-	protected static final long POLL_ROUTER = Util.ONE_MINUTE;
-	protected static final long POLL_DELAY_MS = 3000; 
+	protected static final long POLL_ROUTER = Util.ONE_MINUTE*2;
+	protected static final long POLL_DELAY_MS = 2000; 
 	
 	private static Vector<String> wlanData = new Vector<String>();
 	private static Vector<String> ethData = new Vector<String>();
@@ -22,10 +21,7 @@ public class NetworkMonitor {
 	private static Vector<String> networkData = new Vector<String>();
 	private static Vector<String> connections = new Vector<String>();
 
-	// TODO: discover and keep in static vars here 
 	protected static final String DEFAULT_ROUTER = Settings.getReference().readSetting(ManualSettings.prefered_router); 
-	protected static final String WLAN = "wlan2";
-	protected static final String ETH = "eth0";
 	protected static final String AP = "ap";
 	
 	Timer networkTimer = new Timer();
@@ -77,8 +73,8 @@ public class NetworkMonitor {
 	    			if(pingValue != null) pingLast = System.currentTimeMillis();
 	    		}
 	    		
-	    		if((System.currentTimeMillis()-NetworkMonitor.pingLast) > POLL_DELAY_MS){
-	    			Util.log("... starting ap mode now", this);
+	    		if((System.currentTimeMillis()-NetworkMonitor.pingLast) > (POLL_DELAY_MS*3)){
+	    			Util.log("pingTask()... starting ap mode now", this);
 	    			startAdhoc();
 	    		}
 	    		
@@ -98,13 +94,14 @@ public class NetworkMonitor {
 		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 							
 		String line = null;
-		String time = null;
+		// String time = null;
 		while ((line = procReader.readLine()) != null){
 			if(line.contains("time=")){
-				time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+				// time = 
+				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 				// Util.debug("ping time: "+ time);
-				if(time.equals("0")) return null;
-				return time;
+				// if(time.equals("0")) return null;
+				// return time;
 			}	
 		}
 		// Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
@@ -238,7 +235,7 @@ public class NetworkMonitor {
 		try {
 			killApplet();
 			Util.log("changeWIFI: (with password): " + ssid, this); 
-			Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
+			Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password, "&"});
 		} catch (Exception e) { 
 			Util.debug("changeWIFI: " + e.getLocalizedMessage(), this); 
 		}		
@@ -246,9 +243,11 @@ public class NetworkMonitor {
 	
 	public void changeWIFI(final String ssid){		
 		try {
-			killApplet();
-			Util.log("changeWIFI: " + ssid, this); 
-			Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid, "&"});
+			long start = System.currentTimeMillis();
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid }); // , "&"});
+			proc.waitFor();
+			Util.log("changeWIFI(): " + ssid + " exit code: " + proc.exitValue(), this); 
+			Util.log("changeWIFI(): " + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
 		} catch (Exception e) { 
 			Util.debug("changeWIFI(): " + e.getLocalizedMessage(), this);
 		}		
@@ -275,7 +274,7 @@ public class NetworkMonitor {
 	private void readWAN(){
 		for(int i = 0 ; i < networkData.size() ; i++){		
 			String line = networkData.get(i);
-			if(line.startsWith("- Device: " + WLAN)) {	
+			if(line.startsWith("- Device: wlan")) {	
 				setSSID(line);
 				wlanData.clear();
 				for(int j = i+1 ; j < networkData.size() ; j++){
@@ -292,7 +291,7 @@ public class NetworkMonitor {
 	private void readETH() { 
 		for(int i = 0 ; i < networkData.size() ; i++){		
 			String line = networkData.get(i);
-			if(line.startsWith("- Device: " + ETH)) {	
+			if(line.startsWith("- Device: eth")) {	
 				ethData.clear();
 				for(int j = i+1 ; j < networkData.size() ; j++){
 					if(networkData.get(j).contains("- Device")) return;
@@ -310,13 +309,7 @@ public class NetworkMonitor {
 		state.delete(values.localaddress);
 		state.delete(values.signalspeed);
 		state.delete(values.gateway);
-		//killApplet();
-		
-		// TODO: just make those ping times get bigger?
-		
-//		state.delete(values.wifiping);
-//		state.delete(values.ethernetping);
-//		state.delete(values.externaladdress); // TODO: need this
+		pingValue = null;
 	}
 	
 	private void parseETH(){
