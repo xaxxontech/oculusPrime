@@ -51,9 +51,7 @@ public class NetworkServlet extends HttpServlet {
 			
 			if(action.equals("adhoc")){		
 				monitor.startAdhoc();
-				Util.log("..... start adhoc called", this);
-				Util.delay(500);
-				response.sendRedirect("http://10.42.0.1:" +request.getServerPort() + "/oculusPrime/network"); 
+				response.sendRedirect("dashboard"); 
 				return;
 			}
 			
