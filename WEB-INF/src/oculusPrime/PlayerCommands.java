@@ -28,7 +28,7 @@ public enum PlayerCommands {
     
     // video/audio (flash)
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
-    streamsettingsset, motiondetectgo, motiondetectcancel, framegrabtofile,
+    streamsettingsset, motiondetectgo, motiondetectcancel, motiondetectstream, framegrabtofile,
     
     // malg board 
     motorsreset, cameracommand, camtilt, camtiltfast, getdrivingsettings, drivingsettingsupdate,

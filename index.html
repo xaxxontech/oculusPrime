@@ -975,17 +975,22 @@ floor plane top view <a class="blackbg" href="javascript: depthView('floorPlaneT
  <a class="blackbg" href="javascript: callServer('clearmap','');">clear map</a><br>
 
 processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> / 
-<a class="blackbg" href="javascript: processedImg('close');">off</a><br> 
-<!-- 
-stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> / 
-<a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
-stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> / 
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>
-stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on</a> / 
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>
-left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>
- -->
+<a class="blackbg" href="javascript: processedImg('close');">off</a><br>
+motion detect demo <a class="blackbg"
+					  href="javascript: callServer('motiondetectstream', ''); imgOverVideo('on');">on</a> /
+<a class="blackbg"
+   href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
+	<!--
+    stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> /
+    <a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
+    stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> /
+    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
+    stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on</a> /
+    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
+    left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
+    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
+     -->
  
 </div>
 

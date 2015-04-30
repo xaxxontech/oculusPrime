@@ -1,6 +1,7 @@
 package developer.image;
 
 import oculusPrime.Util;
+import org.opencv.core.Core;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -52,13 +53,14 @@ public class openCVTestPanel extends JFrame{
 
 
         // do stuff
+        System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // moved to Application so only loaded once
 
         new Thread(new Runnable() {
             public void run() {
                 try {
                     OpenCVMotionDetect ocvmd = new OpenCVMotionDetect();
-                    Util.delay(2000);
-                    ocvmd.motionDetectGo();
+//                    Util.delay(2000);
+                    ocvmd.motionDetectGoTest();
 
                     while(true) {
                         if (ocvmd.imageupdated) {

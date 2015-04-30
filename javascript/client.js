@@ -2600,4 +2600,30 @@ function depthViewImgReload(mode) {
 	img.onload = function() { depthViewRepeat(mode); }
 }
 
+function imgOverVideo(mode) {
+	var img = document.getElementById("videologo");
+	if (mode == "on") {
+		play("stop"); // will stop playing stream, and turn videologo on
+		// <img id="videologo" src="images/eye.gif" width="640" height="480"
+		img.src = "frameGrabHTTP?mode=videoOverlayImg&date=" + new Date().getTime();
+		img.onload = function() { imgOverVideoRepeat(); }
+	}
+	else {
+		clearTimeout(radartimer);
+		radartimer = null;
+		img.onload = null;
+		img.src = "images/eye.gif";
+	}
+}
 
+function imgOverVideoRepeat() {
+	clearTimeout(radartimer);
+	radartimer = setTimeout("imgOverVideoReload();", 50);
+}
+
+function imgOverVideoReload() {
+	radartimer = null;
+	var img = document.getElementById("videologo");
+	img.src = "frameGrabHTTP?mode=videoOverlayImg&date=" + new Date().getTime();
+	img.onload = function() { imgOverVideoRepeat(); }
+}

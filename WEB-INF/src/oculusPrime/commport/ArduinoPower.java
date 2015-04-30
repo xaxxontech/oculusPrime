@@ -1,9 +1,6 @@
 package oculusPrime.commport;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,8 +61,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int WARNING_ONLY_BELOW = 40;
 	public static final int RESET_REQUIRED_ABOVE= 19;
 	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4);  // log only, suppress gui warnings:
-	
-	
+
+	private volatile List<Byte> commandList = new ArrayList<>();
+	private volatile boolean commandlock = false;
+
 	public ArduinoPower(Application app) {
 		application = app;	
 		state.put(State.values.powerport, portname);
@@ -105,7 +104,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 		for(Map.Entry<String, Integer> entry : temp.entrySet()){
 			pwrerr.put(entry.getValue(), entry.getKey());
 		}
-		
+
+		new CommandSender().start();
+
 		if(!settings.readSetting(ManualSettings.powerport).equals(Settings.DISABLED)) connect();
 		
 		if (isconnected) { 
@@ -247,7 +248,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			}		
 		}
 	}
-	
+
 	public void reset() {
 			new Thread(new Runnable() {
 				public void run() {
@@ -491,34 +492,89 @@ public class ArduinoPower implements SerialPortEventListener  {
 	 */
 	public void sendCommand(byte[] cmd) {
 
-		if (!isconnected) return;
-		
 		String text = "sendCommand(): " + (char)cmd[0] + " ";
 		for(int i = 1 ; i < cmd.length ; i++) 
 			text += ((byte)cmd[i] & 0xFF) + " ";   // & 0xFF converts to unsigned byte
 		
 		PowerLogger.append(text, this);
-		
-		final byte[] command = cmd;
-		new Thread(new Runnable() {
-			public void run() {
-				try {
 
-					serialPort.writeBytes(command);  // byte array
-					serialPort.writeInt(13);  		 // end of command
-		
-				} catch (Exception e) {
-					Util.log("ArduinoPower: sendCommand(), ERROR " + e.getMessage(), this);
-					PowerLogger.append("ArduinoPower: sendCommand(), ERROR " + e.getMessage(), this);
-				}
-			}
-		}).start();
+		long timeout = System.currentTimeMillis() + 5000;
+		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
+		if (commandlock) {
+			String str = "";
+			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
+			Util.log("error, commandlock timeout, command dropped: "+str, this);
+		}
+		else {
+			commandlock = true;
+			for (byte b : cmd) commandList.add(b);
+			commandList.add((byte) 13); // EOF
+			commandlock = false;
+		}
 	}
 	
 	private void sendCommand(final byte cmd){
 		sendCommand(new byte[]{cmd});
 	}
-	
+
+	/** inner class to send commands to port in sequential order */
+	public class CommandSender extends Thread {
+
+		public CommandSender() {
+			this.setDaemon(true);
+		}
+
+		public void run() {
+
+			while (true) {
+				if (commandList.size() > 0 &! commandlock) {
+
+					commandlock = true;
+
+					if (!isconnected) {
+						Util.log("error, not connected", this);
+						commandList.clear();
+						commandlock = false;
+						continue;
+					}
+
+					if (commandList.size() > 15) {
+						commandList.clear();
+						Util.log("error, command stack up, all dropped", this);
+						commandlock = false;
+						continue;
+					}
+
+					if (commandList.get(commandList.size() - 1) != (byte) 13) {
+						String str = "";
+						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
+						Util.log("error, warning no EOF char: "+str, this); // nuke this, triggers sometimes as expected
+						commandlock = false;
+						continue;
+					}
+
+					byte c[] = new byte[commandList.size()];
+					for (int i = 0; i < commandList.size(); i++) c[i]=commandList.get(i);
+					commandList.clear();
+
+					commandlock = false;
+
+					try {
+						serialPort.writeBytes(c); // writing as array ensures goes at baud rate?
+
+					} catch (Exception e) {
+						Util.log("sendCommand() error", this); // , attempting reset", this);
+						Util.printError(e);
+					}
+
+				}
+
+				Util.delay(1);
+
+			}
+		}
+	}
+
 	public void shutdown() {
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 			application.message("can't power down when docked", null, null);

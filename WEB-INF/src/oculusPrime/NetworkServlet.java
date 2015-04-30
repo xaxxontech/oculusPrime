@@ -109,7 +109,7 @@ public class NetworkServlet extends HttpServlet {
 		out.println("<table cellpadding=\"5\" >");
 		out.println("\n<tr><td colspan=\"15\"><center><b>available access points </b></center><hr></td></tr>");
 		
-		if(state.equals(values.ssid, "ap"))  out.println("\n<tr><td colspan=\"15\"><i>ah-Hoc mode enabled</i></td></tr>");
+		if(state.equals(values.ssid, "ap"))  out.println("\n<tr><td colspan=\"15\"><i>ad-hoc mode enabled</i></td></tr>");
 		else out.println("\n<tr><td colspan=\"15\">"+ adhoc +"</td></tr>");
 		
 		out.println("\n<tr>");

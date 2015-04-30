@@ -143,9 +143,12 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 
-		new CommandSender().start();
 
-		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) connect();
+
+		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) {
+			new CommandSender().start();
+			connect();
+		}
 		initialize();
 		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
 		new WatchDog().start();
@@ -346,7 +349,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
         			Thread.sleep(DEVICEHANDSHAKEDELAY);
         			serialPort.readBytes(); // clear serial buffer
         			
-        			serialPort.writeBytes(new byte[] { GET_PRODUCT, 13 }); // query device
+        			serialPort.writeBytes(new byte[]{GET_PRODUCT, 13}); // query device
         			Thread.sleep(100); // some delay is required
 					byte[] buffer = serialPort.readBytes();
         			
@@ -475,7 +478,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			Util.log("DEBUG: "+ text, this);
 		}   // */
 
-		long timeout = System.currentTimeMillis() + 5000;
+		// TODO: initial timeout for testing only
+		long timeout = System.currentTimeMillis() + 500;
+
+		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
+		if (commandlock) {
+			String str = "";
+			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
+			Util.log("error, commandlocked after "+timeout+"ms, command waiting: "+str, this);
+		}
+
+		timeout = System.currentTimeMillis() + 4500;
 		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
 		if (commandlock) {
 			String str = "";
@@ -511,15 +524,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 					commandlock = true;
 
-					if (!isconnected) { // redundant
-						Util.log("error, not connected", this);
+					if (!isconnected) {
+						Util.log("error, not connected", this); // TODO: coule be normal reset
 						commandList.clear();
+						commandlock = false;
 						continue;
 					}
 
 					if (commandList.size() > 15) {
 						commandList.clear();
 						Util.log("error, command stack up, all dropped", this);
+						commandlock = false;
 						continue;
 					}
 
@@ -527,6 +542,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						String str = "";
 						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
 						Util.log("error, warning no EOF char: "+str, this); // nuke this, triggers sometimes as expected
+						commandlock = false;
 						continue;
 					}
 

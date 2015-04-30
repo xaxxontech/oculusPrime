@@ -4,19 +4,18 @@ import java.util.Properties;
 
 /** place extensions to settings here */
 public enum ManualSettings {
-	prefered_router,
-	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,  
+	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
 	soundthreshold, motionthreshold,
-	; 
+	preferred_router,
+	;
 	
 	 // new counter to see if constantly searching
 
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
-		config.setProperty(prefered_router.name(), NetworkMonitor.AP);
 		config.setProperty(developer.name(), "false");
 		config.setProperty(debugenabled.name(), "false");
 		config.setProperty(motorport.name(), Settings.ENABLED);
@@ -34,6 +33,7 @@ public enum ManualSettings {
 		config.setProperty(soundthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "0.003");
+		config.setProperty(preferred_router.name(), NetworkMonitor.AP);
 		return config;
 	}
 	

@@ -21,8 +21,8 @@ public class ImageUtils {
 	public static BufferedImage getImageFromStream() {
 		BufferedImage img = null;
 		try {
-//            img = ImageIO.read(new URL("http://127.0.0.1:5080/oculusPrime/frameGrabHTTP"));
-			img = ImageIO.read(new URL("http://192.168.0.107:5080/oculusPrime/frameGrabHTTP"));
+            img = ImageIO.read(new URL("http://127.0.0.1:5080/oculusPrime/frameGrabHTTP"));
+//			img = ImageIO.read(new URL("http://192.168.0.107:5080/oculusPrime/frameGrabHTTP"));
 		} catch (IOException e) { e.printStackTrace(); }
 		return img;
 	}

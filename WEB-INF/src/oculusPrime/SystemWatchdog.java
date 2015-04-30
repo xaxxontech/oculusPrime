@@ -27,7 +27,7 @@ public class SystemWatchdog {
 	
 	public String lastpowererrornotify = null; // this gets set to null on client login 
 	public boolean powererrorwarningonly = true;
-	private boolean redocking = false;
+	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	
     /** Constructor */
@@ -162,7 +162,9 @@ public class SystemWatchdog {
 			Util.delay(1000); // including 500 delay 
 			application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
 			Util.delay(6000); // allow reaction
-			
+
+			if (!redocking) return;
+
 			// camera on
 			application.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			application.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
@@ -177,6 +179,8 @@ public class SystemWatchdog {
 				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 			}
 
+			if (!redocking) return;
+
 			// reverse tilt
 			application.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
 			// docklight on, spotlight off
@@ -188,6 +192,9 @@ public class SystemWatchdog {
 			int rot = 0;
 			String res = "";
 			while (true) {
+
+				if (!redocking) return;
+
 				if (rot == 32) { // failure give up
 					callForHelp(subject, body);
 					application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
@@ -218,15 +225,19 @@ public class SystemWatchdog {
 				rot ++;
 			}
 
+			if (!redocking) return;
+
 			application.driverCallServer(PlayerCommands.autodock, autodockmodes.go.toString()); // attempt dock
 			// wait while autodocking does its thing 
 			start = System.currentTimeMillis();
 			while (state.getBoolean(State.values.autodocking) && System.currentTimeMillis() - start < AUTODOCKTIMEOUT)  
-				Util.delay(100); 
+				Util.delay(100);
+
+			if (!redocking) return;
 
 			application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 			application.driverCallServer(PlayerCommands.floodlight, "0");
-			
+
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				if (!state.exists(State.values.driver.toString()))  callForHelp(subject, body);
 			}

@@ -23,7 +23,7 @@ public class NetworkMonitor {
 	private static Vector<String> connections = new Vector<String>();
 
 	// TODO: discover and keep in static vars here 
-	protected static final String DEFAULT_ROUTER = Settings.getReference().readSetting(ManualSettings.prefered_router); 
+	protected static final String DEFAULT_ROUTER = Settings.getReference().readSetting(ManualSettings.preferred_router);
 	protected static final String WLAN = "wlan2";
 	protected static final String ETH = "eth0";
 	protected static final String AP = "ap";
@@ -46,7 +46,7 @@ public class NetworkMonitor {
 		routerTimer.schedule(new checkRouterTask(), 5000, POLL_ROUTER);
 		pingTimer.schedule(new pingTask(), 5000, POLL_DELAY_MS);
 		updateExternalIPAddress();
-		connectionUpdate();	
+		connectionUpdate();
 		connectionsNever();
 		killApplet();
 	}
@@ -70,25 +70,25 @@ public class NetworkMonitor {
 	public class pingTask extends TimerTask {			
 	    @Override
 	    public void run() {
-	    	try{ 
-	    		
+	    	try{
+
 	    		if(state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) {
 	    			pingValue = pingWIFI("www.xaxxon.com");
 	    			if(pingValue != null) pingLast = System.currentTimeMillis();
 	    		}
-	    		
+
 	    		if((System.currentTimeMillis()-NetworkMonitor.pingLast) > POLL_DELAY_MS){
 	    			Util.log("... starting ap mode now", this);
 	    			startAdhoc();
 	    		}
-	    		
-	    		if( !state.exists(values.externaladdress)  && !state.equals(values.ssid, AP)) 
+
+	    		if( !state.exists(values.externaladdress)  && !state.equals(values.ssid, AP))
 	    			updateExternalIPAddress();
-	    			
+
 			} catch (Exception e) {
 				Util.debug("pingTask(): " + e, this);
-			}		
-	    }    
+			}
+	    }
 	}
 	
 	public static String pingWIFI(final String addr) throws Exception{

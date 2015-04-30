@@ -66,6 +66,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
+	public static BufferedImage videoOverlayImage = null;
 	
 	public Application() {
 		super();
@@ -251,11 +252,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			commandServer = new TelnetServer(this);
 			Util.debug("telnet server started", this);
 		}
-		
+
+		System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
+
 		if (settings.getBoolean(GUISettings.navigation)) {
-			System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
-			navigation =
-					new developer.Navigation(this);
+
+			navigation = new developer.Navigation(this);
 			navigation.runAnyActiveRoute();
 		}
 		
@@ -467,6 +469,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
 			}
+
+			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
 				
 			move(str); 
 			break;
@@ -799,8 +803,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 //		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
 		case motiondetectgo: new OpenCVMotionDetect(this).motionDetectGo(); break;
-		case motiondetectcancel: state.delete(State.values.motiondetectwatching); break;
-		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null);
+		case motiondetectcancel: state.delete(State.values.motiondetect); break;
+		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
+		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null); break;
 
 		}
 	}
@@ -1385,7 +1390,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			comport.stopGoing();
 			moveMacroCancel();
-			
 
 			message("command received: " + str, "motion", "STOPPED");
 			return;

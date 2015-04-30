@@ -31,21 +31,21 @@ public class motionDetect {
 	
 	private void start() {
 		state.delete(State.values.streamactivity);
-		state.set(State.values.motiondetectwatching, true);
+		state.set(State.values.motiondetect, true);
 
 		
 		new Thread(new Runnable() {
 			public void run() {
 				try {
 					int frameno = 0;
-					while (state.getBoolean(State.values.motiondetectwatching)) { // TODO: time out after a while
+					while (state.getBoolean(State.values.motiondetect)) { // TODO: time out after a while
 						
 						if(state.getBoolean(State.values.framegrabbusy.name()) || 
 								 !(state.get(State.values.stream).equals("camera") || 
 										 state.get(State.values.stream).equals("camandmic"))) {
 
 							app.message("framegrab busy or stream unavailable", null,null);
-							state.set(State.values.motiondetectwatching, false);
+							state.set(State.values.motiondetect, false);
 							return;
 						}
 						
@@ -60,7 +60,7 @@ public class motionDetect {
 							if (n> 2000) {  // give up after 10 seconds 
 								Util.debug("frame grab timed out", this);
 								state.set(State.values.framegrabbusy, false);
-								state.set(State.values.motiondetectwatching, false);
+								state.set(State.values.motiondetect, false);
 								return;
 							}
 						}
@@ -87,9 +87,9 @@ public class motionDetect {
 						if (frameno >= 1) { // ignore frames 0
 							int compared = Math.abs(ctrxy[0]-lastMassCtr[0])+Math.abs(ctrxy[1]-lastMassCtr[1]);
 
-							if (compared> threshold && state.getBoolean(State.values.motiondetectwatching)) { //motion detected above noise level
+							if (compared> threshold && state.getBoolean(State.values.motiondetect)) { //motion detected above noise level
 //								lastMassCtr[0] = -1;
-								state.set(State.values.motiondetectwatching, false);
+								state.set(State.values.motiondetect, false);
 								if (!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())) {
 									Util.log("error motion detect attempt while moving", true);
 									return;

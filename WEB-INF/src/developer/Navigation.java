@@ -29,7 +29,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 99;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
 	private final Settings settings = Settings.getReference();
 
 	/** Constructor */
@@ -645,7 +645,7 @@ public class Navigation {
 
 				if (state.exists(State.values.streamactivityenabled))
 					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
-				if (state.exists(State.values.motiondetectwatching))
+				if (state.exists(State.values.motiondetect))
 					app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 
 				break; // if rotating, stop

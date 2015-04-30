@@ -179,6 +179,7 @@ public class SendMail {
 //			Transport.send(message);
 
 			if(application!=null) application.message("email has been sent", null, null);
+			Util.log("email has been sent", this);
 
 		} catch (MessagingException e) {
 			//log.error(e.getMessage() + "error sending email, check settings");

@@ -48,7 +48,8 @@ public class FrameGrabHTTP extends HttpServlet {
         	String mode = req.getParameter("mode");
             
             if (mode.equals("radar"))  radarGrab(req,res);            	
-            else if(mode.equals("processedImg"))  processedImg(req,res); 
+            else if(mode.equals("processedImg"))  processedImg(req,res);
+			else if (mode.equals("videoOverlayImg")) videoOverlayImg(req, res);
             else if (mode.equals("depthFrame") &&  Application.openNIRead.depthCamGenerating) { 	
             	Application.processedImage = Application.openNIRead.generateDepthFrameImg();
             	processedImg(req,res);
@@ -158,6 +159,17 @@ public class FrameGrabHTTP extends HttpServlet {
 		ImageIO.write(Application.processedImage, "GIF", out);
 //		ImageIO.write(Application.processedImage, "JPG", out);
 //		out.close();
+	}
+
+	private void videoOverlayImg(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+
+		if (Application.videoOverlayImage == null)
+			Application.videoOverlayImage= new BufferedImage(640, 480, BufferedImage.TYPE_INT_RGB);
+
+		// send image
+		res.setContentType("image/jpg");
+		OutputStream out = res.getOutputStream();
+		ImageIO.write(Application.videoOverlayImage, "JPG", out);
 	}
 	
 	private void radarGrab(HttpServletRequest req, HttpServletResponse res) 
