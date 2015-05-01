@@ -674,14 +674,15 @@ Settings and Calibration:
 <a class="blackbg" href="javascript: docklinecalibrate('start');">manual dock guide</a><br>
 login notify <a class="blackbg" href="javascript: writesetting('loginnotify true');">on</a> / 
 <a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br>
-reboot every 48 hrs <span style="font-size: 11px">(requires server app restart)</span>
+reboot every 48 hrs <span style="font-size: 11px">(requires server restart)</span>
 <a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
 <a class="blackbg" href="javascript: writesetting('reboot false');">no</a><br>
 attempt auto re-dock if required
 <a class="blackbg" href="javascript: if (confirm(&quot;this will enable unexpected robot movement\nare you sure?&quot;)) {
 writesetting('redock true'); }">yes</a> /
 <a class="blackbg" href="javascript: writesetting('redock false');">no</a><br>
-enable navigation menu <a class="blackbg" href="javascript: writesetting('navigation true');">yes</a> / 
+enable navigation menu <span style="font-size: 11px">(requires server restart)</span>
+	<a class="blackbg" href="javascript: writesetting('navigation true');">yes</a> /
 <a class="blackbg" href="javascript: writesetting('navigation false');">no</a><br>
  
 <a class="blackbg" href="javascript: saveopenwindowpositions();">save window positions</a><br>
@@ -981,16 +982,27 @@ motion detect demo <a class="blackbg"
 <a class="blackbg"
    href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
 
-	<!--
-    stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> /
-    <a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
-    stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> /
-    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
-    stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on</a> /
-    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
-    left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
-    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
-     -->
+<br>
+
+<a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
+<a class="blackbg" href="dashboard?view=state" target="_blank">dashboard state</a><br>
+<a class="blackbg" href="dashboard?view=log" target="_blank">dashboard log combo</a><br>
+<a class="blackbg" href="dashboard?view=sysout" target="_blank">dashboard log sysout</a><br>
+<a class="blackbg" href="dashboard?view=power" target="_blank">dashboard log power</a><br>
+<a class="blackbg" href="dashboard?view=ap" target="_blank">dashboard access points</a><br>
+<a class="blackbg" href="dashboard?view=ban" target="_blank">dashboard ban</a><br>
+<a class="blackbg" href="dashboard?view=ros" target="_blank">dashboard ROS</a><br>
+
+<!--
+stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> /
+<a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
+stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> /
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>
+stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on</a> /
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>
+left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>
+ -->
  
 </div>
 

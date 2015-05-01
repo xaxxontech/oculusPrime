@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
 
 import oculusPrime.*;
 import org.w3c.dom.Document;
@@ -29,7 +31,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 5;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 99;
 	private final Settings settings = Settings.getReference();
 
 	/** Constructor */
@@ -351,7 +353,15 @@ public class Navigation {
 			
 			while (true) {
 
-				state.delete(State.values.nextroutetime);
+				state.delete(State.values.nextroutetime); // ?
+
+				// add xml: starthour, startmin, routeduration, day
+				Calendar calendar = Calendar.getInstance();
+				calendar.setTime(new Date());
+				int hours = calendar.get(Calendar.HOUR_OF_DAY);
+				int minutes = calendar.get(Calendar.MINUTE);
+
+
 
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
@@ -563,7 +573,8 @@ public class Navigation {
 
 		// setup camera
 		if (camera) {
-    		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			// save cpu using 320x240, or increase frame rate delay
+    		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
     		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
     	}
 
@@ -663,7 +674,7 @@ public class Navigation {
 				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
 						System.currentTimeMillis() < stopwaiting) { Util.delay(10); } // wait for stop
 
-				Util.delay(3000); // allow cam to normalize
+				Util.delay(4000); // allow cam to normalize
 				turns ++;
 			}
 

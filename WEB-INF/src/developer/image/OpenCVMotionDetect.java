@@ -51,6 +51,11 @@ public class OpenCVMotionDetect  {
                 BackgroundSubtractorMOG2 mog = new BackgroundSubtractorMOG2(0, 1024, false);
 //                frame = cv.bufferedImageToMat(ImageUtils.getImageFromStream());
 
+                Mat frame;
+                Mat gr = null;
+                Mat bl = null;
+                Mat m =  new Mat();
+
                 int f = 0;
                 long timeout = System.currentTimeMillis() + Util.FIVE_MINUTES;
                 while (state.getBoolean(State.values.motiondetect) && System.currentTimeMillis() < timeout) {
@@ -75,7 +80,7 @@ public class OpenCVMotionDetect  {
                         break;
                     }
 
-                    Mat frame = cv.bufferedImageToMat(img);
+                    frame = cv.bufferedImageToMat(img);
 
                     mog.apply(frame, fore, 0);
 //                    mog.apply(frame, fore);
@@ -87,10 +92,17 @@ public class OpenCVMotionDetect  {
                     if ( activity > threshold && f>1) { // motion detected
 //                        System.out.println(movingpixels);
                         if (!state.getBoolean(State.values.motiondetect)) break;
-                        Mat m = new Mat();
+
                         fore.copyTo(m);
-                        Imgproc.cvtColor(m, m, Imgproc.COLOR_GRAY2BGR);
-                        Core.addWeighted(m, 0.5, frame, 1.0, 1.0, detect);
+
+                        if (gr == null) gr = new Mat().zeros(frame.height(), frame.width(), CvType.CV_8U);
+                        if (bl == null) bl = new Mat().zeros(frame.height(), frame.width(), CvType.CV_8U);
+                        List<Mat> listMat = Arrays.asList(bl, gr, m);
+                        Core.merge(listMat, m);
+                        Core.addWeighted(m, 0.50, frame, 1.0, 1.0, detect);
+
+//                        Imgproc.cvtColor(m, m, Imgproc.COLOR_GRAY2BGR);
+//                        Core.addWeighted(m, 0.5, frame, 1.0, 1.0, detect);
                         Application.processedImage = cv.matToBufferedImage(detect);
                         imageupdated = true;
                         state.set(State.values.streamactivity, "video " + activity);
@@ -131,6 +143,11 @@ public class OpenCVMotionDetect  {
 
                 if (state != null) {
                     if (!state.getBoolean(State.values.motiondetect)) break;
+                    if (!state.get(State.values.stream).equals(Application.streamstate.camera.toString()) &&
+                            !state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()) ) {
+                        state.delete(State.values.motiondetect);
+                        break;
+                    }
                 }
 
                 BufferedImage img = null;
@@ -139,6 +156,8 @@ public class OpenCVMotionDetect  {
                     img = ImageIO.read(new URL("http://127.0.0.1:" + port + "/oculusPrime/frameGrabHTTP"));
                 } catch (IOException e) {
                     e.printStackTrace();
+                    state.delete(State.values.motiondetect);
+                    break;
                 }
 
                 if (img == null) {

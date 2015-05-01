@@ -56,32 +56,37 @@ public class AutoDock {
 	public void autoDock(String str){
 
 		String cmd[] = str.split(" ");
-		
+
 		if (cmd[0].equals(autodockmodes.cancel.toString())) { //used by javascript, don't nuke
 			autoDockCancel();
 		}
 
-		if (cmd[0].equals(autodockmodes.go.toString())) {
-			if (state.getBoolean(State.values.motionenabled)) { 
-				if(state.getBoolean(State.values.autodocking)){
-					app.message("auto-dock in progress", null, null);
-					return;
-				}
-				
-				lowres=true;
-
-				dockGrab(dockgrabmodes.start, 0, 0);
-				state.set(State.values.autodocking, true);
-				autodockingcamctr = false;
-				autodockctrattempts = 0;
-				dockattempts = 1;
-				app.message("auto-dock in progress", "motion", "moving");
-				Util.log("autodock go", this);
-				PowerLogger.append("autodock go", this);
+		else if (cmd[0].equals(autodockmodes.go.toString())) {
+			if (!state.getBoolean(State.values.motionenabled)) {
+				app.message("motion disabled", "autodockcancelled", null);
+				return;
 			}
-			else { app.message("motion disabled","autodockcancelled", null); }
-		}
-		if (cmd[0].equals(autodockmodes.dockgrabbed.toString())) { 
+			if(state.getBoolean(State.values.autodocking)){
+				app.message("auto-dock in progress", null, null);
+				return;
+			}
+			if (state.getBoolean(State.values.odometry)) {
+				app.message("unable to dock, odometry running", "autodockcancelled", null);
+				return;
+			}
+
+			lowres=true;
+
+			dockGrab(dockgrabmodes.start, 0, 0);
+			state.set(State.values.autodocking, true);
+			autodockingcamctr = false;
+			autodockctrattempts = 0;
+			dockattempts = 1;
+			app.message("auto-dock in progress", "motion", "moving");
+			Util.log("autodock go", this);
+			PowerLogger.append("autodock go", this);
+					}
+		else if (cmd[0].equals(autodockmodes.dockgrabbed.toString())) {
 			
 			if (cmd[1].equals(dockgrabmodes.find.toString()) ) { // x,y,width,height,slope
 				
@@ -181,11 +186,11 @@ public class AutoDock {
 				app.message("auto-dock calibrated", "autodocklock", s);
 			}
 		}
-		if (cmd[0].equals(autodockmodes.calibrate.toString())) {
+		else if (cmd[0].equals(autodockmodes.calibrate.toString())) {
 			final int x = Integer.parseInt(cmd[1]) / 2; // assuming 320x240
 			final int y = Integer.parseInt(cmd[2]) / 2; // assuming 320x240
 			lowres = true;
-			comport.floodLight(FLCALIBRATE); 
+			comport.floodLight(FLCALIBRATE);
 
 			new Thread(new Runnable() {
 				public void run() {
@@ -193,12 +198,12 @@ public class AutoDock {
 
 						Thread.sleep(2000); // allow light to adjust
 						dockGrab(dockgrabmodes.calibrate, x, y);
-						
+
 					} catch (Exception e) { e.printStackTrace(); }
 				}
 			}).start();
-			
-			
+
+
 
 		}	
 	}
@@ -421,7 +426,7 @@ public class AutoDock {
 
 	//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
 				if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer
-					comport.clickSteer((x - imgwidth / 2) * rescomp, (y - imgheight / 2) * rescomp);
+					comport.clickSteer((x - imgwidth / 2) * rescomp, 0);
 					comport.delayWithVoltsComp(allowforClickSteer);
 				}
 

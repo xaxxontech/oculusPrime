@@ -1013,6 +1013,8 @@ function editroute(name, rxml) {
 		temproutesxml = loadXMLString(xmlToString(rxml.getElementsByTagName("routeslist")[0]));
 	}
 	
+	var availabledays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+	
 	if (name == null || name == "") { // new route
 		name = "new route";
 		var routeslist = temproutesxml.getElementsByTagName("routeslist")[0];
@@ -1022,17 +1024,38 @@ function editroute(name, rxml) {
 		var newname = temproutesxml.createElement("rname");
 		var newtext = temproutesxml.createTextNode(name);
 		newname.appendChild(newtext);
+		newroute.appendChild(newname);
 		
 		var newminbetween = temproutesxml.createElement("minbetween");
 		var newval = temproutesxml.createTextNode(60);
 		newminbetween.appendChild(newval);
+		newroute.appendChild(newminbetween);
+		
+		var newstarthour = temproutesxml.createElement("starthour");
+		var  newval = temproutesxml.createTextNode("00");
+		newstarthour.appendChild(newval);
+		newroute.appendChild(newstarthour);
+		
+		var newstartmin = temproutesxml.createElement("startmin");
+		var  newval = temproutesxml.createTextNode("00");
+		newstartmin.appendChild(newval);
+		newroute.appendChild(newstartmin);
+		
+		var newrouteduration = temproutesxml.createElement("routeduration");
+		var newval = temproutesxml.createTextNode("1");
+		newrouteduration.appendChild(newval);
+		newroute.appendChild(newrouteduration);
+		
+		for (var d=0; d<availabledays.length; d++) {
+			var newday = temproutesxml.createElement("day");
+			var newval = temproutesxml.createTextNode(availabledays[d]);
+			newday.appendChild(newval);
+			newroute.appendChild(newday);
+		}
 		
 		var newactive = temproutesxml.createElement("active");
 		var newtxt = temproutesxml.createTextNode("false");
 		newactive.appendChild(newtxt);
-
-		newroute.appendChild(newname);
-		newroute.appendChild(newminbetween);
 		newroute.appendChild(newactive);
 		
 		routeslist.appendChild(newroute);
@@ -1055,6 +1078,8 @@ function editroute(name, rxml) {
 	var str = document.getElementById("edit_route_menu").innerHTML;
 	popupmenu("menu","show",null,null,str);
 
+	str = "";
+
 	// route name
 	var name = document.getElementById("routename");
 	name.value = route.getElementsByTagName("rname")[0].childNodes[0].nodeValue;
@@ -1063,12 +1088,76 @@ function editroute(name, rxml) {
 	// minutes between route end>start
 	var min = document.getElementById("routeminbetween");
 	min.value = route.getElementsByTagName("minbetween")[0].childNodes[0].nodeValue;
+		
+	// schedule: weekdays
+	str += "<table><tr valign='top'><td>Run days: </td><td>";
+	var days = route.getElementsByTagName("day");
+	if (days.length == 0) str += "&nbsp; none";
+	if (days.length > 1) reorderdays(days, availabledays);
+	for (var a=0; a<days.length; a++) {
+		
+		var day = days[a].childNodes[0].nodeValue;
+		var d = availabledays.indexOf(day);
+		if (d > -1) availabledays.splice(d,1);
+		
+		str += "&nbsp; <span style='white-space: nowrap'><span class='wpaction'>";
+		str += day+"</span>";
+		str += "<a style='border-left: 2px solid #000' href='javascript: routedaydel("+r+", "+a+");'>";
+		str += "<span class='wpaction'><b>X</b></span></a></span>";
+		if ((a+1) % 7 == 0) str += "<br>";
+	}
+	str += "</td><td style='padding-left: 20px'>";
+	if (availabledays.length > 0) {
+		str += "<select id='routedaynew' onchange='javascript: routedayaddnew("+r+", this.id);'>";
+		str += "<option value='' selected='selected'>&lt; add day</option>";
+		for (var wda=0; wda < availabledays.length; wda++) {
+			str += "<option value='"+availabledays[wda]+"'>"+availabledays[wda]+"</option>";
+		}
+		str += "</select>";
+	}
+	str += "</td></tr></table>";
+	
+	// schedule: hour
+	str += "Start time, hour/min: ";
+	str += "<select id='routehour'>";
+	var hourselection = route.getElementsByTagName("starthour")[0].childNodes[0].nodeValue;
+	for (var h=0; h<=23; h++) {
+		var numstr = h.toString();
+		if (h<10) numstr = "0"+numstr;
+		str +="<option value='"+numstr+"'"
+		if (numstr == hourselection) str += "selected='selected'";
+		str += ">"+numstr+"</option>";
+	}
+	str+="</select>";
+	
+	// schedule: minute
+	str += ":";
+	str += "<select id='routemin'>";
+	var minselection = route.getElementsByTagName("startmin")[0].childNodes[0].nodeValue;
+	for (var h=0; h<=59; h++) {
+		var numstr = h.toString();
+		if (h<10) numstr = "0"+numstr;
+		str +="<option value='"+numstr+"'"
+		if (numstr == minselection) str += "selected='selected'";
+		str += ">"+numstr+"</option>";
+	}
+	str+="</select>";
+	
+	// schedule: route duration
+	str += "&nbsp; &nbsp; &nbsp; Stop after: ";
+	str += "<select id='routeduration'>";
+	var hourselection = route.getElementsByTagName("routeduration")[0].childNodes[0].nodeValue;
+	for (var h=0; h<=23; h++) {
+		str +="<option value='"+h+"'"
+		if (h.toString() == hourselection) str += "selected='selected'";
+		str += ">"+h+"</option>";
+	}
+	str+="</select> hour(s)";
 	
 	// waypoints
 	var routewaypoints = route.getElementsByTagName("waypoint"); 
-	str = "";
 	for (var i=0; i < routewaypoints.length; i++ ) { 	// iterate thru waypoints
-		
+
 		// waypoint name (change to dropdown box)
 		str += "<table><tr><td style='height: 20px'></td></tr></table>";
 		str += "<b>Waypoint "+(i+1)+"</b>: <select id='waypointname"+i+"'>";
@@ -1091,30 +1180,38 @@ function editroute(name, rxml) {
 		
 		// waypoint duration
 		var n = routewaypoints[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue;
-		str += "<br>stay here for (seconds): ";
+		str += "<br>Stay here for (seconds): ";
 		str += "<input id='waypointseconds"+i+"' type='text' size='4' onKeyPress='if (keypress(event)==13) ";
 		str += "{ routesave(); }' class='inputbox' onfocus='keyboard(&quot;disable&quot;); ";
 		str += "this.style.backgroundColor=&quot;#000000&quot;;' onblur='keyboard(&quot;enable&quot;); ";
 		str += "this.style.backgroundColor=&quot;#151515&quot;;' value='"+n+"' ><br>";
 		
 		// waypoint actions
-		str += "<table><tr valign='top'><td>actions: </td><td>";
+		availableactions = navrouteavailableactions.slice();
+		str += "<table><tr valign='top'><td>Actions: </td><td>";
 		var actions = routewaypoints[i].getElementsByTagName("action");
 		if (actions.length == 0) str += "&nbsp; none";
 		for (var a=0; a<actions.length; a++) {
+			var actn = routewaypoints[i].getElementsByTagName("action")[a].childNodes[0].nodeValue;
+			var ai = availableactions.indexOf(actn);
+			if (ai > -1) availableactions.splice(ai,1);
+			
 			str += "&nbsp; <span style='white-space: nowrap'><span class='wpaction'>";
-			str += routewaypoints[i].getElementsByTagName("action")[a].childNodes[0].nodeValue+"</span>";
+			str += actn + "</span>";
 			str += "<a style='border-left: 2px solid #000' href='javascript: waypointactiondel("+r+", "+i+", "+a+");'>";
 			str += "<span class='wpaction'><b>X</b></span></a></span>";
-			if ((a+1) % 3 == 0) str += "<br>";
+			if ((a+1) % 6 == 0) str += "<br>";
 		}
 		str += "</td><td style='padding-left: 20px'>";
-		str += "<select id='waypointactionnew"+i+"' onchange='javascript: waypointactionaddnew("+r+", "+i+", this.id);'>";
-		str += "<option value='' selected='selected'>&lt; add action</option>";
-		for (var wpa=0; wpa < navrouteavailableactions.length; wpa++) {
-			str += "<option value='"+navrouteavailableactions[wpa]+"'>"+navrouteavailableactions[wpa]+"</option>";
+		if (availableactions.length > 0) {
+			str += "<select id='waypointactionnew"+i+"' onchange='javascript: waypointactionaddnew("+r+", "+i+", this.id);'>";
+			str += "<option value='' selected='selected'>&lt; add action</option>";
+			for (var wpa=0; wpa < availableactions.length; wpa++) {
+				str += "<option value='"+availableactions[wpa]+"'>"+availableactions[wpa]+"</option>";
+			}
+			str += "</select>";
 		}
-		str += "</select></td></tr></table>";
+		str += "</td></tr></table>";
 		
 		
 	}
@@ -1125,11 +1222,26 @@ function editroute(name, rxml) {
 	str += "<a class='blackbg' href='javascript: saveroutes("+r+")'>";
 	str += "<span class='cancelbox'>&#x2714;</span> SAVE ROUTE</a>";
 
-	
-	// save, dock between time
 
 	document.getElementById("edit_route_contents").innerHTML = str;
 	popupmenu('menu','resize');
+
+}
+
+function reorderdays(days, availabledays) { 
+	// only called if days.length > 1
+
+	var unordereddays = [];
+	for (var i = 0; i<days.length; i++)  unordereddays.push(days[i].childNodes[0].nodeValue);
+	
+	i = 0;
+	for (var d =0; d<7; d++) {
+		var n = unordereddays.indexOf(availabledays[d]);
+		if (n>-1) {
+			days[i].childNodes[0].nodeValue = availabledays[d];
+			i++;
+		}
+	}
 
 }
 
@@ -1154,6 +1266,9 @@ function saveeditrouteformprogress(routenum) {
 	var route = temproutesxml.getElementsByTagName("route")[routenum];
 	route.getElementsByTagName("rname")[0].childNodes[0].nodeValue = document.getElementById("routename").value;
 	route.getElementsByTagName("minbetween")[0].childNodes[0].nodeValue = document.getElementById("routeminbetween").value;
+	route.getElementsByTagName("starthour")[0].childNodes[0].nodeValue = document.getElementById("routehour").value;
+	route.getElementsByTagName("startmin")[0].childNodes[0].nodeValue = document.getElementById("routemin").value;
+	route.getElementsByTagName("routeduration")[0].childNodes[0].nodeValue = document.getElementById("routeduration").value;
 	
 	var routewaypoints = route.getElementsByTagName("waypoint");
 	for (i=0; i < routewaypoints.length; i++ ) { 	// iterate thru waypoints
@@ -1165,6 +1280,7 @@ function saveeditrouteformprogress(routenum) {
 		n = document.getElementById("waypointseconds"+i).value;
 		routewaypoints[i].getElementsByTagName("duration")[0].childNodes[0].nodeValue = n;
 	}
+
 }
 
 function waypointreorder(routenum, waypointnum, incr) {
@@ -1214,7 +1330,29 @@ function waypointactiondel(routenum, waypointnum, actionnum) {
 	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
 }
 
-// 		str += "<select id='waypointactionnew"+i+"' onchange='javascript: waypointactionaddnew("+r+", "+i+", this.id);'>";
+function routedayaddnew(routenum, id) {
+	saveeditrouteformprogress(routenum);
+	
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	
+	var newday = temproutesxml.createElement("day");
+	var text = document.getElementById(id).value; 
+	var newtext = temproutesxml.createTextNode(text);
+	newday.appendChild(newtext);
+	route.appendChild(newday);
+	
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+}
+
+function routedaydel(routenum, daynum) {
+	saveeditrouteformprogress(routenum);
+	
+	var route = temproutesxml.getElementsByTagName("route")[routenum];
+	route.removeChild(route.getElementsByTagName("day")[daynum]);
+	
+	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
+}
+
 function waypointactionaddnew(routenum, waypointnum, id) {
 	saveeditrouteformprogress(routenum);
 	
@@ -1235,7 +1373,6 @@ function waypointactionaddnew(routenum, waypointnum, id) {
 	
 	editroute(route.getElementsByTagName("rname")[0].childNodes[0].nodeValue, temproutesxml);
 }
-
 
 function loadXMLString(txt) {
 	if (window.DOMParser) {

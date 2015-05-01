@@ -38,12 +38,12 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-		networkTimer.schedule(new networkTask(), 1000, POLL_DELAY_MS);
-		routerTimer.schedule(new checkRouterTask(), 5000, POLL_ROUTER);
-		pingTimer.schedule(new pingTask(), 5000, POLL_DELAY_MS);
+//		networkTimer.schedule(new networkTask(), 1000, POLL_DELAY_MS);
+//		routerTimer.schedule(new checkRouterTask(), 5000, POLL_ROUTER);
+//		pingTimer.schedule(new pingTask(), 5000, POLL_DELAY_MS);
 		updateExternalIPAddress();
-		connectionUpdate();
-		connectionsNever();
+//		connectionUpdate();
+//		connectionsNever();
 		killApplet();
 	}
 

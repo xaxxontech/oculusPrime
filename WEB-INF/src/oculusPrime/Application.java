@@ -72,17 +72,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		super();
 		Util.log("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============", this);
 		PowerLogger.append("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============", this);
-//		System.err.println("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============");
-		
+
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
 		NetworkMonitor.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
-
-//		Util.log("loading opencv native lib", this);
-//		developer.image.OpenCVUtils cv = new OpenCVUtils(); // TODO: testing
 
 		initialize();
 	}
@@ -242,7 +238,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
 		
-		if (settings.getBoolean(ManualSettings.developer.name())) {			
+		if (settings.getBoolean(ManualSettings.developer.name())) {
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
 			stereo = new developer.depth.Stereo();
@@ -253,7 +249,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 
-		System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
+		try {
+			System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
+		} catch (Exception e) {
+			e.printStackTrace();
+			Util.log("opencv native lib not availabe", this);
+		}
 
 		if (settings.getBoolean(GUISettings.navigation)) {
 
@@ -483,8 +484,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			comport.camCommand(ArduinoPrime.cameramove.valueOf(str));
 			break;
-		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
-		case camtilt: comport.cameraSlowToPosition(Integer.parseInt(str)); break;
+//		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
+		case camtilt: comport.camtilt(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;

@@ -31,7 +31,7 @@ public enum PlayerCommands {
     streamsettingsset, motiondetectgo, motiondetectcancel, motiondetectstream, framegrabtofile,
     
     // malg board 
-    motorsreset, cameracommand, camtilt, camtiltfast, getdrivingsettings, drivingsettingsupdate,
+    motorsreset, cameracommand, camtilt, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
