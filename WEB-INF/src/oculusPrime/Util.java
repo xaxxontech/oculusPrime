@@ -390,23 +390,18 @@ public class Util {
 	public static void log(String method, Exception e, Object c) {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
-
-	public static void log(String str, Object c) {
-		
-		//if(str==null || c==null){debug("wtf: " + str);return;
 	
-		final String filter = c.getClass().getName().toLowerCase();
-		
-		// use dedicated logger class - NO, call specific logger from within classes
-//		if(filter.contains("power") || filter.contains("arduinopower")) return;
-		
+	public static void log(String str) {
 		if(history.size() > MAX_HISTORY) history.remove(0);
-//		history.add(getTime() + ", " +str);
-//		System.out.println("OCULUS: " + getTime() + ", " + classname + ", " + str);
-
+		history.add(getTime() + ", " +str);
+		System.out.println("OCULUS: " + getTime() + ", " + str);
+	}
+	
+	public static void log(String str, Object c) {
+		final String filter = c.getClass().getName().toLowerCase();
+		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " + filter + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " + str);
-
 	}
 	
     public static void debug(String str, Object c) {
@@ -499,7 +494,6 @@ public class Util {
 	        
 	        if(ip.endsWith(".")) return false;
 	        
-
 	        return true;
 	    } catch (NumberFormatException nfe) {
 	        return false;

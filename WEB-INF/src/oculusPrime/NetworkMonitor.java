@@ -2,27 +2,26 @@ package oculusPrime;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
+
 import oculusPrime.State.values;
 
 public class NetworkMonitor {
 
-	protected static final long POLL_ROUTER = Util.ONE_MINUTE*2;
-	protected static final long POLL_DELAY_MS = 2000;
-
+	public static final long AP_TIME_OUT = 5000;
+	public static final String AP = "ap";
+	
 	private static Vector<String> wlanData = new Vector<String>();
 	private static Vector<String> ethData = new Vector<String>();
 	private static Vector<String> accesspoints = new Vector<String>();
 	private static Vector<String> networkData = new Vector<String>();
 	private static Vector<String> connections = new Vector<String>();
-
-	protected static final String DEFAULT_ROUTER = Settings.getReference().readSetting(ManualSettings.preferred_router);
-	protected static final String AP = "ap";
 
 	Timer networkTimer = new Timer();
 	Timer routerTimer = new Timer();
@@ -38,93 +37,85 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-//		networkTimer.schedule(new networkTask(), 1000, POLL_DELAY_MS);
-//		routerTimer.schedule(new checkRouterTask(), 5000, POLL_ROUTER);
-//		pingTimer.schedule(new pingTask(), 5000, POLL_DELAY_MS);
+		networkTimer.schedule(new networkTask(), 500, 2000);
+		// routerTimer.schedule(new checkRouterTask(), 5000, Util.FIVE_MINUTES);
+		pingTimer.schedule(new pingTask(), 3000, 3000);
 		updateExternalIPAddress();
-//		connectionUpdate();
-//		connectionsNever();
+		connectionUpdate();
+		connectionsNever();
 		killApplet();
 	}
-
-	public class checkRouterTask extends TimerTask {
-		@Override
-		public void run() {
-			try{
-				if(connectionExists(DEFAULT_ROUTER)){
-					if( ! state.equals(values.ssid, DEFAULT_ROUTER)) {
-						Util.log("checkRouterTask: current = "+ state.get(values.ssid) + " prefered = " + DEFAULT_ROUTER, this);
-						changeWIFI(DEFAULT_ROUTER);
-					}
-				}
-			} catch (Exception e) {
-				Util.debug("checkRouterTask(): " + e, this);
-			}
-		}
+	
+	public class pingTask extends TimerTask {			
+	    @Override
+	    public void run() {
+	    	if(! state.equals(values.ssid, AP)) {
+	    		if(state.exists(values.externaladdress)){
+	    			
+	    			pingValue = pingWIFI("www.xaxxon.com");
+	    			if(pingValue != null) pingLast = System.currentTimeMillis();
+	    		
+	    		} else {	
+	    			updateExternalIPAddress();
+	    		}
+	    		
+	    		if((System.currentTimeMillis() - pingLast) > AP_TIME_OUT){
+	    			Util.log("pingTask()... starting ap mode now...", this);
+	    			startAdhoc();
+	    		}
+	    	}
+	    }    
 	}
-
-	public class pingTask extends TimerTask {
-		@Override
-		public void run() {
-			try{
-
-				if(state.exists(values.externaladdress) && !state.equals(values.ssid, AP)) {
-					pingValue = pingWIFI("www.xaxxon.com");
-					if(pingValue != null) pingLast = System.currentTimeMillis();
+	
+	/*
+	public class checkRouterTask extends TimerTask {			
+	    @Override
+	    public void run() {
+			if(connectionExists(DEFAULT_ROUTER)){
+				if( ! state.equals(values.ssid, DEFAULT_ROUTER)) {
+					Util.log("checkRouterTask: current = "+ state.get(values.ssid) + " prefered = " + DEFAULT_ROUTER, this);
+					changeWIFI(DEFAULT_ROUTER);
 				}
-
-				if((System.currentTimeMillis()-NetworkMonitor.pingLast) > (POLL_DELAY_MS*3)){
-					Util.log("pingTask()... starting ap mode now", this);
-					startAdhoc();
-				}
-
-				if( !state.exists(values.externaladdress)  && !state.equals(values.ssid, AP))
-					updateExternalIPAddress();
-
-			} catch (Exception e) {
-				Util.debug("pingTask(): " + e, this);
 			}
-		}
+	    }    
 	}
-
-	public static String pingWIFI(final String addr) throws Exception{
-		// long start = System.currentTimeMillis();
-		final String[] PING = new String[]{"ping", "-c1", "-W1", addr}; // TODO: force interface 
-		Process proc = Runtime.getRuntime().exec(PING);
-		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
+	*/
+	
+	public static String pingWIFI(final String addr){
+		
+		long start = System.currentTimeMillis();
+		
+		Process proc = null;
+		try {                                              
+			// TODO: force interface
+			proc = Runtime.getRuntime().exec(new String[]{"ping", "-c1", "-W1", addr});
+		} catch (IOException e) {
+			Util.log("pingWIFI(): ", e.getMessage());
+			Util.log("pingWIFI(): ping fail: " + (System.currentTimeMillis()-start));
+			return null;
+		}  
+		
 		String line = null;
-		// String time = null;
-		while ((line = procReader.readLine()) != null){
-			if(line.contains("time=")){
-				// time = 
-				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
-				// Util.debug("ping time: "+ time);
-				// if(time.equals("0")) return null;
-				// return time;
+		String time = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("time=")){
+					time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+					break;
+				}	
 			}
+		} catch (IOException e) {
+			Util.log("pingWIFI(): ", e.getMessage());
 		}
-		// Util.debug("pingWIFI(): ping took: " + (System.currentTimeMillis()-start));
-		return line;
+		
+		if((System.currentTimeMillis()-start) > 1000)
+			Util.log("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
+		
+		return time;	
 	}
-
-	public static String pingETH(final String addr) throws Exception{
-		//	long start = System.currentTimeMillis();
-		final String[] PING = new String[]{"ping", "-c", "1", /*"-I", WLAN,*/ addr};
-		Process proc = Runtime.getRuntime().exec(PING);
-		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-		String line = null;
-		while ((line = procReader.readLine()) != null){
-			if(line.contains("time=")){
-				return line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
-			}
-		}
-
-		//	Util.debug("pingETH(): ping took: " + (System.currentTimeMillis()-start));
-		return line;
-	}
-
+	
 	public class networkTask extends TimerTask {
 		@Override
 		public void run() {
@@ -159,6 +150,7 @@ public class NetworkMonitor {
 				getAccessPoints();
 				parseETH();
 
+				// is about 250ms to reply
 				// Util.debug("networkTask(): nm-tool took: " + (System.currentTimeMillis()-start));
 
 			} catch (Exception e) {
@@ -206,9 +198,9 @@ public class NetworkMonitor {
 
 	private void killApplet(){
 		try {
-			//Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-			//Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
-			Util.debug("killApplet(): called... do nada ", this);
+			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
+			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+			// Util.debug("killApplet(): called... do nada ", this);
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}
@@ -234,22 +226,26 @@ public class NetworkMonitor {
 	public void changeWIFI(final String ssid, final String password){
 		try {
 			killApplet();
-			Util.log("changeWIFI: (with password): " + ssid, this);
-			Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password, "&"});
-		} catch (Exception e) {
-			Util.debug("changeWIFI: " + e.getLocalizedMessage(), this);
-		}
+			long start = System.currentTimeMillis();
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
+			proc.waitFor();
+			Util.log("changeWIFI(): (with password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
+		} catch (Exception e) { 
+			Util.debug("changeWIFI: " + e.getLocalizedMessage(), this); 
+		}		
 	}
 
 	public void changeWIFI(final String ssid){
+		long start = System.currentTimeMillis();
 		try {
-			long start = System.currentTimeMillis();
+
 			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid }); // , "&"});
 			proc.waitFor();
 			Util.log("changeWIFI(): " + ssid + " exit code: " + proc.exitValue(), this);
 			Util.log("changeWIFI(): " + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
+			
 		} catch (Exception e) {
-			Util.debug("changeWIFI(): " + e.getLocalizedMessage(), this);
+			Util.log("changeWIFI(): " + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
 		}
 	}
 
@@ -258,11 +254,11 @@ public class NetworkMonitor {
 		changeWIFI(AP);
 	}
 
-	private static boolean isSSID(final String line){
+	private static boolean isSSID(final String line) {
 		return line.contains("Strength") && line.contains("Freq");
 	}
 
-	private void setSSID(final String line){
+	private void setSSID(final String line) {
 		// Util.debug("ssid: " + line, this);
 		if(line.contains("[") && line.contains("]")){
 			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
@@ -399,7 +395,7 @@ public class NetworkMonitor {
 	}
 	
 	/*
-	public String wlanHTMLi(){
+	public String wlanHTML(){
 		String text = new String("<table cellpadding=\"5\"border=\"1\">\n");
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
 			String line = accesspoints.get(j);
@@ -416,9 +412,8 @@ public class NetworkMonitor {
 		text += "</table>";
 		
 		return text;	
-	}
-	*/
-
+	}*/
+	
 	public String[] getAccessPoints(){
 		Vector<String> aps = new Vector<String>();
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
@@ -439,7 +434,7 @@ public class NetworkMonitor {
 
 		return result;
 	}
-
+	
 	/*
 	public String[] getKnownAccessPoints() {
 		Vector<String> aps = new Vector<String>();
