@@ -17,7 +17,7 @@ public class SystemWatchdog {
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
 	
-	private static final long DELAY = 5000; // 10 sec 
+	private static final long DELAY = 10000; // 10 sec 
 	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
 	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
 	public static final String NOFORWARD = "noforward";
@@ -43,12 +43,13 @@ public class SystemWatchdog {
 	private void getCPU(){
 		try {
 
-			String[] cmd = { "/bin/sh", "-c", "top -bn 3 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 			Process proc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			state.set(values.cpu, procReader.readLine()); 
-			//state.set(values.cpu, Util.formatFloat(Integer.parseInt(procReader.readLine()), 0)); 
-
+			String line = procReader.readLine();
+			// Util.log("cpu : " + Util.formatFloat(line, 0));
+			state.set(values.cpu, Util.formatFloat(line, 0)); 
+		
 		} catch (Exception e) {
 			Util.debug("getCPU(): " + e.getMessage(), this);
 		}

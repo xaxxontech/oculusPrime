@@ -47,7 +47,7 @@ public class State {
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm}//, cpu}
+		odomturnpwm, odomlinearpwm, cpu}
 
 
 	public String toTableHTML(){
@@ -278,12 +278,11 @@ public class State {
 					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
 					String line = procReader.readLine();
-					DateFormat format = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH);
-					Date date = format.parse(line);
+					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
 					set(values.linuxboot, date.getTime());
 					
-					Util.delay(5000); // testing
-					Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
+					// Util.delay(5000);
+					// Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
 					 
 				} catch (Exception e) {
 					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());

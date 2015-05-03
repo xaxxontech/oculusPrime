@@ -107,6 +107,21 @@ public class Util {
 		}
 	}
 
+	public static String formatFloat(String text, int precision) {
+		int start = text.indexOf(".") + 1;
+		if (start == 0) return text;
+
+		if (precision == 0) return text.substring(0, start - 1);
+	
+		if (start <= 0) {
+			return text;
+		} else if ((start + precision) <= text.length()) {
+			return text.substring(0, (start + precision));
+		} else {
+			return text;
+		}
+	}
+	
 	/**
 	 * Returns the specified double, formatted as a string, to n decimal places,
 	 * as specified by precision.

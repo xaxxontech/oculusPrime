@@ -38,11 +38,11 @@ public class NetworkMonitor {
 
 	private NetworkMonitor(){
 		
-		// if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
+		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
 		
-		networkTimer.schedule(new networkTask(), 500, 5000);
+		networkTimer.schedule(new networkTask(), AP_TIME_OUT-200);
 		// routerTimer.schedule(new checkRouterTask(), 5000, Util.FIVE_MINUTES);
-		// pingTimer.schedule(new pingTask(), 3000, 3000);
+		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT-300);
 		updateExternalIPAddress();
 		connectionUpdate();
 		connectionsNever();
