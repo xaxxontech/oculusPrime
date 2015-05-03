@@ -50,7 +50,7 @@ public class State {
 
 
 	public String toTableHTML(){
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\"> \n");
 		
 		str.append("<tr>" 
 				+ "<td><b>distanceangle</b><td>" + get(values.distanceangle)
@@ -114,7 +114,7 @@ public class State {
 		return str.toString();
 	}
 	public String rosDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\"> \n");
 		
 		str.append("<tr>" 
 				+ "<td><b>distanceangle</b><td>" + get(values.distanceangle)
@@ -179,15 +179,14 @@ public class State {
 	}
 	
 	public String toDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"0\">");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"12\" border=\"0\">");
 		
-		str.append("<tr><td><b>ssid </b>" + get(values.ssid) + "<td><b>ip</b> " + get(values.gateway));
-		if(exists(values.ethernetaddress)) str.append("<br /><b>eth </b>" + get(values.ethernetaddress));
-		str.append("<td><b>lan </b>" + get(values.localaddress) 
-				+ " <b>wan </b>" + get(values.externaladdress)
-				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
-				+ "<td><b>external ping </b>" + NetworkMonitor.pingValue
-				+ "<td><b>last ping ping </b>" + (System.currentTimeMillis()-NetworkMonitor.pingLast)
+		str.append("<tr><td><b>ssid </b>" + get(values.ssid) + " -- <b>"+ get(values.signalspeed) + "</b>" 
+				+ "<br /><b>ping </b>" + NetworkMonitor.pingValue + "  ms --   <b>last</b> " + (System.currentTimeMillis()-NetworkMonitor.pingLast) + "   " 
+				+ "<td><b>gate</b> " + get(values.gateway)
+				+ "<br /><b>eth   </b>" + get(values.ethernetaddress)
+				+ "<td><b>lan   </b>" + get(values.localaddress) 
+				+ "<br /><b>wan </b>" + get(values.externaladdress)
 				+ "</tr>");
 		
 		str.append("<tr><td><b>motor port </b>" + get(values.motorport) 
@@ -215,7 +214,10 @@ public class State {
 	*/	
 		
 		if(exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
-
+		str.append("\n<tr><td colspan=\"11\">" + Util.tail(7) + "</tr>");
+		
+		// str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
+		
 		str.append("</table>\n");
 		return str.toString();
 	}

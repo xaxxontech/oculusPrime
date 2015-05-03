@@ -111,12 +111,11 @@ public class DashboardServlet extends HttpServlet {
 			
 			if(view.equalsIgnoreCase("log")){
 				out.println("\nsystem output: <hr>\n");
-				out.println(Util.tail(15) + "\n");
+				out.println(Util.tail(25) + "\n");
 				out.println("\n<br />power log: <hr>\n");
-				out.println("\n" + PowerLogger.tail(10) + "\n");
+				out.println("\n" + PowerLogger.tail(5) + "\n");
 				out.println("\n<br />banned addresses: " +  ban + " telnet users [" 
-						+ state.get(State.values.telnetusers)+ "] " 
-						+ "<hr>\n");
+						+ state.get(State.values.telnetusers)+ "] " + "<hr>\n");
 				out.println("\n" + ban.tail(10) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
