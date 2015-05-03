@@ -37,9 +37,12 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-		networkTimer.schedule(new networkTask(), 500, 2000);
+		
+		// if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
+		
+		networkTimer.schedule(new networkTask(), 500, 5000);
 		// routerTimer.schedule(new checkRouterTask(), 5000, Util.FIVE_MINUTES);
-		pingTimer.schedule(new pingTask(), 3000, 3000);
+		// pingTimer.schedule(new pingTask(), 3000, 3000);
 		updateExternalIPAddress();
 		connectionUpdate();
 		connectionsNever();

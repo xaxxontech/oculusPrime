@@ -95,13 +95,8 @@ public class Settings {
 
 	public String readSetting(String str) {
 		
-		if(settings.containsKey(str)) {
-			// Util.log("found in memory [" + str + "]", this);
-			return settings.get(str);
-		}
-		
-	// 	Util.log("... need to look in file [" + str + "]", this);
-		
+		if(settings.containsKey(str)) return settings.get(str);
+	
 		FileInputStream filein;
 		String result = null;
 		try {
@@ -249,9 +244,7 @@ public class Settings {
 	}
  
 	public void writeSettings(String setting, int value) {
-
 		String str = null;
-
 		try {
 			str = Integer.toString(value);
 		} catch (Exception e) {
@@ -259,9 +252,12 @@ public class Settings {
 		}
 
 		if (str != null) writeSettings(setting, str);
-
 	}
-
+	
+	public void writeSettings(ManualSettings setting, String str) {
+		if (str != null) writeSettings(setting, str);
+	}
+	
 	/**
 	 * Modify value of existing setting. read whole file, replace line while
 	 * you're at it, write whole file
@@ -269,7 +265,7 @@ public class Settings {
 	 * @param setting
 	 * @param value
 	 */
-	public void writeSettings(String setting, String value) {
+	public synchronized void writeSettings(String setting, String value) {
 		value = value.trim();
 		settings.put(setting, value);
 		FileInputStream filein;
@@ -478,4 +474,6 @@ public class Settings {
 	public long getLong(ManualSettings setting) {
 		return Long.valueOf(readSetting(setting));
 	}
+
+	
 }

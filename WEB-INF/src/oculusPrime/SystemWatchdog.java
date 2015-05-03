@@ -6,6 +6,8 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -15,7 +17,7 @@ public class SystemWatchdog {
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
 	
-	private static final long DELAY = 10000; // 10 sec 
+	private static final long DELAY = 5000; // 10 sec 
 	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
 	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
 	public static final String NOFORWARD = "noforward";
@@ -30,15 +32,36 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	
-    /** Constructor */
 	SystemWatchdog(Application a){ 
 		application = a;
 		Timer timer = new Timer();
 		timer.scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 	
+	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
+	private void getCPU(){
+		try {
+
+			String[] cmd = { "/bin/sh", "-c", "top -bn 3 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			state.set(values.cpu, procReader.readLine()); 
+			//state.set(values.cpu, Util.formatFloat(Integer.parseInt(procReader.readLine()), 0)); 
+
+		} catch (Exception e) {
+			Util.debug("getCPU(): " + e.getMessage(), this);
+		}
+	}
+	
 	private class Task extends TimerTask {
 		public void run() {
+			
+			getCPU(); // TODO: build up functionality 
+			if(state.getDouble(values.cpu.name()) > 70) {
+				Util.log("cpu too high?? " + state.get(values.cpu));
+				// settings.writeSettings(ManualSettings.debugenabled, "false");
+			}
 
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {

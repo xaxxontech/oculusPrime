@@ -41,13 +41,13 @@ public class State {
 		navigationrouteid, nextroutetime,
 		
 		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress, // ethernetping, externalping, //wifiping, temptest
+		signalspeed, ssid, gateway, ethernetaddress, cpu, // ethernetping, externalping, //wifiping, temptest
 		
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm}
+		odomturnpwm, odomlinearpwm}//, cpu}
 
 
 	public String toTableHTML(){
@@ -191,9 +191,7 @@ public class State {
 				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
 				+ "<td><b>external ping </b>" + NetworkMonitor.pingValue
 				+ "<td><b>last ping ping </b>" + (System.currentTimeMillis()-NetworkMonitor.pingLast)
-	//			+ "<td><b>eth ping </b>" + get(values.ethernetping)
-				
-			
+				+ "<td><b>cpu </b>" + get(values.cpu) + " %"
 				+ "</tr>");
 	/*			
 		str.append("<tr><td><b>video mode </b>" + get(values.videosoundmode) + " <b>stream </b>" + get(values.stream)
