@@ -37,34 +37,46 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-		
+	
 		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
 		
-		networkTimer.schedule(new networkTask(), AP_TIME_OUT-200);
-		// routerTimer.schedule(new checkRouterTask(), 5000, Util.FIVE_MINUTES);
-		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT-300);
-		updateExternalIPAddress();
+		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT);
+		networkTimer.schedule(new networkTask(), 2000, 2000);	
+	
+		// updateExternalIPAddress();
 		connectionUpdate();
-		connectionsNever();
-		killApplet();
+		// connectionsNever();
+		// killApplet();
 	}
 	
 	public class pingTask extends TimerTask {			
 	    @Override
 	    public void run() {
 	    	if(! state.equals(values.ssid, AP)) {
-	    		if(state.exists(values.externaladdress)){
+	    		if(state.exists(values.gateway)){ //values.externaladdress)){
 	    			
-	    			pingValue = pingWIFI("www.xaxxon.com");
-	    			if(pingValue != null) pingLast = System.currentTimeMillis();
+	    			pingValue = pingWIFI(state.get(values.gateway));//"www.xaxxon.com");
+	    			if(pingValue == null) {
+	    				
+	    				Util.log("... dropped ping...");
+	    				
+	    				//Util.delay(900);
+	    				//pingValue = pingWIFI(state.get(values.gateway));//"www.xaxxon.com");
+		    			//if(pingValue == null) pingLast = System.currentTimeMillis();
+	    			
+	    			} else {
+	    					
+	    				pingLast = System.currentTimeMillis();
 	    		
-	    		} else {	
-	    			updateExternalIPAddress();
+	    			}
 	    		}
+	    			
+	    		if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
 	    		
-	    		if((System.currentTimeMillis() - pingLast) > AP_TIME_OUT){
+	    		if((System.currentTimeMillis() - pingLast) > (AP_TIME_OUT*2)){
 	    			Util.log("pingTask()... starting ap mode now...", this);
-	    			startAdhoc();
+	    			pingLast = System.currentTimeMillis() + AP_TIME_OUT*5;
+	    			// startAdhoc();
 	    		}
 	    	}
 	    }    
@@ -113,8 +125,10 @@ public class NetworkMonitor {
 			Util.log("pingWIFI(): ", e.getMessage());
 		}
 		
-		if((System.currentTimeMillis()-start) > 1000)
+		if((System.currentTimeMillis()-start) > 10100){
 			Util.log("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
+			if(time == null) Util.log("pingWIFI(): null result for address: " + addr);
+		}
 		
 		return time;	
 	}
@@ -124,7 +138,7 @@ public class NetworkMonitor {
 		public void run() {
 			try{
 
-				// long start = System.currentTimeMillis();
+				long start = System.currentTimeMillis();
 
 				networkData.clear();
 				wlanData.clear();
@@ -154,7 +168,7 @@ public class NetworkMonitor {
 				parseETH();
 
 				// is about 250ms to reply
-				// Util.debug("networkTask(): nm-tool took: " + (System.currentTimeMillis()-start));
+				Util.debug("networkTask(): nm-tool took: " + (System.currentTimeMillis()-start));
 
 			} catch (Exception e) {
 				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
@@ -192,10 +206,19 @@ public class NetworkMonitor {
 
 	private void removeConnection(final String ssid){
 		try {
-			Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
-			Util.debug("removeConnection: " + ssid, this);
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
+			BufferedReader procReader = new BufferedReader(
+					new InputStreamReader(proc.getInputStream()));
+
+			String line = null;
+			while ((line = procReader.readLine()) != null){
+				line = line.trim();
+				if(line.endsWith("never")){
+					Util.log("removeConnection: " + line, this);
+				}
+			}
 		} catch (Exception e) {
-			Util.debug("removeConnection: " + e.getLocalizedMessage(), this);
+			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}
 	}
 

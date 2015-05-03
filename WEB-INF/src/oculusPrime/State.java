@@ -2,7 +2,6 @@ package oculusPrime;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,7 +46,7 @@ public class State {
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, cpu}
+		odomturnpwm, odomlinearpwm, cpu } // , framegrabbusy}
 
 
 	public String toTableHTML(){
@@ -180,68 +179,42 @@ public class State {
 	}
 	
 	public String toDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"0\">");
 		
-		str.append("<tr><td><b>ssid </b>" + get(values.ssid) 
-				+ "<"
-				+ "td><b>ip</b> " + get(values.gateway)
-				+ "<td><b>eth </b>" + get(values.ethernetaddress)
-				+ "<td><b>lan </b>" + get(values.localaddress) 
-				+ "<td><b>wan </b>" + get(values.externaladdress)
+		str.append("<tr><td><b>ssid </b>" + get(values.ssid) + "<td><b>ip</b> " + get(values.gateway));
+		if(exists(values.ethernetaddress)) str.append("<br /><b>eth </b>" + get(values.ethernetaddress));
+		str.append("<td><b>lan </b>" + get(values.localaddress) 
+				+ " <b>wan </b>" + get(values.externaladdress)
 				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
 				+ "<td><b>external ping </b>" + NetworkMonitor.pingValue
 				+ "<td><b>last ping ping </b>" + (System.currentTimeMillis()-NetworkMonitor.pingLast)
-				+ "<td><b>cpu </b>" + get(values.cpu) + " %"
 				+ "</tr>");
+		
+		str.append("<tr><td><b>motor port </b>" + get(values.motorport) 
+				+ "<td><b>linux mins</b> " + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) / 60)
+				+ "<td><b>motion </b>" + get(values.motionenabled) + " <b>moving </b>" + get(values.moving)
+				// + " <b>direction </b>" + get(values.direction) // + " <td><b>speed </b>" + get(values.motorspeed) 
+				+ "</tr>");
+				
+		str.append("<tr><td><b>power port </b>" + get(values.powerport)
+				+ "<td><b>java mins </b>" + (getUpTime()/1000)/60  
+			//	+ "<td><b>volts </b>" + get(values.battvolts) + " <b>life </b> " + get(values.batterylife) 
+				+ "<td><b>life </b> " + get(values.batterylife) + " <b>cpu </b>" + get(values.cpu) + " % </tr>");
+				
 	/*			
 		str.append("<tr><td><b>video mode </b>" + get(values.videosoundmode) + " <b>stream </b>" + get(values.stream)
 				+ "<td><b>driverstream </b>" + get(values.driverstream) + " <b>volume </b>" + get(values.volume)
 			    + "<td><b>busy </b>" + get(values.framegrabbusy)    odomturnpwm
 			    + "<td><b>driver </b>" + get(values.driver) 
 		        + "<td><b>telnet </b>" + get(values.telnetusers) 
-				+ "</tr>");
-	*/
+				+ "</tr>")
+	       	   + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
+		       + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
+				+ "<td><b>linux uptime (minutes) </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
+		        + "<td><b>java uptime (minutes) </b>" + (getUpTime()/1000)/60 
+	*/	
 		
-	       	//    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
-			//    + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
-			//	+ "<td><b>linux uptime (minutes) </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
-		    //    + "<td><b>java uptime (minutes) </b>" + (getUpTime()/1000)/60 
-	
-		str.append("<tr><td><b>motor port </b>" + get(values.motorport) 
-				+ "<td><b>linux uptime [</b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) / 60) + "] <b>minutes</b>"
-				+ "<td><b>motion </b>" + get(values.motionenabled) + " <b>moving </b>" + get(values.moving)
-				// + " <b>direction </b>" + get(values.direction) // + " <td><b>speed </b>" + get(values.motorspeed) 
-				+ "</tr>");
-				
-		str.append("<tr><td><b>power port </b>" + get(values.powerport)
-				+ "<td><b>java uptime [</b>" + (getUpTime()/1000)/60  + "] <b>minutes</b>"
-				+ "<td><b>volts </b>" + get(values.battvolts) + " <b>life </b> " + get(values.batterylife) 
-			//	+ "<td><b>wall power </b>" + get(values.wallpower) + " <b>status </b>" + get(values.dockstatus)
-				+ "</tr>");
-		
-		/*
-		str.append("<tr><td><b>" + values.gateway    + "</b><td>" + get(values.gateway) 
-				+ "<td><b>" + values.localaddress    + "</b><td>" + get(values.localaddress) 
-				+ "<td><b>" + values.externaladdress + "</b><td>" + get(values.externaladdress)
-			//	+ "<td><b>" + values.ethernetaddress + "</b><td>" + get(values.ethernetaddress) 
-				+ "<td><b>" + values.ssid            + "</b><td>" + get(values.ssid) + "</tr>");
-		
-		str.append("<tr><td><b>" + values.signalquality + "</b><td>" + get(values.signalquality) 
-				+ "<td><b>" + values.signalnoise        + "</b><td>" + get(values.signalnoise) 
-				+ "<td><b>" + values.signalstrength     + "</b><td>" + get(values.signalstrength) 
-				+ "<td><b>" + values.signalspeed        + "</b><td>" + get(values.signalspeed) + "</tr>");
-		
-		str.append("<tr><td><b>" + values.powerport + "</b><td>" + get(values.powerport)
-				+ "<td><b>" + values.battvolts      + "</b><td>" + get(values.battvolts)  
-				+ "<td><b>" + values.batterylife    + "</b><td>" + get(values.batterylife)  
-		//		+ "<td><b>" + values.wallpower   + "</b><td>" + get(values.wallpower) 
-				+ "<td><b>" + values.batterylife    + "</b><td>" + get(values.batterylife) + "</tr>");
-		*/
-		
-		//str.append("\n<tr><td colspan=\"11\">" + get(values.batteryinfo) + "</tr>");
-		//if(exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
-		
-		// if(exists(values.)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
+		if(exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
 
 		str.append("</table>\n");
 		return str.toString();
