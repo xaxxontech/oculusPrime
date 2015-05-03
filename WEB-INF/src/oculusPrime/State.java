@@ -46,7 +46,7 @@ public class State {
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, cpu } // , framegrabbusy}
+		odomturnpwm, odomlinearpwm, cpu, framegrabbusy}
 
 
 	public String toTableHTML(){

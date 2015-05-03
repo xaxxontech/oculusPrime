@@ -138,7 +138,7 @@ public class NetworkMonitor {
 		public void run() {
 			try{
 
-				long start = System.currentTimeMillis();
+				// long start = System.currentTimeMillis();
 
 				networkData.clear();
 				wlanData.clear();
@@ -168,7 +168,7 @@ public class NetworkMonitor {
 				parseETH();
 
 				// is about 250ms to reply
-				Util.debug("networkTask(): nm-tool took: " + (System.currentTimeMillis()-start));
+				// Util.debug("networkTask(): nm-tool took: " + (System.currentTimeMillis()-start));
 
 			} catch (Exception e) {
 				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
