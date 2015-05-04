@@ -6,6 +6,8 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -30,15 +32,37 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	
-    /** Constructor */
 	SystemWatchdog(Application a){ 
 		application = a;
 		Timer timer = new Timer();
 		timer.scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 	
+	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
+	private void getCPU(){
+		try {
+
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String line = procReader.readLine();
+			// Util.log("cpu : " + Util.formatFloat(line, 0));
+			state.set(values.cpu, Util.formatFloat(line, 0)); 
+		
+		} catch (Exception e) {
+			Util.debug("getCPU(): " + e.getMessage(), this);
+		}
+	}
+	
 	private class Task extends TimerTask {
 		public void run() {
+			
+			getCPU(); // TODO: build up functionality 
+			if(state.getDouble(values.cpu.name()) > 70) {
+				Util.log("cpu too high?? " + state.get(values.cpu), this);
+				// settings.writeSettings(ManualSettings.debugenabled, "false");
+			}
 
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {

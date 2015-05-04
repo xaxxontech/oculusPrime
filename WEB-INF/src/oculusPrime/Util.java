@@ -27,7 +27,6 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
-
 public class Util {
 	
 	private static final int PRECISION = 2;
@@ -41,13 +40,6 @@ public class Util {
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>();
 
-	/**
-	 * Delays program execution for the specified delay.
-	 * 
-	 * @param delay
-	 *            is the specified time to delay program execution
-	 *            (milliseconds).
-	 */
 	public static void delay(long delay) {
 		try {
 			Thread.sleep(delay);
@@ -56,13 +48,6 @@ public class Util {
 		}
 	}
 
-	/**
-	 * Delays program execution for the specified delay.
-	 * 
-	 * @param delay
-	 *            is the specified time to delay program execution
-	 *            (milliseconds).
-	 */
 	public static void delay(int delay) {
 		try {
 			Thread.sleep(delay);
@@ -107,6 +92,21 @@ public class Util {
 		}
 	}
 
+	public static String formatFloat(String text, int precision) {
+		int start = text.indexOf(".") + 1;
+		if (start == 0) return text;
+
+		if (precision == 0) return text.substring(0, start - 1);
+	
+		if (start <= 0) {
+			return text;
+		} else if ((start + precision) <= text.length()) {
+			return text.substring(0, (start + precision));
+		} else {
+			return text;
+		}
+	}
+	
 	/**
 	 * Returns the specified double, formatted as a string, to n decimal places,
 	 * as specified by precision.
@@ -133,37 +133,6 @@ public class Util {
 			return text;
 		}
 	}
-
-	/**
-	 * Returns the specified double, formatted as a string, to n decimal places,
-	 * as specified by precision.
-	 * <p/>
-	 * ie: formatFloat(1.1666, 1) -> 1.2 ie: formatFloat(3.1666, 2) -> 3.17 ie:
-	 * formatFloat(3.1666, 3) -> 3.167
-	
-	public static String formatString(String number, int precision) {
-
-		String text = number;
-		if (precision >= text.length()) {
-			return text;
-		}
-
-		int start = text.indexOf(".") + 1;
-
-		if (start == 0) return text;
-
-		if (precision == 0) {
-			return text.substring(0, start - 1);
-		}
-
-		if (start <= 0) {
-			return text;
-		} else if ((start + precision) <= text.length()) {
-			return text.substring(0, (start + precision));
-		}
-
-		return text;
-	} */
 
 	public static boolean copyfile(String srFile, String dtFile) {
 		try {
@@ -235,53 +204,6 @@ public class Util {
 		}
 	}
 
-
-	/**
-	 * @return this device's external IP address is via http lookup, or null if fails 
-	
-	public static String getExternalIPAddress(){
-
-		String address = null;
-		URL url = null;
-
-		try {
-			
-			url = new URL("http://checkip.dyndns.org/");
-
-			// read in file from the encoded url
-			URLConnection connection = (URLConnection) url.openConnection();
-			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-
-			int i;
-			while ((i = in.read()) != -1) {
-				address = address + (char) i;
-			}
-			in.close();
-
-			// parse html file
-			address = address.substring(address.indexOf(": ") + 2);
-			address = address.substring(0, address.indexOf("</body>"));
-			
-		} catch (Exception e) {
-			return null;
-		}
-		
-		// all good 
-		return address;
-	} */ 
-
-    /**
-     * @return the local host's IP, null on error
-     
-    public static String getLocalAddress(){
-            try {
-                    return (InetAddress.getLocalHost()).getHostAddress();
-            } catch (UnknownHostException e) {
-                    return null;
-            }
-    }*/
-	
-	
 //	/** @return a list of ip's for this local network */ 
 //	public static String getLocalAddress() {
 //		String address = "";
@@ -313,24 +235,9 @@ public class Util {
 //		return null;
 //	}
 
-	/**
-	 * write new value to user's screen and set it 
-	 * change the host computer's volume 
-	 * 
-	 * @param percent
-	 */
 	public static void setSystemVolume(int percent, Application app){
-		String str = "amixer set Master "+percent+"%";
-		
-		//	float vol = (float) percent / 100 * 65535;
-		//	str = "nircmdc.exe setsysvolume "+ (int) vol; //w in
-		// }
-		
-		Util.systemCall(str);
-		Settings settings = Settings.getReference();
-		
-		//private static final boolean debug = settings.getBoolean(ManualSettings.debugenabled);
-		settings.writeSettings(GUISettings.volume.name(), percent);
+		Util.systemCall("amixer set Master "+percent+"%");
+		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
 	/*
@@ -359,8 +266,7 @@ public class Util {
 	    
 		return result;
 	}
-		*/
-	
+	*/
 	
 	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
         BufferedInputStream in = null;
@@ -386,7 +292,19 @@ public class Util {
 		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
 		return str.toString();
 	}
-		
+	
+	public static String tailShort(int lines){
+		int i = 0;
+		StringBuffer str = new StringBuffer();
+	 	if(history.size() > lines) i = history.size() - lines;
+		for(; i < history.size() ; i++) {
+			String line = history.get(i).substring(history.get(i).indexOf(",")+1);
+			// if(line.startsWith("oculusprime")) line = line.substring(13);
+			str.append(line + "\n<br />"); 
+		}
+		return str.toString();
+	}
+	
 	public static void log(String method, Exception e, Object c) {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}

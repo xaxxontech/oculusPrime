@@ -6,7 +6,7 @@ public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
-	soundthreshold, motionthreshold;
+	soundthreshold, motionthreshold, networkmonitor;
 
 	/** get basic settings */
 	public static Properties createDeaults(){
@@ -28,6 +28,7 @@ public enum ManualSettings {
 		config.setProperty(soundthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "0.003");
+		config.setProperty(networkmonitor.name(), "false");
 		return config;
 	}
 	

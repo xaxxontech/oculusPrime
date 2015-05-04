@@ -2,7 +2,6 @@ package oculusPrime;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -41,213 +40,14 @@ public class State {
 		navigationrouteid, nextroutetime,
 		
 		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress, // ethernetping, externalping, //wifiping, temptest
+		signalspeed, ssid, gateway, ethernetaddress, cpu, 
+		// ethernetping, externalping, //wifiping, temptest
 		
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm}
-
-
-	public String toTableHTML(){
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>distanceangle</b><td>" + get(values.distanceangle)
-				+ "<td><b>direction</b><td>" + get(values.direction)
-				+ "<td><b>odometry</b><td>" + get(values.odometry) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>distanceanglettl</b><td>" + get(values.distanceanglettl) 
-				+ "<td><b>stopbetweenmoves</b><td>" + get(values.stopbetweenmoves) 
-				+ "<td><b>odometrybroadcast</b><td>" + get(values.odometrybroadcast) 
-				+ "<td><b>odomturndpms</b><td>" + get(values.odomturndpms) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>odomturnpwm</b><td>" + get(values.odomturnpwm) 
-				+ "<td><b>odomupdated</b><td>" + get(values.odomupdated) 
-				+ "<td><b>odomlinearmpms</b><td>" + get(values.odomlinearmpms) 
-				+ "<td><b>odomlinearpwm</b><td>" + get(values.odomlinearpwm) 
-				+ "</tr> \n");
-		
-		str.append("<tr>"
-				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + get(values.rosmapinfo) 
-			// 	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
-				+ "</tr> \n");
-			
-		str.append("<tr><td><b>roscurrentgoal</b><td>" + get(values.roscurrentgoal) 
-				+ "<td><b>rosmapupdated</b><td>" + get(values.rosmapupdated) 
-			//	+ "<td><b>rosmapwaypoints</b><td>" + get(values.rosmapwaypoints) 
-				+ "<td><b>navigationenabled</b><td>" + get(values.navigationenabled) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>rossetgoal</b><td>" + get(values.rossetgoal) 
-				+ "<td><b>rosgoalstatus</b><td>" + get(values.rosgoalstatus)
-				+ "<td><b>rosgoalcancel</b><td>" + get(values.rosgoalcancel) 
-				+ "<td><b>navigationroute</b><td>" + get(values.navigationroute)
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>rosinitialpose</b><td>" + get(values.rosinitialpose) 
-				+ "<td><b>navigationrouteid</b><td>" + get(values.navigationrouteid) 
-				+ "</tr> \n");
-		
-	//	str.append("<tr>"
-	//			+ "<td><b>rosmapinfo</b><td colspan\"3\">" + get(values.rosmapinfo) 
-			//	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
-	//			+ "</tr> \n");
-		
-		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + get(values.rosmapwaypoints) );
-		
-		str.append("<tr>" // long line
-				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + get(values.rosglobalpath) 
-				+ "</tr> \n");
-				
-		
-		
-		str.append("\n</table>\n");
-		return str.toString();
-	}
-	public String rosDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>distanceangle</b><td>" + get(values.distanceangle)
-				+ "<td><b>direction</b><td>" + get(values.direction)
-				+ "<td><b>odometry</b><td>" + get(values.odometry) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>distanceanglettl</b><td>" + get(values.distanceanglettl) 
-				+ "<td><b>stopbetweenmoves</b><td>" + get(values.stopbetweenmoves) 
-				+ "<td><b>odometrybroadcast</b><td>" + get(values.odometrybroadcast) 
-				+ "<td><b>odomturndpms</b><td>" + get(values.odomturndpms) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>odomturnpwm</b><td>" + get(values.odomturnpwm) 
-				+ "<td><b>odomupdated</b><td>" + get(values.odomupdated) 
-				+ "<td><b>odomlinearmpms</b><td>" + get(values.odomlinearmpms) 
-				+ "<td><b>odomlinearpwm</b><td>" + get(values.odomlinearpwm) 
-				+ "</tr> \n");
-		
-		str.append("<tr>"
-				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + get(values.rosmapinfo) 
-			// 	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
-				+ "</tr> \n");
-			
-		str.append("<tr><td><b>roscurrentgoal</b><td>" + get(values.roscurrentgoal) 
-				+ "<td><b>rosmapupdated</b><td>" + get(values.rosmapupdated) 
-			//	+ "<td><b>rosmapwaypoints</b><td>" + get(values.rosmapwaypoints) 
-				+ "<td><b>navigationenabled</b><td>" + get(values.navigationenabled) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>rossetgoal</b><td>" + get(values.rossetgoal) 
-				+ "<td><b>rosgoalstatus</b><td>" + get(values.rosgoalstatus)
-				+ "<td><b>rosgoalcancel</b><td>" + get(values.rosgoalcancel) 
-				+ "<td><b>navigationroute</b><td>" + get(values.navigationroute)
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>rosinitialpose</b><td>" + get(values.rosinitialpose) 
-				+ "<td><b>navigationrouteid</b><td>" + get(values.navigationrouteid) 
-				+ "</tr> \n");
-		
-	//	str.append("<tr>"
-	//			+ "<td><b>rosmapinfo</b><td colspan\"3\">" + get(values.rosmapinfo) 
-			//	+ "<td><b>rosamcl</b><td>" + get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + get(values.rosglobalpath) 
-	//			+ "</tr> \n");
-		
-		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + get(values.rosmapwaypoints) );
-		
-		str.append("<tr>" // long line
-				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + get(values.rosglobalpath) 
-				+ "</tr> \n");
-				
-		
-		
-		str.append("\n</table>\n");
-		return str.toString();
-	}
-	
-	public String toDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">");
-		
-		str.append("<tr><td><b>ssid </b>" + get(values.ssid) 
-				+ "<"
-				+ "td><b>ip</b> " + get(values.gateway)
-				+ "<td><b>eth </b>" + get(values.ethernetaddress)
-				+ "<td><b>lan </b>" + get(values.localaddress) 
-				+ "<td><b>wan </b>" + get(values.externaladdress)
-				+ "<tr><td><b>signal speed </b>" + get(values.signalspeed) 
-				+ "<td><b>external ping </b>" + NetworkMonitor.pingValue
-				+ "<td><b>last ping ping </b>" + (System.currentTimeMillis()-NetworkMonitor.pingLast)
-	//			+ "<td><b>eth ping </b>" + get(values.ethernetping)
-				
-			
-				+ "</tr>");
-	/*			
-		str.append("<tr><td><b>video mode </b>" + get(values.videosoundmode) + " <b>stream </b>" + get(values.stream)
-				+ "<td><b>driverstream </b>" + get(values.driverstream) + " <b>volume </b>" + get(values.volume)
-			    + "<td><b>busy </b>" + get(values.framegrabbusy)    odomturnpwm
-			    + "<td><b>driver </b>" + get(values.driver) 
-		        + "<td><b>telnet </b>" + get(values.telnetusers) 
-				+ "</tr>");
-	*/
-		
-	       	//    + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
-			//    + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
-			//	+ "<td><b>linux uptime (minutes) </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
-		    //    + "<td><b>java uptime (minutes) </b>" + (getUpTime()/1000)/60 
-	
-		str.append("<tr><td><b>motor port </b>" + get(values.motorport) 
-				+ "<td><b>linux uptime [</b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) / 60) + "] <b>minutes</b>"
-				+ "<td><b>motion </b>" + get(values.motionenabled) + " <b>moving </b>" + get(values.moving)
-				// + " <b>direction </b>" + get(values.direction) // + " <td><b>speed </b>" + get(values.motorspeed) 
-				+ "</tr>");
-				
-		str.append("<tr><td><b>power port </b>" + get(values.powerport)
-				+ "<td><b>java uptime [</b>" + (getUpTime()/1000)/60  + "] <b>minutes</b>"
-				+ "<td><b>volts </b>" + get(values.battvolts) + " <b>life </b> " + get(values.batterylife) 
-			//	+ "<td><b>wall power </b>" + get(values.wallpower) + " <b>status </b>" + get(values.dockstatus)
-				+ "</tr>");
-		
-		/*
-		str.append("<tr><td><b>" + values.gateway    + "</b><td>" + get(values.gateway) 
-				+ "<td><b>" + values.localaddress    + "</b><td>" + get(values.localaddress) 
-				+ "<td><b>" + values.externaladdress + "</b><td>" + get(values.externaladdress)
-			//	+ "<td><b>" + values.ethernetaddress + "</b><td>" + get(values.ethernetaddress) 
-				+ "<td><b>" + values.ssid            + "</b><td>" + get(values.ssid) + "</tr>");
-		
-		str.append("<tr><td><b>" + values.signalquality + "</b><td>" + get(values.signalquality) 
-				+ "<td><b>" + values.signalnoise        + "</b><td>" + get(values.signalnoise) 
-				+ "<td><b>" + values.signalstrength     + "</b><td>" + get(values.signalstrength) 
-				+ "<td><b>" + values.signalspeed        + "</b><td>" + get(values.signalspeed) + "</tr>");
-		
-		str.append("<tr><td><b>" + values.powerport + "</b><td>" + get(values.powerport)
-				+ "<td><b>" + values.battvolts      + "</b><td>" + get(values.battvolts)  
-				+ "<td><b>" + values.batterylife    + "</b><td>" + get(values.batterylife)  
-		//		+ "<td><b>" + values.wallpower   + "</b><td>" + get(values.wallpower) 
-				+ "<td><b>" + values.batterylife    + "</b><td>" + get(values.batterylife) + "</tr>");
-		*/
-		
-		//str.append("\n<tr><td colspan=\"11\">" + get(values.batteryinfo) + "</tr>");
-		//if(exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
-		
-		// if(exists(values.)) str.append("\n<tr><td colspan=\"11\">" + get(values.powererror) + "</tr>");
-
-		str.append("</table>\n");
-		return str.toString();
-	}
+		odomturnpwm, odomlinearpwm, cpu, framegrabbusy}
 	
 	public static final int ERROR = -1;
 
@@ -280,12 +80,11 @@ public class State {
 					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
 					String line = procReader.readLine();
-					DateFormat format = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH);
-					Date date = format.parse(line);
+					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
 					set(values.linuxboot, date.getTime());
 					
-					Util.delay(5000); // testing
-					Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
+					// Util.delay(5000);
+					// Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
 					 
 				} catch (Exception e) {
 					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());

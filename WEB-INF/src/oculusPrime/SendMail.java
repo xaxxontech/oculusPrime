@@ -12,11 +12,6 @@ import oculusPrime.Application;
 import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 
-/**
- * Send yourself an email from your gmail account
- * 
- * @author brad.zdanivsk@gmail.com
- */
 public class SendMail {
 
 	private Settings settings = Settings.getReference();
