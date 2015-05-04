@@ -23,12 +23,11 @@ public class NetworkMonitor {
 	private static Vector<String> networkData = new Vector<String>();
 	private static Vector<String> connections = new Vector<String>();
 
-	Timer networkTimer = new Timer();
-	Timer routerTimer = new Timer();
-	Timer pingTimer = new Timer();
-
-	public static String pingValue = null;
-	public static long pingLast = System.currentTimeMillis();
+	private static Timer networkTimer = new Timer();
+	private static Timer pingTimer = new Timer();
+	
+	private static String pingValue = null;
+	private static long pingLast = System.currentTimeMillis();
 
 	public static State state = State.getReference();
 	private static NetworkMonitor singleton = new NetworkMonitor();
@@ -43,10 +42,10 @@ public class NetworkMonitor {
 		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT);
 		networkTimer.schedule(new networkTask(), 2000, 2000);	
 	
-		// updateExternalIPAddress();
+		updateExternalIPAddress();
 		connectionUpdate();
-		// connectionsNever();
-		// killApplet();
+		connectionsNever();
+		killApplet();
 	}
 	
 	public class pingTask extends TimerTask {			
@@ -75,28 +74,14 @@ public class NetworkMonitor {
 	    		
 	    		if((System.currentTimeMillis() - pingLast) > (AP_TIME_OUT*2)){
 	    			Util.log("pingTask()... starting ap mode now...", this);
-	    			pingLast = System.currentTimeMillis() + AP_TIME_OUT*5;
+	    			// pingLast = System.currentTimeMillis() + AP_TIME_OUT*5;
 	    			// startAdhoc();
 	    		}
 	    	}
 	    }    
 	}
 	
-	/*
-	public class checkRouterTask extends TimerTask {			
-	    @Override
-	    public void run() {
-			if(connectionExists(DEFAULT_ROUTER)){
-				if( ! state.equals(values.ssid, DEFAULT_ROUTER)) {
-					Util.log("checkRouterTask: current = "+ state.get(values.ssid) + " prefered = " + DEFAULT_ROUTER, this);
-					changeWIFI(DEFAULT_ROUTER);
-				}
-			}
-	    }    
-	}
-	*/
-	
-	public static String pingWIFI(final String addr){
+	public String pingWIFI(final String addr){
 		
 		long start = System.currentTimeMillis();
 		
@@ -142,7 +127,7 @@ public class NetworkMonitor {
 
 				networkData.clear();
 				wlanData.clear();
-				accesspoints.clear();
+				// accesspoints.clear();
 
 				Process proc = Runtime.getRuntime().exec(new String[]{"nm-tool"});
 				BufferedReader procReader = new BufferedReader(
@@ -166,6 +151,9 @@ public class NetworkMonitor {
 				parseWLAN();
 				getAccessPoints();
 				parseETH();
+				
+				// connectionUpdate();
+
 
 				// is about 250ms to reply
 				// Util.debug("networkTask(): nm-tool took: " + (System.currentTimeMillis()-start));
@@ -187,7 +175,7 @@ public class NetworkMonitor {
 	private void connectionsNever(){
 		try {
 
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", /*"list"*/ });
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con" });
 			BufferedReader procReader = new BufferedReader(
 					new InputStreamReader(proc.getInputStream()));
 
@@ -226,22 +214,38 @@ public class NetworkMonitor {
 		try {
 			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
 			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
-			// Util.debug("killApplet(): called... do nada ", this);
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}
 	}
 
-	public void connectionUpdate(){
+	public synchronized String[] getConnections() {
+		String[] con = new String[connections.size()];
+		for(int i = 0 ; i < con.length ; i++){	
+			
+			String[] line = connections.get(i).split(" ");
+			for(int j = 0 ; j < line.length ; j++) {
+				if(line[j].matches("[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}")){
+					String id = "";
+					for(int u = 0 ; u < j ; u++) id+= line[u] + " ";
+					con[i] = id.trim();
+				}
+			}
+		}
+	
+		return con;
+	}
+	
+	public synchronized void connectionUpdate(){
 		try {
 			connections.clear();
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", /* "list"*/ });
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con"});
 			BufferedReader procReader = new BufferedReader(
 					new InputStreamReader(proc.getInputStream()));
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){
-				if( !line.startsWith("NAME") && line.contains("wireless"))
+				if( !line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
 					connections.add(line);
 			}
 		} catch (Exception e) {
@@ -250,37 +254,76 @@ public class NetworkMonitor {
 	}
 
 	public void changeWIFI(final String ssid, final String password){
-		try {
-			killApplet();
-			long start = System.currentTimeMillis();
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
-			proc.waitFor();
-			Util.log("changeWIFI(): (with password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
-		} catch (Exception e) { 
-			Util.debug("changeWIFI: " + e.getLocalizedMessage(), this); 
-		}		
+	
+		disconnecteddWAN();
+		
+		new Thread(){
+		    public void run() {
+		    	try {
+		
+					long start = System.currentTimeMillis();
+					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
+					
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+					String line = null;
+					while ((line = procReader.readLine()) != null)
+						Util.log("changeWIFI(): stdout: " + ssid + " " + line, this);
+					
+					proc.waitFor();
+					Util.log("changeWIFI(): (with password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
+				    	
+		    	} catch (Exception e) {
+					Util.log("changeWIFI(): [" + ssid + "] ", e, this); 
+				}
+		    }
+		}.start();
 	}
 
 	public void changeWIFI(final String ssid){
-		long start = System.currentTimeMillis();
-		try {
+		
+		disconnecteddWAN();
+		
+		new Thread(){
+		    public void run() {
+		    	try {
 
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid }); // , "&"});
-			proc.waitFor();
-			Util.log("changeWIFI(): " + ssid + " exit code: " + proc.exitValue(), this);
-			Util.log("changeWIFI(): " + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
-			
-		} catch (Exception e) {
-			Util.log("changeWIFI(): " + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
-		}
+		    		long start = System.currentTimeMillis();                                                // TODO: spaces in ssid? 
+					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid}); //  "\""+ssid+"\"" }); 
+					
+					//InputStream in = proc.getInutStream();
+				/* give root pw? 
+					OutputStream in = proc.getOutputStream();
+					in.write("xxxxxxx\n\r".getBytes());
+					in.close();
+				*/
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+					String line = null;
+					while ((line = procReader.readLine()) != null)
+						Util.log("changeWIFI(): stdout: " + ssid + " " + line, this);
+					
+					procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+					while ((line = procReader.readLine()) != null)
+						Util.log("changeWIFI(): error: " + ssid + " " + line, this);
+					
+					proc.waitFor();
+					Util.log("changeWIFI(): [" + ssid + "] exit code: " + proc.exitValue(), this);
+					Util.log("changeWIFI(): [" + ssid + "] " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
+					
+				} catch (Exception e) {
+					Util.log("changeWIFI(): [" + ssid + "] ", e, this); 
+				}
+		    }
+		}.start();
 	}
 
-	public void startAdhoc(){
+	public synchronized void startAdhoc(){
 		disconnecteddWAN();
 		changeWIFI(AP);
 	}
 
-	private static boolean isSSID(final String line) {
+	private boolean isSSID(final String line) {
 		return line.contains("Strength") && line.contains("Freq");
 	}
 
@@ -420,33 +463,14 @@ public class NetworkMonitor {
 		if( !star ) disconnecteddWAN();
 	}
 	
-	/*
-	public String wlanHTML(){
-		String text = new String("<table cellpadding=\"5\"border=\"1\">\n");
-		for(int j = 0 ; j < accesspoints.size() ; j++) {
-			String line = accesspoints.get(j);
-		
-			if(state.get(values.ssid) != null)
-				if(line.startsWith(state.get(values.ssid)))
-					line = line.replaceFirst(state.get(values.ssid), "<b>" + state.get(values.ssid) + "</b>");
-			
-			line = line.replaceAll(":", "<td>");
-			line = line.replaceAll(",", "<td>");
-			
-			text += "<tr><td>" + line + "<br />\n"; 
-		}
-		text += "</table>";
-		
-		return text;	
-	}*/
-	
 	public String[] getAccessPoints(){
 		Vector<String> aps = new Vector<String>();
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
 			if(accesspoints.get(j).contains(":")){
 				String ssid = accesspoints.get(j).substring(0, accesspoints.get(j).indexOf(":")).trim();
 				if( ! aps.contains(ssid))
-					aps.add(ssid);
+					if( ! connectionExists(ssid))
+						aps.add(ssid);
 			}
 		}
 
@@ -461,27 +485,6 @@ public class NetworkMonitor {
 		return result;
 	}
 	
-	/*
-	public String[] getKnownAccessPoints() {
-		Vector<String> aps = new Vector<String>();
-		for(int j = 0 ; j < accesspoints.size() ; j++) {
-			String ssid = accesspoints.get(j).substring(0, accesspoints.get(j).indexOf(":")).trim();
-			if(connectionExists(ssid))
-				aps.add(ssid);
-		}
-		
-		int r = 0;
-		String[] result = new String[aps.size()];
-		for(int j = 0 ; j < aps.size() ; j++) 
-			result[r++] = aps.get(j);
-				
-		//Util.debug("getAccessPoints: found [" + result.length + "] wifi routers", this);
-		//for(int i = 0; i < result.length ; i++) Util.debug((i + "\t" + result[i]), this);
-		
-		return result;
-	}
-	*/
-
 	private void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 			try {
@@ -501,5 +504,13 @@ public class NetworkMonitor {
 				state.delete(values.externaladdress);
 			}
 		} }).start();
+	}
+
+	public String getPingTime() {
+		return pingValue;
+	}
+
+	public long getLast() {
+		return pingLast;
 	}
 }

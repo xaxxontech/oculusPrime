@@ -38,6 +38,8 @@ public class TelnetServer implements Observer {
 		
 			clientSocket = socket;  
 			
+			// TODO: check if is a lan based IP address ??
+			
 			// check if banned if not in developer mode 
 			if( ! settings.getBoolean(ManualSettings.developer)){
 				if (banlist.isBanned(clientSocket)){ 
@@ -50,8 +52,7 @@ public class TelnetServer implements Observer {
 					}		
 				}
 			}
-		
-			
+	
 			// connect 
 			try {
 			
@@ -207,20 +208,7 @@ public class TelnetServer implements Observer {
 				out.println("<multiline>");
 				out.println(state.toString());
 				out.println("</multiline>");
-				
-				// app.messageplayer("<state> "+state.toString(), null, null);
 			}
-			
-		// removed from app lication
-		// doPlayer(str, out);
-		// this from Application, gui doesn't require this 
-		//	else {  
-		//		if (s[0].matches("\\S+")) { // one arg 
-		//			messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
-		//		} else {  // no args
-		//			//messageplayer("<state> "+state.toString(), null, null);
-		//		} 
-		//	}
 			
 			return true;
 			
