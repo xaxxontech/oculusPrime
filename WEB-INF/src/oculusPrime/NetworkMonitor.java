@@ -90,8 +90,8 @@ public class NetworkMonitor {
 			// TODO: force interface
 			proc = Runtime.getRuntime().exec(new String[]{"ping", "-c1", "-W1", addr});
 		} catch (IOException e) {
-			Util.log("pingWIFI(): ", e.getMessage());
-			Util.log("pingWIFI(): ping fail: " + (System.currentTimeMillis()-start));
+			Util.log("NetworkMonitor().pingWIFI(): "+ e.getMessage(), "");
+			Util.log("NetworkMonitor()pingWIFI(): ping fail: " + (System.currentTimeMillis()-start), "");
 			return null;
 		}  
 		
@@ -111,7 +111,8 @@ public class NetworkMonitor {
 		}
 		
 		if((System.currentTimeMillis()-start) > 1000)
-			Util.log("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
+			Util.log("NetworkMonitor().pingWIFI(): ping timed out, took over a second: "
+					+ (System.currentTimeMillis()-start), "");
 		
 		return time;	
 	}

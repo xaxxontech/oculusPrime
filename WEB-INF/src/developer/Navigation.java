@@ -310,7 +310,7 @@ public class Navigation {
 		}
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
-				!state.exists(State.values.navigationenabled))  {
+				!state.getBoolean(State.values.navigationenabled))  {
 			app.driverCallServer(PlayerCommands.messageclients,
 					"Can't start route, location unknown");
 			return;
@@ -350,18 +350,71 @@ public class Navigation {
 		
 		new Thread(new Runnable() { public void run() {
 			int consecutiveroute = 1;
-			
+
+			// map days to numbers
+			NodeList days = navroute.getElementsByTagName("day");
+			if (days.getLength() == 0) {
+				app.driverCallServer(PlayerCommands.messageclients,
+						"Can't schedule route, no days specified");
+				cancelRoute();
+				return;
+			}
+			int[] daynums = new int[days.getLength()];
+			String[] availabledays = new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+			for (int d=0; d<days.getLength(); d++) {
+				for (int ad = 0; ad<availabledays.length; ad++) {
+					if (days.item(d).getTextContent().equalsIgnoreCase(availabledays[ad]))   daynums[d]=ad+1;
+				}
+			}
+
+			int starthour = Integer.parseInt(navroute.getElementsByTagName("starthour").item(0).getTextContent());
+			int startmin = Integer.parseInt(navroute.getElementsByTagName("startmin").item(0).getTextContent());
+			int routedurationhours = Integer.parseInt(navroute.getElementsByTagName("routeduration").item(0).getTextContent());
+
 			while (true) {
 
 				state.delete(State.values.nextroutetime); // ?
 
-				// add xml: starthour, startmin, routeduration, day
-				Calendar calendar = Calendar.getInstance();
-				calendar.setTime(new Date());
-				int hours = calendar.get(Calendar.HOUR_OF_DAY);
-				int minutes = calendar.get(Calendar.MINUTE);
+				while (state.exists(State.values.navigationroute)) {
+					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
+					// add xml: starthour, startmin, routeduration, day
+					Calendar calendarnow = Calendar.getInstance();
+					calendarnow.setTime(new Date());
+					int daynow = calendarnow.get(Calendar.DAY_OF_WEEK); // 1-7 (friday is 6)
 
+					// parse new xml: starthour, startmin, routeduration (hours), day (0-6)
+					// determine if now is within day + range, if not determine time to next range and wait
+
+					boolean startroute = false;
+
+					for (int i=0; i<daynums.length; i++) {
+						if (daynums[i] == daynow -1 || daynums[i] == daynow) {
+							Calendar testday = Calendar.getInstance();
+							if (daynums[i] == daynow -1) { // yesterday
+								testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+										calendarnow.get(Calendar.DATE) - 1, starthour, startmin);
+							}
+							else { // today
+								testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+										calendarnow.get(Calendar.DATE), starthour, startmin);
+							}
+							if (calendarnow.getTimeInMillis() >= testday.getTimeInMillis() && calendarnow.getTimeInMillis() <
+									testday.getTimeInMillis() + (routedurationhours * 60 * 60 * 1000)) {
+								startroute = true;
+								break;
+							}
+						}
+					}
+
+					if (startroute) break;
+
+					Util.delay(1000);
+				}
+
+				// check if cancelled while waiting
+				if (!state.exists(State.values.navigationroute)) return;
+				if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
@@ -484,7 +537,7 @@ public class Navigation {
 					msg = " min until reboot, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
 				}
 
-					// delay to next route
+				// delay to next route
 				String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
 		    	long timebetween = Long.parseLong(min) * 1000 * 60;
 				state.set(State.values.nextroutetime, System.currentTimeMillis()+timebetween);
