@@ -9,7 +9,7 @@ import java.util.Vector;
  */
 public class TelnetServer implements Observer {
 	
-	public static enum Commands {state, settings, chat, exit, bye, quit};
+	public static enum Commands {chat, exit, bye, quit}; // state, settings,
 	
 	public static final boolean ADMIN_ONLY = true;
 	public static final String MSGPLAYERTAG = "<messageclient>";
@@ -190,27 +190,27 @@ public class TelnetServer implements Observer {
 		case exit: shutDown("user left", out, in, clientSocket); 
 			return true;
 		
-		case settings: 
-			out.println("<multiline>");
-			out.println(settings.toString()); 
-			out.println("</multiline>");
-			return true;
-			
-		case state:
-		
-			String s[] = str.split(" ");			
-			if (s.length == 3) { 
-				if (s[1].equals("delete")) state.delete(s[2]);
-				else state.set(s[1], s[2]); 
-			}
-			
-			if(s.length == 1){
-				out.println("<multiline>");
-				out.println(state.toString());
-				out.println("</multiline>");
-			}
-			
-			return true;
+//		case settings:
+//			out.println("<multiline>");
+//			out.println(settings.toString());
+//			out.println("</multiline>");
+//			return true;
+//
+//		case state:
+//
+//			String s[] = str.split(" ");
+//			if (s.length == 3) {
+//				if (s[1].equals("delete")) state.delete(s[2]);
+//				else state.set(s[1], s[2]);
+//			}
+//
+//			if(s.length == 1){
+//				out.println("<multiline>");
+//				out.println(state.toString());
+//				out.println("</multiline>");
+//			}
+//
+//			return true;
 			
 		}
 		

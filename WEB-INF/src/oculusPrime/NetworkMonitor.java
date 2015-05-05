@@ -36,13 +36,13 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
-	
-		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
-		
-		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT);
-		networkTimer.schedule(new networkTask(), 2000, 2000);	
-	
 		updateExternalIPAddress();
+
+		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
+
+		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT);
+		networkTimer.schedule(new networkTask(), 2000, 2000);
+
 		connectionUpdate();
 		connectionsNever();
 		killApplet();

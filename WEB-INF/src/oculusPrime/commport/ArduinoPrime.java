@@ -175,14 +175,15 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 //				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" PCB past reset delay", this);
 				
-				if (now - lastReset > RESET_DELAY && !state.getBoolean(oculusPrime.State.values.autodocking) && 
-						state.get(oculusPrime.State.values.driver) == null && isconnected &&
-						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
-						!state.getBoolean(oculusPrime.State.values.moving)) {
-					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
-					lastReset = now;
-					reset();
-				}
+//				if (now - lastReset > RESET_DELAY &&
+//						state.get(oculusPrime.State.values.dockstatus).equals(AutoDock.DOCKED) &&
+//						state.get(oculusPrime.State.values.driver) == null && isconnected &&
+//						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
+//						!state.getBoolean(oculusPrime.State.values.moving)) {
+//					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
+//					lastReset = now;
+//					reset();
+//				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
@@ -476,7 +477,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (commandlock) {
 			String str = "";
 			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-			Util.log("error, commandlocked after "+timeout+"ms, command waiting: "+str, this);
+			Util.log("error, commandlocked after 500 ms, command waiting: "+str, this);
 		}
 
 		timeout = System.currentTimeMillis() + 4500;
@@ -484,7 +485,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (commandlock) {
 			String str = "";
 			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-			Util.log("error, commandlock timeout, command dropped: "+str, this);
+			Util.log("error, commandlock timeout after 5000ms, command dropped: "+str, this);
 		}
 		else {
 			commandlock = true;

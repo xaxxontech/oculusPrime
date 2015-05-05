@@ -48,7 +48,7 @@ public class OpenCVMotionDetect  {
 
         new Thread(new Runnable() {
             public void run() {
-                BackgroundSubtractorMOG2 mog = new BackgroundSubtractorMOG2(0, 1024, false);
+                BackgroundSubtractorMOG2 mog = new BackgroundSubtractorMOG2(0, 512, false);
 //                frame = cv.bufferedImageToMat(ImageUtils.getImageFromStream());
 
                 Mat frame;
@@ -58,6 +58,7 @@ public class OpenCVMotionDetect  {
 
                 int f = 0;
                 long timeout = System.currentTimeMillis() + Util.FIVE_MINUTES;
+                int trigger = 0;
                 while (state.getBoolean(State.values.motiondetect) && System.currentTimeMillis() < timeout) {
 
                     if (!state.getBoolean(State.values.motiondetect)) {
@@ -90,29 +91,32 @@ public class OpenCVMotionDetect  {
                     double movingpixels = Core.countNonZero(fore);
                     double activity = movingpixels / (fore.width()*fore.height());
                     if ( activity > threshold && f>1) { // motion detected
+                        if (trigger >=3) {
 //                        System.out.println(movingpixels);
-                        if (!state.getBoolean(State.values.motiondetect)) break;
+                            if (!state.getBoolean(State.values.motiondetect)) break;
 
-                        fore.copyTo(m);
+                            fore.copyTo(m);
 
-                        if (gr == null) gr = new Mat().zeros(frame.height(), frame.width(), CvType.CV_8U);
-                        if (bl == null) bl = new Mat().zeros(frame.height(), frame.width(), CvType.CV_8U);
-                        List<Mat> listMat = Arrays.asList(bl, gr, m);
-                        Core.merge(listMat, m);
-                        Core.addWeighted(m, 0.50, frame, 1.0, 1.0, detect);
+                            if (gr == null) gr = new Mat().zeros(frame.height(), frame.width(), CvType.CV_8U);
+                            if (bl == null) bl = new Mat().zeros(frame.height(), frame.width(), CvType.CV_8U);
+                            List<Mat> listMat = Arrays.asList(bl, gr, m);
+                            Core.merge(listMat, m);
+                            Core.addWeighted(m, 0.50, frame, 1.0, 1.0, detect);
 
 //                        Imgproc.cvtColor(m, m, Imgproc.COLOR_GRAY2BGR);
 //                        Core.addWeighted(m, 0.5, frame, 1.0, 1.0, detect);
-                        Application.processedImage = cv.matToBufferedImage(detect);
-                        imageupdated = true;
-                        state.set(State.values.streamactivity, "video " + activity);
-                        if (app != null)
-                            app.driverCallServer(PlayerCommands.messageclients, "motion detected "+activity);
-                        break;
+                            Application.processedImage = cv.matToBufferedImage(detect);
+                            imageupdated = true;
+                            state.set(State.values.streamactivity, "video " + activity);
+                            if (app != null)
+                                app.driverCallServer(PlayerCommands.messageclients, "motion detected " + activity);
+                            break;
+                        }
+                        else trigger ++;
                     }
 
                     f ++;
-                    Util.delay(100); // cpu saver
+                    Util.delay(200); // cpu saver
                 }
 
                 state.set(State.values.motiondetect, false);

@@ -21,6 +21,8 @@ public class Settings {
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
 	public static final int ERROR = -1;
+	public static final String FALSE = "false";
+	public static final String TRUE = "true";
 		
 	private static Settings singleton = null;
 	public static Settings getReference() {
@@ -59,7 +61,7 @@ public class Settings {
 		String str = readSetting(key);
 		if (str == null) return false;
 		if (str.toUpperCase().equals("YES")) return true;
-		else if (str.toUpperCase().equals("TRUE")) return true;
+		else if (str.equalsIgnoreCase(TRUE)) return true;
 		return false;
 	}
 
@@ -132,14 +134,14 @@ public class Settings {
 		for (GUISettings factory : GUISettings.values()) {
 			String val = readSetting(factory.toString());
 			if (val != null) // if( ! val.equals("null")) 
-				result += factory.toString() + " " + val + "\n\r";
+				result += factory.toString() + " " + val + "<br>"; // "\n\r";
 		}
 	
 		for (ManualSettings ops : ManualSettings.values()) {
 			String val = readSetting(ops.toString());
 			if (val != null)  { // never send out plain text passwords 
 				if( ! ops.equals(ManualSettings.email_password)) // { val = "***"; }
-					result += ops.toString() + " " + val + "\n\r";
+					result += ops.toString() + " " + val + "<br>"; // "\n\r";
 			}
 		}
 		

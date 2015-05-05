@@ -13,7 +13,7 @@ public enum GUISettings {
 	/** get basic settings */
 	public static Properties createDeaults() {
 		Properties config = new Properties();
-		config.setProperty(skipsetup.name() , "no");
+		config.setProperty(skipsetup.name() , Settings.FALSE);
 		config.setProperty(speedslow.name() , "50");
 		config.setProperty(speedmed.name() , "150");
 		config.setProperty(docktarget.name() , "1.6666666_0.27447918_0.22083333_0.28177083_125_115_80_48_-0.041666668");
@@ -29,16 +29,16 @@ public enum GUISettings {
 		config.setProperty(maxclickcam.name() , "30");
 		config.setProperty(volume.name() , "100");
 //		config.setProperty(muteonrovmove.name() , "true"); 
-		config.setProperty(reboot.name() , "false");
+		config.setProperty(reboot.name() , Settings.FALSE);
 //		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2700");
 		config.setProperty(onemeterdelay.name(), "2400");
 		config.setProperty(steeringcomp.name(), "L20");
 		config.setProperty(camhoriz.name(), "70");
 		config.setProperty(camreverse.name(), "138");
-		config.setProperty(loginnotify.name() , "false");
-		config.setProperty(redock.name() , "false");
-		config.setProperty(navigation.name() , "false");
+		config.setProperty(loginnotify.name() , Settings.FALSE);
+		config.setProperty(redock.name() , Settings.FALSE);
+		config.setProperty(navigation.name() , Settings.FALSE);
 		
 		return config;
 	}

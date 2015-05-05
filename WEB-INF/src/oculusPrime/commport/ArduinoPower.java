@@ -21,7 +21,7 @@ import oculusPrime.Util;
 public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
-	public static final int DEAD_TIME_OUT = 10000;
+	public static final int DEAD_TIME_OUT = 20000;
 	public static final int ALLOW_FOR_RESET = 10000;
 	public static final int ERROR_TIME_OUT = (int) Util.ONE_MINUTE;
 	public static final int WATCHDOG_DELAY = 5000;
@@ -222,14 +222,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 					reset();
 				}
 				
-				if (now - lastReset > RESET_DELAY && isconnected && 
-						!state.getBoolean(oculusPrime.State.values.autodocking) ){  
-					application.message("power PCB periodic reset", "battery", "resetting");
-					Util.log("power PCB periodic reset", this);
-					PowerLogger.append("power PCB periodic reset", this);
-					lastReset = now;
-					reset();
-				}
+//				if (now - lastReset > RESET_DELAY && isconnected &&
+//						!state.getBoolean(oculusPrime.State.values.autodocking) ){
+//					application.message("power PCB periodic reset", "battery", "resetting");
+//					Util.log("power PCB periodic reset", this);
+//					PowerLogger.append("power PCB periodic reset", this);
+//					lastReset = now;
+//					reset();
+//				}
 
 				if (now - lastHostHeartBeat > HOST_HEARTBEAT_DELAY && isconnected) { 
 					sendCommand((byte) PING); // no response expected
@@ -237,8 +237,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 				}
 				
 				if (now - lastRead > ERROR_TIME_OUT && !isconnected) { // comm with pcb lost!
-					if (state.exists(oculusPrime.State.values.powererror.toString())){ 
-						state.set(oculusPrime.State.values.powererror, ","+COMM_LOST);
+					if (state.exists(oculusPrime.State.values.powererror.toString())){
+						String err = state.get(oculusPrime.State.values.powererror);
+						if (!err.matches(".*"+COMM_LOST+"$")) // only set once
+							state.set(oculusPrime.State.values.powererror, err+","+COMM_LOST);
 					} else { 
 						state.set(oculusPrime.State.values.powererror, COMM_LOST);
 					}

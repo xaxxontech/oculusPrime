@@ -118,7 +118,7 @@ public class State {
 		Set<String> keys = props.keySet();
 		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			String key = i.next();
-			str += (key + " " + props.get(key) + "\n\r");
+			str += (key + " " + props.get(key) + "<br>"); // "\n\r");
 		}
 		return str;
 	} 

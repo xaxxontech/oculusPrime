@@ -312,7 +312,8 @@ public class Navigation {
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 				!state.getBoolean(State.values.navigationenabled))  {
 			app.driverCallServer(PlayerCommands.messageclients,
-					"Can't start route, location unknown");
+					"Can't start route, location unknown, command dropped");
+			cancelAllRoutes();
 			return;
 		}
 		
@@ -356,7 +357,7 @@ public class Navigation {
 			if (days.getLength() == 0) {
 				app.driverCallServer(PlayerCommands.messageclients,
 						"Can't schedule route, no days specified");
-				cancelRoute();
+				cancelRoute(id);
 				return;
 			}
 			int[] daynums = new int[days.getLength()];
@@ -383,10 +384,11 @@ public class Navigation {
 					calendarnow.setTime(new Date());
 					int daynow = calendarnow.get(Calendar.DAY_OF_WEEK); // 1-7 (friday is 6)
 
-					// parse new xml: starthour, startmin, routeduration (hours), day (0-6)
+					// parse new xml: starthour, startmin, routeduration (hours), day (1-7)
 					// determine if now is within day + range, if not determine time to next range and wait
 
 					boolean startroute = false;
+					int nextday = 7;
 
 					for (int i=0; i<daynums.length; i++) {
 						if (daynums[i] == daynow -1 || daynums[i] == daynow) {
@@ -404,10 +406,20 @@ public class Navigation {
 								startroute = true;
 								break;
 							}
+
 						}
+						if (daynow <= daynums[i] && daynums[i] < nextday) nextday = daynums[i];
+
 					}
 
 					if (startroute) break;
+
+					if (!state.exists(State.values.nextroutetime)) {
+						Calendar testday = Calendar.getInstance();
+						testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+								calendarnow.get(Calendar.DATE) + (nextday - daynow), starthour, startmin);
+						state.set(State.values.nextroutetime, testday.getTimeInMillis());
+					}
 
 					Util.delay(1000);
 				}
@@ -418,15 +430,14 @@ public class Navigation {
 
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						!state.exists(State.values.navigationenabled))  {
-					app.driverCallServer(PlayerCommands.messageclients,
-							"Can't navigate route, location unknown");
-					cancelRoute();
+					app.driverCallServer(PlayerCommands.messageclients, "Can't navigate route, location unknown");
+					cancelRoute(id);
 					return;
 				}
 
 				if (!waitForNavSystem()) {
 					app.driverCallServer(PlayerCommands.messageclients, "Unable to start navigation");
-					cancelRoute();
+					cancelRoute(id);
 					return;
 				}
 
@@ -485,7 +496,7 @@ public class Navigation {
 	
 					if (!state.exists(State.values.rosgoalstatus)) {
 						Util.log("error, state rosgoalstatus null", this);
-						cancelRoute();
+						cancelRoute(id);
 						return;
 					}
 					
@@ -523,7 +534,7 @@ public class Navigation {
 				}
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					cancelRoute();
+					cancelRoute(id);
 					// try docking one more time, sending alert if fail
 					Util.log("calling redock()", this);
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
@@ -760,7 +771,11 @@ public class Navigation {
 		return false;
 	}
 
-	public void cancelRoute() {
+	private void cancelRoute(String id) {
+		if (id.equals(state.get(State.values.navigationrouteid))) cancelAllRoutes();
+	}
+
+	public void cancelAllRoutes() {
 		state.delete(State.values.navigationroute); // this eventually stops currently running route
 		goalCancel();
 		state.delete(State.values.nextroutetime);

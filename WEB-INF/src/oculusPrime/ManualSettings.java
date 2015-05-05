@@ -11,8 +11,8 @@ public enum ManualSettings {
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
-		config.setProperty(developer.name(), "false");
-		config.setProperty(debugenabled.name(), "false");
+		config.setProperty(developer.name(), Settings.FALSE);
+		config.setProperty(debugenabled.name(), Settings.FALSE);
 		config.setProperty(motorport.name(), Settings.ENABLED);
 		config.setProperty(powerport.name(), Settings.ENABLED);
 		config.setProperty(email_smtp_server.name(), Settings.DISABLED);
@@ -24,11 +24,11 @@ public enum ManualSettings {
 		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");
-		config.setProperty(alertsenabled.name() , "true");
+		config.setProperty(alertsenabled.name() , Settings.TRUE);
 		config.setProperty(soundthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "0.003");
-		config.setProperty(networkmonitor.name(), "false");
+		config.setProperty(networkmonitor.name(), Settings.FALSE);
 		return config;
 	}
 	

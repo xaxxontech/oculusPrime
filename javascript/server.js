@@ -147,8 +147,8 @@ function saveandlaunch() {
 	}
 	
 	//skipsetup
-	if (document.getElementById("skipsetup").checked) {str += "skipsetup yes "; }
-	else { str += "skipsetup no "; }
+	if (document.getElementById("skipsetup").checked) {str += "skipsetup true "; }
+	else { str += "skipsetup false "; }
 
 	if (msg != "") { message(msg); }
 	if (oktosend) {

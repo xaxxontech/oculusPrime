@@ -464,7 +464,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
-				navigation.cancelRoute();
+				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
@@ -789,7 +789,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case cancelroute:
-			if (navigation != null) navigation.cancelRoute();
+			if (navigation != null) navigation.cancelAllRoutes();
 
 		case clearmap: Mapper.clearMap();
 			break;
@@ -797,9 +797,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case error: 
 			try {
 				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
-			} catch (Exception e) {
-				Util.printError(e);
-			}
+			} catch (Exception e)  { Util.printError(e); }
+
 			break;
 
 //		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
@@ -807,6 +806,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
 		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null); break;
+		case log: Util.log(str, this); break;
+		case settings: messageplayer(settings.toString(), null, null); break;
 
 		}
 	}
@@ -1985,7 +1986,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	/** */
 	private void populateSettings() {
-		settings.writeSettings("skipsetup", "no");
+		settings.writeSettings("skipsetup", Settings.FALSE);
 		String result = "populatevalues ";
 
 		String str = settings.readSetting("user0");

@@ -3,7 +3,7 @@ package oculusPrime;
 public enum PlayerCommands { 
 	    
     // server
-    uptime, restart, quitserver, showlog, writesetting, readsetting,
+    uptime, restart, quitserver, showlog, writesetting, readsetting, settings, log,
     //undocumented (not typically used by scripts):
     softwareupdate, 
     
