@@ -38,21 +38,16 @@ public class TelnetServer implements Observer {
 		
 			clientSocket = socket;  
 			
-			// TODO: check if is a lan based IP address ??
-			
-			// check if banned if not in developer mode 
-			if( ! settings.getBoolean(ManualSettings.developer)){
-				if (banlist.isBanned(clientSocket)){ 
-					try { 
-						Util.debug("banned ip: " + clientSocket.toString(), this);
-						socket.close();
-						return;
-					} catch (Exception e) {
-						Util.log("ConnectionHandler(), banned IP error", e, this);
-					}		
-				}
+			if (banlist.isBanned(clientSocket)){ 
+				try { 
+					Util.debug("banned ip: " + clientSocket.toString(), this);
+					socket.close();
+					return;
+				} catch (Exception e) {
+					Util.log("ConnectionHandler(), banned IP error", e, this);
+				}		
 			}
-	
+
 			// connect 
 			try {
 			
