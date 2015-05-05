@@ -9,57 +9,58 @@ import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.Map;
 import java.util.Vector;
-import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class BanList {
 	
-	public static final  String sep = System.getProperty("file.separator");
-	public static String banfile = System.getenv("RED5_HOME") +sep+"conf"+sep+"banlist.txt";
-	public final static String banlog = System.getenv("RED5_HOME") + sep + "log" + sep + "banlist.log";
-
-	private static RandomAccessFile logfile = null;
-	public static final long ROLLOVER = 5000; 
-
-	private static final long BAN_TIME_OUT = 60000;
-//	private static final int BAN = 3; 
-	private static final int BLOCK = 5; 
-	static final int MAX_HISTORY = 50;
+	public static final String sep = System.getProperty("file.separator");
+	public static final String banfile = System.getenv("RED5_HOME") +sep+"conf"+sep+"banlist.txt";
+	public static final String banlog = System.getenv("RED5_HOME") + sep + "log" + sep + "banlist.log";
 	
+	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
+	public static final long ROLL_OVER = 15000;
+	public static final int BAN_ATTEMPTS = 3;
+	public static final int MAX_ATTEMPTS = 5;	
+	public static final int MAX_HISTORY = 10;
+	
+	private HashMap<String, Integer> attempts = new HashMap<String, Integer>();
+	private HashMap<String, Long> blocked = new HashMap<String, Long>();
 	private Vector<String> history = new Vector<String>();
-	private HashMap<String, Integer> list = new HashMap<String, Integer>();
+	private Vector<String> banned = new Vector<String>();
+	private RandomAccessFile logfile = null;
 	private Timer timer = new Timer();
+	private boolean override = false; 
 	
 	static BanList singleton = new BanList();
 	public static BanList getRefrence(){
 		return singleton;
 	}
 	
-	private BanList() {
-
-		try {
-			if(new File(banfile).exists()) {
-				String line = null; // import from file
-				BufferedReader br = new BufferedReader(new FileReader(new File(banfile)));
+	private BanList() {		
+		try {	
+			File ban = new File(banfile);
+			if(ban.exists()) {
+				String line = null;
+				Util.log("BanList(): reading file: " + banfile, this); 
+				BufferedReader br = new BufferedReader(new FileReader(ban));
 				while((line = br.readLine()) != null) {
 					String addr = line.trim();
-					if(Util.validIP(addr))
-						list.put(addr, BLOCK ); 
-						//TODO: Integer.MAX_VALUE/2);		
+					if(Util.validIP(addr)) banned.add(addr); 
+					else Util.log("invalid address: " + addr, this);
 				}
 				br.close();		
 			}
 		} catch (Exception e) {
 			Util.log(e.getLocalizedMessage(), this);
 		}
-		
+
 		File log = new File(banlog);
 		if (log.exists()) {
-			if (log.length() > ROLLOVER) {
-				Util.debug("BanList(): file too large, rolling over: " + banlog);
+			if (log.length() > ROLL_OVER) {
+				Util.log("BanList(): file too large, rolling over: " + log.getAbsolutePath(), this);
 				log.delete();
 			}
 		}
@@ -70,7 +71,9 @@ public class BanList {
 			Util.debug("BanList(): " + e.getMessage());
 		}
 		
-		timer.scheduleAtFixedRate(new ClearTimer(), BAN_TIME_OUT, BAN_TIME_OUT);
+		override = Settings.getReference().getBoolean(ManualSettings.developer);
+		if(override) Util.log("BanList(): disabled, developer mode enabled", this);
+		else timer.scheduleAtFixedRate(new ClearTimer(), Util.ONE_MINUTE, Util.ONE_MINUTE);
 	}
 	
 	public String tail(int lines){
@@ -81,10 +84,11 @@ public class BanList {
 		return str.toString();
 	}
 	
-	public void appendLog(final String str){
-		
+	private void appendLog(final String str){
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(Util.getTime() + ", " +str);
+		
+		if(logfile==null) return;
 		
 		try {
 			logfile.seek(logfile.length());
@@ -93,109 +97,108 @@ public class BanList {
 			Util.debug("BanList.appendLog(): " + e.getMessage() + " " + str);
 		}
 	}
+
+	public synchronized void removeblockedFile(final String address) {
+		appendLog("remove from file: " + address);
+		if(banned.contains(address)) banned.remove(address);
+		clearAddress(address);
+		writeFile();
+	}
 	
-	public void addBlockedFile(String ip){
-		
-		appendLog("....... adding to file: " + ip);
-		
-		list.put(ip, Integer.MAX_VALUE/2);	
-		
-		if(new File(banfile).exists()){
-			try {
-					
-				BufferedWriter bw = new BufferedWriter(new FileWriter(new File(banfile)));
-				Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 
-				while(i.hasNext()) bw.append(i.next().getKey() + "\n"); 
-				bw.close();
-						
-			} catch (Exception e) {
-				Util.log("addBlockedFile(): ", e, this);
-			}
-		}	
+	public synchronized void addBlockedFile(final String ip){
+		if(Util.validIP(ip)){
+			appendLog("adding to file: " + ip);
+			banned.add(ip);	
+			writeFile();
+		}
+	}
+	
+	private void writeFile(){				
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter(new File(banfile)));
+			for(int i = 0 ; i < banned.size() ; i++) 
+				if(Util.validIP(banned.get(i)))
+					bw.append(banned.get(i) + " \n\r");
+			bw.close();	
+		} catch (Exception e) {
+			Util.log("writeFile(): ", e, this);
+		}
 	}
 	
 	public synchronized boolean isBanned(Socket socket) {
-		final String address = socket.getInetAddress().toString().substring(1);
-		return isBanned(address);
+		return isBanned(socket.getInetAddress().toString().substring(1));
 	}
 	
-	public synchronized boolean isBanned(String address) {
+	public synchronized boolean isBanned(final String address) {
 		
-		if(list.isEmpty()) return false;
-	
-		if(list.containsKey(address)) {
+		if(address.equals("127.0.0.1") || override) return false;
 			
-			if(list.get(address) >= BLOCK){
-				appendLog("login rejected banned address: " + address);
-				return true;
+		if(banned.contains(address)) {
+			appendLog("banned address: " + address);
+			return true;
+		}
+		
+		if(blocked.containsKey(address)) {
+			
+			appendLog("blocked address: " + address);
+			if(attempts.containsKey(address)) attempts.put(address, attempts.get(address)+1);
+			
+			if(attempts.get(address) >= MAX_ATTEMPTS){
+				appendLog("now banned: " + address);
+				addBlockedFile(address);
 			}
 			
 			return true;
 		}
 		
+		appendLog("passed isBanned(): " + address);
 		return false;
 	}
-
-	public synchronized void remove(String address) {
-		
-		appendLog("....... remove from file: " + address);
-		
-		if(list.containsKey(address)) {
-		
-			list.remove(address);
-		
-			if(new File(banfile).exists()){
-				try {
-						
-					BufferedWriter bw = new BufferedWriter(new FileWriter(new File(banfile)));
-					Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 
-					while(i.hasNext()) bw.append(i.next().getKey() + "\n"); 
-					bw.close();
-							
-				} catch (Exception e) {
-					Util.log("remove()", e, this);
-				}
-			}		
-		}
+	
+	public synchronized void clearAddress(String address) {
+		if(attempts.containsKey(address)) attempts.remove(address);
+		if(blocked.containsKey(address)) blocked.remove(address);
 	}
 	
 	public synchronized void loginFailed(final String remoteAddress, final String user) {
 		
-		if(remoteAddress.equals("127.0.0.1")) return;
+		if(remoteAddress.equals("127.0.0.1") || override) return;
 	
-		appendLog("login failed: " + remoteAddress + " user: " + user);
-
-		// add to list if not there 
-		list.put(remoteAddress, BLOCK);
+		if(banned.contains(remoteAddress)) Util.log(".. failed sanity check: " + user, this);
+		
+		if(attempts.containsKey(remoteAddress)) attempts.put(remoteAddress, attempts.get(remoteAddress)+1);
+		else attempts.put(remoteAddress, 1);  
 			
-		// increment if there 
-		if(list.containsKey(remoteAddress)) list.put(remoteAddress, list.get(remoteAddress)+1);
-		else list.put(remoteAddress, BLOCK);
-	}
-	
-	@Override
-	public String toString(){
-		return list.toString();
+		appendLog("login failed: " + remoteAddress + " user: " + user + " attempts: " + attempts.get(remoteAddress));
+
+		if(attempts.get(remoteAddress) >= BAN_ATTEMPTS){
+			appendLog("now blocked: " + remoteAddress + " user: " + user);
+			blocked.put(remoteAddress, System.currentTimeMillis());
+		}
 	}
 	
 	private class ClearTimer extends TimerTask {
 		@Override
 		public void run() {
-			if(list.isEmpty()) return;
 			
-		//	appendLog("Banned list: " + list.toString());
-			
+			if(blocked.isEmpty()) return;
+						
 			try {
-				Iterator<Entry<String, Integer>> i = list.entrySet().iterator(); 
-				while(i.hasNext()){
-				    String key = i.next().getKey();
-				    if(list.get(key) > 0) list.put(key, list.get(key)-1);
-				    if(list.get(key) == 0) list.remove(key);
+				for (Map.Entry<String, Long> entry : blocked.entrySet()) {				    
+					if((entry.getValue()+BAN_TIME_OUT) < System.currentTimeMillis()){
+				    	appendLog("removed from blocked list: " + entry.getKey());
+				    	clearAddress(entry.getKey());
+				    }		
 				}
 			} catch (Exception e) {
-				Util.log("deleted entry: " + e.getLocalizedMessage(), this);
-				Util.log("deleted entry: Banned list: " + list.toString(), this);
+				Util.log("ClearTimer(): ", e, this);
 			}		
 		}
+	}
+	
+	@Override
+	public String toString(){
+		if(override) return "developer override: " + banned.toString() + " " + attempts.toString();
+		return banned.toString() + " " + attempts.toString();
 	}
 }

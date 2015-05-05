@@ -11,7 +11,6 @@ import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 
-// TODO: more responsive to be a state observer and use timer as a watchdog
 public class SystemWatchdog {
 	
 	private final Settings settings = Settings.getReference();
@@ -34,8 +33,7 @@ public class SystemWatchdog {
 	
 	SystemWatchdog(Application a){ 
 		application = a;
-		Timer timer = new Timer();
-		timer.scheduleAtFixedRate(new Task(), DELAY, DELAY);
+		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 	
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
@@ -60,7 +58,7 @@ public class SystemWatchdog {
 			
 			getCPU(); // TODO: build up functionality 
 			if(state.getDouble(values.cpu.name()) > 70) {
-				Util.log("cpu too high?? " + state.get(values.cpu), this);
+				// Util.log("cpu too high?? " + state.get(values.cpu), this);
 				// settings.writeSettings(ManualSettings.debugenabled, "false");
 			}
 

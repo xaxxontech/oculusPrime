@@ -26,7 +26,6 @@ import developer.Navigation;
 import developer.UpdateFTP;
 import developer.Ros;
 import developer.depth.Mapper;
-import developer.image.motionDetect;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -48,8 +47,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String salt = null;
 	
 	private Settings settings = Settings.getReference();
-	private BanList banlist = BanList.getRefrence();
 	private State state = State.getReference();
+	private BanList banlist = null;
 	private LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
 	private AutoDock docker = null;
@@ -77,9 +76,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
 		NetworkMonitor.getReference();
+		banlist = BanList.getRefrence();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
-
+		
 		initialize();
 	}
 
@@ -91,23 +91,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// always accept local grabber
 		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
 
-		if (logininfo.length == 1) { // test for cookie auth
+		// TODO: if banned, but cookie exists?? 
+		if(banlist.isBanned(connection.getRemoteAddress())) return false;
+		
+		// test for cookie auth
+		if (logininfo.length == 1) { 
 			String username = logintest("", logininfo[0]);
 			if (username != null) {
 				state.set(State.values.pendinguserconnected, username);
+				banlist.clearAddress(connection.getRemoteAddress());
 				return true;
 			}
 		}
-		
-		if(banlist.isBanned(connection.getRemoteAddress())) return false;
-		
-		if (logininfo.length > 1) { // test for user/pass/remember
+	
+		 // test for user/pass/remember
+		if (logininfo.length > 1) {
 			String encryptedPassword = (passwordEncryptor.encryptPassword(logininfo[0] + salt + logininfo[1])).trim();
 			if (logintest(logininfo[0], encryptedPassword) != null) {
 				if (logininfo[2].equals("remember")) {
 					authtoken = encryptedPassword;
 				}
 				state.set(State.values.pendinguserconnected, logininfo[0]);
+				banlist.clearAddress(connection.getRemoteAddress());
 				return true;
 			}
 		}
@@ -732,7 +737,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case unblock:
-			banlist.remove(str);
+			banlist.removeblockedFile(str);
 			break;
 		
 		case powershutdown:

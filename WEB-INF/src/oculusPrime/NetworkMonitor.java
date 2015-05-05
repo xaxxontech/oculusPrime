@@ -394,10 +394,15 @@ public class NetworkMonitor {
 			if(line.contains("Address: ") && !line.startsWith("HW")){
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
 				// Util.debug("parseETH: address: " + addr, this);
-				if( ! state.exists(values.ethernetaddress)) state.set(values.ethernetaddress, addr);
-				if( state.exists(values.ethernetaddress))
-					if( ! state.equals(values.ethernetaddress, addr))
-						state.set(values.ethernetaddress, addr);
+				if(Util.validIP(addr)){
+					if( ! state.exists(values.ethernetaddress)) state.set(values.ethernetaddress, addr);
+					
+					if( state.exists(values.ethernetaddress)){
+						if( ! state.equals(values.ethernetaddress, addr)){
+							state.set(values.ethernetaddress, addr);
+						}
+					}
+				} 
 			}
 		}
 	}
@@ -434,22 +439,33 @@ public class NetworkMonitor {
 			if(wlanData.get(i).startsWith("Address: ")){
 
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
-				// Util.debug("parseWLAN: addr: " + addr, this);			
-				if( ! state.exists(values.localaddress)) state.set(values.localaddress, addr);
-				if(state.exists(values.localaddress))
-					if( ! state.equals(values.localaddress, addr))
-						state.set(values.localaddress, addr);
+				// Util.debug("parseWLAN: addr: " + addr, this);	
+				if(Util.validIP(addr)){
+
+					if( ! state.exists(values.localaddress)) state.set(values.localaddress, addr);
+					
+					if(state.exists(values.localaddress)){
+						if( ! state.equals(values.localaddress, addr)){
+							state.set(values.localaddress, addr);
+						}
+					}
+				}
 			}
 
 			if(line.startsWith("Gateway: ")){
 
 				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
 				// Util.debug("parseWLAN: gate: " + gate, this);
-				if( ! state.exists(values.gateway)) state.set(values.gateway, gate);
-				if(state.exists(values.gateway))
-					if( ! state.get(values.gateway).equals(gate))
-						state.set(values.gateway, gate);
-
+				if(Util.validIP(gate)){
+					
+					if( ! state.exists(values.gateway)) state.set(values.gateway, gate);
+					
+					if(state.exists(values.gateway)){
+						if( ! state.get(values.gateway).equals(gate)){
+							state.set(values.gateway, gate);
+						}
+					}
+				}
 			}
 			
 			/*if(line.startsWith("State: ")){

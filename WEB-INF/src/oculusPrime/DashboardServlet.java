@@ -16,7 +16,7 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "2";
+	static final String HTTP_REFRESH_DELAY_SECONDS = "3";
 	
 	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
@@ -35,18 +35,12 @@ public class DashboardServlet extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 	
-		if ( ! settings.getBoolean(ManualSettings.developer.name())){
+		if( !request.getServerName().equals("127.0.0.1") && !settings.getBoolean(ManualSettings.developer.name())){
 			out.println("this service is for developers only, check settings..");
 			out.close();	
 			return;
 		}
-		
-		if(ban.isBanned(request.getRemoteAddr())){
-			out.println("this is a banned address: " + ban);
-			out.close();	
-			return;
-		}
-	
+					
 		String action = null;
 		String router = null; 
 		String password = null;
@@ -87,7 +81,6 @@ public class DashboardServlet extends HttpServlet {
 			}
 		}	
 		
-		
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 
 		if(view != null){
@@ -112,14 +105,14 @@ public class DashboardServlet extends HttpServlet {
 			
 			if(view.equalsIgnoreCase("sysout")){
 				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
-				out.println(Util.tail(30) + "\n");
+				out.println(Util.tail(50) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("power")){	
 				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
-				out.println(PowerLogger.tail(30) + "\n");
+				out.println(PowerLogger.tail(50) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -132,11 +125,11 @@ public class DashboardServlet extends HttpServlet {
 			
 			if(view.equalsIgnoreCase("log")){
 				out.println("\nsystem output: <hr>\n");
-				out.println(Util.tail(25) + "\n");
+				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
 				out.println("\n" + PowerLogger.tail(5) + "\n");
-				out.println("\n<br />banned addresses: " +  ban + " telnet users [" + state.get(State.values.telnetusers)+ "] " + "<hr>\n");
-				out.println("\n" + ban.tail(10) + "\n");
+				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
+				out.println("\n" + ban.tail(7) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -288,7 +281,7 @@ public class DashboardServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"20\" border=\"0\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"1\">  \n");
 		
 		String list = "connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
@@ -319,7 +312,8 @@ public class DashboardServlet extends HttpServlet {
 		str.append("<tr><td><b>power port </b>" + state.get(values.powerport)
 				+ "<td><b>java mins </b>" + (state.getUpTime()/1000)/60  
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life </b> " + state.get(values.batterylife) + " <b>cpu </b>" + state.get(values.cpu) + " % </tr> \n");
+				+ "<td><b>life </b> " + state.get(values.batterylife) + " <b>cpu </b>" + state.get(values.cpu) + "% "
+				+ "<b>telnet </b> " + state.get(values.telnetusers) + " </tr> \n");
 				
 	/*			
 		str.append("<tr><td><b>video mode </b>" + state.get(values.videosoundmode) + " <b>stream </b>" + state.get(values.stream)
