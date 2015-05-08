@@ -35,7 +35,7 @@ public class State {
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
-		roscurrentgoal, rosmapupdated, rosmapwaypoints, navigationenabled,
+		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime,
 		

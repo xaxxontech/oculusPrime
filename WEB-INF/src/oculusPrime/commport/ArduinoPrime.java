@@ -1353,7 +1353,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			@SuppressWarnings("incomplete-switch")
 			public void run() {
 				
-				final int tempspeed = state.getInteger(State.values.motorspeed);
+				int tempspeed = state.getInteger(State.values.motorspeed);
 				state.put(State.values.motorspeed, speedfast);
 				
 				

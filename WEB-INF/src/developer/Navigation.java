@@ -31,11 +31,12 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 99;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 999;
 	private final Settings settings = Settings.getReference();
 
 	/** Constructor */
-	public Navigation(Application a){ 
+	public Navigation(Application a){
+		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		app = a;
 		Ros.loadwaypoints();
 	}	
@@ -47,7 +48,7 @@ public class Navigation {
 		}
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
-				!state.exists(State.values.navigationenabled))  {
+				!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  {
 			app.driverCallServer(PlayerCommands.messageclients,
 					"Can't navigate, location unknown");
 			return;
@@ -55,10 +56,7 @@ public class Navigation {
 		
 		new Thread(new Runnable() { public void run() {
 
-			if (!waitForNavSystem()) {
-				app.driverCallServer(PlayerCommands.messageclients, "Unable to start navigation");
-				return;
-			}
+			if (!waitForNavSystem()) return;
 			
 			// undock if necessary
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
@@ -81,14 +79,19 @@ public class Navigation {
 	}
 	
 	private boolean waitForNavSystem() { // blocking
-		if (!state.exists(State.values.navigationenabled)) startNavigation();
-		else if (!state.getBoolean(State.values.navigationenabled)) startNavigation();
-		
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString())) {
+			app.driverCallServer(PlayerCommands.messageclients,
+					"can't start navigation, in process of shutting down");
+			return false;
+		}
+
+		startNavigation();
+
 		long start = System.currentTimeMillis();
-		while (!state.getBoolean(State.values.navigationenabled) 
+		while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 				&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT*3) { Util.delay(50);  } // wait
 
-		if (!state.getBoolean(State.values.navigationenabled)) {
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation start failure");
 			return false;
 		}
@@ -100,52 +103,61 @@ public class Navigation {
 	}
 	
 	public void startNavigation() {
-		if (state.exists(State.values.navigationenabled)) {
-			Util.log("can't start navigation, already running", this);
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+			app.driverCallServer(PlayerCommands.messageclients,
+					"can't re-start navigation, may be already running");
 			return;
 		}
 
 		new Thread(new Runnable() { public void run() {
 			app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
-//			stopNavigation();
-			state.set(State.values.navigationenabled, false); // false=pending, set true by ROS node when ready
-//			Util.delay(3000);
+			state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
 			Ros.launch(Ros.REMOTE_NAV);
 
 			// wait
 			long start = System.currentTimeMillis();
-			while (!state.getBoolean(State.values.navigationenabled) 
+			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
 
 			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 
-			if (state.getBoolean(State.values.navigationenabled)) return; // success
+			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) return; // success
 			
 			// ========try again if needed, just once======
-			if (!state.exists(State.values.navigationenabled)) return; // in case cancelled
+
+			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) ||
+					state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+				return; // in case cancelled
 
 			Util.log("navigation start attempt #2", this);
-			stopNavigation(); // ros script deletes state navigationenabled after couple secs
-			state.set(State.values.navigationenabled, false); // false=pending, set true by ROS node when ready
-			Util.delay(Ros.ROSSHUTDOWNDELAY);
+			stopNavigation();
+			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) // wait
+				Util.delay(10);
 			Ros.launch(Ros.REMOTE_NAV);
 
 			// wait
 			start = System.currentTimeMillis();
-			while (!state.getBoolean(State.values.navigationenabled)
+			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait, again
 
-			if (state.getBoolean(State.values.navigationenabled)) return; // success
-			else  stopNavigation();
+			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) )
+				return; // success
+			else  stopNavigation(); // give up
 
 		}  }).start();
-
 	}
 	
 	public void stopNavigation() {
-		state.delete(State.values.navigationenabled);
-//		if (state.exists(State.values.navigationroute)) cancelRoute(); // don't do this
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+			return;
+
 		Util.systemCall("pkill roslaunch");
+		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopping.toString());
+		new Thread(new Runnable() { public void run() {
+			Util.delay(Ros.ROSSHUTDOWNDELAY);
+			state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
+		}  }).start();
+
 	}
 	
 	public void dock() {
@@ -157,11 +169,7 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.messageclients, "already docked, command dropped");
 			return;
 		}
-		else if (!state.exists(State.values.navigationenabled)) {
-				app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
-			return;
-		}
-		else if (!state.getBoolean(State.values.navigationenabled)) {
+		else if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
@@ -310,13 +318,15 @@ public class Navigation {
 		}
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
-				!state.getBoolean(State.values.navigationenabled))  {
+				!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  {
 			app.driverCallServer(PlayerCommands.messageclients,
 					"Can't start route, location unknown, command dropped");
 			cancelAllRoutes();
 			return;
 		}
-		
+
+		if (state.exists(State.values.navigationroute))  cancelAllRoutes(); // if another route running
+
 		// check for route name
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
@@ -352,6 +362,7 @@ public class Navigation {
 		new Thread(new Runnable() { public void run() {
 			int consecutiveroute = 1;
 
+			// get schedule info
 			// map days to numbers
 			NodeList days = navroute.getElementsByTagName("day");
 			if (days.getLength() == 0) {
@@ -367,15 +378,17 @@ public class Navigation {
 					if (days.item(d).getTextContent().equalsIgnoreCase(availabledays[ad]))   daynums[d]=ad+1;
 				}
 			}
-
+			// more schedule info
 			int starthour = Integer.parseInt(navroute.getElementsByTagName("starthour").item(0).getTextContent());
 			int startmin = Integer.parseInt(navroute.getElementsByTagName("startmin").item(0).getTextContent());
 			int routedurationhours = Integer.parseInt(navroute.getElementsByTagName("routeduration").item(0).getTextContent());
 
+			// repeat route schedule forever until cancelled
 			while (true) {
 
-				state.delete(State.values.nextroutetime); // ?
+				state.delete(State.values.nextroutetime);
 
+				// determine next scheduled route time, wait if necessary
 				while (state.exists(State.values.navigationroute)) {
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
@@ -388,10 +401,12 @@ public class Navigation {
 					// determine if now is within day + range, if not determine time to next range and wait
 
 					boolean startroute = false;
-					int nextday = 7;
+					int nextdayindex = 99;
 
 					for (int i=0; i<daynums.length; i++) {
-						if (daynums[i] == daynow -1 || daynums[i] == daynow) {
+
+						// check if need to start run right away
+						if (daynums[i] == daynow -1 || daynums[i] == daynow) { // yesterday or today
 							Calendar testday = Calendar.getInstance();
 							if (daynums[i] == daynow -1) { // yesterday
 								testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
@@ -408,16 +423,36 @@ public class Navigation {
 							}
 
 						}
-						if (daynow <= daynums[i] && daynums[i] < nextday) nextday = daynums[i];
 
+						if (daynow == daynums[i]) nextdayindex = i;
+						else if (daynow > daynums[i]) nextdayindex = i+1;
 					}
 
 					if (startroute) break;
 
-					if (!state.exists(State.values.nextroutetime)) {
+					if (!state.exists(State.values.nextroutetime)) { // only set once
+
+						int adddays = 0;
+						if (nextdayindex >= daynums.length ) { //wrap around
+							nextdayindex = 0;
+							adddays = 7-daynow + daynums[0];
+						}
+						else adddays = daynums[nextdayindex] - daynow;
+
 						Calendar testday = Calendar.getInstance();
 						testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
-								calendarnow.get(Calendar.DATE) + (nextday - daynow), starthour, startmin);
+								calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
+
+						if (testday.getTimeInMillis() < System.currentTimeMillis()) { // same day, past route
+							nextdayindex ++;
+							if (nextdayindex >= daynums.length ) { //wrap around
+								adddays = 7-daynow + daynums[0];
+							}
+							else  adddays = daynums[nextdayindex] - daynow;
+							testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+									calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
+						}
+
 						state.set(State.values.nextroutetime, testday.getTimeInMillis());
 					}
 
@@ -429,14 +464,13 @@ public class Navigation {
 				if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
-						!state.exists(State.values.navigationenabled))  {
+						!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
 					app.driverCallServer(PlayerCommands.messageclients, "Can't navigate route, location unknown");
 					cancelRoute(id);
 					return;
 				}
 
 				if (!waitForNavSystem()) {
-					app.driverCallServer(PlayerCommands.messageclients, "Unable to start navigation");
 					cancelRoute(id);
 					return;
 				}
@@ -530,13 +564,15 @@ public class Navigation {
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
 							!state.getBoolean(State.values.autodocking)) break; // success
-					Util.delay(100); 
+					Util.delay(100);
 				}
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					cancelRoute(id);
+					cancelRoute(id); // TODO: send alert
 					// try docking one more time, sending alert if fail
 					Util.log("calling redock()", this);
+					stopNavigation();
+					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 					return; 
 				}
@@ -550,7 +586,7 @@ public class Navigation {
 
 				// delay to next route
 				String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
-		    	long timebetween = Long.parseLong(min) * 1000 * 60;
+				long timebetween = Long.parseLong(min) * 1000 * 60;
 				state.set(State.values.nextroutetime, System.currentTimeMillis()+timebetween);
 				app.driverCallServer(PlayerCommands.messageclients, min +  msg);
 		    	start = System.currentTimeMillis();
@@ -559,8 +595,6 @@ public class Navigation {
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 					Util.delay(1000);
 				}
-
-				state.delete(State.values.nextroutetime);
 
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
 //					app.restart();
@@ -731,14 +765,20 @@ public class Navigation {
 			}
 
 			if (rotate) {
-				if (camera) Util.delay(500); // TODO: need this due to motiondetect cpu 100%?
-				app.driverCallServer(PlayerCommands.left, "45");
+//				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
+												// TODO: testing 1000, still happening
+//				app.driverCallServer(PlayerCommands.left, "45");
+
+				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
+				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.left.toString());
+				Util.delay((long) (45.0 / degperms));
+				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 
 				long stopwaiting = System.currentTimeMillis()+5000; // timeout if error
 				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
 						System.currentTimeMillis() < stopwaiting) { Util.delay(10); } // wait for stop
 
-				Util.delay(4000); // allow cam to normalize
+				Util.delay(4000); // allow cam to normalize TODO: only if light on...?
 				turns ++;
 			}
 
@@ -771,6 +811,10 @@ public class Navigation {
 		return false;
 	}
 
+	/**
+	 * cancel all routes, only if id matches state
+	 * @param id
+	 */
 	private void cancelRoute(String id) {
 		if (id.equals(state.get(State.values.navigationrouteid))) cancelAllRoutes();
 	}
@@ -780,10 +824,10 @@ public class Navigation {
 		goalCancel();
 		state.delete(State.values.nextroutetime);
 
-		// check for route name
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 
+		// set all routes inactive
 		for (int i = 0; i< routes.getLength(); i++) {
 			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
 		}

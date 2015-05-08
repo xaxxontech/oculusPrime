@@ -1,5 +1,6 @@
 package developer;
 
+import oculusPrime.State;
 import oculusPrime.Util;
 
 import java.util.Calendar;
@@ -9,9 +10,31 @@ public class Scratch {
 
     public static void main(String[] args) {
 
-        int code = -50;
-        String str = "asdf,-50,asdf";
-        if (str.matches(".*"+code+"$") ) System.out.println("match");
+//        int[] daynums = new int[] {1,2,3,4,5};
+//        int nextday = 99;
+//        int daynow = 5;
+//        for (int i=0; i<daynums.length; i++) {
+//            if (daynow <= daynums[i] && daynums[i] < nextday) nextday = daynums[i];
+//        }
+//
+//        if (nextday == 99 ) nextday = 7-daynow + daynums[0];
+//        System.out.println(nextday);
+
+
+        int[] daynums = new int[] {2,6};
+        int nextday = 99;
+        int daynow = 7;
+        for (int i=0; i<daynums.length; i++) {
+            if (daynow == daynums[i]) {
+                nextday = i; // break;
+            }
+            if (daynow > daynums[i]) nextday = i+1;
+        }
+
+        if (nextday > daynums.length-1 ) nextday = 0;
+        System.out.println(daynums[nextday]);
+
+
 
     }
 }

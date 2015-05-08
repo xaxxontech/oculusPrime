@@ -6,8 +6,6 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 
