@@ -182,7 +182,7 @@ public class DashboardServlet extends HttpServlet {
 		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
 				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
 			//	+ "<td><b>rosmapwaypoints</b><td>" + state.get(values.rosmapwaypoints) 
-				+ "<td><b>navigationenabled</b><td>" + state.get(values.navigationenabled) 
+				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
 				+ "</tr> \n");
 		
 		str.append("<tr>" 
@@ -246,7 +246,7 @@ public class DashboardServlet extends HttpServlet {
 		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
 				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
 			//	+ "<td><b>rosmapwaypoints</b><td>" + state.get(values.rosmapwaypoints) 
-				+ "<td><b>navigationenabled</b><td>" + state.get(values.navigationenabled) 
+				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
 				+ "</tr> \n");
 		
 		str.append("<tr>" 

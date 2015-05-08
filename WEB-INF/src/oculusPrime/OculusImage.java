@@ -89,7 +89,7 @@ public class OculusImage {
 		int w;
 		int e;
 		int i;
-		
+
 		while (q.size() > 0) {
 			n = q.remove(q.size()-1);
 			if (ablob[n]==1) {
@@ -142,22 +142,22 @@ public class OculusImage {
 		}
 		Boolean[] blob = floodFill(parr, start);
 		int blobSize =0;
-			int r[] = getRect(blob,start);
-			int minx = r[0];
-			int maxx = r[1];
-			int miny = r[2];
-			int maxy = r[3];  
-			blobSize = r[4];
-			int	blobBox = (maxx-minx)*(maxy-miny);
-			lastTopRatio = (float) getPixelEqTrueCount(blob, minx, (int) (minx+(maxx-minx)*0.333), miny, maxy) / (float) blobBox; // left
-			lastMidRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.333), (int) (minx+(maxx-minx)*0.666), miny, maxy) / (float) blobBox;
-			lastBottomRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.666), maxx, miny, maxy) / (float) blobBox; // left
-			lastBlobRatio = (float)(maxx-minx)/(float)(maxy-miny);
-			float slope =  getBottomSlope(blob,minx,maxx,miny,maxy)[0];
-			//result = x,y,width,height,slope,lastBlobRatio,lastTopRatio,lastMidRatio,lastBottomRatio
-			result = new String[]{Integer.toString(minx), Integer.toString(miny), Integer.toString(maxx-minx),
-					Integer.toString(maxy-miny), Float.toString(slope), Float.toString(lastBlobRatio),
-					Float.toString(lastTopRatio), Float.toString(lastMidRatio), Float.toString(lastBottomRatio)}; 
+		int r[] = getRect(blob,start);
+		int minx = r[0];
+		int maxx = r[1];
+		int miny = r[2];
+		int maxy = r[3];
+		blobSize = r[4];
+		int	blobBox = (maxx-minx)*(maxy-miny);
+		lastTopRatio = (float) getPixelEqTrueCount(blob, minx, (int) (minx+(maxx-minx)*0.333), miny, maxy) / (float) blobBox; // left
+		lastMidRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.333), (int) (minx+(maxx-minx)*0.666), miny, maxy) / (float) blobBox;
+		lastBottomRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.666), maxx, miny, maxy) / (float) blobBox; // left
+		lastBlobRatio = (float)(maxx-minx)/(float)(maxy-miny);
+		float slope =  getBottomSlope(blob,minx,maxx,miny,maxy)[0];
+		//result = x,y,width,height,slope,lastBlobRatio,lastTopRatio,lastMidRatio,lastBottomRatio
+		result = new String[]{Integer.toString(minx), Integer.toString(miny), Integer.toString(maxx-minx),
+				Integer.toString(maxy-miny), Float.toString(slope), Float.toString(lastBlobRatio),
+				Float.toString(lastTopRatio), Float.toString(lastMidRatio), Float.toString(lastBottomRatio)};
 
 		if (lastThreshhold==0) {
 			int runningttl = 0;

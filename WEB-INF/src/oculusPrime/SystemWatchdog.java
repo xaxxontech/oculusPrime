@@ -58,7 +58,7 @@ public class SystemWatchdog {
 			
 			getCPU(); // TODO: build up functionality 
 			if(state.getDouble(values.cpu.name()) > 70) {
-				// Util.log("cpu too high?? " + state.get(values.cpu), this);
+				 Util.log("cpu too high?? " + state.get(values.cpu), this);
 				// settings.writeSettings(ManualSettings.debugenabled, "false");
 			}
 

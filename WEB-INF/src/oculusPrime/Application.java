@@ -799,7 +799,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case clearmap: Mapper.clearMap();
 			break;
 		
-		case error: 
+		case error:
 			try {
 				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
 			} catch (Exception e)  { Util.printError(e); }
@@ -1361,7 +1361,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	public void quit() { 
-		messageplayer("server shutting down",null,null);
+		messageplayer("server shutting down", null, null);
 		shutdown();
 	}
 
@@ -1379,13 +1379,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		PowerLogger.close();
 		
-		if (navigation != null && state.exists(State.values.navigationenabled)) 
-			navigation.stopNavigation();
+		if (navigation != null) {
+			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+				navigation.stopNavigation();
+		}
 
 		if (! settings.getBoolean(ManualSettings.debugenabled))
 			Util.systemCall("pkill chrome");  // TODO: use PID
 
-		Util.systemCall(Settings.redhome+Settings.sep+"red5-shutdown.sh");
+		Util.systemCall(Settings.redhome + Settings.sep + "red5-shutdown.sh");
 	}
 
 	@SuppressWarnings("incomplete-switch")

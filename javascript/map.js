@@ -223,9 +223,8 @@ function rosinfo() {
 						}
 						break;
 						
-					case "navigationenabled":
-						if (ss[1] == "true") systemstatustext = "RUNNING";
-						else if (ss[1] == "false") systemstatustext = "INITIALIZING";
+					case "navsystemstatus":
+						systemstatustext = ss[1].toUpperCase();
 						break;
 						
 					case "navigationroute":
@@ -954,7 +953,7 @@ function routesload() {
 			str = xmlhttp.responseText;
 			if (str != "") {
 				routesxml = loadXMLString(str);
-				routespopulate();
+				setTimeout("routespopulate();", 50);
 			}
 		}
 	}
@@ -996,13 +995,13 @@ function routespopulate() {
 function activateroute(name) {
 	callServer("runroute", name);
 	// routesxml = null;
-	// setTimeout("routesmenu()", 500); 
+	// setTimeout("routesxml = null", 1000); 
 }
 
 function deactivateroute() {
 	callServer("cancelroute", "");
 	// routesxml = null;
-	// setTimeout("routesmenu()", 500);
+	// setTimeout("routesxml = null", 1000); 
 }
 
 function editroute(name, rxml) {
@@ -1147,7 +1146,7 @@ function editroute(name, rxml) {
 	str += "&nbsp; &nbsp; &nbsp; Stop after: ";
 	str += "<select id='routeduration'>";
 	var hourselection = route.getElementsByTagName("routeduration")[0].childNodes[0].nodeValue;
-	for (var h=0; h<=23; h++) {
+	for (var h=0; h<=24; h++) {
 		str +="<option value='"+h+"'"
 		if (h.toString() == hourselection) str += "selected='selected'";
 		str += ">"+h+"</option>";
@@ -1246,9 +1245,11 @@ function reorderdays(days, availabledays) {
 }
 
 function deleteroute(routenum) {
-	var routeslist = routesxml.getElementsByTagName("routeslist")[0];
-	routeslist.removeChild(routeslist.getElementsByTagName("route")[routenum]);
-	saveroutes();
+	if (confirm("delete this route\nare you sure?")) { 
+		var routeslist = routesxml.getElementsByTagName("routeslist")[0];
+		routeslist.removeChild(routeslist.getElementsByTagName("route")[routenum]);
+		saveroutes();
+	}
 }
 
 function routewaypointdelete(routenum, waypointnum) {

@@ -20,8 +20,9 @@ public class Ros {
 	private static State state = State.getReference();
 	
 	// State keys
+	public enum navsystemstate { stopped, starting, running, stopping };
 
-	public static final long ROSSHUTDOWNDELAY = 20000;
+	public static final long ROSSHUTDOWNDELAY = 15000;
 
 	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
@@ -140,8 +141,8 @@ public class Ros {
 		if (state.exists(State.values.rosmapwaypoints)) 
 			str += " " + State.values.rosmapwaypoints.toString() +"_" + state.get(State.values.rosmapwaypoints);
 
-		if (state.exists(State.values.navigationenabled)) 
-			str += " " + State.values.navigationenabled.toString() +"_"+ state.get(State.values.navigationenabled);
+		if (state.exists(State.values.navsystemstatus))
+			str += " " + State.values.navsystemstatus.toString() +"_"+ state.get(State.values.navsystemstatus);
 
 		if (state.exists(State.values.navigationroute))
 			str += " " + State.values.navigationroute.toString() + "_" + state.get(State.values.navigationroute);
