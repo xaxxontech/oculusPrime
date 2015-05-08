@@ -26,23 +26,22 @@ public class NetworkMonitor {
 	private static Timer networkTimer = new Timer();
 	private static Timer pingTimer = new Timer();
 	
-	private static String pingValue = null;
 	private static long pingLast = System.currentTimeMillis();
-
+	private static String pingValue = null;
+	
 	public static State state = State.getReference();
+	public static Settings settings = Settings.getReference();
 	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static NetworkMonitor getReference() {
 		return singleton;
 	}
 
 	private NetworkMonitor(){
-		updateExternalIPAddress();
-
-		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) return;
 
 		pingTimer.schedule(new pingTask(), AP_TIME_OUT, AP_TIME_OUT);
-		networkTimer.schedule(new networkTask(), 2000, 2000);
-
+		networkTimer.schedule(new networkTask(), 3000, 3000);	
+	
+		updateExternalIPAddress();
 		connectionUpdate();
 		connectionsNever();
 		killApplet();
@@ -51,6 +50,9 @@ public class NetworkMonitor {
 	public class pingTask extends TimerTask {			
 	    @Override
 	    public void run() {
+	    	
+			if(settings.readSetting(ManualSettings.networkmonitor).equals("false")) return;
+	    	
 	    	if(! state.equals(values.ssid, AP)) {
 	    		if(state.exists(values.gateway)){ //values.externaladdress)){
 	    			
@@ -124,11 +126,13 @@ public class NetworkMonitor {
 		public void run() {
 			try{
 
+				if(settings.readSetting(ManualSettings.networkmonitor).equals("false")) return;
+
 				// long start = System.currentTimeMillis();
 
 				networkData.clear();
 				wlanData.clear();
-				// accesspoints.clear();
+				accesspoints.clear();
 
 				Process proc = Runtime.getRuntime().exec(new String[]{"nm-tool"});
 				BufferedReader procReader = new BufferedReader(
@@ -514,8 +518,9 @@ public class NetworkMonitor {
 				while ((i = in.read()) != -1) address += (char)i;
 				in.close();
 
-				state.put(values.externaladdress, address);
-
+				if(Util.validIP(address)) state.put(values.externaladdress, address);
+				else Util.log("read invalid address from server", this);
+		
 			} catch (Exception e) {
 				Util.log("updateExternalIPAddress():", e, this);
 				state.delete(values.externaladdress);

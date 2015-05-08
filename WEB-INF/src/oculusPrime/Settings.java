@@ -14,10 +14,6 @@ public class Settings {
 	public final static String settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
 	public final static String stdout = redhome+sep+"log"+sep+"jvm.stdout";
 	
-	// public static String ftpconfig = redhome+sep+"conf"+sep+"ftp.properties";
-	// public static String loginactivity = redhome+sep+"log"+sep+"loginactivity.txt";
-	// public final static String powerlog = redhome+sep+"log"+sep+"power.log";
-	
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
 	public static final int ERROR = -1;
@@ -54,8 +50,38 @@ public class Settings {
 		} catch (Exception e) {
 			Util.log("importFile: " + e.getMessage(), this);
 		}
+		
+		// test for missing
+		
+		for (GUISettings setting : GUISettings.values()) {
+			if (readSetting(setting.name()) == null) {
+				Util.log("missing setting, changed to default: " + setting.name(), this);
+				writeFile();
+				break;
+			} else {
+				if(readSetting(setting.name()).equalsIgnoreCase("null")){
+					Util.log("missing setting, changed to default: " + setting.name(), this);
+					writeFile();
+					break;
+				}
+			}
+		}
+		
+		for (ManualSettings setting : ManualSettings.values()) {
+			if (readSetting(setting.name()) == null) {
+				Util.log("missing setting, changed to default: " + setting.name(), this);
+				writeFile();
+				break;
+			} else {
+				if(readSetting(setting.name()).equalsIgnoreCase("null")){
+					Util.log("missing setting, changed to default: " + setting.name(), this);
+					writeFile();
+					break;
+				}
+			}
+		}
 	}
-	
+		
 	public boolean getBoolean(String key) {
 		if (key == null) return false;
 		String str = readSetting(key);
@@ -175,7 +201,7 @@ public class Settings {
 	}
 	
 	/** Organize the settings file into 3 sections. Use Enums's to order the file */
-	public synchronized void writeFile(){ // String path) {
+	public synchronized void writeFile(){
 		
 		try {
 			
@@ -257,7 +283,12 @@ public class Settings {
 	}
 	
 	public void writeSettings(ManualSettings setting, String str) {
-		if (str != null) writeSettings(setting, str);
+		
+		if(setting == null) return;
+		
+		if (str != null) 
+			if( ! str.equalsIgnoreCase("null"))
+				writeSettings(setting, str);
 	}
 	
 	/**
@@ -268,6 +299,11 @@ public class Settings {
 	 * @param value
 	 */
 	public synchronized void writeSettings(String setting, String value) {
+		
+		if(setting == null) return;
+		if(value == null) return;
+		if(value.equalsIgnoreCase("null")) return;
+				
 		value = value.trim();
 		settings.put(setting, value);
 		FileInputStream filein;
@@ -477,5 +513,13 @@ public class Settings {
 		return Long.valueOf(readSetting(setting));
 	}
 
-	
+	public void disable(ManualSettings setting) {
+		if(setting == null) return;
+		writeSettings(setting, "false");
+	}
+
+	public void enabl(ManualSettings setting) {
+		if(setting == null) return;
+		writeSettings(setting, "true");
+	}
 }

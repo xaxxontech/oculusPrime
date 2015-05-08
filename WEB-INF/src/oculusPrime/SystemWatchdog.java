@@ -36,34 +36,25 @@ public class SystemWatchdog {
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 	
-	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
-	private void getCPU(){
-		try {
-
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String line = procReader.readLine();
-			// Util.log("cpu : " + Util.formatFloat(line, 0));
-			state.set(values.cpu, Util.formatFloat(line, 0)); 
-		
-		} catch (Exception e) {
-			Util.debug("getCPU(): " + e.getMessage(), this);
-		}
-	}
-	
 	private class Task extends TimerTask {
 		public void run() {
 			
-			getCPU(); // TODO: build up functionality 
-			if(state.getDouble(values.cpu.name()) > 70) {
-				// Util.log("cpu too high?? " + state.get(values.cpu), this);
-				// settings.writeSettings(ManualSettings.debugenabled, "false");
-			}
+			String cpu = Util.getCPU();
+			if(cpu != null) state.put(values.cpu, cpu);
+			if(state.getDouble(values.cpu) > 75 ) {
+				
+				Util.log("cpu too high?? " + state.get(values.cpu), this);
+			 
+				// TODO: build up functionality 
+				// TODO: sets off tight loop??
+				//settings.disable(ManualSettings.debugenabled);
+				//settings.disable(ManualSettings.networkmonitor);
+			} 
 
 			// safety: check for force_undock command from battery firmware
-			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			       										   // state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 
+				
 				Util.log("System WatchDog, force undock", this);
 				PowerLogger.append("System WatchDog, force undock", this);
 				forceundock();
