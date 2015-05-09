@@ -34,7 +34,7 @@ public class SystemWatchdog {
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 		
 		if(settings.readSetting(ManualSettings.debugenabled).equals("true")) 
-			new Timer().schedule(new cpuTask(), 1500);
+			new Timer().scheduleAtFixedRate(new cpuTask(), 1000, 1500);
 		
 	}
 	
@@ -49,14 +49,21 @@ public class SystemWatchdog {
 				double now = Double.parseDouble(cpuNow);
 				double was = Double.parseDouble(cpuWas);
 				
-				state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
-				
-				if(state.getDouble(values.cpu) > 70 ) {
+				// threshold updates 
+				if( Math.abs(state.getDouble(values.cpu) - (now+was)/2) > 20){
 					
-					Util.log("is cpu too high?? " + state.get(values.cpu), this);
+					//	Util.log("is cpu changing: " + state.get(values.cpu), this);
+					//  Util.log("now: " + now + " was: " + was, this);
+						
+					state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
+				
+					if(state.getDouble(values.cpu) > 70 ) {
+					
+						Util.log("is cpu too high?? " + state.get(values.cpu), this);
 				 
 					// TODO: build up functionality 
 					
+					}
 				}
 			}
 		}
