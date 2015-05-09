@@ -50,14 +50,14 @@ public class SystemWatchdog {
 				double was = Double.parseDouble(cpuWas);
 				
 				// threshold updates 
-				if( Math.abs(state.getDouble(values.cpu) - (now+was)/2) > 20){
+				if( Math.abs(state.getDouble(values.cpu) - (now+was)/2) > 10){
 					
 					//	Util.log("is cpu changing: " + state.get(values.cpu), this);
 					//  Util.log("now: " + now + " was: " + was, this);
 						
 					state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
 				
-					if(state.getDouble(values.cpu) > 70 ) {
+					if(state.getDouble(values.cpu) > 75 ) {
 					
 						Util.log("is cpu too high?? " + state.get(values.cpu), this);
 				 
