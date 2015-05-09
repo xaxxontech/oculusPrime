@@ -32,22 +32,38 @@ public class SystemWatchdog {
 	SystemWatchdog(Application a){ 
 		application = a;
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
+		
+		if(settings.readSetting(ManualSettings.debugenabled).equals("true")) 
+			new Timer().schedule(new cpuTask(), 1500);
+		
+	}
+	
+	
+	private class cpuTask extends TimerTask {
+		public void run() {
+		
+			String cpuNow = Util.getCPU();
+			String cpuWas =  Util.getCPU();
+			if(cpuNow != null && cpuWas != null){
+				
+				double now = Double.parseDouble(cpuNow);
+				double was = Double.parseDouble(cpuWas);
+				
+				state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
+				
+				if(state.getDouble(values.cpu) > 70 ) {
+					
+					Util.log("is cpu too high?? " + state.get(values.cpu), this);
+				 
+					// TODO: build up functionality 
+					
+				}
+			}
+		}
 	}
 	
 	private class Task extends TimerTask {
 		public void run() {
-			
-			String cpu = Util.getCPU();
-			if(cpu != null) state.put(values.cpu, cpu);
-			if(state.getDouble(values.cpu) > 75 ) {
-				
-				Util.log("cpu too high?? " + state.get(values.cpu), this);
-			 
-				// TODO: build up functionality 
-				// TODO: sets off tight loop??
-				//settings.disable(ManualSettings.debugenabled);
-				//settings.disable(ManualSettings.networkmonitor);
-			} 
 
 			// safety: check for force_undock command from battery firmware
 			       										   // state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
