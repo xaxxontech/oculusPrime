@@ -43,7 +43,7 @@ public class SystemWatchdog {
 		public void run() {
 		
 			String cpuNow = Util.getCPU();
-			String cpuWas =  Util.getCPU();
+			String cpuWas =  state.get(values.cpu);
 			if(cpuNow != null && cpuWas != null){
 				
 				double now = Double.parseDouble(cpuNow);
