@@ -104,8 +104,6 @@ public class Navigation {
 	
 	public void startNavigation() {
 		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
-			app.driverCallServer(PlayerCommands.messageclients,
-					"can't re-start navigation, may be already running");
 			return;
 		}
 
@@ -774,9 +772,11 @@ public class Navigation {
 				Util.delay((long) (45.0 / degperms));
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 
-				long stopwaiting = System.currentTimeMillis()+5000; // timeout if error
+				long stopwaiting = System.currentTimeMillis()+500; // timeout if error
 				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
-						System.currentTimeMillis() < stopwaiting) { Util.delay(10); } // wait for stop
+						System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait for stop
+				if (!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()))
+					Util.log("error, missed turnstop within 500ms", this);
 
 				Util.delay(4000); // allow cam to normalize TODO: only if light on...?
 				turns ++;

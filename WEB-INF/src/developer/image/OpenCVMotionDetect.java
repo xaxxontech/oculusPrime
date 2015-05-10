@@ -66,20 +66,31 @@ public class OpenCVMotionDetect  {
                         return;
                     }
 
-                    BufferedImage img = null;
-
-                    try {
-                        img = ImageIO.read(new URL("http://127.0.0.1:" +
-                                settings.readRed5Setting("http.port") + "/oculusPrime/frameGrabHTTP"));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+//                    BufferedImage img = null;
+//
+//                    try {
+//                        img = ImageIO.read(new URL("http://127.0.0.1:" +
+//                                settings.readRed5Setting("http.port") + "/oculusPrime/frameGrabHTTP"));
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
                     double threshold = settings.getDouble(ManualSettings.motionthreshold.toString());
+//
+//                    if (img == null) {
+//                        Util.log("stream unavailable", this);
+//                        break;
+//                    }
 
-                    if (img == null) {
-                        Util.log("stream unavailable", this);
-                        break;
+                    boolean fg = app.frameGrab();
+                    long waittime = System.currentTimeMillis() + 2000;
+                    while (state.getBoolean(State.values.framegrabbusy) && System.currentTimeMillis() < waittime)
+                        Util.delay(1);
+                    if (state.getBoolean(State.values.framegrabbusy) || !fg) {
+                        app.driverCallServer(PlayerCommands.messageclients,
+                                "OpenCVMotionDetect().motionDetectGo() frame unavailable");
+                        return;
                     }
+                    BufferedImage img = ImageUtils.toBufferedImageOfType(app.processedImage, BufferedImage.TYPE_3BYTE_BGR);
 
                     frame = cv.bufferedImageToMat(img);
 
@@ -116,7 +127,7 @@ public class OpenCVMotionDetect  {
                     }
 
                     f ++;
-                    Util.delay(200); // cpu saver
+                    Util.delay(300); // cpu saver
                 }
 
                 state.set(State.values.motiondetect, false);

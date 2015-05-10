@@ -1,5 +1,6 @@
 package oculusPrime;
 
+import developer.Ros;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
@@ -58,7 +59,7 @@ public class SystemWatchdog {
 			
 			getCPU(); // TODO: build up functionality 
 			if(state.getDouble(values.cpu.name()) > 70) {
-				 Util.log("cpu too high?? " + state.get(values.cpu), this);
+				 Util.log("warning high cpu: " + state.get(values.cpu)+"%", this);
 				// settings.writeSettings(ManualSettings.debugenabled, "false");
 			}
 
@@ -167,6 +168,20 @@ public class SystemWatchdog {
 	
 	public void redock(String str) {
 		if (redocking) return;
+
+		if (settings.getBoolean(GUISettings.navigation)) {
+			if (state.get(values.navsystemstatus).equals(Ros.navsystemstate.running) ||
+					state.get(values.navsystemstatus).equals(Ros.navsystemstate.starting)) {
+				Util.log("warning: redock skipped, navigation running", this);
+				return;
+			}
+			if (state.exists(values.nextroutetime)) {
+				if (state.getLong(values.nextroutetime.toString()) - System.currentTimeMillis() < Util.TWO_MINUTES) {
+					Util.log("warning: redock skipped, route starting soon", this);
+					return;
+				}
+			}
+		}
 		
 		if (str == null) str = "";
 		final String option = str;

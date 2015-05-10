@@ -233,7 +233,7 @@ public class ImageUtils {
 		return restultxy;
 	}
 
-	/*
+//	/*
 	public static BufferedImage toBufferedImageOfType(BufferedImage original, int type) {
 		if (original == null) {
 			throw new IllegalArgumentException("original == null");
@@ -259,5 +259,5 @@ public class ImageUtils {
 
 		return image;
 	}
-	*/
+//	*/
 }

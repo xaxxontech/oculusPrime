@@ -534,17 +534,26 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						continue;
 					}
 
-					if (commandList.get(commandList.size() - 1) != (byte) 13) {
+					int EOLindex = commandList.indexOf((byte) 13);
+					if (EOLindex == -1) {
+//					if (commandList.get(commandList.size() - 1) != (byte) 13) {
 						String str = "";
 						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
-						Util.log("error, warning no EOF char: "+str, this); // nuke this, triggers sometimes as expected
+						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
 						commandlock = false;
 						continue;
 					}
 
-					byte c[] = new byte[commandList.size()];
-					for (int i = 0; i < commandList.size(); i++) c[i]=commandList.get(i);
-					commandList.clear();
+//					byte c[] = new byte[commandList.size()];
+//					for (int i = 0; i < commandList.size(); i++) c[i]=commandList.get(i);
+//					commandList.clear();
+
+					// in case of multiple EOL chars,
+					byte c[] = new byte[EOLindex+1];
+					for (int i = 0; i <= EOLindex; i++) {
+						c[i]=commandList.get(0);
+						commandList.remove(0);
+					}
 
 					commandlock = false;
 
