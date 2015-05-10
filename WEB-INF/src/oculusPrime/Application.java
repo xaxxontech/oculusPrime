@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Set;
 
 import developer.image.OpenCVMotionDetect;
+import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -46,8 +47,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String authtoken = null;
 	private String salt = null;
 	
-	private Settings settings = Settings.getReference();
-	private State state = State.getReference();
+	private Settings settings = null;
+	private State state = null;
 	private BanList banlist = null;
 	private LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
@@ -75,6 +76,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
+		settings = Settings.getReference();
+		state = State.getReference();
 		NetworkMonitor.getReference();
 		banlist = BanList.getRefrence();
 		FrameGrabHTTP.setApp(this);
@@ -813,7 +816,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null); break;
 		case log: Util.log(str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
-
+		
+		case cpu: 
+			String cpu = Util.getCPU(); 
+			if(cpu != null) state.put(values.cpu, cpu);
+			break;
+			
 		}
 	}
 

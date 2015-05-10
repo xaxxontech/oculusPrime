@@ -49,7 +49,7 @@ public class BanList {
 				while((line = br.readLine()) != null) {
 					String addr = line.trim();
 					if(Util.validIP(addr)) banned.add(addr); 
-					else Util.log("invalid address: " + addr, this);
+					// else Util.log("invalid address: " + addr, this);
 				}
 				br.close();		
 			}

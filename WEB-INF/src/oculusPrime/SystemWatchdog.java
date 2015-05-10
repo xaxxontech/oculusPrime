@@ -7,8 +7,6 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -31,40 +29,80 @@ public class SystemWatchdog {
 	public boolean powererrorwarningonly = true;
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
+	private int cpuoverload = 0;
 	
+
 	SystemWatchdog(Application a){ 
 		application = a;
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
+		
+		if(settings.readSetting(ManualSettings.developer).equals("true"))
+			new Timer().scheduleAtFixedRate(new cpuTask(), DELAY, 1500);
+		
 	}
 	
-	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
-	private void getCPU(){
-		try {
-
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String line = procReader.readLine();
-			// Util.log("cpu : " + Util.formatFloat(line, 0));
-			state.set(values.cpu, Util.formatFloat(line, 0)); 
+	
+	private class cpuTask extends TimerTask {
+		public void run() {
 		
-		} catch (Exception e) {
-			Util.debug("getCPU(): " + e.getMessage(), this);
+			String cpuNow = Util.getCPU();
+
+			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
+			
+			String cpuWas =  state.get(values.cpu);
+		
+			if(cpuNow != null && cpuWas == null) state.put(values.cpu, Util.formatFloat(cpuNow, 0));
+			
+			if(cpuNow != null && cpuWas != null){
+				
+				double now = Double.parseDouble(cpuNow);
+				double was = Double.parseDouble(cpuWas);
+				
+				// threshold updates on 10% change
+				if( Math.abs(state.getDouble(values.cpu) - (now+was)/2) > 10){
+					
+					// Util.debug("is cpu changing: " + state.get(values.cpu), this);
+					// Util.debug("now: " + now + " was: " + was, this);
+						
+					state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
+				
+					if(state.getDouble(values.cpu) > 70 ) {
+					
+						cpuoverload++;
+						
+						Util.log("["+cpuoverload + "] is cpu too high?? " + state.get(values.cpu), this);
+						
+						// TODO: build up functionality 
+						if( ! state.getBoolean(values.autodocking) && cpuoverload > 4 ) {
+							
+//							Util.log("["+cpuoverload++ + "] is cpu maxed, stopping motion!", this);
+//							application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+//							application.message("cpu maxed, stopping motion!", null, null);
+							cpuoverload = 0;
+							return;
+						}
+					
+					} 
+					
+					//TODO: clear on timer from first cpu overage timestamp ??
+					if(state.getDouble(values.cpu) < 30 ) {
+						
+						cpuoverload--;
+//						application.message("... cpu recovered", null, null);
+						
+					}
+				}
+			}
 		}
 	}
 	
 	private class Task extends TimerTask {
 		public void run() {
-			
-			getCPU(); // TODO: build up functionality 
-			if(state.getDouble(values.cpu.name()) > 70) {
-				 Util.log("warning high cpu: " + state.get(values.cpu)+"%", this);
-				// settings.writeSettings(ManualSettings.debugenabled, "false");
-			}
 
 			// safety: check for force_undock command from battery firmware
-			if (state.getBoolean(State.values.forceundock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			       										   // state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 
+				
 				Util.log("System WatchDog, force undock", this);
 				PowerLogger.append("System WatchDog, force undock", this);
 				forceundock();

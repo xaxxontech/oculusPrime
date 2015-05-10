@@ -41,16 +41,26 @@ public class State {
 		
 		localaddress, externaladdress, // network things 
 		signalspeed, ssid, gateway, ethernetaddress, cpu, 
-		// ethernetping, externalping, //wifiping, temptest
 		
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, cpu, framegrabbusy}
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand}
+	
+	
+	
+	/** @return true if given command is in the sub-set */
+	public static boolean isNonTelnetBroadCast(final String str) {
+		try { 
+			nonTelnetBroadcast.valueOf(str); 
+		} catch (Exception e) {return false;}
+		
+		return true; 
+	}
 	
 	public static final int ERROR = -1;
-
+	
 	/** notify these on change events */
 	public Vector<Observer> observers = new Vector<Observer>();
 	
@@ -83,9 +93,6 @@ public class State {
 					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
 					set(values.linuxboot, date.getTime());
 					
-					// Util.delay(5000);
-					// Util.log("linux uptime (minutes): "+ (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60), this);
-					 
 				} catch (Exception e) {
 					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
 				}										
@@ -184,8 +191,15 @@ public class State {
 	/** Put a name/value pair into the configuration */
 	public synchronized void set(final String key, final String value) {
 		
-		if(key==null) return;
-		if(value==null) return;
+		if(key==null) {
+			Util.log("set() null key!", this);
+			return;
+		}
+		if(value==null) {
+			Util.log("set() use delete() instead", this);
+			Util.log("set() null valu for key: " + key, this);
+			return;
+		}
 		
 		try {
 			props.put(key.trim(), value.trim());
@@ -378,6 +392,8 @@ public class State {
 	public double getDouble(String key) {
 		double value = ERROR;
 		
+		if(get(key) == null) return value;
+		
 		try {
 			value = Double.valueOf(get(key));
 		} catch (NumberFormatException e) {
@@ -387,13 +403,8 @@ public class State {
 		return value;
 	}
 
-	/** @return true if given command is in the sub-set */
-	public static boolean isNonTelnetBroadCast(final String str) {
-		try {
-			nonTelnetBroadcast.valueOf(str);
-		} catch (Exception e) {return false;}
-		
-		return true; 
+	public double getDouble(values key) {
+		return getDouble(key.name());
 	}
 
 }

@@ -16,7 +16,7 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "3";
+	static final String HTTP_REFRESH_DELAY_SECONDS = "4";
 	
 	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
@@ -35,12 +35,18 @@ public class DashboardServlet extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 	
+		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) {
+			out.println("the network monitor is not running, check settings..");
+			out.close();	
+			return;
+		}
+		
 		if( !request.getServerName().equals("127.0.0.1") && !settings.getBoolean(ManualSettings.developer.name())){
 			out.println("this service is for developers only, check settings..");
 			out.close();	
 			return;
 		}
-					
+				
 		String action = null;
 		String router = null; 
 		String password = null;
@@ -105,14 +111,14 @@ public class DashboardServlet extends HttpServlet {
 			
 			if(view.equalsIgnoreCase("sysout")){
 				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
-				out.println(Util.tail(50) + "\n");
+				out.println(Util.tail(40) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("power")){	
 				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
-				out.println(PowerLogger.tail(50) + "\n");
+				out.println(PowerLogger.tail(40) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -281,9 +287,9 @@ public class DashboardServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"1\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"19\" border=\"0\">  \n");
 		
-		String list = "connections <hr> \n";
+		String list = " " + "connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++) list += (router + ap[i] + "\">" + ap[i] + "</a><br /> \n");

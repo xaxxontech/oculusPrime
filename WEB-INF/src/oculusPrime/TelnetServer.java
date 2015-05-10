@@ -295,16 +295,18 @@ public class TelnetServer implements Observer {
 				new ConnectionHandler(serverSocket.accept());
 
 			} catch (Exception e) {
-				
+						
+				Util.log("....only happens at shutdown? can remove?", this);
+				Util.log("....failed server socket ConnectionHandler: ", e, this);
+
 				try {				
 					if(serverSocket.isBound())
 						serverSocket.close();
-				} catch (IOException e1) {
-					Util.log("socket error: " + e1.getMessage(),this);
+				} catch (IOException ee) {
+					Util.log("....socket error: ", ee, this);
 					return;					
 				}	
 				
-				Util.log(".............failed to close server socket: ", e, this);
 				return;
 			}
 		}
@@ -312,7 +314,7 @@ public class TelnetServer implements Observer {
 
 	public void close() {
 		
-		Util.log("...closing resources... ", this);
+		// Util.log("...closing resources... ", this);
 		
 		for (int c = 0; c < printers.size(); c++) printers.get(c).close();
 		

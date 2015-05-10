@@ -24,6 +24,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import oculusPrime.State.values;
+
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -38,7 +40,7 @@ public class Util {
 	public static final long ONE_HOUR = 3600000;
 	
 	static final int MAX_HISTORY = 50;
-	static Vector<String> history = new Vector<String>();
+	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 
 	public static void delay(long delay) {
 		try {
@@ -309,7 +311,7 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 	
-	private static void log(String str) {
+	public static void log(String str) {
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + str);
@@ -417,4 +419,23 @@ public class Util {
 	        return false;
 	    }
 	}
+	
+	
+	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
+	public static String getCPU(){
+		try {
+
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			return procReader.readLine();
+				
+		} catch (Exception e) {
+			Util.debug("Util.getCPU(): " + e.getMessage());
+		}
+		
+		return null;
+	}
+	
 }
