@@ -432,7 +432,7 @@ public class Util {
 			return procReader.readLine();
 				
 		} catch (Exception e) {
-			Util.debug("Util.getCPU(): " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		return null;

@@ -419,6 +419,8 @@ public class AutoDock {
 
 			comport.speedset(ArduinoPrime.speeds.fast.toString());
 
+			SystemWatchdog.waitForCpu();
+
 			if (w * h < s1) { // mode: quite far away yet, approach only
 
 				if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);

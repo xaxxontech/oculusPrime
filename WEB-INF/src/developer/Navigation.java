@@ -728,7 +728,8 @@ public class Navigation {
 			if (state.exists(State.values.streamactivity)) {
 
 				String streamactivity =  state.get(State.values.streamactivity);
-				String msg = "detected "+Util.getTime()+", level " + streamactivity.replaceAll("\\D","") + ", at waypoint: " + wpname + ", route: " + name;
+//				String msg = "detected "+Util.getTime()+", level " + streamactivity.replaceAll("\\D","") + ", at waypoint: " + wpname + ", route: " + name;
+				String msg = "detected "+Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
 				Util.log(msg+" "+streamactivity, this);
 
 				if (email || rss) { // && settings.getBoolean(ManualSettings.alertsenabled) ) {
@@ -766,6 +767,8 @@ public class Navigation {
 //				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
 												// TODO: testing 1000, still happening
 //				app.driverCallServer(PlayerCommands.left, "45");
+
+				SystemWatchdog.waitForCpu(); // lots of missed stop commands here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.left.toString());
