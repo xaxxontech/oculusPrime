@@ -21,7 +21,7 @@ import oculusPrime.Util;
 public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
-	public static final int DEAD_TIME_OUT = 20000;
+	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
 	public static final int ERROR_TIME_OUT = (int) Util.ONE_MINUTE;
 	public static final int WATCHDOG_DELAY = 5000;
@@ -68,7 +68,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public ArduinoPower(Application app) {
 		application = app;	
 		state.put(State.values.powerport, portname);
-		
+		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
+		state.put(State.values.batterylife, AutoDock.UNKNOWN);
+
+
 		Map<String, Integer> temp = new HashMap<String, Integer>();
 		// (reversed declaration for easier transcribing from firmware)
 		// ERROR CODES

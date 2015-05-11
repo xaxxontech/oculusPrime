@@ -311,11 +311,11 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 	
-	public static void log(String str) {
-		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + str);
-	}
+//	public static void log(String str) {
+//		if(history.size() > MAX_HISTORY) history.remove(0);
+//		history.add(getTime() + ", " +str);
+//		System.out.println("OCULUS: " + getTime() + ", " + str);
+//	}
 	
 	public static void log(String str, Object c) {
 		final String filter = c.getClass().getName().toLowerCase();

@@ -9,13 +9,7 @@ import jssc.SerialPort;
 import jssc.SerialPortEvent;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
-import oculusPrime.Application;
-import oculusPrime.AutoDock;
-import oculusPrime.GUISettings;
-import oculusPrime.ManualSettings;
-import oculusPrime.Settings;
-import oculusPrime.State;
-import oculusPrime.Util;
+import oculusPrime.*;
 import developer.depth.Mapper;
 
 /**
@@ -91,9 +85,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //	private boolean invertswap = false;
 	
 	// tracking motor moves 
-	private Timer cameraTimer = null;
-	private double lastodomangle = 0; // degrees
-	private int lastodomlinear = 0; // mm
+	private volatile double lastodomangle = 0; // degrees
+	private volatile int lastodomlinear = 0; // mm
 	
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
@@ -113,6 +106,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
+	public static final Double METERSPERSEC = 0.33;
+	public static final Double DEGPERMS = 0.0857;
+//		degperms = 0.0857 # turnspeed
+
 
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
@@ -128,14 +125,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.put(State.values.floodlightlevel, 0);
 		state.put(State.values.spotlightbrightness, 0);
 		
-		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
-		state.put(State.values.batterylife, AutoDock.UNKNOWN);
-
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
 		state.put(State.values.direction, direction.stop.name()); // .toString());
 
-		state.put(State.values.odomturnpwm, speedmed);
-		state.put(State.values.odomlinearpwm, speedmed);
+		state.put(State.values.odomturnpwm, settings.readSetting(ManualSettings.odomturnpwm.name()));
+		state.put(State.values.odomlinearpwm, settings.readSetting(ManualSettings.odomlinearpwm.name()));
 		state.set(State.values.odomupdated, false);
 		
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
@@ -957,8 +951,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						newpwm = currentpwm + pwmincr;
 						if (newpwm > 255) newpwm = 255;
 					}
-					else // within tolerance, kill thread to save cpu
-						break;
+//					else // within tolerance, kill thread to save cpu
+//						break;
 					
 					// modify speed
 					state.set(State.values.odomturnpwm, newpwm);
@@ -992,9 +986,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		new Thread(new Runnable() {public void run() {
 			final long linearstart = System.currentTimeMillis();
 			long start = linearstart;
-			final double tolerance = state.getDouble(State.values.odomlinearmpms.toString()) * 0.08; //0.000015625; //  meters per ms --- 5% of target speed 0.32m/s (0.00032
-			final int pwmincr = 5;
-			final int accel = 480;
+			final double tolerance = state.getDouble(State.values.odomlinearmpms.toString()) * 0.05; //0.000015625; //  meters per ms --- 5% of target speed 0.32m/s (0.00032
+			final int pwmincr = 10;
+			final int accel = 480; // TODO: try lowering this, kind of useless for small linear moves during rosnav
 			final double targetrate = state.getDouble(State.values.odomlinearmpms.toString());
 			
 			while (currentMoveID == moveID)  {
@@ -1022,8 +1016,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						newpwm = currentpwm + pwmincr;
 						if (newpwm > 255) newpwm = 255;
 					}
-					else // within tolerance, kill thread (save cpu)
-						break;
+//					else // within tolerance, kill thread (save cpu)
+//						break;
 					
 					//modify speed
 					state.set(State.values.odomlinearpwm, newpwm);
@@ -1691,7 +1685,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.delete(State.values.distanceangle);
 		state.set(State.values.odometry, true);
 		state.set(State.values.stopbetweenmoves, true);
-		
+		state.put(State.values.odomlinearmpms, METERSPERSEC / 1000);
+		state.put(State.values.odomturndpms, DEGPERMS);
+		state.put(State.values.motorspeed, state.get(State.values.odomlinearpwm));
+
 		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
 			new Thread(new Runnable() {public void run() {
 				

@@ -95,10 +95,7 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation start failure");
 			return false;
 		}
-		
-		if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
-			state.set(State.values.rosinitialpose, "0_0_0");
-		
+
 		return true;
 	}
 	
@@ -117,9 +114,14 @@ public class Navigation {
 			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
 
-			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 
-			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) return; // success
+
+			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) {
+				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
+					state.set(State.values.rosinitialpose, "0_0_0");
+				return; // success
+			}
 			
 			// ========try again if needed, just once======
 
@@ -138,13 +140,17 @@ public class Navigation {
 			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait, again
 
-			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) )
+			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) {
+				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
+					state.set(State.values.rosinitialpose, "0_0_0");
 				return; // success
+			}
 			else  stopNavigation(); // give up
 
 		}  }).start();
 	}
-	
+
 	public void stopNavigation() {
 		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
 			return;
@@ -157,7 +163,7 @@ public class Navigation {
 		}  }).start();
 
 	}
-	
+
 	public void dock() {
 		if (state.getBoolean(State.values.autodocking)  ) {
 			app.driverCallServer(PlayerCommands.messageclients, "autodocking in progress, command dropped");
@@ -171,6 +177,8 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
+
+		SystemWatchdog.waitForCpu();
 		
 		Ros.setWaypointAsGoal(DOCK);
 		state.set(State.values.roscurrentgoal, "pending");
@@ -545,7 +553,8 @@ public class Navigation {
 							((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
 					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name, id);
 		    		
-					Util.delay(1000);
+//					Util.delay(1000);
+					SystemWatchdog.waitForCpu(); // TODO: testing
 
 					wpnum ++;
 				}

@@ -47,7 +47,7 @@ public class SystemWatchdog {
 		
 			String cpuNow = Util.getCPU();
 
-			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
+			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
 
 			String cpuWas =  state.get(values.cpu);
 		
@@ -158,7 +158,7 @@ public class SystemWatchdog {
 			else  lowbattredock = false;
 
 			String cpuNow = Util.getCPU();
-			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
+			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
 
 
 		}
@@ -364,7 +364,7 @@ public class SystemWatchdog {
 			if (Double.parseDouble(cpu) < 60) return;
 			Util.delay(1000);
 		}
-		Util.log("Util.waitForCpu() error, timed out "+ cpu);
+		Util.log("Util.waitForCpu() error, timed out "+ cpu, "");
 	}
 
 
