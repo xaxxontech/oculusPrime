@@ -311,14 +311,9 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 	
-	public static void log(String str) {
-		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " +str);
-		System.out.println("OCULUS: " + getTime() + ", " + str);
-	}
-	
 	public static void log(String str, Object c) {
-		final String filter = c.getClass().getName().toLowerCase();
+		String filter = "STATIC";
+		if(c!=null) filter = c.getClass().getName().toLowerCase();
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " + filter + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " + str);
@@ -326,7 +321,7 @@ public class Util {
 	
     public static void debug(String str, Object c) {
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
-			System.out.println("DEBUG: " + getTime() + ", " + c.getClass().getName() +  ", " +str);
+			System.out.println("DEBUG: " + getTime() + ", " + c.getClass().getSimpleName() +  ", " +str);
 	}
     
     public static void debug(String str) {
@@ -425,20 +420,106 @@ public class Util {
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
 	public static String getCPU(){
 		
+		long start = System.currentTimeMillis();
+		
 		try {
-
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			return procReader.readLine();
-			
-			
 				
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
+			String line = reader.readLine();
+			reader.close();
+			log("cpu:" + line, null);
+			
+			/* BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				// if( ! line.contains("intr")) log("cpu:" + line, null);
+				if( line.length() < 100)
+					if( line.contains("cpu"))
+						log("cpu:" + line, null); */
+		
+	//		String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+	//		Process proc = Runtime.getRuntime().exec(cmd);
+	//		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+	//		return procReader.readLine();
+					
 		} catch (Exception e) {
-			Util.debug("Util.getCPU(): " + e.getMessage());
+			e.printStackTrace();
 		}
 		
-		return null;
+		Util.log("...getCPU(): took: " + (System.currentTimeMillis()-start) + " ms", null);
+		
+		return "42";
+	}
+
+	public static String getJavaStatus(){
+		
+		long start = System.currentTimeMillis();
+		
+		try {
+			
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ getJavaPID() +"/stat")));
+			String line = reader.readLine();
+			reader.close();
+			log("getJavaStatus:" + line, null);
+					
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
+		return "42";
+	}
+	
+
+	public static String getJavaPID(){	
+		try {
+		
+			String[] cmd = { "/bin/sh", "-c", "ps -al | grep java"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String[] reply = procReader.readLine().split(" ");
+			return reply[4];
+			
+		} catch (Exception e) {
+			return null;
+		}
+	}	
+	
+	public static String pingWIFI(final String addr){
+		
+		long start = System.currentTimeMillis();
+		
+		Process proc = null;
+		try { // TODO: force interface
+			proc = Runtime.getRuntime().exec(new String[]{"ping", "-c1", "-W1", addr});
+		} catch (IOException e) {
+			Util.log("pingWIFI(): "+ e.getMessage(), "");
+			Util.log("pingWIFI(): ping fail: " + (System.currentTimeMillis()-start), null);
+			return null;
+		}  
+		
+		String line = null;
+		String time = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("time=")){
+					time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
+					break;
+				}	
+			}
+		} catch (IOException e) {
+			Util.log("pingWIFI(): ", e.getMessage());
+		}
+
+
+		if((System.currentTimeMillis()-start) > 1100){
+			Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
+			if(time == null) Util.log("pingWIFI(): null result for address: " + addr, null);
+		}
+
+		return time;	
 	}
 	
 }

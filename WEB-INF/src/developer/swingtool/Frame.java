@@ -28,7 +28,7 @@ public class Frame extends JFrame implements Runnable {
 	// swing will call us when ready 
 	public void run() {
 		setResizable(false);
-		setAlwaysOnTop(true);
+		setAlwaysOnTop(false);
 		pack();
 		setVisible(true);
 	}

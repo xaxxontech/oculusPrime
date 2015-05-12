@@ -1383,13 +1383,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 			commandServer.close();
 		}
 		
-		// TODO: kills the eeprom details getting to log file?
 		powerport.writeStatusToEeprom();
 		PowerLogger.close();
 		
 		if (navigation != null) {
 			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
 				navigation.stopNavigation();
+			if (state.exists(values.odomlinearpwm))
+				settings.writeSettings(ManualSettings.odomlinearpwm.name(), state.get(values.odomlinearpwm));
+			if (state.exists(values.odomturnpwm))
+				settings.writeSettings(ManualSettings.odomturnpwm.name(), state.get(values.odomturnpwm));
 		}
 
 		if (! settings.getBoolean(ManualSettings.debugenabled))

@@ -37,7 +37,7 @@ public class SystemWatchdog {
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 		
 		if(settings.readSetting(ManualSettings.developer).equals("true"))
-			new Timer().scheduleAtFixedRate(new cpuTask(), DELAY, 5000);
+			new Timer().scheduleAtFixedRate(new cpuTask(), DELAY, 1000);
 		
 	}
 	
@@ -46,7 +46,10 @@ public class SystemWatchdog {
 		public void run() {
 		
 			String cpuNow = Util.getCPU();
-			String cpuWas =  state.get(values.cpu);
+			state.put(values.cpu, Util.formatFloat(cpuNow, 0));
+			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
+
+			/*String cpuWas =  state.get(values.cpu);
 			
 			// if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
 			
@@ -90,7 +93,8 @@ public class SystemWatchdog {
 						}
 					}
 				}
-			}
+			}*/
+			
 		}
 	}
 	
@@ -153,7 +157,11 @@ public class SystemWatchdog {
 				PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
 				redock(null);
 			}
-			else  lowbattredock = false; 
+			else  lowbattredock = false;
+
+			String cpuNow = Util.getCPU();
+			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
+
 
 		}
 	}
@@ -349,5 +357,17 @@ public class SystemWatchdog {
 //		String body = "Oculus Prime Power ERROR, Forced Un-Dock";
 //		callForHelp(subject, body);
 	}
+
+	public static void waitForCpu() {
+		long timeout = System.currentTimeMillis() + 5000;
+		String cpu= "";
+		while (System.currentTimeMillis() < timeout) {
+			cpu = Util.getCPU();
+			if (Double.parseDouble(cpu) < 60) return;
+			Util.delay(1000);
+		}
+		Util.log("Util.waitForCpu() error, timed out "+ cpu, null);
+	}
+
 
 }

@@ -4,7 +4,7 @@ import java.util.Properties;
 
 public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
-	gyrocomp, alertsenabled,
+	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
 	soundthreshold, motionthreshold, networkmonitor;
 
@@ -29,6 +29,8 @@ public enum ManualSettings {
 		config.setProperty(motionthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "0.003");
 		config.setProperty(networkmonitor.name(), Settings.FALSE);
+		config.setProperty(odomlinearpwm.name(), "150");
+		config.setProperty(odomturnpwm.name(), "150");
 		return config;
 	}
 	

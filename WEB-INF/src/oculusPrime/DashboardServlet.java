@@ -318,8 +318,8 @@ public class DashboardServlet extends HttpServlet {
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b><td>" + state.get(values.cpu) + "%"
-				+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) + " </tr> \n");
+				+ "<td><b>life</b> " + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
+				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
 				
 	/*			
 		str.append("<tr><td><b>video mode </b>" + state.get(values.videosoundmode) + " <b>stream </b>" + state.get(values.stream)
@@ -338,7 +338,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
 		// str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\">Oculus Prime v" + new Updater().getCurrentVersion() + "(002)</tr> \n");		
+		str.append("\n<tr><td colspan=\"11\">Oculus Prime v" + new Updater().getCurrentVersion() + " -- (0093)</tr> \n");		
 		str.append("\n</table>\n");
 		return str.toString();
 	}
