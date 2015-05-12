@@ -424,12 +424,15 @@ public class Util {
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
 	public static String getCPU(){
+		
 		try {
 
 			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 			Process proc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			return procReader.readLine();
+			
+			
 				
 		} catch (Exception e) {
 			Util.debug("Util.getCPU(): " + e.getMessage());

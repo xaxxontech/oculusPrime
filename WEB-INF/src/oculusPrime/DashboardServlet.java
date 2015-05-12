@@ -287,7 +287,7 @@ public class DashboardServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"19\" border=\"0\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"19\" border=\"1\">  \n");
 		
 		String list = " " + "connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
@@ -299,27 +299,27 @@ public class DashboardServlet extends HttpServlet {
 		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i] + "</a><br /> \n");
 		
-		str.append("<tr><td rowspan=\"99\" valign=\"top\">"+ list +"</tr> \n");
+		str.append("<tr><td rowspan=\"10\" valign=\"top\">"+ list +"</tr> \n");
 		
-		str.append("<tr><td><b>ssid </b>" + state.get(values.ssid) + " -- <b>"+ state.get(values.signalspeed) + "</b>" 
-				+ "<br /><b>ping </b>" + monitor.getPingTime() + "  ms --   <b>last</b> " + (System.currentTimeMillis()-monitor.getLast()) + "   " 
-				+ "<td><b>gate</b> " + state.get(values.gateway)
-				+ "<br /><b>eth   </b>" + state.get(values.ethernetaddress)
-				+ "<td><b>lan   </b>" + state.get(values.localaddress) 
-				+ "<br /><b>wan </b>" + state.get(values.externaladdress)
+		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>"+ state.get(values.signalspeed) + "</b>" 
+				+ "<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLast()) + "   " 
+				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
+				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
+				+ "<td><b>lan</b><td>" + state.get(values.localaddress) 
+				+ "<td><b>wan</b><td>" + state.get(values.externaladdress)
 				+ "</tr> \n");
 		
-		str.append("<tr><td><b>motor port </b>" + state.get(values.motorport) 
-				+ "<td><b>linux mins</b> " + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)
-				+ "<td><b>motion </b>" + state.get(values.motionenabled) + " <b>moving </b>" + state.get(values.moving)
+		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
+				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)
+				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + "<td><b>moving</b><td>" + state.get(values.moving)
 				// + " <b>direction </b>" + state.get(values.direction) // + " <td><b>speed </b>" + state.get(values.motorspeed) 
 				+ "</tr> \n");
 				
-		str.append("<tr><td><b>power port </b>" + state.get(values.powerport)
-				+ "<td><b>java mins </b>" + (state.getUpTime()/1000)/60  
+		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
+				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life </b> " + state.get(values.batterylife) + " <b>cpu </b>" + state.get(values.cpu) + "% "
-				+ "<b>telnet </b> " + state.get(values.telnetusers) + " </tr> \n");
+				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b><td>" + state.get(values.cpu) + "%"
+				+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) + " </tr> \n");
 				
 	/*			
 		str.append("<tr><td><b>video mode </b>" + state.get(values.videosoundmode) + " <b>stream </b>" + state.get(values.stream)
@@ -334,8 +334,11 @@ public class DashboardServlet extends HttpServlet {
 		        + "<td><b>java uptime (minutes) </b>" + (getUpTime()/1000)/60 
 	*/	
 		
-		if(state.exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + state.get(values.powererror) + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(15) + "</tr> \n");		
+		//if(state.exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + state.get(values.powererror) + "</tr> \n");
+		
+		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
+		// str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\">Oculus Prime v" + new Updater().getCurrentVersion() + "(002)</tr> \n");		
 		str.append("\n</table>\n");
 		return str.toString();
 	}

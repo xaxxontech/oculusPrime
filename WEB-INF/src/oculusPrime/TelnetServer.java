@@ -9,7 +9,7 @@ import java.util.Vector;
  */
 public class TelnetServer implements Observer {
 	
-	public static enum Commands {chat, exit, bye, quit}; // state, settings,
+	public static enum Commands {chat, exit, bye, quit}; 
 	
 	public static final boolean ADMIN_ONLY = true;
 	public static final String MSGPLAYERTAG = "<messageclient>";

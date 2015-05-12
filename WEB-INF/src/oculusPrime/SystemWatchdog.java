@@ -37,7 +37,7 @@ public class SystemWatchdog {
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 		
 		if(settings.readSetting(ManualSettings.developer).equals("true"))
-			new Timer().scheduleAtFixedRate(new cpuTask(), DELAY, 1500);
+			new Timer().scheduleAtFixedRate(new cpuTask(), DELAY, 5000);
 		
 	}
 	
@@ -46,11 +46,10 @@ public class SystemWatchdog {
 		public void run() {
 		
 			String cpuNow = Util.getCPU();
-
-			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
-			
 			String cpuWas =  state.get(values.cpu);
-		
+			
+			// if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
+			
 			if(cpuNow != null && cpuWas == null) state.put(values.cpu, Util.formatFloat(cpuNow, 0));
 			
 			if(cpuNow != null && cpuWas != null){
@@ -59,9 +58,9 @@ public class SystemWatchdog {
 				double was = Double.parseDouble(cpuWas);
 				
 				// threshold updates on 10% change
-				if( Math.abs(state.getDouble(values.cpu) - (now+was)/2) > 10){
+				if( Math.abs(state.getDouble(values.cpu) - ((now+was)/2)) > 15){
 					
-					// Util.debug("is cpu changing: " + state.get(values.cpu), this);
+					Util.debug("is cpu changing: " + Math.abs(state.getDouble(values.cpu) - ((now+was)/2)));
 					// Util.debug("now: " + now + " was: " + was, this);
 						
 					state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
@@ -69,27 +68,26 @@ public class SystemWatchdog {
 					if(state.getDouble(values.cpu) > 70 ) {
 					
 						cpuoverload++;
-						
-						Util.log("["+cpuoverload + "] is cpu too high?? " + state.get(values.cpu), this);
+						Util.log("["+cpuoverload + "] is cpu too high?? " + state.get(values.cpu), this);		
 						
 						// TODO: build up functionality 
-						if( ! state.getBoolean(values.autodocking) && cpuoverload > 4 ) {
-							
+//						if( ! state.getBoolean(values.autodocking) && cpuoverload > 5 ) {
+												
 //							Util.log("["+cpuoverload++ + "] is cpu maxed, stopping motion!", this);
 //							application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 //							application.message("cpu maxed, stopping motion!", null, null);
-							cpuoverload = 0;
-							return;
-						}
+//							cpuoverload = 0;
+//							return;
+//						}
 					
 					} 
 					
 					//TODO: clear on timer from first cpu overage timestamp ??
 					if(state.getDouble(values.cpu) < 30 ) {
-						
-						cpuoverload--;
-//						application.message("... cpu recovered", null, null);
-						
+						if(cpuoverload > 0){
+							cpuoverload--;
+							application.message("... cpu recovered", null, null);
+						}
 					}
 				}
 			}
