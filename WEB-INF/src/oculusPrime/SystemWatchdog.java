@@ -29,8 +29,8 @@ public class SystemWatchdog {
 	public boolean powererrorwarningonly = true;
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
-	private int cpuoverload = 0;
 	
+	private int cpuoverload = 0;
 
 	SystemWatchdog(Application a){ 
 		application = a;
@@ -45,6 +45,7 @@ public class SystemWatchdog {
 	private class cpuTask extends TimerTask {
 		public void run() {
 		
+			Util.getJavaStatus();// call but ignore return value
 			String cpuNow = Util.getCPU();
 			state.put(values.cpu, Util.formatFloat(cpuNow, 0));
 			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);

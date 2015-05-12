@@ -24,8 +24,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import oculusPrime.State.values;
-
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -41,6 +39,8 @@ public class Util {
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
+	
+	static String javaPID = getJavaPID();
 
 	public static void delay(long delay) {
 		try {
@@ -415,19 +415,18 @@ public class Util {
 	    }
 	}
 	
-	
-	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
 	public static String getCPU(){
 		
 		long start = System.currentTimeMillis();
-		
+		String line = null;
 		try {
 				
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
-			String line = reader.readLine();
+			line = reader.readLine();
 			reader.close();
-			log("cpu:" + line, null);
+			// TODO parse and compute values
+			
+			// log("cpu:" + line, null);
 			
 			/* BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
 			String line = null;
@@ -436,7 +435,9 @@ public class Util {
 				if( line.length() < 100)
 					if( line.contains("cpu"))
 						log("cpu:" + line, null); */
-		
+			
+	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime	
 	//		String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 	//		Process proc = Runtime.getRuntime().exec(cmd);
 	//		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -446,21 +447,25 @@ public class Util {
 			e.printStackTrace();
 		}
 		
-		Util.log("...getCPU(): took: " + (System.currentTimeMillis()-start) + " ms", null);
+		Util.log("getCPU(): " + (System.currentTimeMillis()-start) + " ms", null);
 		
 		return "42";
 	}
 
 	public static String getJavaStatus(){
 		
-		long start = System.currentTimeMillis();
+		if(javaPID == null) return null;
 		
+		long start = System.currentTimeMillis();
+		String line = null;
 		try {
 			
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ getJavaPID() +"/stat")));
-			String line = reader.readLine();
+			// http://stackoverflow.com/questions/1420426/calculating-cpu-usage-of-a-process-in-linux
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ javaPID +"/stat")));
+			line = reader.readLine();
 			reader.close();
-			log("getJavaStatus:" + line, null);
+			// TODO parse and compute values
+			// log("getJavaStatus:" + line, null);
 					
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -470,16 +475,13 @@ public class Util {
 		return "42";
 	}
 	
-
 	public static String getJavaPID(){	
 		try {
-		
 			String[] cmd = { "/bin/sh", "-c", "ps -al | grep java"};
 			Process proc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			String[] reply = procReader.readLine().split(" ");
 			return reply[4];
-			
 		} catch (Exception e) {
 			return null;
 		}
