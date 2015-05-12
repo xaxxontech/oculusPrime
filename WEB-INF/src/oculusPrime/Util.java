@@ -417,7 +417,7 @@ public class Util {
 	
 	public static String getCPU(){
 		
-		long start = System.currentTimeMillis();
+		//long start = System.currentTimeMillis();
 		String line = null;
 		try {
 				
@@ -426,7 +426,8 @@ public class Util {
 			reader.close();
 			// TODO parse and compute values
 			
-			// log("cpu:" + line, null);
+			
+			log("cpu:" + line, null);
 			
 			/* BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
 			String line = null;
@@ -436,8 +437,8 @@ public class Util {
 					if( line.contains("cpu"))
 						log("cpu:" + line, null); */
 			
-	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime	
+	//      top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	//      http://askubuntu.com/questions/274349/getting-cpu-usage-realtime	
 	//		String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 	//		Process proc = Runtime.getRuntime().exec(cmd);
 	//		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -447,7 +448,7 @@ public class Util {
 			e.printStackTrace();
 		}
 		
-		Util.log("getCPU(): " + (System.currentTimeMillis()-start) + " ms", null);
+	//	Util.log("getCPU(): " + (System.currentTimeMillis()-start) + " ms", null);
 		
 		return "42";
 	}
@@ -456,7 +457,8 @@ public class Util {
 		
 		if(javaPID == null) return null;
 		
-		long start = System.currentTimeMillis();
+		// long start = System.currentTimeMillis();
+		
 		String line = null;
 		try {
 			
@@ -465,13 +467,13 @@ public class Util {
 			line = reader.readLine();
 			reader.close();
 			// TODO parse and compute values
-			// log("getJavaStatus:" + line, null);
+			log("getJavaStatus:" + line, null);
 					
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
+	//	Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
 		return "42";
 	}
 	
