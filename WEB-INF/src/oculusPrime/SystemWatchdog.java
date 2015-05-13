@@ -37,7 +37,7 @@ public class SystemWatchdog {
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 		
 		if(settings.readSetting(ManualSettings.developer).equals("true"))
-			new Timer().scheduleAtFixedRate(new cpuTask(), DELAY, 1000);
+			new Timer().scheduleAtFixedRate(new cpuTask(), 5000, 5000);
 		
 	}
 	
@@ -45,16 +45,14 @@ public class SystemWatchdog {
 	private class cpuTask extends TimerTask {
 		public void run() {
 		
-			Util.getJavaStatus();// call but ignore return value
+			// Util.getJavaStatus();// call but ignore return value
+			
+			String cpuWas = state.get(values.cpu);
 			String cpuNow = Util.getCPU();
-			state.put(values.cpu, Util.formatFloat(cpuNow, 0));
-			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
 
-			/*String cpuWas =  state.get(values.cpu);
-			
-			// if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow);
-			
-			if(cpuNow != null && cpuWas == null) state.put(values.cpu, Util.formatFloat(cpuNow, 0));
+			// if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
+
+			if(cpuWas == null && cpuNow != null) state.put(values.cpu, Util.formatFloat(cpuNow, 0));
 			
 			if(cpuNow != null && cpuWas != null){
 				
@@ -62,27 +60,13 @@ public class SystemWatchdog {
 				double was = Double.parseDouble(cpuWas);
 				
 				// threshold updates on 10% change
-				if( Math.abs(state.getDouble(values.cpu) - ((now+was)/2)) > 15){
-					
-					Util.debug("is cpu changing: " + Math.abs(state.getDouble(values.cpu) - ((now+was)/2)));
-					// Util.debug("now: " + now + " was: " + was, this);
-						
+				if( Math.abs(state.getDouble(values.cpu) - ((now+was)/2)) > 10){							
 					state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
 				
 					if(state.getDouble(values.cpu) > 70 ) {
 					
 						cpuoverload++;
 						Util.log("["+cpuoverload + "] is cpu too high?? " + state.get(values.cpu), this);		
-						
-						// TODO: build up functionality 
-//						if( ! state.getBoolean(values.autodocking) && cpuoverload > 5 ) {
-												
-//							Util.log("["+cpuoverload++ + "] is cpu maxed, stopping motion!", this);
-//							application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
-//							application.message("cpu maxed, stopping motion!", null, null);
-//							cpuoverload = 0;
-//							return;
-//						}
 					
 					} 
 					
@@ -90,11 +74,11 @@ public class SystemWatchdog {
 					if(state.getDouble(values.cpu) < 30 ) {
 						if(cpuoverload > 0){
 							cpuoverload--;
-							application.message("... cpu recovered", null, null);
+							// application.message("... cpu recovered", null, null);
 						}
 					}
 				}
-			}*/
+			}
 			
 		}
 	}

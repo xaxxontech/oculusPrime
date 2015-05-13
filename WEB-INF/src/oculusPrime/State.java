@@ -48,8 +48,6 @@ public class State {
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
 		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand}
 	
-	
-	
 	/** @return true if given command is in the sub-set */
 	public static boolean isNonTelnetBroadCast(final String str) {
 		try { 

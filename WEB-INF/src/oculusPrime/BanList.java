@@ -44,7 +44,7 @@ public class BanList {
 			File ban = new File(banfile);
 			if(ban.exists()) {
 				String line = null;
-				Util.log("BanList(): reading file: " + banfile, this); 
+				// Util.log("BanList(): reading file: " + banfile, this); 
 				BufferedReader br = new BufferedReader(new FileReader(ban));
 				while((line = br.readLine()) != null) {
 					String addr = line.trim();

@@ -35,11 +35,13 @@ public class DashboardServlet extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 	
+		/*
 		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) {
 			out.println("the network monitor is not running, check settings..");
 			out.close();	
 			return;
 		}
+		*/
 		
 		if( !request.getServerName().equals("127.0.0.1") && !settings.getBoolean(ManualSettings.developer.name())){
 			out.println("this service is for developers only, check settings..");
@@ -134,6 +136,7 @@ public class DashboardServlet extends HttpServlet {
 				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
 				out.println("\n" + PowerLogger.tail(5) + "\n");
+				// .getReference().getBoolean(ManualSettings.developer);
 				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
 				out.println("\n" + ban.tail(7) + "\n");
 				out.println("\n</body></html> \n");
@@ -311,14 +314,14 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
 				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)
-				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + "<td><b>moving</b><td>" + state.get(values.moving)
+				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + " mins<td><b>moving</b><td>" + state.get(values.moving)
 				// + " <b>direction </b>" + state.get(values.direction) // + " <td><b>speed </b>" + state.get(values.motorspeed) 
 				+ "</tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life</b> " + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
+				+ "<td><b>life</b> " + state.get(values.batterylife) + " mins<td><b>cpu</b> " + state.get(values.cpu) + "%"
 				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
 				
 	/*			
@@ -336,9 +339,10 @@ public class DashboardServlet extends HttpServlet {
 		
 		//if(state.exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + state.get(values.powererror) + "</tr> \n");
 		
-		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
-		// str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\">Oculus Prime v" + new Updater().getCurrentVersion() + " -- (0093)</tr> \n");		
+		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");		
+		String footer = "oculus prime version <b>" + new Updater().getCurrentVersion() + "</b>";
+		if(settings.getBoolean(ManualSettings.developer)) footer += "  <i>**developer mode enabled**</i>";
+		str.append("\n<tr><td colspan=\"11\">"+footer+"</tr> \n");		
 		str.append("\n</table>\n");
 		return str.toString();
 	}

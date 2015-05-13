@@ -40,7 +40,7 @@ public class Util {
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
-	static String javaPID = getJavaPID();
+	private static String javaPID = getJavaPID();
 
 	public static void delay(long delay) {
 		try {
@@ -425,9 +425,11 @@ public class Util {
 			line = reader.readLine();
 			reader.close();
 			// TODO parse and compute values
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 			
-			
-			log("cpu:" + line, null);
+	//		log("cpu:" + line, null);
 			
 			/* BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
 			String line = null;
@@ -439,18 +441,18 @@ public class Util {
 			
 	//      top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	//      http://askubuntu.com/questions/274349/getting-cpu-usage-realtime	
-	//		String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
-	//		Process proc = Runtime.getRuntime().exec(cmd);
-	//		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-	//		return procReader.readLine();
+	/*		
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			return procReader.readLine();
 					
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		
 		
 	//	Util.log("getCPU(): " + (System.currentTimeMillis()-start) + " ms", null);
-		
-		return "42";
+		*/
+			
+		return "42";//null;
 	}
 
 	public static String getJavaStatus(){
