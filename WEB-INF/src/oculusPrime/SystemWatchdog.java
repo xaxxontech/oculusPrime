@@ -36,12 +36,12 @@ public class SystemWatchdog {
 		application = a;
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 		
-		if(settings.readSetting(ManualSettings.developer).equals("true"))
-			new Timer().scheduleAtFixedRate(new cpuTask(), 5000, 5000);
+//		if(settings.readSetting(ManualSettings.developer).equals("true"))
+//			new Timer().scheduleAtFixedRate(new cpuTask(), 5000, 5000);
 		
 	}
 	
-	
+	/*
 	private class cpuTask extends TimerTask {
 		public void run() {
 		
@@ -82,6 +82,7 @@ public class SystemWatchdog {
 			
 		}
 	}
+	*/
 	
 	private class Task extends TimerTask {
 		public void run() {
@@ -144,9 +145,9 @@ public class SystemWatchdog {
 			}
 			else  lowbattredock = false;
 
-			String cpuNow = Util.getCPU();
-			if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
-
+			Util.log("cpu: "+Util.getCPU(), null);
+//			int cpuNow = Util.getCPU();
+//			if (cpuNow > 70) Util.log("cpu high: "+cpuNow, this);
 
 		}
 	}
@@ -344,11 +345,17 @@ public class SystemWatchdog {
 	}
 
 	public static void waitForCpu() {
-		long timeout = System.currentTimeMillis() + 5000;
-		String cpu= "";
+//		Util.log("waitForCpu() cpu: "+Util.getCPU(), null);
+//		return;
+
+		long timeout = System.currentTimeMillis() + 10000;
+		int cpu = 0;
 		while (System.currentTimeMillis() < timeout) {
 			cpu = Util.getCPU();
-			if (Double.parseDouble(cpu) < 60) return;
+			if (cpu < 55) {
+				Util.log("Util.waitForCpu() cleared "+ cpu, null);
+				return;
+			}
 			Util.delay(1000);
 		}
 		Util.log("Util.waitForCpu() error, timed out "+ cpu, null);

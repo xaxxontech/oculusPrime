@@ -9,7 +9,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
-import com.sun.deploy.uitoolkit.impl.fx.Utils;
+
 
 import oculusPrime.State.values;
 
@@ -46,15 +46,16 @@ public class NetworkMonitor {
 	}
 
 	private NetworkMonitor(){
+		updateExternalIPAddress();
 
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
 			pingTimer.schedule(new pingTask(), 5000, 1000);
 			networkTimer.schedule(new networkTask(), Util.ONE_MINUTE, Util.TWO_MINUTES);
 			killApplet();
 		}
-		
+		else return;
+
 		runNetworkTool();
-		updateExternalIPAddress();
 		connectionUpdate();
 		connectionsNever();		
 	}

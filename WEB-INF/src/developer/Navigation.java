@@ -189,7 +189,8 @@ public class Navigation {
 			while (state.exists(State.values.roscurrentgoal) 
 					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  } // wait
 		
-			if ( !state.exists(State.values.rosgoalstatus)) { //
+			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
+
 				Util.log("error, state rosgoalstatus null", this);
 				return;
 			}
@@ -534,7 +535,8 @@ public class Navigation {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 	
-					if (!state.exists(State.values.rosgoalstatus)) {
+					if (!state.exists(State.values.rosgoalstatus)) { // this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
+
 						Util.log("error, state rosgoalstatus null", this);
 						cancelRoute(id);
 						return;

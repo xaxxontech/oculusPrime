@@ -3,12 +3,37 @@ package developer;
 import oculusPrime.State;
 import oculusPrime.Util;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
 public class Scratch {
+
+
+    public long[] readProcStat() {
+        try {
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
+            String line = reader.readLine();
+            reader.close();
+
+            String[] values = line.split("\\s+");
+
+            long total = 0;
+            for (int i=1;i<=4;i++)
+                total += Long.valueOf(values[i]);
+            long idle = Long.valueOf(values[4]);
+            return new long[] { total, idle};
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public static void main(String[] args) {
 
@@ -36,15 +61,22 @@ public class Scratch {
 //        if (nextday > daynums.length-1 ) nextday = 0;
 //        System.out.println(daynums[nextday]);
 
-        List<Integer> numbers = new ArrayList<Integer>();
-        numbers.add(4);
-        numbers.add(5);
-        numbers.add(6);
+        Util.delay(2000);
 
-        numbers.remove(1);
-        System.out.println(numbers.size());
-        System.out.println(numbers.get(0));
-        System.out.println(numbers.get(1));
+        Scratch scratch = new Scratch();
+        long[] procStat = scratch.readProcStat();
+        long totproc1st = procStat[0];
+        long totidle1st = procStat[1];
+        Util.delay(100);
+        procStat = scratch.readProcStat();
+        long totproc2nd = procStat[0];
+        long totidle2nd = procStat[1];
+        int percent = (int) ((double) ((totproc2nd-totproc1st) - (totidle2nd - totidle1st))/ (double) (totproc2nd-totproc1st) * 100);
+        System.out.println(percent);
+
+        Util.delay(2000);
+
+        System.out.println(Util.getCPUTop());
 
     }
 }

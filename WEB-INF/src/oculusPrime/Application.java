@@ -818,7 +818,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case settings: messageplayer(settings.toString(), null, null); break;
 		
 		case cpu: 
-			String cpu = Util.getCPU(); 
+			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.put(values.cpu, cpu);
 			break;
 			

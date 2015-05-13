@@ -414,45 +414,51 @@ public class Util {
 	        return false;
 	    }
 	}
-	
-	public static String getCPU(){
-		
-		//long start = System.currentTimeMillis();
-		String line = null;
+
+	public static long[] readProcStat() {
 		try {
-				
+
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
-			line = reader.readLine();
+			String line = reader.readLine();
 			reader.close();
-			// TODO parse and compute values
+			String[] values = line.split("\\s+");
+			long total = Long.valueOf(values[1])+Long.valueOf(values[2])+Long.valueOf(values[3])+Long.valueOf(values[4]);
+			long idle = Long.valueOf(values[4]);
+			return new long[] { total, idle};
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-			
-	//		log("cpu:" + line, null);
-			
-			/* BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
-			String line = null;
-			while ((line = reader.readLine()) != null) {
-				// if( ! line.contains("intr")) log("cpu:" + line, null);
-				if( line.length() < 100)
-					if( line.contains("cpu"))
-						log("cpu:" + line, null); */
-			
-	//      top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	//      http://askubuntu.com/questions/274349/getting-cpu-usage-realtime	
-	/*		
+		return null;
+	}
+
+	public static int getCPU(){
+		long[] procStat = readProcStat();
+		long totproc1st = procStat[0];
+		long totidle1st = procStat[1];
+		Util.delay(100);
+		procStat = readProcStat();
+		long totproc2nd = procStat[0];
+		long totidle2nd = procStat[1];
+		int percent = (int) ((double) ((totproc2nd-totproc1st) - (totidle2nd - totidle1st))/ (double) (totproc2nd-totproc1st) * 100);
+		return percent;
+	}
+
+	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
+	public static String getCPUTop(){
+		try {
+
 			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 			Process proc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			return procReader.readLine();
-					
-		
-		
-	//	Util.log("getCPU(): " + (System.currentTimeMillis()-start) + " ms", null);
-		*/
-			
-		return "42";//null;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 	public static String getJavaStatus(){
