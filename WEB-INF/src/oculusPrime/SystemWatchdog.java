@@ -30,65 +30,15 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	
-	private int cpuoverload = 0;
-
 	SystemWatchdog(Application a){ 
 		application = a;
-		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
-		
-//		if(settings.readSetting(ManualSettings.developer).equals("true"))
-//			new Timer().scheduleAtFixedRate(new cpuTask(), 5000, 5000);
-		
+		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);	
 	}
-	
-	/*
-	private class cpuTask extends TimerTask {
-		public void run() {
-		
-			// Util.getJavaStatus();// call but ignore return value
-			
-			String cpuWas = state.get(values.cpu);
-			String cpuNow = Util.getCPU();
-
-			// if (Double.parseDouble(cpuNow) > 70) Util.log("cpu high: "+cpuNow, this);
-
-			if(cpuWas == null && cpuNow != null) state.put(values.cpu, Util.formatFloat(cpuNow, 0));
-			
-			if(cpuNow != null && cpuWas != null){
-				
-				double now = Double.parseDouble(cpuNow);
-				double was = Double.parseDouble(cpuWas);
-				
-				// threshold updates on 10% change
-				if( Math.abs(state.getDouble(values.cpu) - ((now+was)/2)) > 10){							
-					state.put(values.cpu, Util.formatFloat((now+was)/2, 0));
-				
-					if(state.getDouble(values.cpu) > 70 ) {
-					
-						cpuoverload++;
-						Util.log("["+cpuoverload + "] is cpu too high?? " + state.get(values.cpu), this);		
-					
-					} 
-					
-					//TODO: clear on timer from first cpu overage timestamp ??
-					if(state.getDouble(values.cpu) < 30 ) {
-						if(cpuoverload > 0){
-							cpuoverload--;
-							// application.message("... cpu recovered", null, null);
-						}
-					}
-				}
-			}
-			
-		}
-	}
-	*/
 	
 	private class Task extends TimerTask {
 		public void run() {
 
 			// safety: check for force_undock command from battery firmware
-			       										   // state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 
 				
 				Util.log("System WatchDog, force undock", this);
@@ -146,9 +96,9 @@ public class SystemWatchdog {
 			}
 			else  lowbattredock = false;
 
-//			Util.log("cpu: "+Util.getCPU(), null);
 			int cpuNow = Util.getCPU();
 			if (cpuNow > 50) Util.log("cpu: "+cpuNow, this);
+			state.put(values.cpu, cpuNow);
 
 		}
 	}

@@ -77,7 +77,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		loginRecords = new LoginRecords(this);
 		settings = Settings.getReference();
 		state = State.getReference();
-		NetworkMonitor.getReference();
+		NetworkMonitor.setApp(this);
 		banlist = BanList.getRefrence();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);

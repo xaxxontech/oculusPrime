@@ -304,8 +304,12 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td rowspan=\"10\" valign=\"top\">"+ list +"</tr> \n");
 		
-		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>"+ state.get(values.signalspeed) + "</b>" 
-				+ "<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLast()) + "   " 
+		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid));
+		
+		if(state.exists(values.signalspeed))
+			str.append("  <b>"+ state.get(values.signalspeed) + "</b>" );
+				
+		str.append("<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLast()) + "   " 
 				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
 				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
 				+ "<td><b>lan</b><td>" + state.get(values.localaddress) 
@@ -313,15 +317,15 @@ public class DashboardServlet extends HttpServlet {
 				+ "</tr> \n");
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
-				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)
-				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + " mins<td><b>moving</b><td>" + state.get(values.moving)
+				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
+				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + "<td><b>moving</b><td>" + state.get(values.moving)
 				// + " <b>direction </b>" + state.get(values.direction) // + " <td><b>speed </b>" + state.get(values.motorspeed) 
 				+ "</tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
-				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  
+				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life</b> " + state.get(values.batterylife) + " mins<td><b>cpu</b> " + state.get(values.cpu) + "%"
+				+ "<td><b>life</b> " + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
 				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
 				
 	/*			

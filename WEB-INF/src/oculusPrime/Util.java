@@ -312,6 +312,7 @@ public class Util {
 	}
 	
 	public static void log(String str, Object c) {
+    	if(str == null) return;
 		String filter = "STATIC";
 		if(c!=null) filter = c.getClass().getName().toLowerCase();
 		if(history.size() > MAX_HISTORY) history.remove(0);
@@ -320,11 +321,15 @@ public class Util {
 	}
 	
     public static void debug(String str, Object c) {
+    	if(str == null) return;
+    	String filter = "STATIC";
+    	if(c!=null) filter = c.getClass().getName().toLowerCase();
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
-			System.out.println("DEBUG: " + getTime() + ", " + c.getClass().getSimpleName() +  ", " +str);
+			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
 	}
     
     public static void debug(String str) {
+    	if(str == null) return;
     	if(Settings.getReference().getBoolean(ManualSettings.debugenabled))
     		System.out.println("DEBUG: " + getTime() + ", " +str);
     }
