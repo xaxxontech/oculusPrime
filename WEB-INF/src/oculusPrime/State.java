@@ -294,7 +294,7 @@ public class State {
 		return value;
 	}
 	
-	/** @return the ms since last boot */
+	/** @return the ms since last app start */
 	public long getUpTime(){
 		return System.currentTimeMillis() - getLong(values.javastartup);
 	}

@@ -61,7 +61,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
-	public static developer.depth.Stereo stereo = null;
 	private developer.Navigation navigation = null;
 
 	public static byte[] framegrabimg  = null;
@@ -249,7 +248,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
-			stereo = new developer.depth.Stereo();
 		}
 	
 		if ( ! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) {
@@ -656,17 +654,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}			
 			messageplayer("openNI camera "+str, null, null);
 			break;
-			
-		case stereo:
-			if (!state.get(State.values.stream).equals("stop")) {
-				messageplayer("left camera in use", null, null);
-				break;
-			}
-			if(str.equals("on")) stereo.startCameras(); 
-			else stereo.stopCameras();
-			messageplayer("stereo cameras "+str, null, null);
-			break;
-			
+
 		case videosoundmode:
 			setGrabberVideoSoundMode(str);
 			break;

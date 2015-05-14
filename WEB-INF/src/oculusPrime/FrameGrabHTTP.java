@@ -72,20 +72,6 @@ public class FrameGrabHTTP extends HttpServlet {
 //            	}
             	processedImg(req,res);
             }
-            else if (mode.equals("stereo") && Application.stereo.stereoCamerasOn) {
-            	String type ="";
-            	if (req.getParameter("type")!=null) type=req.getParameter("type").toString();
-            	Application.processedImage = Application.stereo.getDepthImage(type);
-            	processedImg(req,res);
-            }
-            else if (mode.equals("stereotop")  && Application.stereo.stereoCamerasOn) {
-            	Application.processedImage = Application.stereo.getTopView();
-            	processedImg(req,res);
-            }
-            else if (mode.equals("stereoleft") && Application.stereo.stereoCamerasOn) {
-                Application.processedImage = Application.stereo.leftCameraFeed();
-                processedImg(req,res);
-            }
             else if (mode.equals("rosmap")) {
             	Application.processedImage = Ros.rosmapImg();
 				if (!state.exists(State.values.rosmapinfo))

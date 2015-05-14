@@ -302,7 +302,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		else if (s[0].equals("stopdetectfail")) {
 //			if (settings.getBoolean(ManualSettings.debugenabled))
 				application.message("FIRMWARE STOP DETECT FAIL", null, null);
-//			Util.debug("FIRMWARE STOP DETECT FAIL", this);
+				Util.log("FIRMWARE STOP DETECT FAIL", this);
 			if (state.getBoolean(State.values.stopbetweenmoves)) 
 				state.set(State.values.direction, direction.stop.toString());
 		}
@@ -464,38 +464,45 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			Util.log("DEBUG: "+ text, this);
 		}   // */
 
-		// TODO: initial timeout for testing only
-		long timeout = System.currentTimeMillis() + 500;
+//		// TODO: initial timeout for testing only
+//		long timeout = System.currentTimeMillis() + 500;
+//
+//		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
+//		if (commandlock) {
+//			String str = "";
+//			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
+//			Util.log("error, commandlocked after 500 ms, command waiting: "+str, this);
+//		}
+//
+//		timeout = System.currentTimeMillis() + 4500;
+//		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
+//		if (commandlock) {
+//			String str = "";
+//			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
+//			Util.log("error, commandlock timeout after 5000ms, command dropped: "+str, this);
+//			return;
+//		}
 
-		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
-		if (commandlock) {
-			String str = "";
-			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-			Util.log("error, commandlocked after 500 ms, command waiting: "+str, this);
+		int n = 0;
+		while (commandlock) {
+			Util.delay(1);
+			n++;
 		}
 
-		timeout = System.currentTimeMillis() + 4500;
-		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
-		if (commandlock) {
-			String str = "";
-			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-			Util.log("error, commandlock timeout after 5000ms, command dropped: "+str, this);
+		commandlock = true;
+		if (n!=0) Util.log("error, commandlock true for "+n+"ms", this);
+		for (byte b : cmd) {
+			if (b==10) b=11;
+			else if (b==13) b=12;
+			commandList.add(b);
 		}
-		else {
-			commandlock = true;
-			for (byte b : cmd) {
-				if (b==10) b=11;
-				else if (b==13) b=12;
-				commandList.add(b);
-			}
-			commandList.add((byte) 13); // EOF
-			commandlock = false;
-		}
+		commandList.add((byte) 13); // EOL
+		commandlock = false;
 
 	}
 	
 	
-	public void sendCommand(final byte cmd){
+	public void sendCommand(byte cmd){
 		sendCommand(new byte[]{cmd});
 	}
 
@@ -510,37 +517,33 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		public void run() {
 
 			while (true) {
-				if (commandList.size() > 0 &! commandlock) {
+				if (commandList.size() > 1 &! commandlock) { // >1 because NL required
 
-					commandlock = true;
+//					commandlock = true;
 
 					if (!isconnected) {
 						Util.log("error, not connected", this); // TODO: could be normal reset or unavailable hwdr
 						commandList.clear();
-						commandlock = false;
+//						commandlock = false;
 						continue;
 					}
 
-					if (commandList.size() > 15) {
+					if (commandList.size() > 15) { // buffer in firmware is now 32 (was 8) AVR is 64?
 						commandList.clear();
 						Util.log("error, command stack up, all dropped", this);
-						commandlock = false;
+//						commandlock = false;
 						continue;
 					}
 
 					int EOLindex = commandList.indexOf((byte) 13);
 					if (EOLindex == -1) {
-//					if (commandList.get(commandList.size() - 1) != (byte) 13) {
 						String str = "";
 						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
 						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
-						commandlock = false;
+//						commandlock = false;
+						Util.delay(1);
 						continue;
 					}
-
-//					byte c[] = new byte[commandList.size()];
-//					for (int i = 0; i < commandList.size(); i++) c[i]=commandList.get(i);
-//					commandList.clear();
 
 					// in case of multiple EOL chars,
 					byte c[] = new byte[EOLindex+1];
@@ -549,7 +552,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						commandList.remove(0);
 					}
 
-					commandlock = false;
+//					commandlock = false;
 
 					try {
 
@@ -558,11 +561,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						serialPort.writeBytes(c); // writing as array ensures goes at baud rate?
 
 					} catch (Exception e) {
-//							for (int i = commands.length-1; i>=0; i--) commandList.add(0, commands[i]); //save command for after reset
 						Util.log("sendCommand() error", this); // , attempting reset", this);
 						Util.printError(e);
-//							lastReset = System.currentTimeMillis();
-//							reset(); // this will (help) resets happen quicker, not just on watchdog intervals
 					}
 
 				}
@@ -953,14 +953,20 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					}
 //					else // within tolerance, kill thread to save cpu
 //						break;
-					
+
+					byte dir = 0;
+
 					// modify speed
 					state.set(State.values.odomturnpwm, newpwm);
 					if ( state.get(State.values.direction).equals(direction.left.toString()))
-						sendCommand(new byte[] { LEFT, (byte) newpwm, (byte) newpwm });
-					else 
-						sendCommand(new byte[] { RIGHT, (byte) newpwm, (byte) newpwm });
-					
+						dir = LEFT;
+					else if ( state.get(State.values.direction).equals(direction.right.toString())) // extra thread safe
+						dir = RIGHT;
+
+					if (currentMoveID == moveID && dir != 0 ) // extra thread safe
+						sendCommand(new byte[] { dir, (byte) newpwm, (byte) newpwm });
+					else break;
+
 					start = now;
 					
 				}
@@ -1023,21 +1029,24 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					state.set(State.values.odomlinearpwm, newpwm);
 
 					int[] comp = applyComp(newpwm); // steering comp
-					int L,R;
-					byte dir;
+					int L = 0;
+					int R = 0;
+					byte dir = 0;
 
 					
 					if ( state.get(State.values.direction).equals(direction.forward.toString())) {
 						dir = FORWARD;
 						L = comp[0];
 						R = comp[1];
-					} else  {
+					} else if ( state.get(State.values.direction).equals(direction.backward.toString())){ // extra thread safe
 						dir = BACKWARD;
 						L = comp[1];
 						R = comp[0];
 					}
-					
-					sendCommand(new byte[] { dir, (byte) R, (byte) L});
+
+					if (currentMoveID == moveID && dir != 0) // extra thread safe
+						sendCommand(new byte[] { dir, (byte) R, (byte) L});
+					else break;
 					
 					start = now;
 				}
@@ -1300,8 +1309,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public void nudge(final direction dir) {
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
-			if (Application.openNIRead.depthCamGenerating || Application.stereo.stereoCamerasOn ) {
-				if (Application.stereo.generating) return; // (assuming wont be using openni in this case)
+			if (Application.openNIRead.depthCamGenerating ) {
 				switch (dir) {
 				case right:
 				case left:  rotate(dir, 15); break;
@@ -1368,14 +1376,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						state.delete(State.values.distanceanglettl);
 					}
 					
-					if (Application.stereo.stereoCamerasOn) {
-						if (Mapper.map.length==0) {
-							short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-							Mapper.addArcPath(cells, 0, 0);
-						}
-						if (!state.getBoolean(State.values.odometry)) odometryStart();
-						state.delete(State.values.distanceanglettl);
-					}
 				}
 				
 				switch (dir) {
@@ -1399,23 +1399,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					if (Application.openNIRead.depthCamGenerating) { // openni 
 						Util.delay(500); // allow for slow to stop
 						short[] depthFrameAfter = Application.openNIRead.readFullFrame();
-	
+
 						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
 						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
 						Mapper.addMove(depthFrameAfter, 0, angle);
 						msg += "angle moved via gyro: "+angle;
 					}
-					
-					if (Application.stereo.stereoCamerasOn) {
-						Util.delay(700); // allow extra 200ms for latest frame 	
-	
-						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
-						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-						msg += "angle moved via gyro: "+angle;
-						
-						short cells[][] = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-						Mapper.addArcPath(cells, 0, angle);
-					}
+
 				}
 				
 				if (msg.equals("")) msg = null;
@@ -1453,15 +1443,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
 	        					state.delete(State.values.distanceanglettl);
 							}
-							
-	                        if (Application.stereo.stereoCamerasOn) { // stereo
-	        					if (Mapper.map.length==0) {
-	                                cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-	        						Mapper.addArcPath(cellsBefore, 0, 0);
-	        					}
-	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-	        					state.delete(State.values.distanceanglettl);
-	                        }
 						}
 
                         goForward(); 
@@ -1475,15 +1456,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
 	        					state.delete(State.values.distanceanglettl);
 							}
-							
-	                        if (Application.stereo.stereoCamerasOn) { // stereo
-	        					if (Mapper.map.length==0) {
-	        						cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-	        						Mapper.addArcPath(cellsAfter, 0, 0);
-	        					}
-	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-	        					state.delete(State.values.distanceanglettl);
-	    					}
+
 						}
                         
 						goBackward();
@@ -1537,26 +1510,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						msg = "distance moved d: "+distance+", angle:"+angle;
 						Mapper.addMove(depthFrameBefore, distance, angle);
 					}
-	
-	                else if (Application.stereo.stereoCamerasOn) {
-	                    Util.delay(750); // might need bit extra to get latest frame?
-	
-						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(10); } //wait TODO: add timer
-						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-	                    
-	                    if (dir.equals(direction.forward)) { // went forward, stereo
-	                        cellsAfter = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-	    					Mapper.addArcPath(cellsAfter, distance, angle);
-	    					msg = "moved forward: "+distance+"mm, "+angle+"deg";
-	                    }
-	                    else { // went backward, stereo
-	                        cellsBefore = Application.stereo.captureTopViewShort(Mapper.mapSingleHeight);
-	    					Mapper.addArcPath(cellsBefore, distance, -angle);
-	    					msg = "moved backward: "+distance+"mm, -"+angle+"deg";
-	                    }
-	
-	                }
+
 				}
 				
 				state.put(State.values.motorspeed, tempspeed);

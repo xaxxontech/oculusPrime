@@ -108,6 +108,7 @@ public class SystemWatchdog {
 					!state.exists(State.values.powererror.toString()) && // why..? 
 					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
 					state.getInteger(State.values.telnetusers) == 0 &&
+					System.currentTimeMillis() - state.getUpTime() > Util.TEN_MINUTES && // prevent runaway reboots
 					(settings.getBoolean(GUISettings.reboot))){
 				
 				// String boot = new Date(state.getLong(State.values.javastartup.name())).toString();				
@@ -145,9 +146,9 @@ public class SystemWatchdog {
 			}
 			else  lowbattredock = false;
 
-			Util.log("cpu: "+Util.getCPU(), null);
-//			int cpuNow = Util.getCPU();
-//			if (cpuNow > 70) Util.log("cpu high: "+cpuNow, this);
+//			Util.log("cpu: "+Util.getCPU(), null);
+			int cpuNow = Util.getCPU();
+			if (cpuNow > 50) Util.log("cpu: "+cpuNow, this);
 
 		}
 	}
@@ -200,8 +201,9 @@ public class SystemWatchdog {
 		if (redocking) return;
 
 		if (settings.getBoolean(GUISettings.navigation)) {
-			if (state.get(values.navsystemstatus).equals(Ros.navsystemstate.running) ||
-					state.get(values.navsystemstatus).equals(Ros.navsystemstate.starting)) {
+			if (state.exists(values.navigationroute) && (
+					state.get(values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ||
+					state.get(values.navsystemstatus).equals(Ros.navsystemstate.starting.toString()))) {
 				Util.log("warning: redock skipped, navigation running", this);
 				return;
 			}
@@ -344,21 +346,30 @@ public class SystemWatchdog {
 //		callForHelp(subject, body);
 	}
 
-	public static void waitForCpu() {
+	public static boolean waitForCpu() {
 //		Util.log("waitForCpu() cpu: "+Util.getCPU(), null);
 //		return;
 
-		long timeout = System.currentTimeMillis() + 10000;
+		long start = System.currentTimeMillis();
+		long timeout = 20000;
 		int cpu = 0;
-		while (System.currentTimeMillis() < timeout) {
+		int threshold = 60;
+		while (System.currentTimeMillis() - start < timeout) {
 			cpu = Util.getCPU();
-			if (cpu < 55) {
-				Util.log("Util.waitForCpu() cleared "+ cpu, null);
-				return;
+			if (cpu < threshold) { // do it again to be sure
+				cpu = Util.getCPU();
+				if (cpu <threshold) {
+					Util.log("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
+					return true;
+				}
 			}
 			Util.delay(1000);
 		}
 		Util.log("Util.waitForCpu() error, timed out "+ cpu, null);
+//		State.getReference().set(values.linuxboot, "0"); // force reboot next dock
+//		return false;
+
+		return true;
 	}
 
 

@@ -48,7 +48,7 @@ public enum PlayerCommands {
     statuscheck, block, unblock, // help, 
     
     // experimental (undocumented)
-    opennisensor, clearmap, stereo, error,
+    opennisensor, clearmap, error,
     
     // navigation
     roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,

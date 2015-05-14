@@ -61,23 +61,26 @@ public class Scratch {
 //        if (nextday > daynums.length-1 ) nextday = 0;
 //        System.out.println(daynums[nextday]);
 
-        Util.delay(2000);
+//        Util.delay(2000);
+//
+//        Scratch scratch = new Scratch();
+//        long[] procStat = scratch.readProcStat();
+//        long totproc1st = procStat[0];
+//        long totidle1st = procStat[1];
+//        Util.delay(100);
+//        procStat = scratch.readProcStat();
+//        long totproc2nd = procStat[0];
+//        long totidle2nd = procStat[1];
+//        int percent = (int) ((double) ((totproc2nd-totproc1st) - (totidle2nd - totidle1st))/ (double) (totproc2nd-totproc1st) * 100);
+//        System.out.println(percent);
+//
+//        Util.delay(2000);
+//
+//        System.out.println(Util.getCPUTop());
+        int i = 100;
+        final int intensity = i * 255 / 100;
 
-        Scratch scratch = new Scratch();
-        long[] procStat = scratch.readProcStat();
-        long totproc1st = procStat[0];
-        long totidle1st = procStat[1];
-        Util.delay(100);
-        procStat = scratch.readProcStat();
-        long totproc2nd = procStat[0];
-        long totidle2nd = procStat[1];
-        int percent = (int) ((double) ((totproc2nd-totproc1st) - (totidle2nd - totidle1st))/ (double) (totproc2nd-totproc1st) * 100);
-        System.out.println(percent);
-
-        Util.delay(2000);
-
-        System.out.println(Util.getCPUTop());
-
-    }
+        System.out.println(intensity);
+     }
 }
 

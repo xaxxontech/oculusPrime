@@ -204,7 +204,10 @@ public class Navigation {
 			
 			// success, should be pointing at dock, shut down nav
 			stopNavigation();
-			Util.delay(Ros.ROSSHUTDOWNDELAY/2); // 5000 too low, massive cpu sometimes here
+//			Util.delay(Ros.ROSSHUTDOWNDELAY/2); // 5000 too low, massive cpu sometimes here
+
+			Util.delay(5000); // 5000 too low, massive cpu sometimes here
+			SystemWatchdog.waitForCpu();
 			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 			
@@ -303,16 +306,19 @@ public class Navigation {
 	}
 
 	public void runAnyActiveRoute() {
-		Document document = Util.loadXMLFromString(routesLoad());
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		for (int i = 0; i< routes.getLength(); i++) {
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
-			if (isactive.equals("true")) {
-				runRoute(rname);
-				break;
+		new Thread(new Runnable() { public void run() {
+			Document document = Util.loadXMLFromString(routesLoad());
+			NodeList routes = document.getDocumentElement().getChildNodes();
+			for (int i = 0; i< routes.getLength(); i++) {
+				String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+				String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
+				if (isactive.equals("true")) {
+					Util.delay(Util.TWO_MINUTES); // avoid boot up bog down
+					runRoute(rname);
+					break;
+				}
 			}
-		}
+		}  }).start();
 	}
 	
 	public void runRoute(final String name) {
@@ -490,6 +496,13 @@ public class Navigation {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
 					state.set(State.values.motionenabled, true);
 					app.comport.checkisConnectedBlocking(); // just in case
+
+					if (!SystemWatchdog.waitForCpu()) {
+						stopNavigation(); // disconnects telnet clients so can reboot
+						Util.log("high cpu, rebooting before route start", this);
+						Util.delay(Util.ONE_MINUTE); // wait for reboot
+					}
+
 					app.driverCallServer(PlayerCommands.forward, "0.7");
 
 					Util.delay(3000);
@@ -517,6 +530,8 @@ public class Navigation {
 					app.comport.checkisConnectedBlocking(); // just in case
 
 		    		if (wpname.equals(DOCK))  break;
+
+					if (!SystemWatchdog.waitForCpu()) break; //  do not pass go, go directly to jail
 
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
@@ -556,8 +571,6 @@ public class Navigation {
 					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name, id);
 		    		
 //					Util.delay(1000);
-					SystemWatchdog.waitForCpu(); // TODO: testing
-
 					wpnum ++;
 				}
 		    	
@@ -778,19 +791,19 @@ public class Navigation {
 //				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
 												// TODO: testing 1000, still happening
 //				app.driverCallServer(PlayerCommands.left, "45");
-
-				SystemWatchdog.waitForCpu(); // lots of missed stop commands here
+				Util.delay(2000);
+				if (!SystemWatchdog.waitForCpu()) break; // lots of missed stop commands here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.left.toString());
 				Util.delay((long) (45.0 / degperms));
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 
-				long stopwaiting = System.currentTimeMillis()+500; // timeout if error
+				long stopwaiting = System.currentTimeMillis()+750; // timeout if error
 				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
 						System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait for stop
 				if (!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()))
-					Util.log("error, missed turnstop within 500ms", this);
+					Util.log("error, missed turnstop within 750ms", this);
 
 				Util.delay(4000); // allow cam to normalize TODO: only if light on...?
 				turns ++;
