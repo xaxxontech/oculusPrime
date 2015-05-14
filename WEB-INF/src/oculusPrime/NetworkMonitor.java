@@ -5,18 +5,17 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
-
-
 
 import oculusPrime.State.values;
 
 public class NetworkMonitor {
 
-	public static final long AP_TIME_OUT = 20000;
-	public static final long AP_PING_FAILS = 10;
+	public static final long AP_TIME_OUT = 10000;
+	public static final long AP_PING_FAILS = 20;
 	public static final String AP = "ap";
 	
 	private static Vector<String> wlanData = new Vector<String>();
@@ -27,29 +26,27 @@ public class NetworkMonitor {
 
 	private static Timer networkTimer = new Timer();
 	private static Timer pingTimer = new Timer();
-//	private static Timer apTimer = new Timer();
 	
 	private static long pingLast = System.currentTimeMillis();
 	private static String pingValue = null;
+	private static int apModeCounter = 0;
 	private static int pingCounter = 0;
 	private static int pingFails = 0;
 	private static int externalLookup = 0;
-	
 	private static boolean changingWIFI = false;
-	
-	public static State state = State.getReference();
-	public static Settings settings = Settings.getReference();
-	
-	private static NetworkMonitor singleton = new NetworkMonitor();
-	public static NetworkMonitor getReference() {
-		return singleton;
-	}
+	private static State state = State.getReference();
+	private static Settings settings = Settings.getReference();
+	private static Application application = null; 
 
+	private static NetworkMonitor singleton = new NetworkMonitor();
+	public static void setApp(Application a) { application = a;}
+	public static NetworkMonitor getReference() { return singleton; }
+	
 	private NetworkMonitor(){
 		updateExternalIPAddress();
 
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
-			pingTimer.schedule(new pingTask(), 5000, 1000);
+			pingTimer.schedule(new pingTask(), 10000, 1000);
 			networkTimer.schedule(new networkTask(), Util.ONE_MINUTE, Util.TWO_MINUTES);
 			killApplet();
 		}
@@ -59,46 +56,65 @@ public class NetworkMonitor {
 		connectionUpdate();
 		connectionsNever();		
 	}
+
+	private void doAP(){
+		try {
+			if (application != null) {
+				if(apModeCounter++%3==0){ // slow down flashes
+					application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
+					// Util.log("NetworkMonitor.doAP() .. in AP mode: "+apModeCounter, null);
+				}
+			}
+			if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
+				Util.log("NetworkMonitor().pingTask() .. in AP mode for five minutes", null);
+				pingLast = System.currentTimeMillis();
+				tryAnyConnection();
+			}
+		} catch (Exception e) {
+			Util.log("NetworkMonitor.doAP(): ", e, null);
+		}
+	}
+	
+	private void panicPings(){
+		
+		pingLast = System.currentTimeMillis();
+		
+		// ping and see if recovers, let Linux try other connections.. 
+		for(int i = 0 ; i < AP_PING_FAILS ; i++ ){
+			Util.delay(1500);
+			Util.log("panicPings(): fail: " + i, this);
+			pingValue = Util.pingWIFI(state.get(values.gateway));
+			if(pingValue == null) pingFails++;
+			else pingLast = System.currentTimeMillis();	
+			if(i%5==0) runNetworkTool();
+			if(state.exists(values.ssid)) return;
+		}
+		
+		if(pingFails >= AP_PING_FAILS){
+			Util.log("panicPings(): ... starting ap mode now", this);
+			pingLast = System.currentTimeMillis();
+			pingCounter = 0;
+			pingFails = 0;
+			startAdhoc();
+		}
+	}
 	
 	public class pingTask extends TimerTask {			
 	    @Override
 	    public void run() {
 	    	
-	    	if(state.equals(values.ssid, AP)) {
-	    		if((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES)
-	    			Util.log("NetworkMonitor().pingTask() .. in AP mode for five minutes", null);
-	    		
-	    		return;
-	    	}
-    		
-	    	if(state.exists(values.gateway) && !changingWIFI){ 
+	    	if(state.equals(values.ssid, AP)) { doAP(); return; }
     			
-    			pingCounter++;
-    			if(pingCounter% 100 == 0) Util.log("NetworkMonitor().pingTask(): ping count = " + pingCounter, null);
+    		if(((System.currentTimeMillis() - pingLast) > AP_TIME_OUT) && !changingWIFI) panicPings();
+    			
+    		if(state.exists(values.gateway) && !changingWIFI){ 
+    			
+    			pingCounter++; // how long connected messure 
+    			if(pingCounter% 100 == 0) Util.debug("NetworkMonitor.pingTask(): ping count = " + pingCounter, null);
     			
     			pingValue = Util.pingWIFI(state.get(values.gateway));
     			if(pingValue != null) pingLast = System.currentTimeMillis();
-    		}
     			
-    		if(((System.currentTimeMillis() - pingLast) > AP_TIME_OUT) && !changingWIFI){
-    			
-    			pingLast = System.currentTimeMillis();
-    			
-    			for(int i = 0 ; i < AP_PING_FAILS ; i++ ){
-    				Util.delay(500);
-    				Util.log("pingTask(): fail: " + i, this);
-    				pingValue = Util.pingWIFI(state.get(values.gateway));
-    				if(pingValue == null) pingFails++;
-    				else pingLast = System.currentTimeMillis();		
-    			}
-    			
-    			if(pingFails >= AP_PING_FAILS){
-    				Util.log("pingTask()... starting ap mode now...", this);
-    				pingLast = System.currentTimeMillis();
-    				pingCounter = 0;
-    				pingFails = 0;
-    				startAdhoc();
-    			}
     		}
     	}
 	}
@@ -111,34 +127,6 @@ public class NetworkMonitor {
 				if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
 			} catch (Exception e) {
 				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
-			}
-		}
-	}
-	
-	public class apTask extends TimerTask {
-		
-		int i = 0; 
-		
-		@Override
-		public void run() {
-			try{
-				
-				// if( i%5==0 ) runNetworkTool();
-				
-				Util.log( i + " NetworkMonitor().apTask(): ping timer = " +(System.currentTimeMillis()- pingLast), this);
-				Util.log( i + " NetworkMonitor().apTask(): ping count = " + pingCounter, this);
-				
-				if( pingCounter > 95) {
-					Util.log(i +  "NetworkMonitor().apTask(): die..........................................", this);
-					this.cancel();
-				}
-					
-				if( i++ > 10) {
-					Util.log(i +  "NetworkMonitor().apTask(): connected, ping rx'ed ", this);
-					this.cancel();
-				}			
-			} catch (Exception e) {
-				Util.debug("apTask: " + e.getLocalizedMessage(), this);
 			}
 		}
 	}
@@ -163,7 +151,7 @@ public class NetworkMonitor {
 							networkData.add(line);
 			}
 			
-			Util.log("networkTask: lines copied: " + networkData.size(), this);
+			Util.debug("networkTask: lines copied: " + networkData.size(), this);
 
 			proc.waitFor();
 			readETH();
@@ -177,6 +165,15 @@ public class NetworkMonitor {
 		}
 	}
 	
+	public void tryAnyConnection() {	
+		String[] routers = getConnections();
+		for(int i = 0 ; i < routers.length ; i++)
+		Util.log(i + " tryAnyConnection: " + routers[i], this);
+		String ssid = routers[ new Random().nextInt(routers.length) ];
+		Util.log("tryAnyConnection: " + ssid, this);
+		changeWIFI(ssid);
+	}
+
 	public boolean connectionExists(final String ssid){
 		for(int i = 0 ; i < (connections.size()) ; i++)
 			if(connections.get(i).startsWith(ssid.trim()))
@@ -286,7 +283,7 @@ public class NetworkMonitor {
 					proc.waitFor();
 					Util.log("changeWIFI(): (with password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
 					
-					Util.delay(200);
+					Util.delay(1200);
 					runNetworkTool();
 					
 		    	} catch (Exception e) {
@@ -296,7 +293,7 @@ public class NetworkMonitor {
 		}.start();
 	}
 
-	public /*synchronized*/ void changeWIFI(final String ssid){
+	public void changeWIFI(final String ssid){
 		
 		if(ssid == null) return; 
 		
@@ -305,9 +302,11 @@ public class NetworkMonitor {
 			return;
 		}
 		
-		if(state.get(values.ssid).equals(ssid)) {
-			Util.log("changeWIFI(): already is the ssid", this);
-			return;
+		if(state.exists(values.ssid)){
+			if(state.get(values.ssid).equals(ssid)) {
+				Util.log("changeWIFI(): already is the ssid", this);
+				return;
+			}
 		}
 		
 		changingWIFI = true;
@@ -316,9 +315,6 @@ public class NetworkMonitor {
 		
 		Util.log("changeWIFI(): switch to ssid = " + ssid, this);
 		
-	//	if(apTimer == null) apTimer.cancel();
-	//	apTimer.scheduleAtFixedRate(new apTask(), 1000, 1000);
-	
 		new Thread(){
 		    public void run() {
 		    	try {
@@ -345,7 +341,7 @@ public class NetworkMonitor {
 					Util.log("changeWIFI(): [" + ssid + "] exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
 					
-					Util.delay(100);
+					Util.delay(1000);
 					runNetworkTool();
 					changingWIFI = false;
 					
@@ -422,7 +418,8 @@ public class NetworkMonitor {
 		state.delete(values.localaddress);
 		state.delete(values.signalspeed);
 		state.delete(values.gateway);
-		pingValue = null; 
+		pingValue = "0"; 
+		apModeCounter = 0;
 		externalLookup = 0;
 		pingCounter = 0;
 		pingFails = 0;
@@ -461,17 +458,18 @@ public class NetworkMonitor {
 
 		// 	Util.debug("parseWLAN: " + wlanData.size(), this);
 
-		// boolean star = false;
+		boolean star = false;
 
 		for(int i = 0 ; i < wlanData.size() ; i++){
 
 			String line = wlanData.get(i).trim();
 
-			if(line.startsWith("*")) line = line.substring(1);
+			if(line.startsWith("*")) {
+				line = line.substring(1);
+				star = true;
+			}
 			
-			if(isSSID(line))
-				if( ! accesspoints.contains(line))
-					accesspoints.add(line);
+			if(isSSID(line) && ! accesspoints.contains(line)) accesspoints.add(line);
 
 			if(line.contains("Speed: ")){
 
@@ -517,10 +515,18 @@ public class NetworkMonitor {
 			
 			if(line.startsWith("State: ")){
 				
-				String gate = line.substring(line.indexOf("Gateway: ")+9).trim();
-				Util.debug("parseWLAN: State: " + gate, this);
+				String state = line.substring(line.indexOf("Gateway: ")+9).trim();
+				Util.debug("parseWLAN: State: " + state, this);
 				
-			}
+			}	
+		}
+		
+		if(!star) {
+			
+			Util.debug("nm-tool.. disconnected? no star", this);
+			// disconnecteddWAN();
+			// start ap?
+			
 		}
 	}
 	
