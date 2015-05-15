@@ -488,6 +488,7 @@ public class Util {
 		
 	//	Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
 		return "42";
+		
 	}
 	
 	public static String getJavaPID(){	
@@ -503,6 +504,8 @@ public class Util {
 	}	
 	
 	public static String pingWIFI(final String addr){
+		
+		if(addr==null) return null;
 		
 		long start = System.currentTimeMillis();
 		
