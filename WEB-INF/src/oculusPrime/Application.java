@@ -1344,12 +1344,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer("restarting server application", null, null);
 
 		// write file as restart flag for script
-		File f = new File(Settings.redhome + Settings.sep + "restart"); // windows & linux	
+		File f = new File(Settings.redhome + Settings.sep + "restart"); 
 		if (!f.exists())
 			try {
 				f.createNewFile();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				Util.printError(e);
 			}
 		
