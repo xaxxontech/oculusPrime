@@ -14,7 +14,7 @@ import oculusPrime.State.values;
 
 public class NetworkMonitor {
 
-	public static final long AP_TIME_OUT = 5000;
+	public static final long AP_TIME_OUT = 7000;
 	public static final long AP_PING_FAILS = 10;
 	public static final String AP = "ap";
 
@@ -84,7 +84,7 @@ public class NetworkMonitor {
 			pingValue = Util.pingWIFI(state.get(values.gateway));
 			if(pingValue == null) pingFails++;
 			else pingLast = System.currentTimeMillis();	
-			if(i%5==0) runNetworkTool();
+			if(i%5==0 && i > 2) runNetworkTool();
 			if(state.exists(values.ssid)) return;
 		}
 		
@@ -121,9 +121,11 @@ public class NetworkMonitor {
 		@Override
 		public void run() {
 			try{
+				
 				if(settings.getBoolean(ManualSettings.networkmonitor)) {
 					runNetworkTool();
-				 	connectionUpdate();
+				 	// connectionUpdate();
+					Util.debug("networkTask: called nm-tool", this);
 				}
 	
 				if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
