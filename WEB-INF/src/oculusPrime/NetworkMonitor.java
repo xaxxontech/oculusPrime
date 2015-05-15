@@ -59,7 +59,7 @@ public class NetworkMonitor {
 		try {
 			if (application != null) {
 				if(apModeCounter++ % 5 ==0){ // slow down flashes
-					application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
+					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 					// Util.log("NetworkMonitor.doAP() .. in AP mode: "+apModeCounter, null);
 				}
 			}

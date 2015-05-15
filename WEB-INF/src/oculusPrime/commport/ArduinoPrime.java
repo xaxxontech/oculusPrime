@@ -221,7 +221,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final long duration = d;
 		if (i==0) i=100;
 		final int intensity = i * 255 / 100;
-		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString())) {
+		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString()) && !state.getBoolean(State.values.strobeflashon)) {
 			state.set(State.values.strobeflashon, true);
 			final long strobestarted = System.currentTimeMillis();
 			new Thread(new Runnable() {
