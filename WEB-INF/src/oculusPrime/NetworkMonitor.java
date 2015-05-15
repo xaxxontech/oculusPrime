@@ -15,7 +15,7 @@ import oculusPrime.State.values;
 public class NetworkMonitor {
 
 	public static final long AP_TIME_OUT = 7000;
-	public static final long AP_PING_FAILS = 10;
+	public static final long AP_PING_FAILS = 5;
 	public static final String AP = "ap";
 
 	private static Vector<String> wlanData = new Vector<String>();
@@ -149,7 +149,7 @@ public class NetworkMonitor {
 			
 			networkData.clear();
 			wlanData.clear();
-			accesspoints.clear();
+			// accesspoints.clear();
 
 			Process proc = Runtime.getRuntime().exec(new String[]{"nm-tool"});
 			BufferedReader procReader = new BufferedReader(
@@ -295,8 +295,9 @@ public class NetworkMonitor {
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){
-				if( !line.startsWith("NAME") && line.contains("wireless") )// && !line.contains("never"))
-					connections.add(line);
+				if( !line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
+					if( ! connections.contains(line))
+						connections.add(line);
 			}
 		} catch (Exception e) {
 			Util.debug("connectionUpdate(): " + e.getLocalizedMessage(), this);
