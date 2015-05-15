@@ -306,7 +306,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"0\">  \n");
 		
-		String list = " " + "connections <hr> \n";
+		String list = " <hr>" + "connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
 	//	final String router = "<a href=\"http://" + url + "?action=connect&router=";
@@ -324,10 +324,10 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td rowspan=\"10\" valign=\"top\">"+ list +"</tr> \n");
 		
-		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid));
+		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
 		
-		if(state.exists(values.signalspeed))
-			str.append("  <b>"+ state.get(values.signalspeed) + "</b>" );
+		// if(state.exists(values.signalspeed))
+		//	str.append("  <b>"+ state.get(values.signalspeed) + "</b>" );
 				
 		str.append("<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLast()) + "   " 
 				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
@@ -345,7 +345,7 @@ public class DashboardServlet extends HttpServlet {
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life</b> " + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
+				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
 				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
 				
 	/*			
