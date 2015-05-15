@@ -126,10 +126,10 @@ public class OpenCVMotionDetect  {
                             break;
                         }
                         else trigger ++;
-                    }
+                    } else trigger = 0;
 
                     f ++;
-                    Util.delay(300); // cpu saver
+                    Util.delay(150); // cpu saver
                 }
 
                 state.set(State.values.motiondetect, false);

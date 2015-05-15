@@ -791,7 +791,7 @@ public class Navigation {
 //				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
 												// TODO: testing 1000, still happening
 //				app.driverCallServer(PlayerCommands.left, "45");
-				Util.delay(2000);
+//				Util.delay(2000); // TODO: put this back, just testing
 				if (!SystemWatchdog.waitForCpu()) break; // lots of missed stop commands here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
@@ -805,7 +805,10 @@ public class Navigation {
 				if (!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()))
 					Util.log("error, missed turnstop within 750ms", this);
 
-				Util.delay(4000); // allow cam to normalize TODO: only if light on...?
+				Util.delay(2000);
+				if (state.getInteger(State.values.spotlightbrightness) > 0)
+					Util.delay(2000); // allow cam to normalize
+
 				turns ++;
 			}
 

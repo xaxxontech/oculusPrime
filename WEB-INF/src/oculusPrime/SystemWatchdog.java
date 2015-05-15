@@ -306,13 +306,13 @@ public class SystemWatchdog {
 		int threshold = 60;
 		while (System.currentTimeMillis() - start < timeout) {
 			cpu = Util.getCPU();
-			if (cpu < threshold) { // do it again to be sure
-				cpu = Util.getCPU();
+//			if (cpu < threshold) { // do it again to be sure
+//				cpu = Util.getCPU();
 				if (cpu <threshold) {
 					Util.log("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
 					return true;
 				}
-			}
+//			}
 			Util.delay(1000);
 		}
 		Util.log("Util.waitForCpu() error, timed out "+ cpu, null);

@@ -483,9 +483,10 @@ public class AutoDock {
 						comport.clickSteer(lastcamctr, 0);
 						comport.delayWithVoltsComp(allowforClickSteer);
 
+						SystemWatchdog.waitForCpu(); // lots of missed stops here
 						comport.goForward();
 						comport.delayWithVoltsComp(s2FWDmilliseconds);
-						comport.stopGoing();
+						comport.stopGoing(); // often subject to lag!
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
 //						state.set(State.values.direction, ArduinoPrime.direction.unknown.toString());
