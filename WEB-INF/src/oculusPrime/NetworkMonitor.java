@@ -63,7 +63,7 @@ public class NetworkMonitor {
 					// Util.log("NetworkMonitor.doAP() .. in AP mode: "+apModeCounter, null);
 				}
 			}
-			if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
+			if ((System.currentTimeMillis() - pingLast) > Util.TWO_MINUTES ){ // .FIVE_MINUTES) {
 				Util.log("NetworkMonitor().pingTask() .. in AP mode for five minutes", null);
 				pingLast = System.currentTimeMillis();
 				tryAnyConnection();
@@ -185,6 +185,7 @@ public class NetworkMonitor {
 		String ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
+		// TODO: super hack... 
 		Util.log("tryAnyConnection: " + ssid, this);
 		changeWIFI(ssid);
 	}
@@ -225,34 +226,40 @@ public class NetworkMonitor {
 			return;
 		}
 		
-		try {
+		new Thread(){
+			public void run() {
+				try {
+		
+					changingWIFI = true;
+					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-			String line = null;
-			while ((line = procReader.readLine()) != null){
-				Util.log("removeConnection(): " + line, this);
-			}
-			
-			pingLast = System.currentTimeMillis();
-			
-			Util.log("removeConnection(): waitfor: " + proc.waitFor(), this);
-			Util.log("removeConnection(): exitvalue " + proc.exitValue(), this);
-			
-			connectionUpdate();
-			if(proc.exitValue() == 0){
-				Util.log("removeConnection(): failed, try again: " + proc.waitFor(), this);
-				removeConnection(ssid);
-				Util.delay(500);
-			}
-			connectionUpdate();
-			
-		} catch (Exception e) {
-			Util.log("removeConnection(): " + e.getLocalizedMessage(), this);
-		}
+					String line = null;
+					while ((line = procReader.readLine()) != null){
+						Util.log("removeConnection(): " + line, this);
+					}
+					
+					pingLast = System.currentTimeMillis();
+					
+					Util.log("removeConnection(): waitfor: " + proc.waitFor(), this);
+					Util.log("removeConnection(): exitvalue " + proc.exitValue(), this);
+					
+					if(proc.exitValue() == 0){
+						Util.log("removeConnection(): failed, try again: " + proc.waitFor(), this);
+						removeConnection(ssid);
+						Util.delay(300);
+					}
+					
+					connectionUpdate();
+					changingWIFI = false;
+					
+				} catch (Exception e) {
+					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);
+				}
+		    }
+		}.start();
 	}
-
+	
 	private void killApplet(){
 		try {
 			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
@@ -330,7 +337,7 @@ public class NetworkMonitor {
 						Util.log("changeWIFI(password): stdout: " + ssid + " " + line, this);
 					
 					proc.waitFor();
-					Util.log("changeWIFI(password): (with password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
+					Util.log("changeWIFI(password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
 					
 					proc.waitFor();						
 					Util.log("changeWIFI(password): exit code: " + proc.exitValue(), this);
@@ -649,4 +656,88 @@ public class NetworkMonitor {
 	public long getLast() {
 		return pingLast;
 	}
+	
+
+	/*
+	public class TelnetTask extends TimerTask {
+		
+		Socket socket = new Socket();
+		BufferedReader input = null;
+		BufferedWriter output = null;
+		
+		
+		public TelnetTask(){
+			
+			try {
+				socket.connect(new InetSocketAddress("192.168.1.7", 4444));
+			} catch (IOException e) {
+				e.printStackTrace();
+				return;
+			}
+			
+			try {
+				input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			try {
+				output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					
+					String str = null;
+					try {
+						while((str = input.readLine().trim()) != null){
+							
+							if(str.startsWith("<multiline>")){
+							
+								map.clear();
+								for(;;){
+								
+									str = input.readLine().trim();
+									
+									if(str.startsWith("</multiline>")) break;
+																	
+									String key = str.split(" ")[0];
+									String value = str.split(" ")[1];
+									map.put(key, value);
+									
+								}
+							}
+							
+							else System.out.println("update: " + str);
+							
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					
+				}
+			}).start();
+			
+		}
+		
+		@Override
+		public void run() {
+			try {
+				
+				output.flush();
+				output.write("state");
+				output.newLine(); 
+				output.flush();
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+	*/
+	
 }
