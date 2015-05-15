@@ -67,7 +67,7 @@ public class DashboardServlet extends HttpServlet {
 			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
 		}
 			
-		if(delay == null) delay =  HTTP_REFRESH_DELAY_SECONDS;
+		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 
 		if(password != null){
 			monitor.changeWIFI(router, password);
@@ -76,6 +76,20 @@ public class DashboardServlet extends HttpServlet {
 		}
 		
 		if(action != null){ 
+			
+			if(action.equals("delete")  && (router != null)){	
+				
+				if(state.equals(values.ssid, router)){
+					Util.log("can't delete if conncted: " + router, this);
+					response.sendRedirect("dashboard");     
+					return;
+				}
+				
+				Util.log(request.getServerName()+" delete: " + router, this);
+				monitor.removeConnection(router);	
+				response.sendRedirect("dashboard");     
+				return;
+			}
 			
 			if(action.equals("connect")  && (router != null)){	
 				if(monitor.connectionExists(router)){
@@ -294,8 +308,14 @@ public class DashboardServlet extends HttpServlet {
 		
 		String list = " " + "connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
+		
+	//	final String router = "<a href=\"http://" + url + "?action=connect&router=";
+	//	for(int i = 0 ; i < ap.length ; i++) list += (router + ap[i] + "\">" + ap[i] + "</a><br /> \n");
+	
+		final String delete = "<a href=\"http://" + url + "?action=delete&router=";
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++) list += (router + ap[i] + "\">" + ap[i] + "</a><br /> \n");
+		for(int i = 0 ; i < ap.length ; i++)
+			list += router + ap[i] + "\">" + ap[i] + "</a> " + delete + ap[i] + "\"> x </a> <br />\n";
 		 
 		list += "<hr>access points <hr>  \n";
 		ap = monitor.getAccessPoints();		
@@ -345,7 +365,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");		
 		String footer = "oculus prime version <b>" + new Updater().getCurrentVersion() + "</b>";
-		if(settings.getBoolean(ManualSettings.developer)) footer += "  <i>**developer mode enabled**</i>";
+		if(settings.getBoolean(ManualSettings.developer)) footer += "  <i>*developer mode active*</i>";
 		str.append("\n<tr><td colspan=\"11\">"+footer+"</tr> \n");		
 		str.append("\n</table>\n");
 		return str.toString();

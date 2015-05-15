@@ -14,30 +14,28 @@ import oculusPrime.State.values;
 
 public class NetworkMonitor {
 
-	public static final long AP_TIME_OUT = 10000;
-	public static final long AP_PING_FAILS = 20;
+	public static final long AP_TIME_OUT = 5000;
+	public static final long AP_PING_FAILS = 10;
 	public static final String AP = "ap";
-	
+
 	private static Vector<String> wlanData = new Vector<String>();
 	private static Vector<String> ethData = new Vector<String>();
 	private static Vector<String> accesspoints = new Vector<String>();
 	private static Vector<String> networkData = new Vector<String>();
 	private static Vector<String> connections = new Vector<String>();
-
+	private static long pingLast = System.currentTimeMillis();
+	private static Settings settings = Settings.getReference();
+	private static State state = State.getReference();	
+	private static Application application = null; 
+	private static boolean changingWIFI = false;
 	private static Timer networkTimer = new Timer();
 	private static Timer pingTimer = new Timer();
-	
-	private static long pingLast = System.currentTimeMillis();
 	private static String pingValue = null;
+	private static int externalLookup = 0;
 	private static int apModeCounter = 0;
 	private static int pingCounter = 0;
 	private static int pingFails = 0;
-	private static int externalLookup = 0;
-	private static boolean changingWIFI = false;
-	private static State state = State.getReference();
-	private static Settings settings = Settings.getReference();
-	private static Application application = null; 
-
+	
 	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static void setApp(Application a) { application = a;}
 	public static NetworkMonitor getReference() { return singleton; }
@@ -54,7 +52,7 @@ public class NetworkMonitor {
 
 		runNetworkTool();
 		connectionUpdate();
-		connectionsNever();		
+		// connectionsNever();		
 	}
 
 	private void doAP(){
@@ -82,7 +80,7 @@ public class NetworkMonitor {
 		// ping and see if recovers, let Linux try other connections.. 
 		for(int i = 0 ; i < AP_PING_FAILS ; i++ ){
 			Util.delay(1500);
-			Util.log("panicPings(): fail: " + i, this);
+			// Util.log("panicPings(): fail: " + i, this);
 			pingValue = Util.pingWIFI(state.get(values.gateway));
 			if(pingValue == null) pingFails++;
 			else pingLast = System.currentTimeMillis();	
@@ -91,7 +89,7 @@ public class NetworkMonitor {
 		}
 		
 		if(pingFails >= AP_PING_FAILS){
-			Util.log("panicPings(): ... starting ap mode now", this);
+			Util.log("panicPings(): ... starting ap mode now!", this);
 			pingLast = System.currentTimeMillis();
 			pingCounter = 0;
 			pingFails = 0;
@@ -109,7 +107,7 @@ public class NetworkMonitor {
     			
     		if(state.exists(values.gateway) && !changingWIFI){ 
     			
-    			pingCounter++; // how long connected messure 
+    			pingCounter++; // how long connected measure 
     			if(pingCounter% 100 == 0) Util.debug("NetworkMonitor.pingTask(): ping count = " + pingCounter, null);
     			
     			pingValue = Util.pingWIFI(state.get(values.gateway));
@@ -123,7 +121,11 @@ public class NetworkMonitor {
 		@Override
 		public void run() {
 			try{
-				if(settings.getBoolean(ManualSettings.networkmonitor)) runNetworkTool();
+				if(settings.getBoolean(ManualSettings.networkmonitor)) {
+					runNetworkTool();
+				 	connectionUpdate();
+				}
+	
 				if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
 			} catch (Exception e) {
 				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
@@ -161,7 +163,7 @@ public class NetworkMonitor {
 			parseETH();
 			
 		} catch (Exception ex){
-			Util.debug("networkTask: nm-tool failure: " + ex.getLocalizedMessage(), this);
+			Util.log("networkTask: nm-tool failure: " + ex.getLocalizedMessage(), this);
 		}
 	}
 	
@@ -170,6 +172,8 @@ public class NetworkMonitor {
 		for(int i = 0 ; i < routers.length ; i++)
 		Util.log(i + " tryAnyConnection: " + routers[i], this);
 		String ssid = routers[ new Random().nextInt(routers.length) ];
+		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
+		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		Util.log("tryAnyConnection: " + ssid, this);
 		changeWIFI(ssid);
 	}
@@ -193,8 +197,9 @@ public class NetworkMonitor {
 			while ((line = procReader.readLine()) != null){
 				line = line.trim();
 				if(line.endsWith("never")){
-					Util.debug("connectionsNever: " + line, this);
+					Util.debug("connectionsNever(): " + line, this);
 					removeConnection(line.substring(0, 8).trim());
+					// TODO: MAGIC NUMBER... 
 				}
 			}
 		} catch (Exception e) {
@@ -202,21 +207,29 @@ public class NetworkMonitor {
 		}
 	}
 
-	private void removeConnection(final String ssid){
+	public void removeConnection(final String ssid){
+		
+		if(ssid.equals(AP)) {
+			Util.log("removeConnection(): can't remove AP", this);
+			return;
+		}
+		
 		try {
+
 			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
-			BufferedReader procReader = new BufferedReader(
-					new InputStreamReader(proc.getInputStream()));
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){
-				line = line.trim();
-				if(line.endsWith("never")){
-					Util.log("removeConnection: " + line, this);
-				}
+				Util.log("removeConnection(): " + line, this);
 			}
+			
+			Util.log("removeConnection(): waitfor: " + proc.waitFor(), this);
+			Util.log("removeConnection(): exitvalue " + proc.exitValue(), this);
+			connectionUpdate();
+			
 		} catch (Exception e) {
-			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
+			Util.log("removeConnection(): " + e.getLocalizedMessage(), this);
 		}
 	}
 
@@ -255,7 +268,7 @@ public class NetworkMonitor {
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){
-				if( !line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
+				if( !line.startsWith("NAME") && line.contains("wireless") )// && !line.contains("never"))
 					connections.add(line);
 			}
 		} catch (Exception e) {
@@ -265,7 +278,23 @@ public class NetworkMonitor {
 
 	public void changeWIFI(final String ssid, final String password){
 	
+		if(ssid == null) return; 
+		
+		if(changingWIFI){
+			Util.log("changeWIFI(): busy, rejected", this);
+			return;
+		}
+		
+		if(state.exists(values.ssid)){
+			if(state.get(values.ssid).equals(ssid)) {
+				Util.log("changeWIFI(): already is the ssid", this);
+				return;
+			}
+		}
+		
+		changingWIFI = true;
 		disconnecteddWAN();
+		killApplet();
 		
 		new Thread(){
 		    public void run() {
@@ -283,8 +312,10 @@ public class NetworkMonitor {
 					proc.waitFor();
 					Util.log("changeWIFI(): (with password):" + ssid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
 					
-					Util.delay(1200);
+					Util.delay(1000);
 					runNetworkTool();
+					connectionUpdate();
+					changingWIFI = false;
 					
 		    	} catch (Exception e) {
 					Util.log("changeWIFI(): [" + ssid + "] ", e, this); 
@@ -343,6 +374,7 @@ public class NetworkMonitor {
 					
 					Util.delay(1000);
 					runNetworkTool();
+					connectionUpdate();
 					changingWIFI = false;
 					
 				} catch (Exception e) {
@@ -418,10 +450,10 @@ public class NetworkMonitor {
 		state.delete(values.localaddress);
 		state.delete(values.signalspeed);
 		state.delete(values.gateway);
-		pingValue = "0"; 
-		apModeCounter = 0;
 		externalLookup = 0;
+		apModeCounter = 0;
 		pingCounter = 0;
+		pingValue = "0"; 
 		pingFails = 0;
 	}
 
@@ -432,7 +464,6 @@ public class NetworkMonitor {
 
 			if(line.contains("State: ")){
 				if(line.contains("unavailable")){
-					// Util.debug("...parseETH: NOT available", this);
 					state.delete(values.ethernetaddress);
 					return;
 				}
@@ -484,7 +515,7 @@ public class NetworkMonitor {
 			if(wlanData.get(i).startsWith("Address: ")){
 
 				String addr = line.substring(line.indexOf("Address: ")+9).trim();
-				Util.debug("parseWLAN: addr: " + addr, this);	
+				// Util.debug("parseWLAN: addr: " + addr, this);	
 				if(Util.validIP(addr)){
 
 					if( ! state.exists(values.localaddress)) state.set(values.localaddress, addr);
@@ -535,9 +566,7 @@ public class NetworkMonitor {
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
 			if(accesspoints.get(j).contains(":")){
 				String ssid = accesspoints.get(j).substring(0, accesspoints.get(j).indexOf(":")).trim();
-				if( ! aps.contains(ssid))
-					if( ! connectionExists(ssid))
-						aps.add(ssid);
+				if( ! aps.contains(ssid) && ! connectionExists(ssid)) aps.add(ssid);
 			}
 		}
 
@@ -570,8 +599,13 @@ public class NetworkMonitor {
 				while ((i = in.read()) != -1) address += (char)i;
 				in.close();
 
-				if(Util.validIP(address)) state.put(values.externaladdress, address);
-				else Util.log("read invalid address from server", this);
+				if(Util.validIP(address)) {
+					externalLookup = 0;
+					state.put(values.externaladdress, address);
+				} else {
+					state.delete(values.externaladdress);
+					Util.log("read invalid address from server", this);
+				}
 		
 			} catch (Exception e) {
 				Util.log("updateExternalIPAddress():"+ e.getMessage(), this);
