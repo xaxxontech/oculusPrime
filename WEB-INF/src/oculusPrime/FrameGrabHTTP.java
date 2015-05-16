@@ -10,6 +10,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
@@ -24,16 +25,17 @@ import java.util.Calendar;
 
 @SuppressWarnings("serial")
 public class FrameGrabHTTP extends HttpServlet {
-	
+		
+	private static BufferedImage radarImage = null;
 	private static Application app = null;
 	private static State state;
-	
+	private static BanList ban;
 	private static int var;
-	private static BufferedImage radarImage = null;
 	
 	public static void setApp(Application a) {
 		if(app != null) return;
 		state = State.getReference();
+		ban = BanList.getRefrence();
 		app = a;
 		var = 0;
 	}
@@ -43,6 +45,14 @@ public class FrameGrabHTTP extends HttpServlet {
 	}
 	
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		
+		if( ! ban.knownAddress(req.getServerName())){
+			Util.log("unkown address: danger..", this);
+			// out.println("this address is unknown, check banlist..");
+			// out.close();	
+			return;
+		}
+		
         if (req.getParameter("mode") != null) {
 
         	String mode = req.getParameter("mode");

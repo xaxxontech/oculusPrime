@@ -17,7 +17,7 @@ public class DashboardServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "4";
-	
+	static final double VERSION = new Updater().getCurrentVersion();
 	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
 	BanList ban = BanList.getRefrence();
@@ -49,6 +49,13 @@ public class DashboardServlet extends HttpServlet {
 			return;
 		}
 		*/	
+
+		if( ! ban.knownAddress(request.getServerName())){
+			Util.log("unkown address: danger..", this);
+			//out.println("this address is unknown, check banlist..");
+			//out.close();	
+			return;
+		}
 		
 		String action = null;
 		String router = null; 
@@ -151,7 +158,6 @@ public class DashboardServlet extends HttpServlet {
 				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
 				out.println("\n" + PowerLogger.tail(5) + "\n");
-				// .getReference().getBoolean(ManualSettings.developer);
 				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
 				out.println("\n" + ban.tail(7) + "\n");
 				out.println("\n</body></html> \n");
@@ -221,20 +227,12 @@ public class DashboardServlet extends HttpServlet {
 				+ "<td><b>navigationrouteid</b><td>" + state.get(values.navigationrouteid) 
 				+ "</tr> \n");
 		
-	//	str.append("<tr>"
-	//			+ "<td><b>rosmapinfo</b><td colspan\"3\">" + state.get(values.rosmapinfo) 
-			//	+ "<td><b>rosamcl</b><td>" + state.get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + state.get(values.rosglobalpath) 
-	//			+ "</tr> \n");
-		
 		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
 		
 		str.append("<tr>" // long line
 				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) 
 				+ "</tr> \n");
 				
-		
-		
 		str.append("\n</table>\n");
 		return str.toString();
 	}
@@ -285,20 +283,8 @@ public class DashboardServlet extends HttpServlet {
 				+ "<td><b>navigationrouteid</b><td>" + state.get(values.navigationrouteid) 
 				+ "</tr> \n");
 		
-	//	str.append("<tr>"
-	//			+ "<td><b>rosmapinfo</b><td colspan\"3\">" + state.get(values.rosmapinfo) 
-			//	+ "<td><b>rosamcl</b><td>" + state.get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + state.get(values.rosglobalpath) 
-	//			+ "</tr> \n");
-		
 		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
-		
-		str.append("<tr>" // long line
-				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) 
-				+ "</tr> \n");
-				
-		
-		
+		str.append("<tr><td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) + "</tr> \n");
 		str.append("\n</table>\n");
 		return str.toString();
 	}
@@ -307,12 +293,9 @@ public class DashboardServlet extends HttpServlet {
 		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"0\">  \n");
 		
-		String list = "oculus prime <br />version <b>" + new Updater().getCurrentVersion() + "</b><br /><br />connections <hr> \n";
+		String list = "oculus prime <br />version <b>" + VERSION + "</b><br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
-	//	final String router = "<a href=\"http://" + url + "?action=connect&router=";
-	//	for(int i = 0 ; i < ap.length ; i++) list += (router + ap[i] + "\">" + ap[i] + "</a><br /> \n");
-	
 		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++)
@@ -327,9 +310,6 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
 		
-		// if(state.exists(values.signalspeed))
-		//	str.append("  <b>"+ state.get(values.signalspeed) + "</b>" );
-				
 		str.append("<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLast()) + "   " 
 				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
 				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
@@ -349,20 +329,6 @@ public class DashboardServlet extends HttpServlet {
 				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
 				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
 				
-	/*			
-		str.append("<tr><td><b>video mode </b>" + state.get(values.videosoundmode) + " <b>stream </b>" + state.get(values.stream)
-				+ "<td><b>driverstream </b>" + state.get(values.driverstream) + " <b>volume </b>" + state.get(values.volume)
-			    + "<td><b>busy </b>" + state.get(values.framegrabbusy)    odomturnpwm
-			    + "<td><b>driver </b>" + state.get(values.driver) 
-		        + "<td><b>telnet </b>" + state.get(values.telnetusers) 
-				+ "</tr>")
-	       	   + "<td><b>booted: </b>" + new Date(getLong(values.boottime)) 
-		       + "<td><b>login: </b><td>" + new Date(getLong(values.logintime)) 
-				+ "<td><b>linux uptime (minutes) </b>" + (((System.currentTimeMillis() - getLong(values.linuxboot)) / 1000) /60)
-		        + "<td><b>java uptime (minutes) </b>" + (getUpTime()/1000)/60 
-	*/	
-		
-		//if(state.exists(values.powererror)) str.append("\n<tr><td colspan=\"11\">" + state.get(values.powererror) + "</tr> \n");
 		// str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(15) + "</tr> \n");		
 		// String footer = "oculus prime version <b>" + new Updater().getCurrentVersion() + "</b>";
