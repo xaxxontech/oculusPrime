@@ -234,11 +234,11 @@ public class NetworkMonitor {
 					if(deletedAttempts++ > 5){
 						Util.log("removeConnection(): attempts = " + deletedAttempts, this);
 						deletedAttempts = 0;
-						changingWIFI = true;
+						//changingWIFI = true;
 						return;
 					}
 					
-					changingWIFI = true;
+					///changingWIFI = true;
 					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
 
@@ -256,7 +256,7 @@ public class NetworkMonitor {
 					}
 					
 					connectionUpdate();
-					changingWIFI = false;
+					// changingWIFI = false;
 					
 				} catch (Exception e) {
 					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);

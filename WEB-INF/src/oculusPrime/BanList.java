@@ -27,16 +27,16 @@ public class BanList {
 	public static final int BAN_ATTEMPTS = 3;
 	public static final int MAX_ATTEMPTS = 5;	
 	public static final int MAX_HISTORY = 10;
-	protected static State state = State.getReference();
-
+	
 	private HashMap<String, Integer> attempts = new HashMap<String, Integer>();
 	private HashMap<String, Long> blocked = new HashMap<String, Long>();
 	private Vector<String> history = new Vector<String>();
-	private Vector<String> known = new Vector<String>();
 	private Vector<String> banned = new Vector<String>();
+	private Vector<String> known = new Vector<String>();
+	private State state = State.getReference();
 	private RandomAccessFile logfile = null;
-	private Timer timer = new Timer();
 	private boolean override = false; 
+	private Timer timer = new Timer();
 	
 	static BanList singleton = new BanList();
 	public static BanList getRefrence(){
@@ -75,7 +75,7 @@ public class BanList {
 			Util.debug("BanList(): " + e.getMessage());
 		}
 		
-		// override = Settings.getReference().getBoolean(ManualSettings.developer);
+		override = Settings.getReference().getBoolean(ManualSettings.developer);
 		if(override) Util.log("BanList(): disabled, developer mode enabled", this);
 		else timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}
@@ -139,6 +139,7 @@ public class BanList {
 			
 		if(banned.contains(address)) {
 			appendLog("banned address: " + address);
+			if(known.contains(address)) known.remove(address);
 			return true;
 		}
 		
@@ -149,6 +150,7 @@ public class BanList {
 			
 			if(attempts.get(address) >= MAX_ATTEMPTS){
 				appendLog("now banned: " + address);
+				if(known.contains(address)) known.remove(address);
 				addBlockedFile(address);
 			}
 			
@@ -161,11 +163,13 @@ public class BanList {
 	
 	public synchronized boolean knownAddress(final String address) {
 		
-		// if(override) return true;
+		if(override) return true;
 		
-		// if(address.equals("127.0.0.1")) return true;
+		if(address.equals("127.0.0.1")) return true;
 		
-		appendLog("knownAddress(): " + address);
+		if(isBanned(address)) return false;
+
+		// appendLog("knownAddress(): " + address);
 		
 		return known.contains(address);
 	}
@@ -180,7 +184,7 @@ public class BanList {
 		
 		if(remoteAddress.equals("127.0.0.1") || override) return;
 	
-		if(banned.contains(remoteAddress)) Util.log(".. failed sanity check: " + user, this);
+		if(banned.contains(remoteAddress)) Util.log("..failed sanity check: " + user, this);
 		
 		if(attempts.containsKey(remoteAddress)) attempts.put(remoteAddress, attempts.get(remoteAddress)+1);
 		else attempts.put(remoteAddress, 1);  
