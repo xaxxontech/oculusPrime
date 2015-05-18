@@ -157,7 +157,7 @@ public class BanList {
 			return true;
 		}
 		
-		appendLog("passed isBanned(): " + address);
+		// appendLog("passed isBanned(): " + address);
 		return false;
 	}
 	
@@ -168,8 +168,6 @@ public class BanList {
 		if(address.equals("127.0.0.1")) return true;
 		
 		if(isBanned(address)) return false;
-
-		// appendLog("knownAddress(): " + address);
 		
 		return known.contains(address);
 	}
@@ -184,11 +182,13 @@ public class BanList {
 		
 		if(remoteAddress.equals("127.0.0.1") || override) return;
 	
-		if(banned.contains(remoteAddress)) Util.log("..failed sanity check: " + user, this);
+		if(banned.contains(remoteAddress)) Util.log("DANGEROUS..failed sanity check: " + user, this);
 		
 		if(attempts.containsKey(remoteAddress)) attempts.put(remoteAddress, attempts.get(remoteAddress)+1);
 		else attempts.put(remoteAddress, 1);  
 			
+		if(known.contains(remoteAddress)) known.remove(remoteAddress);
+		
 		appendLog("login failed: " + remoteAddress + " user: " + user + " attempts: " + attempts.get(remoteAddress));
 
 		if(attempts.get(remoteAddress) >= BAN_ATTEMPTS){
@@ -227,7 +227,7 @@ public class BanList {
 	
 	@Override
 	public String toString(){
-		if(override) return "developer override: " + banned.toString() + " " + attempts.toString();
-		return banned.toString() + " " + attempts.toString() + " " + known.toString();
+		if(override) return "developer override: " + banned.toString();
+		return " banned: " + banned.toString() + "   known:" + known.toString();
 	}
 }

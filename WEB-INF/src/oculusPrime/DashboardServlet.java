@@ -52,8 +52,8 @@ public class DashboardServlet extends HttpServlet {
 
 		if( ! ban.knownAddress(request.getServerName())){
 			Util.log("unkown address: danger..", this);
-			//out.println("this address is unknown, check banlist..");
-			//out.close();	
+			out.println("this address is an unknown, check banlist..");
+			out.close();	
 			return;
 		}
 		
@@ -158,7 +158,7 @@ public class DashboardServlet extends HttpServlet {
 				out.println(Util.tail(15) + "\n");
 				out.println("\n<br />power log: <hr>\n");
 				out.println("\n" + PowerLogger.tail(5) + "\n");
-				out.println("\n<br />banned addresses: " +  ban + "<hr>\n");
+				out.println("\n<br />" +  ban + "<hr>\n");
 				out.println("\n" + ban.tail(7) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
@@ -229,9 +229,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
 		
-		str.append("<tr>" // long line
-				+ "<td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) 
-				+ "</tr> \n");
+		str.append("<tr><td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) + "</tr> \n");
 				
 		str.append("\n</table>\n");
 		return str.toString();

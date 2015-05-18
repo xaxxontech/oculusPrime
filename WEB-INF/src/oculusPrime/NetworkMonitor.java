@@ -90,7 +90,8 @@ public class NetworkMonitor {
 		}
 		
 		if(pingFails >= AP_PING_FAILS){
-			Util.log("panicPings(): ... starting ap mode now!", this);
+			Util.log("panicPings(): ... starting ap mode now, go to dock!", this);
+			application.driverCallServer(PlayerCommands.gotodock, null);
 			pingLast = System.currentTimeMillis();
 			pingCounter = 0;
 			pingFails = 0;
