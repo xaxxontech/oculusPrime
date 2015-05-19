@@ -50,7 +50,7 @@ public class NetworkMonitor {
 			pingTimer.schedule(new pingTask(), 10000, 1000);
 			networkTimer.schedule(new networkTask(), Util.ONE_MINUTE, Util.TWO_MINUTES);
 			killApplet();
-		}
+		} else return;
 		
 		runNetworkTool();
 		connectionsNever();		

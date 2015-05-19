@@ -938,6 +938,7 @@ function routesmenu() {
 		return;
 	}
 
+	clearTimeout(rosmapinfotimer);
 	str = document.getElementById("routes_menu").innerHTML;
 	str += "<div id='routesmenutest'> </div>";
 	popupmenu("menu","show",null,null,str);
