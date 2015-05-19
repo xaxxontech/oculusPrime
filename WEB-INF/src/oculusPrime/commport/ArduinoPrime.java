@@ -113,6 +113,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
+	private CommandSender cs;
 
 	public ArduinoPrime(Application app) {	
 		
@@ -135,8 +136,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 
 		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) {
-			new CommandSender().start();
+//			new CommandSender().start();
 			connect();
+			cs = new CommandSender();
+			cs.start();
 		}
 		initialize();
 		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
@@ -422,6 +425,12 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			Util.log("resetting MALG board", this);
 			disconnect();
 			connect();
+			if (cs.isAlive()) {
+				Util.log("error, CommmandSender still alive", this);
+//				return;
+			}
+			cs = new CommandSender();
+			cs.start();
 			initialize();
 			}
 		}).start();
@@ -516,22 +525,18 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		public void run() {
 
-			while (true) {
+			while (isconnected) {
 				if (commandList.size() > 1 &! commandlock) { // >1 because NL required
 
-//					commandlock = true;
-
 					if (!isconnected) {
-						Util.log("error, not connected", this); // TODO: could be normal reset or unavailable hwdr
-						commandList.clear();
-//						commandlock = false;
+						Util.log("error, not connected", this); // TODO: not needed
+//						commandList.clear();
 						continue;
 					}
 
 					if (commandList.size() > 15) { // buffer in firmware is now 32 (was 8) AVR is 64?
 						commandList.clear();
 						Util.log("error, command stack up, all dropped", this);
-//						commandlock = false;
 						continue;
 					}
 
@@ -540,7 +545,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						String str = "";
 						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
 						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
-//						commandlock = false;
 						Util.delay(1);
 						continue;
 					}
@@ -551,8 +555,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						c[i]=commandList.get(0);
 						commandList.remove(0);
 					}
-
-//					commandlock = false;
 
 					try {
 
@@ -570,6 +572,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				Util.delay(1);
 
 			}
+
+			Util.log("CommandSender thread exit, isconnected false", this);
 		}
 	}
 

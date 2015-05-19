@@ -31,7 +31,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 999;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 999; // TODO: set to 15 in production
 	private final Settings settings = Settings.getReference();
 
 	/** Constructor */
@@ -254,7 +254,8 @@ public class Navigation {
 					return;
 				}
 			}
-			
+
+			SystemWatchdog.waitForCpu();
 			app.driverCallServer(PlayerCommands.autodock, autodockmodes.go.toString());
 			
 			// wait while autodocking does its thing 
@@ -419,9 +420,9 @@ public class Navigation {
 					for (int i=0; i<daynums.length; i++) {
 
 						// check if need to start run right away
-						if (daynums[i] == daynow -1 || daynums[i] == daynow) { // yesterday or today
+						if (daynums[i] == daynow -1 || daynums[i] == daynow || (daynums[i]==7 && daynow == 1)) { // yesterday or today
 							Calendar testday = Calendar.getInstance();
-							if (daynums[i] == daynow -1) { // yesterday
+							if (daynums[i] == daynow -1 || (daynums[i]==7 && daynow == 1)) { // yesterday
 								testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
 										calendarnow.get(Calendar.DATE) - 1, starthour, startmin);
 							}
@@ -694,7 +695,7 @@ public class Navigation {
 		// setup camera
 		if (camera) {
 			// save cpu using 320x240, or increase frame rate delay
-    		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+    		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
     		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
     	}
 
@@ -791,7 +792,7 @@ public class Navigation {
 //				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
 												// TODO: testing 1000, still happening
 //				app.driverCallServer(PlayerCommands.left, "45");
-//				Util.delay(2000); // TODO: put this back, just testing
+				Util.delay(2000);
 				if (!SystemWatchdog.waitForCpu()) break; // lots of missed stop commands here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;

@@ -338,11 +338,12 @@ public class AutoDock {
 							Util.delay(400);
 							comport.stopGoing();
 
-							comport.floodLight(0);	
-							
-							String str = "motion disabled dock "+UNDOCKED+" battery draining cameratilt "
-									+state.get(State.values.cameratilt)+" autodockcancelled blank";
-							app.message("autodock completely failed", "multiple", str);
+//							comport.floodLight(0);
+//
+//							String str = "motion disabled dock "+UNDOCKED+" battery draining cameratilt "
+//									+state.get(State.values.cameratilt)+" autodockcancelled blank";
+							app.message("autodock completely failed", null, null);
+							autoDockCancel();
 						}
 					}
 						
@@ -483,7 +484,7 @@ public class AutoDock {
 						comport.clickSteer(lastcamctr, 0);
 						comport.delayWithVoltsComp(allowforClickSteer);
 
-						SystemWatchdog.waitForCpu(); // lots of missed stops here
+//						SystemWatchdog.waitForCpu(); // lots of missed stops here
 						comport.goForward();
 						comport.delayWithVoltsComp(s2FWDmilliseconds);
 						comport.stopGoing(); // often subject to lag!

@@ -134,7 +134,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageGrabber(str, "connection awaiting&nbsp;connection");
 			loginRecords.signoutDriver();
 
-			if (!state.getBoolean(State.values.autodocking)) { //if autodocking, keep autodocking
+			//if autodocking, keep autodocking
+			if (!state.getBoolean(State.values.autodocking) && !state.exists(values.navigationroute)) {
 				
 				if (!state.get(State.values.driverstream).equals(driverstreamstate.pending.toString())) {
 				

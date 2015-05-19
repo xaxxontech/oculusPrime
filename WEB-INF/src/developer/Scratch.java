@@ -14,26 +14,6 @@ import java.util.List;
 public class Scratch {
 
 
-    public long[] readProcStat() {
-        try {
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
-            String line = reader.readLine();
-            reader.close();
-
-            String[] values = line.split("\\s+");
-
-            long total = 0;
-            for (int i=1;i<=4;i++)
-                total += Long.valueOf(values[i]);
-            long idle = Long.valueOf(values[4]);
-            return new long[] { total, idle};
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public static void main(String[] args) {
 
@@ -61,26 +41,50 @@ public class Scratch {
 //        if (nextday > daynums.length-1 ) nextday = 0;
 //        System.out.println(daynums[nextday]);
 
-//        Util.delay(2000);
-//
-//        Scratch scratch = new Scratch();
-//        long[] procStat = scratch.readProcStat();
-//        long totproc1st = procStat[0];
-//        long totidle1st = procStat[1];
-//        Util.delay(100);
-//        procStat = scratch.readProcStat();
-//        long totproc2nd = procStat[0];
-//        long totidle2nd = procStat[1];
-//        int percent = (int) ((double) ((totproc2nd-totproc1st) - (totidle2nd - totidle1st))/ (double) (totproc2nd-totproc1st) * 100);
-//        System.out.println(percent);
-//
-//        Util.delay(2000);
-//
-//        System.out.println(Util.getCPUTop());
-        int i = 100;
-        final int intensity = i * 255 / 100;
 
-        System.out.println(intensity);
+        int[] daynums = new int[] {2,3,4,5,6};
+        int starthour = 23;
+        int startmin = 0;
+        int routedurationhours = 18;
+
+        Calendar calendarnow = Calendar.getInstance();
+//        calendarnow.setTime(new Date());
+        calendarnow.set(2015, 4, 17, 0, 10);
+        System.out.println(calendarnow.getTime());
+
+        int daynow = calendarnow.get(Calendar.DAY_OF_WEEK); // 1-7 (friday is 6)
+        System.out.println("daynow day of week: "+daynow);
+
+        boolean startroute = false;
+        int nextdayindex = 99;
+
+        for (int i=0; i<daynums.length; i++) {
+
+            // check if need to start run right away
+            if (daynums[i] == daynow -1 || daynums[i] == daynow || (daynums[i]==7 && daynow == 1)) { // yesterday or today
+                Calendar testday = Calendar.getInstance();
+                if (daynums[i] == daynow -1 || (daynums[i]==7 && daynow == 1)) { // yesterday
+                    testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+                            calendarnow.get(Calendar.DATE) - 1, starthour, startmin);
+                }
+                else { // today
+                    testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+                            calendarnow.get(Calendar.DATE), starthour, startmin);
+                }
+                if (calendarnow.getTimeInMillis() >= testday.getTimeInMillis() && calendarnow.getTimeInMillis() <
+                        testday.getTimeInMillis() + (routedurationhours * 60 * 60 * 1000)) {
+                    startroute = true;
+                    break;
+                }
+
+            }
+
+        }
+
+        if (startroute) System.out.println("start");
+        else System.out.println("not start");
+
+
      }
 }
 
