@@ -11,6 +11,7 @@ import java.util.TimerTask;
 import java.util.Vector;
 
 import oculusPrime.State.values;
+import oculusPrime.commport.ArduinoPrime;
 
 public class NetworkMonitor {
 
@@ -58,17 +59,21 @@ public class NetworkMonitor {
 
 	private void doAP(){
 		try {
+			
 			if (application != null) {
-				if(apModeCounter++ % 5 ==0){ // slow down flashes
+				if(apModeCounter++ % 10 == 0){ // slow down flashes					
 					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-					// Util.log("NetworkMonitor.doAP() .. in AP mode: "+apModeCounter, null);
+					Util.log("NetworkMonitor.doAP() in AP mode: "+apModeCounter, null);
 				}
 			}
-			if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
-				Util.log("NetworkMonitor().pingTask() .. in AP mode for five minutes", null);
+			
+			if ((System.currentTimeMillis() - pingLast) > Util.TWO_MINUTES ){ // FIVE_MINUTES) {
+				Util.log("NetworkMonitor().pingTask() in AP mode for five minutes: "+apModeCounter, null);
 				pingLast = System.currentTimeMillis();
 				tryAnyConnection();
 			}
+			
+			
 		} catch (Exception e) {
 			Util.log("NetworkMonitor.doAP(): ", e, null);
 		}
@@ -77,10 +82,12 @@ public class NetworkMonitor {
 	private void panicPings(){
 		
 		pingLast = System.currentTimeMillis();
+		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name());
+		application.driverCallServer(PlayerCommands.chat, "wifi error, halt..");
 		
 		// ping and see if recovers, let Linux try other connections.. 
 		for(int i = 0 ; i < AP_PING_FAILS ; i++ ){
-			Util.delay(1500);
+			Util.delay(1100);
 			// Util.log("panicPings(): fail: " + i, this);
 			pingValue = Util.pingWIFI(state.get(values.gateway));
 			if(pingValue == null) pingFails++;
@@ -90,8 +97,8 @@ public class NetworkMonitor {
 		}
 		
 		if(pingFails >= AP_PING_FAILS){
-			Util.log("panicPings(): ... starting ap mode now, go to dock!", this);
-			application.driverCallServer(PlayerCommands.gotodock, null);
+			Util.log("panicPings(): ... starting ap mode now, go to dock???", this);
+			/// application.driverCallServer(PlayerCommands.gotodock, null);
 			pingLast = System.currentTimeMillis();
 			pingCounter = 0;
 			pingFails = 0;
@@ -102,17 +109,8 @@ public class NetworkMonitor {
 	public class pingTask extends TimerTask {			
 	    @Override
 	    public void run() {
-	    	/*
-	    	if( !state.exists(values.ssid) || changingWIFI) {
-	    		Util.debug("NetworkMonitor.pingTask(): wifi changing...", null);
-				application.driverCallServer(PlayerCommands.strobeflash, "on 500 00");
-	    		return; 
-	    	}
-	    	*/
-	    	if(state.equals(values.ssid, AP)) { 
-	    		doAP(); 
-	    		return; 
-	    	}
+	    	
+	    	if(state.equals(values.ssid, AP)) { doAP(); return; }
     			
     		if(((System.currentTimeMillis() - pingLast) > AP_TIME_OUT) && !changingWIFI) panicPings();
     			
@@ -235,11 +233,9 @@ public class NetworkMonitor {
 					if(deletedAttempts++ > 5){
 						Util.log("removeConnection(): attempts = " + deletedAttempts, this);
 						deletedAttempts = 0;
-						//changingWIFI = true;
 						return;
 					}
 					
-					///changingWIFI = true;
 					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
 
@@ -247,7 +243,6 @@ public class NetworkMonitor {
 					while ((line = procReader.readLine()) != null)
 						Util.log("removeConnection(): " + line, this);
 					
-					// Util.log("removeConnection(): waitfor: " + proc.waitFor(), this);
 					
 					if(proc.exitValue() == 0){
 						Util.log("removeConnection(): failed, try again, error code = " + proc.waitFor(), this);
@@ -255,9 +250,9 @@ public class NetworkMonitor {
 					} else {
 						deletedAttempts = 0;
 					}
-					
+
+					Util.delay(300);
 					connectionUpdate();
-					// changingWIFI = false;
 					
 				} catch (Exception e) {
 					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);

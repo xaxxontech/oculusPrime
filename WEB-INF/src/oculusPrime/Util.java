@@ -300,9 +300,11 @@ public class Util {
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
 		for(; i < history.size() ; i++) {
-			String line = history.get(i).substring(history.get(i).indexOf(",")+1);
-			// if(line.startsWith("oculusprime")) line = line.substring(13);
-			str.append(line + "\n<br />"); 
+			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim().toLowerCase();
+			line = line.replaceFirst("\\$[0-9]", "");
+			line = line.replaceFirst("^oculusprime.", "");
+			line = line.replaceFirst("^static, ", "");		
+			str.append(line + "<br /> \n"); 
 		}
 		return str.toString();
 	}
@@ -313,7 +315,7 @@ public class Util {
 	
 	public static void log(String str, Object c) {
     	if(str == null) return;
-		String filter = "STATIC";
+		String filter = "static";
 		if(c!=null) filter = c.getClass().getName().toLowerCase();
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(getTime() + ", " + filter + ", " +str);
@@ -322,7 +324,7 @@ public class Util {
 	
     public static void debug(String str, Object c) {
     	if(str == null) return;
-    	String filter = "STATIC";
+    	String filter = "static";
     	if(c!=null) filter = c.getClass().getName().toLowerCase();
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);

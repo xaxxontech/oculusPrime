@@ -167,6 +167,10 @@ public class BanList {
 		
 		if(address.equals("127.0.0.1")) return true;
 		
+		if(address.equals("10.42.0.1")) return true;
+		
+		if(address.equals("0.0.0.0")) return true;
+		
 		if(isBanned(address)) return false;
 		
 		return known.contains(address);

@@ -1388,10 +1388,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.systemCall(Settings.redhome + Settings.sep + "red5-shutdown.sh");
 	}
 
-	@SuppressWarnings("incomplete-switch")
 	public void move(final String str) {
 
-		if (str.equals(ArduinoPrime.direction.stop.toString())) {
+		if (str.equals(ArduinoPrime.direction.stop.name())) {
 			if (state.getBoolean(State.values.autodocking))
 				docker.autoDockCancel();
 
@@ -1423,7 +1422,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		switch (dir) {
 			case backward: comport.goBackward(); break;
 			case right: comport.turnRight(); break;
-			case left: comport.turnLeft(); 
+			case left: comport.turnLeft();
+			default: break; 
 		}
 	
 		messageplayer("command received: " + str, "motion", "MOVING");
