@@ -14,6 +14,8 @@ import java.util.Vector;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import oculusPrime.State.values;
+
 public class BanList {
 	
 	public static final String sep = System.getProperty("file.separator");
@@ -30,9 +32,11 @@ public class BanList {
 	private HashMap<String, Long> blocked = new HashMap<String, Long>();
 	private Vector<String> history = new Vector<String>();
 	private Vector<String> banned = new Vector<String>();
+	private Vector<String> known = new Vector<String>();
+	private State state = State.getReference();
 	private RandomAccessFile logfile = null;
-	private Timer timer = new Timer();
 	private boolean override = false; 
+	private Timer timer = new Timer();
 	
 	static BanList singleton = new BanList();
 	public static BanList getRefrence(){
@@ -73,7 +77,7 @@ public class BanList {
 		
 		override = Settings.getReference().getBoolean(ManualSettings.developer);
 		if(override) Util.log("BanList(): disabled, developer mode enabled", this);
-		else timer.scheduleAtFixedRate(new ClearTimer(), Util.ONE_MINUTE, Util.ONE_MINUTE);
+		else timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}
 	
 	public String tail(int lines){
@@ -135,6 +139,7 @@ public class BanList {
 			
 		if(banned.contains(address)) {
 			appendLog("banned address: " + address);
+			if(known.contains(address)) known.remove(address);
 			return true;
 		}
 		
@@ -145,30 +150,45 @@ public class BanList {
 			
 			if(attempts.get(address) >= MAX_ATTEMPTS){
 				appendLog("now banned: " + address);
+				if(known.contains(address)) known.remove(address);
 				addBlockedFile(address);
 			}
 			
 			return true;
 		}
 		
-		appendLog("passed isBanned(): " + address);
+		// appendLog("passed isBanned(): " + address);
 		return false;
+	}
+	
+	public synchronized boolean knownAddress(final String address) {
+		
+		if(override) return true;
+		
+		if(address.equals("127.0.0.1")) return true;
+		
+		if(isBanned(address)) return false;
+		
+		return known.contains(address);
 	}
 	
 	public synchronized void clearAddress(String address) {
 		if(attempts.containsKey(address)) attempts.remove(address);
 		if(blocked.containsKey(address)) blocked.remove(address);
+		if( ! known.contains(address)) known.add(address);
 	}
 	
 	public synchronized void loginFailed(final String remoteAddress, final String user) {
 		
 		if(remoteAddress.equals("127.0.0.1") || override) return;
 	
-		if(banned.contains(remoteAddress)) Util.log(".. failed sanity check: " + user, this);
+		if(banned.contains(remoteAddress)) Util.log("DANGEROUS..failed sanity check: " + user, this);
 		
 		if(attempts.containsKey(remoteAddress)) attempts.put(remoteAddress, attempts.get(remoteAddress)+1);
 		else attempts.put(remoteAddress, 1);  
 			
+		if(known.contains(remoteAddress)) known.remove(remoteAddress);
+		
 		appendLog("login failed: " + remoteAddress + " user: " + user + " attempts: " + attempts.get(remoteAddress));
 
 		if(attempts.get(remoteAddress) >= BAN_ATTEMPTS){
@@ -180,6 +200,15 @@ public class BanList {
 	private class ClearTimer extends TimerTask {
 		@Override
 		public void run() {
+				
+			if(state.exists(values.gateway) && !known.contains(state.get(values.gateway)))
+				known.add(state.get(values.gateway));
+			
+			if(state.exists(values.localaddress) && !known.contains(state.get(values.localaddress)))
+				known.add(state.get(values.localaddress));
+			
+			if(state.exists(values.ethernetaddress) && !known.contains(state.get(values.ethernetaddress)))
+				known.add(state.get(values.ethernetaddress));
 			
 			if(blocked.isEmpty()) return;
 						
@@ -198,7 +227,7 @@ public class BanList {
 	
 	@Override
 	public String toString(){
-		if(override) return "developer override: " + banned.toString() + " " + attempts.toString();
-		return banned.toString() + " " + attempts.toString();
+		if(override) return "developer override: " + banned.toString();
+		return " banned: " + banned.toString() + "   known:" + known.toString();
 	}
 }

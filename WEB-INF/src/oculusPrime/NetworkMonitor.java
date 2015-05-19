@@ -32,6 +32,7 @@ public class NetworkMonitor {
 	private static Timer pingTimer = new Timer();
 	private static String pingValue = null;
 	private static int externalLookup = 0;
+	private static int deletedAttempts = 0;
 	private static int failedConnetion = 0;
 	private static int apModeCounter = 0;
 	private static int pingCounter = 0;
@@ -63,7 +64,7 @@ public class NetworkMonitor {
 					// Util.log("NetworkMonitor.doAP() .. in AP mode: "+apModeCounter, null);
 				}
 			}
-			if ((System.currentTimeMillis() - pingLast) > Util.TWO_MINUTES ){ // .FIVE_MINUTES) {
+			if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
 				Util.log("NetworkMonitor().pingTask() .. in AP mode for five minutes", null);
 				pingLast = System.currentTimeMillis();
 				tryAnyConnection();
@@ -89,7 +90,8 @@ public class NetworkMonitor {
 		}
 		
 		if(pingFails >= AP_PING_FAILS){
-			Util.log("panicPings(): ... starting ap mode now!", this);
+			Util.log("panicPings(): ... starting ap mode now, go to dock!", this);
+			application.driverCallServer(PlayerCommands.gotodock, null);
 			pingLast = System.currentTimeMillis();
 			pingCounter = 0;
 			pingFails = 0;
@@ -219,7 +221,7 @@ public class NetworkMonitor {
 		}
 	}
 
-	public void removeConnection(final String ssid){
+	public synchronized void removeConnection(final String ssid){
 		
 		if(ssid.equals(AP)) {
 			Util.log("removeConnection(): can't remove AP", this);
@@ -230,28 +232,32 @@ public class NetworkMonitor {
 			public void run() {
 				try {
 		
-					changingWIFI = true;
-					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
-					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-					String line = null;
-					while ((line = procReader.readLine()) != null){
-						Util.log("removeConnection(): " + line, this);
+					if(deletedAttempts++ > 5){
+						Util.log("removeConnection(): attempts = " + deletedAttempts, this);
+						deletedAttempts = 0;
+						//changingWIFI = true;
+						return;
 					}
 					
-					pingLast = System.currentTimeMillis();
+					///changingWIFI = true;
+					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+
+					String line = null;
+					while ((line = procReader.readLine()) != null)
+						Util.log("removeConnection(): " + line, this);
 					
-					Util.log("removeConnection(): waitfor: " + proc.waitFor(), this);
-					Util.log("removeConnection(): exitvalue " + proc.exitValue(), this);
+					// Util.log("removeConnection(): waitfor: " + proc.waitFor(), this);
 					
 					if(proc.exitValue() == 0){
-						Util.log("removeConnection(): failed, try again: " + proc.waitFor(), this);
+						Util.log("removeConnection(): failed, try again, error code = " + proc.waitFor(), this);
 						removeConnection(ssid);
-						Util.delay(300);
+					} else {
+						deletedAttempts = 0;
 					}
 					
 					connectionUpdate();
-					changingWIFI = false;
+					// changingWIFI = false;
 					
 				} catch (Exception e) {
 					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);
