@@ -54,7 +54,7 @@ public class Util {
 		try {
 			Thread.sleep(delay);
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
+			printError(e);
 		}
 	}
 
@@ -393,7 +393,7 @@ public class Util {
 	}
 
 	public static void printError(Exception e) {
-		System.err.println("Error "+getTime()+ ":");
+		System.err.println("error "+getTime()+ ":");
 		e.printStackTrace();
 	}
 	

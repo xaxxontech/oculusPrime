@@ -557,7 +557,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					}
 
 					try {
-
 						// track last write
 						lastSent = System.currentTimeMillis();
 						serialPort.writeBytes(c); // writing as array ensures goes at baud rate?

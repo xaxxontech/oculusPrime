@@ -31,7 +31,7 @@ public class Navigation {
 	private static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 999; // TODO: set to 15 in production
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
 	private final Settings settings = Settings.getReference();
 
 	/** Constructor */

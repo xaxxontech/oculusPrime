@@ -207,7 +207,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				
 				// Util.debug("run....", this);
 
-				if (now - lastReset > RESET_DELAY && isconnected) PowerLogger.append(FIRMWARE_ID+" past reset delay", this);
+//				if (now - lastReset > RESET_DELAY && isconnected) PowerLogger.append(FIRMWARE_ID+" past reset delay", this);
 				
 				if (state.exists(oculusPrime.State.values.powererror)) {
 					final String msg = "power PCB code: " + state.get(oculusPrime.State.values.powererror);
