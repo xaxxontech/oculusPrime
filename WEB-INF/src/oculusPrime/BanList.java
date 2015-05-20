@@ -75,7 +75,7 @@ public class BanList {
 			Util.debug("BanList(): " + e.getMessage());
 		}
 		
-		override = Settings.getReference().getBoolean(ManualSettings.developer);
+		override = ! Settings.getReference().getBoolean(ManualSettings.checkaddresses);
 		if(override) Util.log("BanList(): disabled, developer mode enabled", this);
 		else timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}

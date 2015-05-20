@@ -6,13 +6,14 @@ public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
-	soundthreshold, motionthreshold, networkmonitor;
+	soundthreshold, motionthreshold, networkmonitor, checkaddresses;
 
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
 		config.setProperty(developer.name(), Settings.FALSE);
 		config.setProperty(debugenabled.name(), Settings.FALSE);
+		config.setProperty(checkaddresses.name(), Settings.TRUE);
 		config.setProperty(motorport.name(), Settings.ENABLED);
 		config.setProperty(powerport.name(), Settings.ENABLED);
 		config.setProperty(email_smtp_server.name(), Settings.DISABLED);
