@@ -67,7 +67,7 @@ public class NetworkMonitor {
 				}
 			}
 			
-			if ((System.currentTimeMillis() - pingLast) > Util.TWO_MINUTES ){ // FIVE_MINUTES) {
+			if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
 				Util.log("NetworkMonitor().pingTask() in AP mode for five minutes: "+apModeCounter, null);
 				pingLast = System.currentTimeMillis();
 				tryAnyConnection();
@@ -82,13 +82,10 @@ public class NetworkMonitor {
 	private void panicPings(){
 		
 		pingLast = System.currentTimeMillis();
-		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name());
-		application.driverCallServer(PlayerCommands.chat, "wifi error, halt..");
 		
 		// ping and see if recovers, let Linux try other connections.. 
 		for(int i = 0 ; i < AP_PING_FAILS ; i++ ){
 			Util.delay(1100);
-			// Util.log("panicPings(): fail: " + i, this);
 			pingValue = Util.pingWIFI(state.get(values.gateway));
 			if(pingValue == null) pingFails++;
 			else pingLast = System.currentTimeMillis();	
@@ -97,8 +94,6 @@ public class NetworkMonitor {
 		}
 		
 		if(pingFails >= AP_PING_FAILS){
-			Util.log("panicPings(): ... starting ap mode now, go to dock???", this);
-			/// application.driverCallServer(PlayerCommands.gotodock, null);
 			pingLast = System.currentTimeMillis();
 			pingCounter = 0;
 			pingFails = 0;

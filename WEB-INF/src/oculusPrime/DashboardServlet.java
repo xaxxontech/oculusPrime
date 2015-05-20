@@ -51,10 +51,10 @@ public class DashboardServlet extends HttpServlet {
 		*/	
 
 		if( ! ban.knownAddress(request.getServerName())){
-			Util.log("unkown address: danger..", this);
-			out.println("this address is an unknown, check banlist..");
-			out.close();	
-			return;
+			Util.log("unkown address: danger: "+request.getServerName(), this);
+			// out.println("this address is an unknown, check banlist..");
+			// out.close();	
+			// return;
 		}
 		
 		String action = null;
