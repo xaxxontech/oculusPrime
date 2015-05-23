@@ -50,7 +50,7 @@ public class DashboardServlet extends HttpServlet {
 		}
 		*/	
 
-		if( ! ban.knownAddress(request.getRemoteAddr())){
+		if( ! ban.knownAddress(request.getServerName())){
 			Util.log("unknown address: danger: "+request.getServerName(), this);
 //			return;
 		}

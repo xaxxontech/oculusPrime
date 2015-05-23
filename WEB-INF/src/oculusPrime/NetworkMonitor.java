@@ -11,7 +11,6 @@ import java.util.TimerTask;
 import java.util.Vector;
 
 import oculusPrime.State.values;
-import oculusPrime.commport.ArduinoPrime;
 
 public class NetworkMonitor {
 
@@ -84,7 +83,7 @@ public class NetworkMonitor {
 		pingLast = System.currentTimeMillis();
 		
 		// ping and see if recovers, let Linux try other connections.. 
-		for(int i = 0 ; i < AP_PING_FAILS ; i++ ){
+		for(int i = 0 ; i < AP_PING_FAILS ; i++){
 			Util.delay(1100);
 			pingValue = Util.pingWIFI(state.get(values.gateway));
 			if(pingValue == null) pingFails++;

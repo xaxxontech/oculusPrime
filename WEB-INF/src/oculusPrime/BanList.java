@@ -171,12 +171,14 @@ public class BanList {
 		
 		if(address.equals("0.0.0.0")) return true;
 		
-		if(isBanned(address)) return false;
+	//	if(isBanned(address)) return false;
 		
 		return known.contains(address);
 	}
 	
 	public synchronized void clearAddress(String address) {
+		if(address == null) return;
+		if(address.equals("null")) return;
 		if(attempts.containsKey(address)) attempts.remove(address);
 		if(blocked.containsKey(address)) blocked.remove(address);
 		if( ! known.contains(address)) known.add(address);
@@ -205,14 +207,20 @@ public class BanList {
 		@Override
 		public void run() {
 				
-			if(state.exists(values.gateway) && !known.contains(state.get(values.gateway)))
-				known.add(state.get(values.gateway));
+			if(state.exists(values.gateway)){
+				if( ! known.contains(state.get(values.gateway)))
+					known.add(state.get(values.gateway));
+			}
 			
-			if(state.exists(values.localaddress) && !known.contains(state.get(values.localaddress)))
-				known.add(state.get(values.localaddress));
+			if(state.exists(values.localaddress)){ 
+				if( ! known.contains(state.get(values.localaddress)))
+					known.add(state.get(values.localaddress));
+			}
 			
-			if(state.exists(values.ethernetaddress) && !known.contains(state.get(values.ethernetaddress)))
-				known.add(state.get(values.ethernetaddress));
+			if(state.exists(values.ethernetaddress)){ 
+				if( ! known.contains(state.get(values.ethernetaddress)))
+					known.add(state.get(values.ethernetaddress));
+			}
 			
 			if(blocked.isEmpty()) return;
 						
