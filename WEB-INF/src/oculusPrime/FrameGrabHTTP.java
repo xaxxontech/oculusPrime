@@ -10,20 +10,23 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import javax.servlet.annotation.MultipartConfig;
 
 @SuppressWarnings("serial")
+@MultipartConfig(fileSizeThreshold=1024*1024*2, // 2MB
+		maxFileSize=1024*1024*10,      // 10MB
+		maxRequestSize=1024*1024*50)   // 50MB
 public class FrameGrabHTTP extends HttpServlet {
 		
 	private static BufferedImage radarImage = null;
@@ -31,7 +34,7 @@ public class FrameGrabHTTP extends HttpServlet {
 	private static State state;
 	private static BanList ban;
 	private static int var;
-	
+
 	public static void setApp(Application a) {
 		if(app != null) return;
 		state = State.getReference();
@@ -46,12 +49,10 @@ public class FrameGrabHTTP extends HttpServlet {
 	
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 		
-		if( ! ban.knownAddress(req.getServerName())){
-			Util.log("unkown address: danger..", this);
-			// out.println("this address is unknown, check banlist..");
-			// out.close();	
-			return;
-		}
+//		if( ! ban.knownAddress(req.getServerName())){
+//			Util.log("unkown address: danger..", this);
+//			return;
+//		}
 		
         if (req.getParameter("mode") != null) {
 
@@ -100,6 +101,30 @@ public class FrameGrabHTTP extends HttpServlet {
         		out.print(Navigation.routesLoad());
         		out.close();
             }
+			else if (mode.equals("rosmapdownload")) {
+				res.setContentType("image/x-portable-graymap");
+				res.setHeader("Content-Disposition", "attachment; filename=\"map.pgm\"");
+				FileInputStream a = new FileInputStream(Ros.getMapFilePath()+Ros.mapfilename);
+				while(a.available() > 0)
+					res.getWriter().append((char)a.read());
+				a.close();
+			}
+			else if (mode.equals("rosmapupload")) {
+				if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+					app.message("unable to modify map while navigation running", null, null);
+					return;
+				}
+				Part part = req.getParts().iterator().next();
+				if (part == null) {
+					app.message("problem uploading, map not saved", null, null);
+					return;
+				}
+
+				File save = new File(Ros.getMapFilePath(), Ros.mapfilename );
+				Ros.backUpMappgm();
+				part.write(save.getAbsolutePath());
+				app.message("map saved as: " + save.getAbsolutePath(), null, null);
+			}
         }
 		else { frameGrab(req, res); }
 	}
@@ -279,18 +304,18 @@ public class FrameGrabHTTP extends HttpServlet {
 		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;
 
 		final Downloader dl = new Downloader();
-		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
-		Calendar cal = Calendar.getInstance();
-		final String datetime = dateFormat.format(cal.getTime());
+//		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
+//		Calendar cal = Calendar.getInstance();
+//		final String datetime = dateFormat.format(cal.getTime());
+		final String datetime = Util.getDateStamp();
 		new Thread(new Runnable() {
 			public void run() {
-				String sep = Settings.sep;
+				String sep = Util.sep;
 				dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculusPrime"+sep+"framegrabs");
 			}
 		}).start();
 		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
 				"/oculusPrime/framegrabs/"+datetime+".jpg";
-
 	}
 	
 

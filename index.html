@@ -1,4 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+		"http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <title>Oculus Prime</title>
@@ -921,8 +923,7 @@ onmouseover="document.getElementById('steering_textbox').innerHTML = 'TELNET COM
 			document.getElementById('steeringkeytextbox').innerHTML = 'C';"
 onmouseout="document.getElementById('steering_textbox').innerHTML = '';
 			document.getElementById('steeringkeytextbox').innerHTML = '';"
->telnet text command</a><span 
-id="oculuscommanddiv" style="display: none">:<br>&nbsp;
+>telnet text command</a><span id="oculuscommanddiv" style="display: none">:<br>&nbsp;
 <input id="oculuscommand" class="inputbox" type="text" size="30" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
 onblur="keyboard('enable'); this.style.backgroundColor='#151515'; oculuscommanddivHide();"
@@ -1019,17 +1020,38 @@ Navigation Menu:<br>
 <div id="activeroutediv" class="status_info" style="display: none"> </div>
 <br>
 
-<a class="blackbg" href="javascript: callServer('startnav','');">start</a><br>
-<a class="blackbg" href="javascript: callServer('stopnav','');">stop</a><br>
+<a class="blackbg" href="javascript: callServer('startnav','');">start navigation</a><br>
+<a class="blackbg" href="javascript: callServer('startmapping','');">start mapping</a><br>
+<a class="blackbg" href="javascript: callServer('stopnav','');">stop navigation/mapping</a><br>
 <a class="blackbg" href="javascript: rosmap();">map</a><br>
 
-set waypoint:<br>
+<table><tr><td style="height: 10px"></td></tr></table>
+
+<div>set waypoint:</div>
 &nbsp; <a class="blackbg" href="javascript: setwaypoint(null);">at current position</a><br>
 &nbsp; <a class="blackbg" href="javascript: rosmaparrow('waypoint');">drop arrow</a><br>
 <a class="blackbg" href="javascript: mapshowwaypoints = true;">show waypoints</a><br>
 <a class="blackbg" href="javascript: mapshowwaypoints = false;">hide waypoints</a><br>
 <a class="blackbg" href="javascript: waypointsmenu();">manage waypoints</a> &gt;<br>
 <a class="blackbg" href="javascript: routesmenu();">routes</a> &gt;<br>
+
+<table><tr><td style="height: 10px"></td></tr></table>
+
+<a class="blackbg" href="frameGrabHTTP?mode=rosmapdownload" target="_blank">download map</a><br>
+<div>
+<a class="blackbg" href="javascript:uploadrosmapdivshow();" >upload map</a><span id="uploadrosmapdiv"
+style="display: none;">:
+<form target="upload_frame" action="frameGrabHTTP?mode=rosmapupload" method="post" enctype="multipart/form-data">
+<input id="rosmapupload" name="file" class="inputbox" type="file" size="30"
+	   onchange="if (confirm('Create backup and upload new map\n are you sure?')) { this.form.submit() } uploadrosmapdivhide();" />
+<!--<input type="submit" value="Upload" />-->
+<a class="blackbg" href="javascript: uploadrosmapdivhide();">
+	<span class="cancelbox"><b>X</b></span></a>&thinsp;
+</form>
+</span></div>
+<a class="blackbg" href="javascript: if (confirm('Create backup and save new map\n are you sure?'))
+{ callServer('savemap',''); }">save new map</a><br>
+
 </div>
 
 <!-- waypoints_menu -->
@@ -1150,6 +1172,7 @@ Choose action:<br>
 <img src="images/oculus_corner_logo.gif" alt="">  
 </div>
 
+<iframe id="upload_frame" name="upload_frame" style="display: none"></iframe>
 
 <!--  debugbox -->
 <div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px; display: none; "></div>

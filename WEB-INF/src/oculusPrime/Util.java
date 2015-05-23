@@ -13,6 +13,9 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
 
@@ -36,7 +39,8 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
-	
+	public final static String sep = System.getProperty("file.separator");
+
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
@@ -61,6 +65,12 @@ public class Util {
 	public static String getTime() {
         Date date = new Date();
 		return date.toString();
+	}
+
+	public static String getDateStamp() {
+		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
+		Calendar cal = Calendar.getInstance();
+		return dateFormat.format(cal.getTime());
 	}
 
 	/**
@@ -348,12 +358,12 @@ public class Util {
     }
 	
 	public static void reboot() {
-		String str  = Settings.redhome + Settings.sep + "systemreboot.sh";
+		String str  = Settings.redhome + sep + "systemreboot.sh";
 		Util.systemCall(str);
 	}
 	
 	public static void shutdown() {
-		String str  = Settings.redhome + Settings.sep + "systemshutdown.sh"; 
+		String str  = Settings.redhome + sep + "systemshutdown.sh";
 		Util.systemCall(str);
 	}
 	

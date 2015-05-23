@@ -39,6 +39,7 @@ public class Navigation {
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		app = a;
 		Ros.loadwaypoints();
+		Ros.rospackagedir = Ros.getRosPackageDir();
 	}	
 	
 	public void gotoWaypoint(final String str) {
@@ -98,7 +99,21 @@ public class Navigation {
 
 		return true;
 	}
-	
+
+
+	public void startMapping() {
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+			return;
+		}
+
+		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
+		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
+		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+
+		Ros.launch(Ros.MAKE_MAP);
+
+	}
+
 	public void startNavigation() {
 		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
 			return;
@@ -113,8 +128,6 @@ public class Navigation {
 			long start = System.currentTimeMillis();
 			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
-
-
 
 			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) {
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
@@ -868,5 +881,17 @@ public class Navigation {
 
 		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 	}
+
+	public void saveMap() {
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.mapping.toString())) {
+			app.message("unable to save map, mapping not running", null, null);
+			return;
+		}
+		new Thread(new Runnable() { public void run() {
+			if (Ros.saveMap())  app.message("map saved to "+Ros.getMapFilePath(), null, null);
+		}  }).start();
+
+	}
+
 
 }

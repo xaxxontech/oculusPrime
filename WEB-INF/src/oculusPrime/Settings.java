@@ -8,11 +8,11 @@ import oculusPrime.State.values;
 
 public class Settings {
 
-	public final static String sep = System.getProperty("file.separator");
 	public final static String redhome = System.getenv("RED5_HOME");
-	public final static String framefile = System.getenv("RED5_HOME") + sep+"webapps"+sep+"oculus"+sep+"images"+sep+"framegrab.jpg";
-	public final static String settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
-	public final static String stdout = redhome+sep+"log"+sep+"jvm.stdout";
+	public final static String framefile = System.getenv("RED5_HOME") + Util.sep+"webapps"+Util.sep+
+			"oculus"+Util.sep+"images"+Util.sep+"framegrab.jpg";
+	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
+	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
 	
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
@@ -205,7 +205,7 @@ public class Settings {
 		
 		try {
 			
-			final String temp = redhome + sep+"conf"+sep+"oculus_created.txt";
+			final String temp = redhome + Util.sep+"conf"+Util.sep+"oculus_created.txt";
 			FileWriter fw = new FileWriter(new File(temp));
 			
 			fw.append("# gui settings \r\n");
@@ -421,7 +421,7 @@ public class Settings {
 	}
 
 	public String readRed5Setting(String str) {
-		String filenm = System.getenv("RED5_HOME") + sep+"conf"+sep+"red5.properties";
+		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
 		FileInputStream filein;
 		String result = null;
 		try {
@@ -443,7 +443,7 @@ public class Settings {
 	}
 
 	public void writeRed5Setting(String setting, String value) { 
-		String filenm = System.getenv("RED5_HOME") + sep+"conf"+sep+"red5.properties";
+		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
 		value = value.replaceAll("\\s+$", ""); // remove trailing whitespace
 		FileInputStream filein;
 		String[] lines = new String[999];

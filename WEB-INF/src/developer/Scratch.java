@@ -3,9 +3,8 @@ package developer;
 import oculusPrime.State;
 import oculusPrime.Util;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import javax.servlet.http.Part;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,7 +40,7 @@ public class Scratch {
 //        if (nextday > daynums.length-1 ) nextday = 0;
 //        System.out.println(daynums[nextday]);
 
-
+/*
         int[] daynums = new int[] {2,3,4,5,6};
         int starthour = 23;
         int startmin = 0;
@@ -83,8 +82,26 @@ public class Scratch {
 
         if (startroute) System.out.println("start");
         else System.out.println("not start");
+*/
 
 
-     }
+//        try {
+//
+//            String sep = System.getProperty("file.separator");
+//            String[] cmd = { "bash", "-ic", "roscd oculusprime; pwd" };
+//            Process proc = Runtime.getRuntime().exec(cmd);
+//            BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+//            System.out.println(procReader.readLine());
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+
+
+        File save = new File(Ros.getMapFilePath(), Ros.mapfilename );
+        System.out.println(save.getAbsolutePath());
+
+    }
 }
 

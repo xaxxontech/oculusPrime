@@ -1,17 +1,16 @@
 package developer;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import oculusPrime.AutoDock;
+import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
 
@@ -20,12 +19,13 @@ public class Ros {
 	private static State state = State.getReference();
 	
 	// State keys
-	public enum navsystemstate { stopped, starting, running, stopping };
+	public enum navsystemstate { stopped, starting, running, mapping, stopping };
 
 	public static final long ROSSHUTDOWNDELAY = 15000;
 
 	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
+	public static final String MAKE_MAP = "make_map"; // mapping launch file
 
 	private static File lockfile = new File("/run/shm/map.raw.lock");
 	private static BufferedImage map = null;
@@ -33,7 +33,12 @@ public class Ros {
 	
 	private static final String redhome = System.getenv("RED5_HOME");
 	public static File waypointsfile = new File(redhome+"/conf/waypoints.txt");
-	
+	public static String mapfilename = "map.pgm";
+	public static String mapyamlname = "map.yaml";
+
+	public static String rospackagedir;
+	public static final String ROSPACKAGE = "oculusprime";
+
 	public static BufferedImage rosmapImg() {	
 		if (!state.exists(State.values.rosmapinfo)) return null;
 		
@@ -160,8 +165,7 @@ public class Ros {
 	}
 	
 	public static void launch(String launch) {
-		String sep = System.getProperty("file.separator");
-		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh"; // setup ros environment
+		String cmd = System.getenv("RED5_HOME")+Util.sep+"ros.sh"; // setup ros environment
 		cmd += " roslaunch oculusprime "+launch+".launch";
 		Util.systemCall(cmd);
 	}
@@ -228,5 +232,91 @@ public class Ros {
 //		state.delete(State.values.rosmapwaypoints);
 		return result;
 	}
-	
+
+	public static String getRosPackageDir() {
+		try {
+
+			String[] cmd = { "bash", "-ic", "roscd "+ROSPACKAGE+" ; pwd" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String str = procReader.readLine();
+//			proc.destroy();
+			return str;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public static String getMapFilePath() {
+		return Ros.rospackagedir + Util.sep + "maps" + Util.sep ;
+	}
+
+	public static void backUpMappgm() {
+		String mapfilepath = getMapFilePath();
+		File oldname = new File(mapfilepath+mapfilename);
+		if (oldname.exists()) {
+			File newname = new File(mapfilepath + Util.getDateStamp() + "_" + mapfilename);
+			oldname.renameTo(newname);
+		}
+	}
+
+	public static void backUpYaml() {
+		String mapfilepath = getMapFilePath();
+		File oldname = new File(mapfilepath+mapyamlname);
+		if (oldname.exists()) {
+			File newname = new File(mapfilepath + Util.getDateStamp() + "_" + mapyamlname);
+			oldname.renameTo(newname);
+		}
+	}
+
+	public static boolean saveMap() {
+		try {
+			// nuke any existing files in root dir
+			Path sourcepath = Paths.get(System.getenv("RED5_HOME")+Util.sep+mapfilename);
+			if (Files.exists(sourcepath)) Files.delete(sourcepath);
+			sourcepath = Paths.get(System.getenv("RED5_HOME")+Util.sep+mapyamlname);
+			if (Files.exists(sourcepath)) Files.delete(sourcepath);
+
+			// call ros map_saver
+			String cmd = System.getenv("RED5_HOME")+Util.sep+"ros.sh"; // setup ros environment
+			cmd += " rosrun map_server map_saver";
+			Util.systemCall(cmd);
+
+			// backup existing map files in ros map dir
+			backUpMappgm();
+			backUpYaml();
+
+			// move files from root to ros map dir
+			sourcepath = Paths.get(System.getenv("RED5_HOME")+Util.sep+mapfilename);
+			Path destinationpath = Paths.get(getMapFilePath()+mapfilename);
+
+			long timeout = System.currentTimeMillis() + 10000;
+			while (!Files.exists(sourcepath) && System.currentTimeMillis()< timeout) Util.delay(10);
+			if (!Files.exists(sourcepath)) {
+				Util.log("error, map not saved", null);
+				return false;
+			}
+			Files.move(sourcepath, destinationpath, StandardCopyOption.REPLACE_EXISTING);
+//			Files.delete(sourcepath);
+
+			sourcepath = Paths.get(System.getenv("RED5_HOME")+Util.sep+mapyamlname);
+			destinationpath = Paths.get(getMapFilePath()+mapyamlname);
+			timeout = System.currentTimeMillis() + 10000;
+			while (!Files.exists(sourcepath) && System.currentTimeMillis()< timeout) Util.delay(10);
+			if (!Files.exists(sourcepath)) {
+				Util.log("error, map not saved", null);
+				return false;
+			}
+			Files.move(sourcepath, destinationpath, StandardCopyOption.REPLACE_EXISTING);
+//			Files.delete(sourcepath);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return true;
+	}
+
+
 }

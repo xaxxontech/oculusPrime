@@ -135,7 +135,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			loginRecords.signoutDriver();
 
 			//if autodocking, keep autodocking
-			if (!state.getBoolean(State.values.autodocking) && !state.exists(values.navigationroute)) {
+			if (!state.getBoolean(State.values.autodocking) &&
+					!(state.exists(values.navigationroute) && !state.exists(values.nextroutetime)) ) {
 				
 				if (!state.get(State.values.driverstream).equals(driverstreamstate.pending.toString())) {
 				
@@ -787,6 +788,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case cancelroute:
 			if (navigation != null) navigation.cancelAllRoutes();
+			break;
+
+		case startmapping:
+			if (navigation != null) navigation.startMapping();
+			break;
+
+		case savemap:
+			if (navigation != null) navigation.saveMap();
+			break;
 
 		case clearmap: Mapper.clearMap();
 			break;
@@ -1345,7 +1355,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer("restarting server application", null, null);
 
 		// write file as restart flag for script
-		File f = new File(Settings.redhome + Settings.sep + "restart"); 
+		File f = new File(Settings.redhome + Util.sep + "restart");
 		if (!f.exists())
 			try {
 				f.createNewFile();
@@ -1386,7 +1396,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (! settings.getBoolean(ManualSettings.debugenabled))
 			Util.systemCall("pkill chrome");  // TODO: use PID
 
-		Util.systemCall(Settings.redhome + Settings.sep + "red5-shutdown.sh");
+		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}
 
 	public void move(final String str) {
@@ -2039,12 +2049,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 								null, null);
 
 						// this is a blocking call
-						if (dl.unzipFolder("download"+Settings.sep+"update.zip", "webapps"))
+						if (dl.unzipFolder("download"+Util.sep+"update.zip", "webapps"))
 							messageplayer("done.", "softwareupdate",
 									"downloadcomplete");
 
 						// not needed now is unpacked
-						dl.deleteDir(new File(Settings.redhome+Settings.sep+"download"));
+						dl.deleteDir(new File(Settings.redhome+Util.sep+"download"));
 
 					} else {
 						messageplayer("update download failed", null, null);
@@ -2065,7 +2075,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public void factoryReset() {
 
-		final String backup = "conf"+Settings.sep+"backup_oculus_settings.txt";
+		final String backup = "conf"+Util.sep+"backup_oculus_settings.txt";
 
 		// backup
 		new File(Settings.settingsfile).renameTo(new File(backup));

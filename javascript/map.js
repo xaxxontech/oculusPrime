@@ -995,13 +995,13 @@ function routespopulate() {
 
 function activateroute(name) {
 	callServer("runroute", name);
-	// routesxml = null;
+	routesxml = null;
 	// setTimeout("routesxml = null", 1000); 
 }
 
 function deactivateroute() {
 	callServer("cancelroute", "");
-	// routesxml = null;
+	routesxml = null;
 	// setTimeout("routesxml = null", 1000); 
 }
 
@@ -1413,4 +1413,13 @@ function saveroutes(routenum) {
 	routesmenu();
 }
 
+function uploadrosmapdivshow() {
+	document.getElementById('uploadrosmapdiv').style.display='';
+	popupmenu('menu','resize');
+}
 
+function uploadrosmapdivhide() {
+	document.getElementById('uploadrosmapdiv').style.display='none';
+	document.getElementById('rosmapupload').value = '';
+	popupmenu('menu','resize');
+}

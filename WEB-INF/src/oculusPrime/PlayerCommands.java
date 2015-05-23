@@ -52,7 +52,7 @@ public enum PlayerCommands {
     
     // navigation
     roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,
-    gotodock, saveroute, runroute, cancelroute,
+    gotodock, saveroute, runroute, cancelroute, startmapping, savemap,
     
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness;
