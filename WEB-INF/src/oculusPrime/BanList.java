@@ -165,18 +165,36 @@ public class BanList {
 		
 		if(override) return true;
 		
+		if( ! Util.validIP(address)) return false;
+		
 		if(address.equals("127.0.0.1")) return true;
 		
-		if(address.equals("10.42.0.1")) return true;
+	//	if(address.equals("10.42.0.1")) return true;
+		
+		if(address.startsWith("10.42")) return true;
+		
+		if(address.startsWith(state.get(values.localaddress).substring(0, 4))) {
+			if( ! known.contains(address)){
+				appendLog("added lan ip: " + address);
+				known.add(address);
+			}
+			return true;
+		}
 		
 		if(address.equals("0.0.0.0")) return true;
 		
-	//	if(isBanned(address)) return false;
+		if(isBanned(address)) return false;
 		
 		return known.contains(address);
 	}
 	
 	public synchronized void clearAddress(String address) {
+		
+		if( ! Util.validIP(address)){
+			appendLog(address + " is not valid, error?"); 
+			return;
+		}
+		
 		if(address == null) return;
 		if(address.equals("null")) return;
 		if(attempts.containsKey(address)) attempts.remove(address);

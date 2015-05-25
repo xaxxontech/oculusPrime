@@ -61,7 +61,7 @@ public class NetworkMonitor {
 			if (application != null) {
 				if(apModeCounter++ % 10 == 0){ // slow down flashes					
 					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-					Util.log("NetworkMonitor.doAP() in AP mode: "+apModeCounter, null);
+					// Util.log("NetworkMonitor.doAP() in AP mode: "+apModeCounter, null);
 				}
 			}
 			
@@ -173,6 +173,7 @@ public class NetworkMonitor {
 	
 	public void tryAnyConnection() {	
 		String[] routers = getConnections();
+		if(routers == null) return; 
 		for(int i = 0 ; i < routers.length ; i++)
 		Util.log(i + " tryAnyConnection: " + routers[i], this);
 		String ssid = routers[ new Random().nextInt(routers.length) ];
@@ -203,7 +204,6 @@ public class NetworkMonitor {
 				if(line.endsWith("never")){
 					Util.debug("connectionsNever(): " + line, this);
 					removeConnection(getName(line));
-					// TODO: MAGIC NUMBER... 
 				}
 			}
 		} catch (Exception e) {
@@ -213,7 +213,7 @@ public class NetworkMonitor {
 
 	public synchronized void removeConnection(final String ssid){
 		
-		Util.log("removeConnection(): "+ssid, this);
+		Util.log("removeConnection(): called with: "+ssid, this);
 		
 		if(ssid.equals(AP)) {
 			Util.log("removeConnection(): can't remove AP", this);
@@ -225,11 +225,12 @@ public class NetworkMonitor {
 				try {
 		
 					accesspoints.remove(ssid);
+					connections.remove(ssid);
 					
 					String[] cmd = new String[]{"nmcli", "con", "delete", "id", "\""+ssid+"\""};
 					String text = "";
 					for(int i = 0; i < cmd.length ; i++) text += cmd[i] + " ";
-					Util.log("removeConnection(): "+text, this);
+					Util.log("removeConnection(): "+text.trim(), this);
 					
 					Process proc = Runtime.getRuntime().exec(cmd);
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
@@ -243,8 +244,8 @@ public class NetworkMonitor {
 						Util.log("removeConnection(): failed, try again, error code = " + proc.waitFor(), this);
 					}
 					
-					Util.delay(300);
-					connectionUpdate();
+				//	Util.delay(300);
+				//	connectionUpdate();
 					
 				} catch (Exception e) {
 					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);

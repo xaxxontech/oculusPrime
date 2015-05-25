@@ -274,7 +274,7 @@ public class DashboardServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"0\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"20\" border=\"0\">  \n");
 		
 		String list = "oculus prime <br />version <b>" + VERSION + "</b><br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
