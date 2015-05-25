@@ -35,24 +35,11 @@ public class DashboardServlet extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 	
-		/*
-		if(Settings.getReference().readSetting(ManualSettings.networkmonitor).equals("false")) {
-			out.println("the network monitor is not running, check settings..");
-			out.close();	
+		if( ! ban.knownAddress(request.getRemoteAddr())){
+			Util.log("unknown address: danger: "+request.getRemoteAddr(), this);
+			out.println("unknown address: danger: "+request.getRemoteAddr() + " \n " + ban.toString());
+			out.close();
 			return;
-		}
-		
-		
-		if( !request.getServerName().equals("127.0.0.1") && !settings.getBoolean(ManualSettings.developer.name())){
-			out.println("this service is for developers only, check settings..");
-			out.close();	
-			return;
-		}
-		*/	
-
-		if( ! ban.knownAddress(request.getServerName())){
-			Util.log("unknown address: danger: "+request.getServerName(), this);
-//			return;
 		}
 		
 		String action = null;
@@ -300,7 +287,7 @@ public class DashboardServlet extends HttpServlet {
 		list += "<br />access points <hr>  \n";
 		ap = monitor.getAccessPoints();		
 		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i] + "</a><br /> \n");
+		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i].toLowerCase() + "</a><br /> \n");
 		
 		str.append("<tr><td rowspan=\"10\" valign=\"top\">"+ list +"</tr> \n");
 		
