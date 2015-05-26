@@ -32,7 +32,6 @@ public class NetworkMonitor {
 	private static Timer pingTimer = new Timer();
 	private static String pingValue = null;
 	private static int externalLookup = 0;
-	private static int deletedAttempts = 0;
 	private static int failedConnetion = 0;
 	private static int apModeCounter = 0;
 	private static int pingCounter = 0;
@@ -62,7 +61,7 @@ public class NetworkMonitor {
 			if (application != null) {
 				if(apModeCounter++ % 10 == 0){ // slow down flashes					
 					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-					Util.log("NetworkMonitor.doAP() in AP mode: "+apModeCounter, null);
+					// Util.log("NetworkMonitor.doAP() in AP mode: "+apModeCounter, null);
 				}
 			}
 			
@@ -123,14 +122,14 @@ public class NetworkMonitor {
 	public class networkTask extends TimerTask {
 		@Override
 		public void run() {
-			try{
-				
+			try{			
 				if(settings.getBoolean(ManualSettings.networkmonitor)) {
+					
 					runNetworkTool();
 					connectionUpdate();
 					Util.debug("networkTask: called nm-tool", this);
+				
 				}
-	
 				if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
 			} catch (Exception e) {
 				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
@@ -174,6 +173,7 @@ public class NetworkMonitor {
 	
 	public void tryAnyConnection() {	
 		String[] routers = getConnections();
+		if(routers == null) return; 
 		for(int i = 0 ; i < routers.length ; i++)
 		Util.log(i + " tryAnyConnection: " + routers[i], this);
 		String ssid = routers[ new Random().nextInt(routers.length) ];
@@ -196,16 +196,14 @@ public class NetworkMonitor {
 		try {
 
 			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con" });
-			BufferedReader procReader = new BufferedReader(
-					new InputStreamReader(proc.getInputStream()));
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){
 				line = line.trim();
 				if(line.endsWith("never")){
 					Util.debug("connectionsNever(): " + line, this);
-					removeConnection(line.substring(0, 8).trim());
-					// TODO: MAGIC NUMBER... 
+					removeConnection(getName(line));
 				}
 			}
 		} catch (Exception e) {
@@ -214,6 +212,8 @@ public class NetworkMonitor {
 	}
 
 	public synchronized void removeConnection(final String ssid){
+		
+		Util.log("removeConnection(): called with: "+ssid, this);
 		
 		if(ssid.equals(AP)) {
 			Util.log("removeConnection(): can't remove AP", this);
@@ -224,29 +224,28 @@ public class NetworkMonitor {
 			public void run() {
 				try {
 		
-					if(deletedAttempts++ > 5){
-						Util.log("removeConnection(): attempts = " + deletedAttempts, this);
-						deletedAttempts = 0;
-						return;
-					}
+					accesspoints.remove(ssid);
+					connections.remove(ssid);
 					
-					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con", "delete", "id", ssid});
+					String[] cmd = new String[]{"nmcli", "con", "delete", "id", "\""+ssid+"\""};
+					String text = "";
+					for(int i = 0; i < cmd.length ; i++) text += cmd[i] + " ";
+					Util.log("removeConnection(): "+text.trim(), this);
+					
+					Process proc = Runtime.getRuntime().exec(cmd);
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
 
 					String line = null;
-					while ((line = procReader.readLine()) != null)
+					while ((line = procReader.readLine()) != null){
 						Util.log("removeConnection(): " + line, this);
-					
+					}
 					
 					if(proc.exitValue() == 0){
 						Util.log("removeConnection(): failed, try again, error code = " + proc.waitFor(), this);
-						removeConnection(ssid);
-					} else {
-						deletedAttempts = 0;
 					}
-
-					Util.delay(300);
-					connectionUpdate();
+					
+				//	Util.delay(300);
+				//	connectionUpdate();
 					
 				} catch (Exception e) {
 					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);
@@ -264,6 +263,20 @@ public class NetworkMonitor {
 		}
 	}
 
+	private static String getName(final String input){
+		String ans = "";
+		String[] line = input.split(" ");
+		for(int j = 0 ; j < line.length ; j++) {
+			if(line[j].matches("[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}")){
+				String id = "";
+				for(int u = 0 ; u < j ; u++) id+= line[u] + " ";
+				ans = id.trim();
+			}
+		}
+		
+		return ans;
+	}
+	
 	public String[] getConnections() {
 		String[] con = new String[connections.size()];
 		for(int i = 0 ; i < con.length ; i++){	

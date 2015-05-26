@@ -21,6 +21,7 @@ import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+
 import javax.servlet.annotation.MultipartConfig;
 
 @SuppressWarnings("serial")
@@ -48,12 +49,19 @@ public class FrameGrabHTTP extends HttpServlet {
 	}
 	
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-		
-//		if( ! ban.knownAddress(req.getServerName())){
-//			Util.log("unknown address: " + req.getServerName(), this);
-//			 return;
-//		}
-		
+
+		if( ! ban.knownAddress(req.getRemoteAddr())){
+			
+			Util.log("unknown address: danger: "+req.getRemoteAddr(), this);
+			
+			// response.setContentType("text/html");
+			// PrintWriter out = response.getWriter();
+			//out.println("unknown address: danger: "+req.getServerName() + " \n " + ban.toString());
+			//out.close();
+			
+			return;
+		}
+
         if (req.getParameter("mode") != null) {
 
         	String mode = req.getParameter("mode");
