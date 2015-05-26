@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.NavigationLog;
 import developer.image.OpenCVMotionDetect;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
@@ -38,6 +39,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final String VIDEOSOUNDMODEHIGH = "high";
 	private static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
+	public static final String RED5_HOME = System.getenv("RED5_HOME");
+	public static final String APPFOLDER = "webapps" + Util.sep + "oculusPrime";
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
@@ -472,6 +475,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
+				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
+						navigation.routestarttime, null, state.get(values.navigationroute),
+						navigation.consecutiveroute);
 				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
@@ -787,7 +793,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case cancelroute:
-			if (navigation != null) navigation.cancelAllRoutes();
+			if (navigation != null) { navigation.cancelAllRoutes();
+			navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
+					navigation.routestarttime, null, state.get(values.navigationroute),
+					navigation.consecutiveroute); }
 			break;
 
 		case startmapping:

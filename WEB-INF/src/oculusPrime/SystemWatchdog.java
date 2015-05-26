@@ -296,30 +296,31 @@ public class SystemWatchdog {
 //		callForHelp(subject, body);
 	}
 
-	public static boolean waitForCpu() {
-//		Util.log("waitForCpu() cpu: "+Util.getCPU(), null);
-//		return;
+
+	public static boolean waitForCpu() { return waitForCpu(20000); }
+
+	public static boolean waitForCpu(long timeout) {
 
 		long start = System.currentTimeMillis();
-		long timeout = 20000;
 		int cpu = 0;
 		int threshold = 60;
 		while (System.currentTimeMillis() - start < timeout) {
 			cpu = Util.getCPU();
-//			if (cpu < threshold) { // do it again to be sure
-//				cpu = Util.getCPU();
+			if (cpu < threshold) { // do it again to be sure
+				cpu = Util.getCPU();
 				if (cpu <threshold) {
 					Util.log("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
 					return true;
 				}
-//			}
+			}
 			Util.delay(1000);
 		}
 		Util.log("Util.waitForCpu() error, timed out "+ cpu, null);
+
 //		State.getReference().set(values.linuxboot, "0"); // force reboot next dock
 //		return false;
 
-		return true;
+		return true; // TODO: take action on high cpu, unused
 	}
 
 

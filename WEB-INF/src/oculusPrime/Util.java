@@ -68,7 +68,7 @@ public class Util {
 	}
 
 	public static String getDateStamp() {
-		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-M-dd_HH-mm-ss");
 		Calendar cal = Calendar.getInstance();
 		return dateFormat.format(cal.getTime());
 	}

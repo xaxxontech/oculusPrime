@@ -1,6 +1,7 @@
-<!--<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">-->
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-		"http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+		"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"-->
+		<!--"http://www.w3.org/TR/html4/loose.dtd">-->
 <html>
 <head>
 <title>Oculus Prime</title>
@@ -96,7 +97,7 @@ onload="loaded();" onunload="playerexit();" onresize="browserwindowresized();">
 <div id="main_menu_topbar" style="line-height: 18px; cursor: move;"
 onmouseover="maintopbar('overpending');" onmouseout="maintopbar('out');"
 onmousedown="popupmenu('main', 'move');" > &nbsp; </div>
-<div id="main_menu_contents"  style="padding: 4px; padding-left: 0px; "> <!-- main_menu_contents div -->
+<div id="main_menu_contents"  style="padding: 4px; padding-left: 0px;"> <!-- main_menu_contents div -->
 
 <table id="maintable" align="center" ><tr valign="top">
 <td style="padding-left: 5px; padding-top: 10px;">
@@ -547,25 +548,25 @@ video settings:<br>
 
 <span id="low_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('low');">low</a>
-<span id="low_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="low_specs" style="font-size: 11px; color: #666666;"></span><br>
 
 <span id="med_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('med');">medium</a>
-<span id="med_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="med_specs" style="font-size: 11px; color: #666666;"></span><br>
 
 <span id="high_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('high');">high</a>
-<span id="high_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="high_specs" style="font-size: 11px; color: #666666;"></span><br>
 
 <span id="full_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('full');">full</a>
-<span id="full_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="full_specs" style="font-size: 11px; color: #666666;"></span><br>
 
 <span id="custom_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('custom');">custom</a>
 <span id="custom_specs" style="font-size: 11px; color: #666666;"></span>&nbsp;<a 
 class="blackbg" href="javascript: streamset('setcustom');">change</a> &gt;
-<br/>
+<br>
 <table><tr><td style="height: 5px"></td></tr></table>
 
 <table><tr>
@@ -784,13 +785,13 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 <table><tr><td style="height: 10px"></td></tr></table>
 Change username:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
-username: <span id="user_name2" style="color: #45F239; text-transform: uppercase;"></span><br/>
+username: <span id="user_name2" style="color: #45F239; text-transform: uppercase;"></span><br>
 new name: <input id="usernamechanged" class="inputbox" type="text" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br/>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 current password: <input id="usernamechangedpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br/>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: account('username_update');">
 <span class="cancelbox">&#x2714;</span> update</a> &nbsp;
@@ -847,7 +848,7 @@ href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
 &nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Add new user<br/>
+Add new user<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 username: <input id="newusername" class="inputbox" type="text" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
@@ -932,7 +933,7 @@ onKeyPress="if (keypress(event)==13) { oculuscommandgo(); }">
 <span class="cancelbox"><b>X</b></span></a>&thinsp;
 <a class="blackbg" href="javascript: oculuscommandgo();" onmousedown="oculuscommandgo();">
 <span class="cancelbox">&#x2714;</span></a>
-</span><br/>
+</span><br>
 
 <a class="blackbg" href="javascript: battStats();">power info</a><br>
 <a class="blackbg" href="javascript: hiddenmessageboxShow();">command log full</a><br>
@@ -947,7 +948,7 @@ onKeyPress="if (keypress(event)==13) { systemcall('',''); }">
 <span class="cancelbox"><b>X</b></span></a>&thinsp;
 <a class="blackbg" href="javascript: systemcall('','');" onmousedown="systemcall('','');">
 <span class="cancelbox">&#x2714;</span></a>
-</span><br/>
+</span><br>
 
 <a class="blackbg" href="javascript: clicksteer('');">crosshairs on/off</a><br>
 <a class="blackbg" href="frameGrabHTTP" target="_blank">frame grab</a><br> 
@@ -983,16 +984,8 @@ motion detect demo <a class="blackbg"
 <a class="blackbg"
    href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
 
-<br>
-
 <a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
-<a class="blackbg" href="dashboard?view=state" target="_blank">dashboard state</a><br>
-<a class="blackbg" href="dashboard?view=log" target="_blank">dashboard log combo</a><br>
-<a class="blackbg" href="dashboard?view=sysout" target="_blank">dashboard log sysout</a><br>
-<a class="blackbg" href="dashboard?view=power" target="_blank">dashboard log power</a><br>
-<a class="blackbg" href="dashboard?view=ap" target="_blank">dashboard access points</a><br>
-<a class="blackbg" href="dashboard?view=ban" target="_blank">dashboard ban</a><br>
-<a class="blackbg" href="dashboard?view=ros" target="_blank">dashboard ROS</a><br>
+
 
 <!--
 stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> /
@@ -1051,6 +1044,10 @@ style="display: none;">:
 </span></div>
 <a class="blackbg" href="javascript: if (confirm('Create backup and save new map\n are you sure?'))
 { callServer('savemap',''); }">save new map</a><br>
+
+<table><tr><td style="height: 10px"></td></tr></table>
+
+<a class="blackbg" href="navigationlog" target="_blank">navigation log</a><br>
 
 </div>
 

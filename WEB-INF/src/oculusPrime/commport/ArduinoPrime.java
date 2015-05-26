@@ -2,8 +2,6 @@ package oculusPrime.commport;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
@@ -531,20 +529,22 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					if (!isconnected) {
 						Util.log("error, not connected", this); // TODO: not needed
 //						commandList.clear();
+						Util.delay(1);
 						continue;
 					}
 
 					if (commandList.size() > 15) { // buffer in firmware is now 32 (was 8) AVR is 64?
 						commandList.clear();
 						Util.log("error, command stack up, all dropped", this);
+						Util.delay(1);
 						continue;
 					}
 
 					int EOLindex = commandList.indexOf((byte) 13);
 					if (EOLindex == -1) {
-						String str = "";
-						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
-						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
+//						String str = "";
+//						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
+//						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
 						Util.delay(1);
 						continue;
 					}

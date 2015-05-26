@@ -5,6 +5,8 @@ import oculusPrime.Util;
 
 import javax.servlet.http.Part;
 import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,14 +43,14 @@ public class Scratch {
 //        System.out.println(daynums[nextday]);
 
 /*
-        int[] daynums = new int[] {2,3,4,5,6};
-        int starthour = 23;
+        int[] daynums = new int[] {2,3,4,5,6,7};
+        int starthour = 2;
         int startmin = 0;
-        int routedurationhours = 18;
+        int routedurationhours = 6;
 
         Calendar calendarnow = Calendar.getInstance();
 //        calendarnow.setTime(new Date());
-        calendarnow.set(2015, 4, 17, 0, 10);
+        calendarnow.set(2015, 4, 25, 23, 50);
         System.out.println(calendarnow.getTime());
 
         int daynow = calendarnow.get(Calendar.DAY_OF_WEEK); // 1-7 (friday is 6)
@@ -85,22 +87,27 @@ public class Scratch {
 */
 
 
-//        try {
-//
-//            String sep = System.getProperty("file.separator");
-//            String[] cmd = { "bash", "-ic", "roscd oculusprime; pwd" };
-//            Process proc = Runtime.getRuntime().exec(cmd);
-//            BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-//            System.out.println(procReader.readLine());
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+//        State state = State.getReference();
+//        state.set(State.values.navigationroute, "zorkulus");
+        NavigationLog navlog = new NavigationLog();
+        for (int i=0; i<5; i++) {
+            navlog.newItem(NavigationLog.COMPLETEDSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+                    "glazeem", "zorkpoint", 5);
+            Util.delay(500);
+            navlog.newItem(NavigationLog.ALERTSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+                    "glazeem", null, 5);
+            Util.delay(500);
+            navlog.newItem(NavigationLog.ERRORSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+                    "glazeem", "zorkpoint", 5);
+            Util.delay(500);
+            navlog.newItem(NavigationLog.INFOSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+                    "glazeem", "zorkpoint", 5);
+            Util.delay(500);
+        }
 
 
-
-        File save = new File(Ros.getMapFilePath(), Ros.mapfilename );
-        System.out.println(save.getAbsolutePath());
+//            String s = "*0123456789*";
+//        System.out.println(s.substring(s.indexOf("567")));
 
     }
 }

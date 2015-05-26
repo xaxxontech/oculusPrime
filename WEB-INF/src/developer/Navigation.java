@@ -33,6 +33,9 @@ public class Navigation {
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
 	private final Settings settings = Settings.getReference();
+	public long routestarttime;
+	public NavigationLog navlog;
+	public int consecutiveroute = 1;
 
 	/** Constructor */
 	public Navigation(Application a){
@@ -40,6 +43,7 @@ public class Navigation {
 		app = a;
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir();
+		navlog = new NavigationLog();
 	}	
 	
 	public void gotoWaypoint(final String str) {
@@ -80,9 +84,10 @@ public class Navigation {
 	}
 	
 	private boolean waitForNavSystem() { // blocking
-		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString())) {
-			app.driverCallServer(PlayerCommands.messageclients,
-					"can't start navigation, in process of shutting down");
+
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.mapping.toString()) ||
+				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString())) {
+			app.driverCallServer(PlayerCommands.messageclients, "can't start navigation");
 			return false;
 		}
 
@@ -102,9 +107,8 @@ public class Navigation {
 
 
 	public void startMapping() {
-		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
 			return;
-		}
 
 		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
@@ -387,7 +391,6 @@ public class Navigation {
 		app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
 		
 		new Thread(new Runnable() { public void run() {
-			int consecutiveroute = 1;
 
 			// get schedule info
 			// map days to numbers
@@ -457,6 +460,7 @@ public class Navigation {
 
 					if (startroute) break;
 
+					// determine seconds to next route
 					if (!state.exists(State.values.nextroutetime)) { // only set once
 
 						int adddays = 0;
@@ -479,6 +483,8 @@ public class Navigation {
 							testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
 									calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
 						}
+						else if (testday.getTimeInMillis() - System.currentTimeMillis() > Util.ONE_DAY*7) //wrap
+							testday.setTimeInMillis(testday.getTimeInMillis()-Util.ONE_DAY*7);
 
 						state.set(State.values.nextroutetime, testday.getTimeInMillis());
 					}
@@ -505,6 +511,9 @@ public class Navigation {
 				// check if cancelled while waiting
 				if (!state.exists(State.values.navigationroute)) return;
 				if (!state.get(State.values.navigationrouteid).equals(id)) return;
+
+				// start!
+				routestarttime = System.currentTimeMillis();
 
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
@@ -549,6 +558,8 @@ public class Navigation {
 
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
+						navlog.newItem(NavigationLog.ERRORSTATUS, "unable to set waypoint", routestarttime,
+								name, state.get(State.values.navigationroute), consecutiveroute);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" unable to set waypoint");
 						wpnum ++;
 						continue;
@@ -573,6 +584,8 @@ public class Navigation {
 					
 					// failed, try next waypoint
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
+						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint", routestarttime, name,
+								state.get(State.values.navigationroute), consecutiveroute);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
 						continue; 
@@ -604,7 +617,10 @@ public class Navigation {
 				}
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					cancelRoute(id); // TODO: send alert
+					// TODO: send alert
+					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock, route cancelled",
+							routestarttime, null, state.get(State.values.navigationroute), consecutiveroute);
+					cancelRoute(id);
 					// try docking one more time, sending alert if fail
 					Util.log("calling redock()", this);
 					stopNavigation();
@@ -613,6 +629,8 @@ public class Navigation {
 					return; 
 				}
 
+				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null,
+						state.get(State.values.navigationroute), consecutiveroute);
 				consecutiveroute ++;
 
 				String msg = " min until next route: "+name+", run #"+consecutiveroute;
@@ -728,7 +746,7 @@ public class Navigation {
 		long delay = 10000;
  		if (duration < delay) duration = delay;
 		int turns = 0;
-		int maxturns = 9;
+		int maxturns = 8;
 		if (!rotate) {
 			delay = duration;
 			turns = maxturns;
@@ -766,15 +784,22 @@ public class Navigation {
 			if (state.exists(State.values.streamactivity)) {
 
 				String streamactivity =  state.get(State.values.streamactivity);
-//				String msg = "detected "+Util.getTime()+", level " + streamactivity.replaceAll("\\D","") + ", at waypoint: " + wpname + ", route: " + name;
 				String msg = "detected "+Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
-				Util.log(msg+" "+streamactivity, this);
+				Util.log(msg + " " + streamactivity, this);
 
-				if (email || rss) { // && settings.getBoolean(ManualSettings.alertsenabled) ) {
+				String navlogmsg = "Detected: "+streamactivity;
+
+				String link = "";
+				if (streamactivity.contains("video")) {
+					link = FrameGrabHTTP.saveToFile("?mode=processedImg");
+					navlogmsg += "<br><a href='" + link + "' target='_blank'>image link</a>";
+				}
+
+				if (email || rss) {
 
 					if (streamactivity.contains("video")) {
 						msg = "[Oculus Prime Motion Detection] Motion " + msg;
-						msg += "\nimage link:\n" + FrameGrabHTTP.saveToFile("?mode=processedImg");
+						msg += "\nimage link: " + link + "\n";
 						Util.delay(3000); // allow time for download thread to capture image before turning off camera
 					}
 					else if (streamactivity.contains("audio")) {
@@ -783,11 +808,19 @@ public class Navigation {
 
 					if (email) {
 						String emailto = settings.readSetting(ManualSettings.email_to_address);
-						if (!emailto.equals(Settings.DISABLED))
+						if (!emailto.equals(Settings.DISABLED)) {
 							app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
+							navlogmsg += "<br> email sent ";
+						}
 					}
-					if (rss)	app.driverCallServer(PlayerCommands.rssadd, msg);
+					if (rss) {
+						app.driverCallServer(PlayerCommands.rssadd, msg);
+						navlogmsg += "<br> new RSS item ";
+					}
 				}
+
+				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
+						state.get(State.values.navigationroute), consecutiveroute);
 
 				if (state.exists(State.values.streamactivityenabled))
 					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
@@ -806,11 +839,11 @@ public class Navigation {
 												// TODO: testing 1000, still happening
 //				app.driverCallServer(PlayerCommands.left, "45");
 				Util.delay(2000);
-				if (!SystemWatchdog.waitForCpu()) break; // lots of missed stop commands here
+				if (!SystemWatchdog.waitForCpu(8000)) break; // lots of missed stop commands, cpu timeouts here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.left.toString());
-				Util.delay((long) (45.0 / degperms));
+				Util.delay((long) (50.0 / degperms));
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
 
 				long stopwaiting = System.currentTimeMillis()+750; // timeout if error
