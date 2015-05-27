@@ -584,8 +584,8 @@ public class Navigation {
 					
 					// failed, try next waypoint
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
-						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint", routestarttime, name,
-								state.get(State.values.navigationroute), consecutiveroute);
+						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
+								routestarttime, wpname, name, consecutiveroute);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
 						continue; 

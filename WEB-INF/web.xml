@@ -47,6 +47,23 @@
 		<url-pattern>/dashboard</url-pattern>
 	</servlet-mapping>
 
+	<servlet>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<servlet-class>oculusPrime.StaticContentServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/framegrabs/</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/framegrabs/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/navigationlog/*</url-pattern>
+	</servlet-mapping>
+
 	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>Forbidden</web-resource-name>

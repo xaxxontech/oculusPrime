@@ -18,9 +18,8 @@ import oculusPrime.State.values;
 
 public class BanList {
 	
-	public static final String sep = System.getProperty("file.separator");
-	public static final String banfile = System.getenv("RED5_HOME") +sep+"conf"+sep+"banlist.txt";
-	public static final String banlog = System.getenv("RED5_HOME") + sep + "log" + sep + "banlist.log";
+	public static final String banfile = Application.RED5_HOME +Util.sep+"conf"+Util.sep+"banlist.txt";
+	public static final String banlog = Application.RED5_HOME + Util.sep + "log" + Util.sep + "banlist.log";
 	
 	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
 	public static final long ROLL_OVER = 15000;
@@ -76,7 +75,7 @@ public class BanList {
 		}
 		
 		override = ! Settings.getReference().getBoolean(ManualSettings.checkaddresses);
-		if(override) Util.log("BanList(): disabled, developer mode enabled", this);
+		if(override) Util.log("BanList(): disabled", this);
 		else timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}
 	
@@ -90,7 +89,7 @@ public class BanList {
 	
 	private void appendLog(final String str){
 		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(Util.getTime() + ", " +str);
+		history.add(Util.getTime() + ", " + str);
 		
 		if(logfile==null) return;
 		
@@ -172,13 +171,15 @@ public class BanList {
 	//	if(address.equals("10.42.0.1")) return true;
 		
 		if(address.startsWith("10.42")) return true;
-		
-		if(address.startsWith(state.get(values.localaddress).substring(0, 4))) {
-			if( ! known.contains(address)){
-				appendLog("added lan ip: " + address);
-				known.add(address);
+
+		if (state.exists(values.localaddress)) {
+			if (address.startsWith(state.get(values.localaddress).substring(0, 4))) {
+				if (!known.contains(address)) {
+					appendLog("added lan ip: " + address);
+					known.add(address);
+				}
+				return true;
 			}
-			return true;
 		}
 		
 		if(address.equals("0.0.0.0")) return true;

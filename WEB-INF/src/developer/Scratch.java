@@ -7,10 +7,7 @@ import javax.servlet.http.Part;
 import java.io.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 public class Scratch {
 
@@ -87,24 +84,24 @@ public class Scratch {
 */
 
 
-//        State state = State.getReference();
-//        state.set(State.values.navigationroute, "zorkulus");
-        NavigationLog navlog = new NavigationLog();
-        for (int i=0; i<5; i++) {
-            navlog.newItem(NavigationLog.COMPLETEDSTATUS, "hi there", System.currentTimeMillis() - 1000000,
-                    "glazeem", "zorkpoint", 5);
-            Util.delay(500);
-            navlog.newItem(NavigationLog.ALERTSTATUS, "hi there", System.currentTimeMillis() - 1000000,
-                    "glazeem", null, 5);
-            Util.delay(500);
-            navlog.newItem(NavigationLog.ERRORSTATUS, "hi there", System.currentTimeMillis() - 1000000,
-                    "glazeem", "zorkpoint", 5);
-            Util.delay(500);
-            navlog.newItem(NavigationLog.INFOSTATUS, "hi there", System.currentTimeMillis() - 1000000,
-                    "glazeem", "zorkpoint", 5);
-            Util.delay(500);
-        }
+//        NavigationLog navlog = new NavigationLog();
+//        for (int i=0; i<5; i++) {
+//            navlog.newItem(NavigationLog.COMPLETEDSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+//                    "glazeem", "zorkpoint", 5);
+//            Util.delay(500);
+//            navlog.newItem(NavigationLog.ALERTSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+//                    "glazeem", null, 5);
+//            Util.delay(500);
+//            navlog.newItem(NavigationLog.ERRORSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+//                    "glazeem", "zorkpoint", 5);
+//            Util.delay(500);
+//            navlog.newItem(NavigationLog.INFOSTATUS, "hi there", System.currentTimeMillis() - 1000000,
+//                    "glazeem", "zorkpoint", 5);
+//            Util.delay(500);
+//        }
 
+        Vector<String> known = new Vector<String>();
+        if (known.contains("asdf")) return;
 
 //            String s = "*0123456789*";
 //        System.out.println(s.substring(s.indexOf("567")));

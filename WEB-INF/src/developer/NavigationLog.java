@@ -73,7 +73,9 @@ public class NavigationLog {
             if (msg != null) str += msg+"<br>\n";
             if (waypoint != null) str += "Waypoint: "+waypoint+"<br>\n";
             str += "Consecutive Route: "+consecutiveroute+"<br>\n";
-            str += "Elapsed time: "+(int) ((System.currentTimeMillis()-starttime)/1000/60)+" minutes<br>\n";
+            long st = starttime;
+            if (st==0) st = System.currentTimeMillis();
+            str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes<br>\n";
             str += "</div>\n";
 
             writeFile(str);
@@ -135,19 +137,19 @@ public class NavigationLog {
                 "font-family: verdana, arial, helvetica, sans-serif;}\n";
         str += "."+COMPLETEDSTATUS.toLowerCase()+" {background-color: #ADEFAD; cursor: pointer; " +
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
-                "border-top: 1px solid #444444; }\n";
+                "border-top: 1px solid #ffffff; }\n";
         str += "."+COMPLETEDSTATUS.toLowerCase()+"expand {background-color: #CDFACD; padding-bottom: 3px}\n";
         str += "."+INFOSTATUS.toLowerCase()+" {background-color: #C2EBFF; cursor: pointer; " +
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
-                "border-top: 1px solid #444444; }\n";
+                "border-top: 1px solid #ffffff; }\n";
         str += "."+INFOSTATUS.toLowerCase()+"expand {background-color: #DBF3FF; padding-bottom: 3px}\n";
         str += "."+ALERTSTATUS.toLowerCase()+" {background-color: #FF8533; cursor: pointer; " +
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
-                "border-top: 1px solid #444444; }\n";
+                "border-top: 1px solid #ffffff; }\n";
         str += "."+ALERTSTATUS.toLowerCase()+"expand {background-color: #FFAB73; padding-bottom: 3px}\n";
         str += "."+ERRORSTATUS.toLowerCase()+" {background-color: #FF3333; cursor: pointer; " +
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
-                "border-top: 1px solid #444444; }\n";
+                "border-top: 1px solid #ffffff; }\n";
         str += "."+ERRORSTATUS.toLowerCase()+"expand {background-color: #FC7E7E; padding-bottom: 3px}\n";
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";
