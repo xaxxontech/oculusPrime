@@ -37,8 +37,9 @@ public class DashboardServlet extends HttpServlet {
 	
 		if( ! ban.knownAddress(request.getRemoteAddr())){
 			Util.log("unknown address: danger: "+request.getRemoteAddr(), this);
-			out.println("unknown address: danger: "+request.getRemoteAddr() + " \n " + ban.toString());
-			out.close();
+			// out.println("unknown address: danger: "+request.getRemoteAddr() + " \n " + ban.toString());
+			// out.close();
+			response.sendRedirect("/oculusPrime");   
 			return;
 		}
 

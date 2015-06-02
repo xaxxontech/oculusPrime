@@ -199,7 +199,7 @@ public class BanList {
 		if(address.equals("null")) return;
 		
 		if( ! Util.validIP(address)){
-			appendLog(address + " is not valid, is this an error?"); 
+			appendLog(address + " is not valid, is this an errrror?"); 
 			return;
 		}
 		
