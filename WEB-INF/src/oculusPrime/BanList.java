@@ -191,13 +191,18 @@ public class BanList {
 	
 	public synchronized void clearAddress(String address) {
 		
-		if( ! Util.validIP(address)){
-			appendLog(address + " is not valid, error?"); 
+		if(address == null) {
+			appendLog(address + " is not valid"); 
 			return;
 		}
 		
-		if(address == null) return;
 		if(address.equals("null")) return;
+		
+		if( ! Util.validIP(address)){
+			appendLog(address + " is not valid, is this an errrror?"); 
+			return;
+		}
+		
 		if(attempts.containsKey(address)) attempts.remove(address);
 		if(blocked.containsKey(address)) blocked.remove(address);
 		if( ! known.contains(address)) known.add(address);
