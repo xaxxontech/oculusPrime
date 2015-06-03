@@ -24,7 +24,7 @@ public class State {
 		
 		streamactivityenabled, videosoundmode, stream, driverstream, volume, //audio video
 		framegrabbusy, controlsinverted, lightlevel, streamactivitythreshold, streamactivity,
-		motiondetect,
+		motiondetect, objectdetect,
 
 		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
 		powererror, forceundock, // power problems

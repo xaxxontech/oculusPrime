@@ -54,8 +54,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected static Settings settings = Settings.getReference();
 	protected String portname = settings.readSetting(ManualSettings.powerport);
 	protected String version = null;
-	
-	
+
 	// errors
 	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
 	public static final int WARNING_ONLY_BELOW = 40;
@@ -362,6 +361,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "multiple", "dock "+AutoDock.DOCKED+" motion disabled");
 				state.put(State.values.dockstatus, AutoDock.DOCKED);
+
+				if (state.getBoolean(State.values.autodocking) && !state.getBoolean(State.values.docking))
+					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
 			}
 		}
 		

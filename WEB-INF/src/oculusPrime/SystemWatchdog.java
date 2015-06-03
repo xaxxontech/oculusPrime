@@ -315,7 +315,7 @@ public class SystemWatchdog {
 			}
 			Util.delay(1000);
 		}
-		Util.log("Util.waitForCpu() error, timed out "+ cpu, null);
+		Util.log("Util.waitForCpu() warning, timed out "+ cpu, null);
 
 //		State.getReference().set(values.linuxboot, "0"); // force reboot next dock
 //		return false;

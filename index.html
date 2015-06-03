@@ -979,10 +979,17 @@ floor plane top view <a class="blackbg" href="javascript: depthView('floorPlaneT
 
 processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> / 
 <a class="blackbg" href="javascript: processedImg('close');">off</a><br>
+
 motion detect demo <a class="blackbg"
-					  href="javascript: callServer('motiondetectstream', ''); imgOverVideo('on');">on</a> /
+href="javascript: callServer('motiondetectstream', ''); imgOverVideo('on');">on</a> /
 <a class="blackbg"
-   href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
+human detect demo <a class="blackbg"
+href="javascript: callServer('objectdetectstream', 'human'); imgOverVideo('on');">on</a> /
+<a class="blackbg"
+href="javascript: callServer('state', 'delete objectdetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
 
 <a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
 

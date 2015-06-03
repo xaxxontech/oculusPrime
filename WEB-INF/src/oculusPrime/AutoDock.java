@@ -271,7 +271,7 @@ public class AutoDock {
 					comport.strobeflash("on", 120, 20);
 					// allow time for charger to get up to voltage 
 				     // and wait to see if came-undocked immediately (fairly commmon)
-					Util.delay(7000);
+					Util.delay(5000);
 				}
 				
 				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful
@@ -411,8 +411,6 @@ public class AutoDock {
 			final double s2slopetolerance = 1.2; // 1.2
 			final double s1slopetolerance = 1.3; // 1.3
 
-			// optionally set breaking delay longer for fast bots
-
 			final int s1FWDmilliseconds = 500; // 400
 			final int s2FWDmilliseconds = 250; // 100
 			final double s1FWDmeters = 0.25;
@@ -434,16 +432,27 @@ public class AutoDock {
 				}
 
 				// go linear
+//				comport.goForward();
+//				comport.delayWithVoltsComp(s1FWDmilliseconds);
+//				comport.stopGoing();
+//				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
-				comport.goForward();
-				comport.delayWithVoltsComp(s1FWDmilliseconds);
-				comport.stopGoing();
-				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+				long moveID = System.nanoTime();
+				comport.currentMoveID = moveID;
+				int speed1 = (int) comport.voltsComp((double) comport.speedslow);
+				if (speed1 > 255) { speed1 = 255; }
+				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
+				Util.delay(comport.ACCEL_DELAY);
+				int speed2= state.getInteger(State.values.motorspeed);
+				speed2 = (int) comport.voltsComp((double) speed2);
+				if (speed2 > 255) { speed2 = 255; }
+				if (comport.currentMoveID != moveID) return;
+				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed2, (byte) speed2});
+				Util.delay(s1FWDmilliseconds - comport.ACCEL_DELAY);
+				if (comport.currentMoveID != moveID) return;
+				comport.sendCommand(ArduinoPrime.STOP);
+				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
-//				state.set(State.values.direction, ArduinoPrime.direction.unknown.toString());
-//				comport.movedistance(ArduinoPrime.direction.forward, s1FWDmeters);
-//				state.block(State.values.direction, ArduinoPrime.direction.stop.toString(), 5000);
-//				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
 				autodocknavrunning = false;
 				dockGrab(dockgrabmodes.find, 0, 0);
@@ -484,20 +493,10 @@ public class AutoDock {
 						comport.clickSteer(lastcamctr, 0);
 						comport.delayWithVoltsComp(allowforClickSteer);
 
-//						SystemWatchdog.waitForCpu(); // lots of missed stops here
 						comport.goForward();
 						comport.delayWithVoltsComp(s2FWDmilliseconds);
-						comport.stopGoing(); // often subject to lag!
+						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
-
-//						state.set(State.values.direction, ArduinoPrime.direction.unknown.toString());
-//						comport.clickSteer(lastcamctr, 0);
-//						state.block(State.values.direction, ArduinoPrime.direction.stop.toString(), 5000);
-
-//						state.set(State.values.direction, ArduinoPrime.direction.unknown.toString());
-//						comport.movedistance(ArduinoPrime.direction.forward, s2FWDmeters);
-//						state.block(State.values.direction, ArduinoPrime.direction.stop.toString(), 5000);
-//						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate before framegrab
 
 						if (Math.abs(lastcamctr) > imgwidth/4) { // correct in case dock occluded by frame after large move
 							comport.clickSteer(-lastcamctr , 0);
@@ -514,11 +513,6 @@ public class AutoDock {
 						comport.delayWithVoltsComp(s2FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
-
-//						state.set(State.values.direction, ArduinoPrime.direction.unknown.toString());
-//						comport.movedistance(ArduinoPrime.direction.forward, s2FWDmeters);
-//						state.block(State.values.direction, ArduinoPrime.direction.stop.toString(), 5000);
-//						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate before framegrab
 
 						autodocknavrunning = false;
 						dockGrab(dockgrabmodes.find, 0, 0);

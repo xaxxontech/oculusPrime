@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 
+import developer.image.OpenCVMotionDetect;
+import developer.image.OpenCVObjectDetect;
 import oculusPrime.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -672,29 +674,29 @@ public class Navigation {
 		
 		// TODO: actions here
 		//  <action>  
-		// var navrouteavailableactions = ["rotate", "email", "rss", "motion", "not motion", "sound", "not sound" ];
+		// var navrouteavailableactions = ["rotate", "email", "rss", "motion", "sound", "human", "not detect" ];
 		/*
-		 * rotate only works with motion & notmotion (ie., camera) ignore otherwise
+		 * rotate only works with motion & human (ie., camera) ignore otherwise
 		 *     -rotate ~30 deg increments, fixed duration. start-stop
 		 *     -minimum full rotation, or more if <duration> allows 
 		 * <duration> -- cancel all actions and move to next waypoint (let actions complete)
-		 * alerts: rss or email: send on detection from "motion", "not motion", "sound", "not sound" 
+		 * alerts: rss or email: send on detection (or not) from "motion", "human", "sound"
 		 *      -once only from single waypoint, max 2 per route (on 1st detection, then summary at end)
 		 * if no alerts, log only
 		 */
-    	// setstreamactivitythreshold 30 0  -- tested fairly sensitive, video, run camera first
     	// takes 5-10 seconds to init if mic is on (mic only, or mic + camera)
 
 		boolean rotate = false;
 		boolean email = false;
 		boolean rss = false;
 		boolean motion = false;
-		boolean notmotion = false;
+		boolean notdetect = false;
 		boolean sound = false;
-		boolean notsound = false;
+		boolean human = false;
 		
 		boolean camera = false;
 		boolean mic = false;
+		String notdetectedaction = "";
 		
     	for (int i=0; i< actions.getLength(); i++) {
     		String action = ((Element) actions.item(i)).getTextContent();
@@ -702,31 +704,43 @@ public class Navigation {
 			case "rotate": rotate = true; break;
 			case "email": email = true; break;
 			case "rss": rss = true; break;
-			case "motion": motion = true;
+			case "motion":
+				motion = true;
 				camera = true;
+				notdetectedaction = action;
 				break;
-			case "notmotion": notmotion = true; 
+			case "not detect":
+				notdetect = true;
+				break;
+			case "sound":
+				sound = true;
+				mic = true;
+				notdetectedaction = action;
+				break;
+			case "human":
+				human = true;
 				camera = true;
-				break;
-			case "sound": sound = true; 
-				mic = true;
-				break;
-			case "notsound": notsound = true; 
-				mic = true;
+				notdetectedaction = action;
 				break;
       		}	
     	}
     	
-    	if (!camera) rotate = false; // if no camera, what's the point in rotating
+    	if (!camera) {
+			rotate = false; // if no camera, what's the point in rotating
+			app.driverCallServer(PlayerCommands.messageclients, "rotate action ignored, camera unused");
+		}
 
     	// VIDEOSOUNDMODELOW required for flash stream activity function to work, saves cpu for camera
     	String previousvideosoundmode = state.get(State.values.videosoundmode);
     	if (mic || camera) app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW);
 
-		// setup camera
+		// setup camera mode and position
 		if (camera) {
-			// save cpu using 320x240, or increase frame rate delay
-    		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			if (human)
+				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+			else // motion
+    			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+
     		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
     	}
 
@@ -755,33 +769,41 @@ public class Navigation {
 		// remain at waypoint looping and/or waiting, detection running if enabled
 		while (System.currentTimeMillis() - waypointstart < duration || turns < maxturns) {
 
+
 			if (!state.exists(State.values.navigationroute)) return;
 	    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-			
-			// start stream(s)
-			if (camera && mic) {
-				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
-//				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
-				app.driverCallServer(PlayerCommands.motiondetectgo, null);
+
+			// enable sound detection
+			if (sound) {
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
-						"0 "+settings.readSetting(ManualSettings.soundthreshold));
-				Util.delay(2000); // mic takes a while to start up
-			} else if (camera && !mic) {
-				if (turnLightOnIfDark())  Util.delay(4000); // allow cam to adjust
-//				app.driverCallServer(PlayerCommands.motiondetectgo, settings.readSetting(ManualSettings.motionthreshold));
-				app.driverCallServer(PlayerCommands.motiondetectgo, null);
-			} else if (!camera && mic) {
-				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
-						"0 "+settings.readSetting(ManualSettings.soundthreshold));
-				Util.delay(2000); // mic takes a while to start up
+						"0 " + settings.readSetting(ManualSettings.soundthreshold));
 			}
 
-			// WAIT
+			// lights on if needed
+			boolean lightondelay = false;
+			if (camera) {
+				if (turnLightOnIfDark()) {
+					Util.delay(4000); // allow cam to adjust
+					lightondelay = true;
+				}
+			}
+
+			// enable human or motion detection
+			if (human)
+				app.driverCallServer(PlayerCommands.objectdetectgo, OpenCVObjectDetect.HUMAN);
+			else if (motion)
+				app.driverCallServer(PlayerCommands.motiondetectgo, null);
+
+			// mic takes a while to start up
+			if (sound && !lightondelay) Util.delay(2000);
+
+			// ALL SENSES ENABLED, NOW WAIT
 			long start = System.currentTimeMillis();
-			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay) { Util.delay(10); }
+			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay
+					&& state.get(State.values.navigationrouteid).equals(id)) { Util.delay(10); }
 
 			// ALERT
-			if (state.exists(State.values.streamactivity)) {
+			if (state.exists(State.values.streamactivity) && ! notdetect) {
 
 				String streamactivity =  state.get(State.values.streamactivity);
 				String msg = "detected "+Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
@@ -790,15 +812,15 @@ public class Navigation {
 				String navlogmsg = "Detected: "+streamactivity;
 
 				String link = "";
-				if (streamactivity.contains("video")) {
+				if (streamactivity.contains("video") || streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
 					link = FrameGrabHTTP.saveToFile("?mode=processedImg");
 					navlogmsg += "<br><a href='" + link + "' target='_blank'>image link</a>";
 				}
 
 				if (email || rss) {
 
-					if (streamactivity.contains("video")) {
-						msg = "[Oculus Prime Motion Detection] Motion " + msg;
+					if (streamactivity.contains("video") || streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
+						msg = "[Oculus Prime Detected "+streamactivity+"] " + msg;
 						msg += "\nimage link: " + link + "\n";
 						Util.delay(3000); // allow time for download thread to capture image before turning off camera
 					}
@@ -822,17 +844,51 @@ public class Navigation {
 				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
 						state.get(State.values.navigationroute), consecutiveroute);
 
+				// shut down sensing
 				if (state.exists(State.values.streamactivityenabled))
 					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 				if (state.exists(State.values.motiondetect))
 					app.driverCallServer(PlayerCommands.motiondetectcancel, null);
+				else if (state.exists(State.values.objectdetect))
+					app.driverCallServer(PlayerCommands.objectdetectcancel, null);
 
-				break; // if rotating, stop
+				break; // go to next waypoint, stop if rotating
 			}
-			else  {
-				if (mic)   app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
-				if (camera) app.driverCallServer(PlayerCommands.motiondetectcancel, null);
+
+			// nothing detected, shut down sensing
+			if (state.exists(State.values.streamactivityenabled))
+				app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+			if (state.exists(State.values.motiondetect))
+				app.driverCallServer(PlayerCommands.motiondetectcancel, null);
+			else if (state.exists(State.values.objectdetect))
+				app.driverCallServer(PlayerCommands.objectdetectcancel, null);
+
+			// ALERT if not detect
+			if (notdetect) {
+				String navlogmsg = "NOT Detected: "+notdetectedaction;
+				String msg = "";
+
+				if (email || rss) {
+					msg = "[Oculus Prime: "+notdetectedaction+" NOT detected] ";
+					msg += "At waypoint: " + wpname + ", route: " + name + ", time: "+Util.getTime();
+				}
+
+				if (email) {
+					String emailto = settings.readSetting(ManualSettings.email_to_address);
+					if (!emailto.equals(Settings.DISABLED)) {
+						app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
+						navlogmsg += "<br> email sent ";
+					}
+				}
+				if (rss) {
+					app.driverCallServer(PlayerCommands.rssadd, msg);
+					navlogmsg += "<br> new RSS item ";
+				}
+
+				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
+						state.get(State.values.navigationroute), consecutiveroute);
 			}
+
 
 			if (rotate) {
 //				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
@@ -874,8 +930,8 @@ public class Navigation {
 
 		state.delete(State.values.lightlevel);
 		app.driverCallServer(PlayerCommands.getlightlevel, null);
-		long start = System.currentTimeMillis();
-		while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() - start < 2000) {
+		long timeout = System.currentTimeMillis() + 5000;
+		while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() < timeout) {
 			Util.delay(10);
 		}
 		if (state.exists(State.values.lightlevel)) {

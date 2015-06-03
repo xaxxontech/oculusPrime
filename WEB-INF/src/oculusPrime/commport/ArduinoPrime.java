@@ -3,6 +3,7 @@ package oculusPrime.commport;
 import java.util.ArrayList;
 import java.util.List;
 
+import developer.Ros;
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
 import jssc.SerialPortException;
@@ -59,7 +60,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static final int TURNING_STOP_DELAY = 500;
 
 	private static final long STROBEFLASH_MAX = 5000; //strobe timeout
-	private static final int ACCEL_DELAY = 75;
+	public static final int ACCEL_DELAY = 75;
 	private static final int COMP_DELAY = 500;
 
 	protected long lastSent = System.currentTimeMillis();
@@ -77,7 +78,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	// thread safety 
 	protected volatile boolean isconnected = false;
-	protected volatile long currentMoveID;
+	public volatile long currentMoveID;
 	protected volatile long currentCamMoveID;
 
 //	private boolean invertswap = false;
@@ -170,16 +171,32 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 //				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" PCB past reset delay", this);
 				
-//				if (now - lastReset > RESET_DELAY &&
-//						state.get(oculusPrime.State.values.dockstatus).equals(AutoDock.DOCKED) &&
-//						state.get(oculusPrime.State.values.driver) == null && isconnected &&
-//						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
-//						!state.getBoolean(oculusPrime.State.values.moving)) {
-//					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
-//					lastReset = now;
-//					reset();
-//				}
-				
+				if (now - lastReset > RESET_DELAY &&
+						state.get(oculusPrime.State.values.dockstatus).equals(AutoDock.DOCKED) &&
+						state.get(oculusPrime.State.values.driver) == null && isconnected &&
+						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
+						!state.getBoolean(oculusPrime.State.values.moving)) {
+
+					if (settings.getBoolean(GUISettings.navigation)) {
+						if (state.exists(oculusPrime.State.values.navigationroute) && (
+								state.get(oculusPrime.State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ||
+										state.get(oculusPrime.State.values.navsystemstatus).equals(Ros.navsystemstate.starting.toString()))) {
+							Util.delay(WATCHDOG_DELAY);
+							continue;
+						}
+						if (state.exists(oculusPrime.State.values.nextroutetime)) {
+							if (state.getLong(oculusPrime.State.values.nextroutetime.toString()) - System.currentTimeMillis() < Util.TWO_MINUTES) {
+								Util.delay(WATCHDOG_DELAY);
+								continue;
+							}
+						}
+					}
+
+					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
+					lastReset = now;
+					reset();
+				}
+
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
 					Util.log(FIRMWARE_ID + " PCB timeout, attempting reset", this);
@@ -471,25 +488,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			Util.log("DEBUG: "+ text, this);
 		}   // */
 
-//		// TODO: initial timeout for testing only
-//		long timeout = System.currentTimeMillis() + 500;
-//
-//		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
-//		if (commandlock) {
-//			String str = "";
-//			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-//			Util.log("error, commandlocked after 500 ms, command waiting: "+str, this);
-//		}
-//
-//		timeout = System.currentTimeMillis() + 4500;
-//		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
-//		if (commandlock) {
-//			String str = "";
-//			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-//			Util.log("error, commandlock timeout after 5000ms, command dropped: "+str, this);
-//			return;
-//		}
-
 		int n = 0;
 		while (commandlock) {
 			Util.delay(1);
@@ -515,7 +513,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 
 	/** inner class to send commands to port in sequential order */
-	public class CommandSender extends Thread {
+	private class CommandSender extends Thread {
 
 		public CommandSender() {
 			this.setDaemon(true);
@@ -642,7 +640,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
 
 		final int spd = speed2;
-		
+
+		// start accel to full speed after short ACCEL_DELAY, no comp (because initial comp causes considerable drift)
 		if (speed2 > speed1) { 
 			new Thread(new Runnable() {
 				public void run() {
@@ -657,19 +656,18 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				} 
 			}).start();
 		}
-		
+
+		// apply comp only when up to full speed
 		if (steeringcomp != 0) {  
 			new Thread(new Runnable() {
 				public void run() {
 					Util.delay(COMP_DELAY); 
 
-					if (currentMoveID != moveID)  return;
-					
 					int[] comp = applyComp(spd); // actual speed, comped
 					int L,R;
 					L = comp[0];
 					R = comp[1];
-		// actual speed, comped
+					if (currentMoveID != moveID)  return;
 					sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 					
 				} 
@@ -779,11 +777,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				public void run() {
 					Util.delay(COMP_DELAY); 
 
-					if (currentMoveID != moveID)  return;
-					
+
 					int[] comp = applyComp(spd); // apply comp now that up to speed
 					int L = comp[1];
 					int R = comp[0];
+					if (currentMoveID != moveID)  return;
 					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});
 					
 				} 
@@ -1528,7 +1526,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * @param n original milliseconds
 	 * @return modified (typically extended) milliseconds
 	 */
-	private double voltsComp(double n) {
+	public double voltsComp(double n) {
 		double volts = 12.0; // default
 		final double nominalvolts = 12.0;
 		final double exponent = 1.6;

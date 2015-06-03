@@ -21,7 +21,7 @@ public class OpenCVUtils {
 
 	}
     
-    public BufferedImage matToBufferedImage(Mat matrix) { // type_intRGB
+    public static BufferedImage matToBufferedImage(Mat matrix) { // type_intRGB
 		int cols = matrix.cols();
 		int rows = matrix.rows();
 		int elemSize = (int) matrix.elemSize();
@@ -50,7 +50,7 @@ public class OpenCVUtils {
 		return image;
 	}
 
-	public Mat bufferedImageToMat(BufferedImage img) {
+	public static Mat bufferedImageToMat(BufferedImage img) {
 //		img = ImageUtils.toBufferedImageOfType(img, BufferedImage.TYPE_3BYTE_BGR);
 
 		byte[] pixels = ((DataBufferByte) img.getRaster().getDataBuffer()).getData();

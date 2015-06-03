@@ -12,6 +12,7 @@ import java.util.Set;
 
 import developer.NavigationLog;
 import developer.image.OpenCVMotionDetect;
+import developer.image.OpenCVObjectDetect;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -451,7 +452,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 			
 		// skip telnet ping broadcast
-		if(fn != PlayerCommands.statuscheck) state.put(State.values.lastusercommand, System.currentTimeMillis()); 
+		if(fn != PlayerCommands.statuscheck) state.put(State.values.lastusercommand, System.currentTimeMillis());
 		
 		String[] cmd = null;
 		if(str!=null) cmd = str.split(" ");
@@ -822,6 +823,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case motiondetectgo: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
+
+		case objectdetectgo: new OpenCVObjectDetect(this).detectGo(str); break;
+		case objectdetectcancel: state.delete(values.objectdetect); break;
+		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
+
 		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null); break;
 		case log: Util.log(str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;

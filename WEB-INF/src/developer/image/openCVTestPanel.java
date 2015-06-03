@@ -64,7 +64,7 @@ public class openCVTestPanel extends JFrame{
 
                     while(true) {
                         if (ocvmd.imageupdated) {
-                            lblNewLabel.setIcon(new ImageIcon(ocvmd.cv.matToBufferedImage(ocvmd.detect)));
+                            lblNewLabel.setIcon(new ImageIcon(OpenCVUtils.matToBufferedImage(ocvmd.detect)));
                             ocvmd.imageupdated = false;
                         }
                         Util.delay(10);

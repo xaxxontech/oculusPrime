@@ -17,14 +17,15 @@ import java.util.Arrays;
 import java.util.List;
 
 public class OpenCVMotionDetect  {
-    OpenCVUtils cv = new OpenCVUtils();;
+//    OpenCVUtils cv = new OpenCVUtils();;
     private Mat fore = new Mat();
-    public Mat detect = new Mat(); // test panel only
+    protected Mat detect = new Mat();
     private State state = null;
     private Settings settings = null;
     private Application app = null;
+    private final long TIMEOUT = Util.ONE_HOUR;
 
-    public volatile boolean imageupdated = false; // test panel only
+    public volatile boolean imageupdated = false;
 
     // constructor
     public OpenCVMotionDetect() {
@@ -55,9 +56,8 @@ public class OpenCVMotionDetect  {
                 Mat gr = null;
                 Mat bl = null;
                 Mat m =  new Mat();
-
+                long timeout = System.currentTimeMillis() + TIMEOUT;
                 int f = 0;
-                long timeout = System.currentTimeMillis() + Util.FIVE_MINUTES;
                 int trigger = 0;
                 while (state.getBoolean(State.values.motiondetect) && System.currentTimeMillis() < timeout) {
 
@@ -94,7 +94,7 @@ public class OpenCVMotionDetect  {
                     }
                     BufferedImage img = ImageUtils.toBufferedImageOfType(app.processedImage, BufferedImage.TYPE_3BYTE_BGR);
 
-                    frame = cv.bufferedImageToMat(img);
+                    frame = OpenCVUtils.bufferedImageToMat(img);
 
                     mog.apply(frame, fore, 0);
 //                    mog.apply(frame, fore);
@@ -118,7 +118,7 @@ public class OpenCVMotionDetect  {
 
 //                        Imgproc.cvtColor(m, m, Imgproc.COLOR_GRAY2BGR);
 //                        Core.addWeighted(m, 0.5, frame, 1.0, 1.0, detect);
-                            Application.processedImage = cv.matToBufferedImage(detect);
+                            Application.processedImage = OpenCVUtils.matToBufferedImage(detect);
                             imageupdated = true;
                             state.set(State.values.streamactivity, "video " + activity);
                             if (app != null)
@@ -183,7 +183,7 @@ public class OpenCVMotionDetect  {
                     break;
                 }
 
-                frame = cv.bufferedImageToMat(img);
+                frame = OpenCVUtils.bufferedImageToMat(img);
 
 //                frame = cv.bufferedImageToMat(ImageUtils.getImageFromStream());
 
@@ -240,7 +240,7 @@ public class OpenCVMotionDetect  {
 
                     while(state.getBoolean(State.values.motiondetect)) {
                         if (imageupdated) {
-                            app.videoOverlayImage = cv.matToBufferedImage(detect);
+                            app.videoOverlayImage = OpenCVUtils.matToBufferedImage(detect);
                             imageupdated = false;
                         }
                         Util.delay(10);

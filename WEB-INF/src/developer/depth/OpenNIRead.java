@@ -8,6 +8,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.util.Map;
 
+import developer.Ros;
 import developer.image.ImageUtils;
 import oculusPrime.Application;
 import oculusPrime.Util;
@@ -52,10 +53,10 @@ public class OpenNIRead  {
 //			} 	
 //		}).start();
 		
-		String sep = System.getProperty("file.separator");
-		String cmd = System.getenv("RED5_HOME")+sep+"ros.sh"; // setup ros environment
-		cmd += " roslaunch oculusprime depthcam_to_java.launch";
-		Util.systemCall(cmd);
+//		String cmd = Application.RED5_HOME+Util.sep+"ros.sh"; // setup ros environment
+//		cmd += " roslaunch oculusprime depthcam_to_java.launch";
+//		Util.systemCall(cmd);
+		Ros.launch("depthcam_to_java");
 		depthCamGenerating = true;
 		depthCamInit = true;
 		

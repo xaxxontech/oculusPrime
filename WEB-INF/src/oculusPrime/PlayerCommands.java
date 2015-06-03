@@ -42,7 +42,7 @@ public enum PlayerCommands {
     
 	// un-categorized
 	speech, serverbrowser, email, state,
-    rssadd, getlightlevel,   
+    rssadd, getlightlevel, objectdetectstream, objectdetectgo, objectdetectcancel,
     
 	// undocumented    
     statuscheck, block, unblock, // help, 
