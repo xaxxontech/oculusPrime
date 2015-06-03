@@ -441,11 +441,11 @@ public class AutoDock {
 				comport.currentMoveID = moveID;
 				int speed1 = (int) comport.voltsComp((double) comport.speedslow);
 				if (speed1 > 255) { speed1 = 255; }
-				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
-				Util.delay(comport.ACCEL_DELAY);
 				int speed2= state.getInteger(State.values.motorspeed);
 				speed2 = (int) comport.voltsComp((double) speed2);
 				if (speed2 > 255) { speed2 = 255; }
+				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
+				Util.delay(comport.ACCEL_DELAY);
 				if (comport.currentMoveID != moveID) return;
 				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed2, (byte) speed2});
 				Util.delay(s1FWDmilliseconds - comport.ACCEL_DELAY);

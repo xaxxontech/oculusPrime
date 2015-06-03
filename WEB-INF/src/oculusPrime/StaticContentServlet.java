@@ -13,15 +13,6 @@ public class StaticContentServlet extends HttpServlet {
 	public void doGet(final HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 
-		// if (true) return; // TODO: testing on localhost
-
-		// Util.log("req.getQueryString(): "+req.getQueryString(), this);
-		// Util.log("req.getContextPath(): "+req.getContextPath(), this);
-		// Util.log("req.getRequestURI(): "+req.getRequestURI(), this);
-		// Util.log("req.getQueryString(): "+req.getQueryString(), this);
-		// Util.log("req.getRequestURL(): "+req.getRequestURL(), this);
-		Util.log("req.getServletPath(): " + req.getServletPath(), this);
-
 		if (!ban.knownAddress(req.getRemoteAddr())) {
 			Util.log("unknown address: danger: " + req.getRemoteAddr(), this);
 			resp.sendRedirect("/oculusPrime");   

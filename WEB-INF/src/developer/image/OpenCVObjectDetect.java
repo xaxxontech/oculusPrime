@@ -53,7 +53,7 @@ public class OpenCVObjectDetect {
         new Thread(new Runnable() {
             public void run() {
 
-                Util.log("objectdetect "+mode, this);
+//                Util.log("objectdetect "+mode, this);
 
                 Mat frame;
                 int trigger = 0;
@@ -98,9 +98,11 @@ public class OpenCVObjectDetect {
                         if (!state.exists(State.values.objectdetect)) break;
 
                         for (int i = 0; i < rects.length; i++) {
-                            if (rects[i].x < 0 || rects[i].x + rects[i].width > frame.width()) {
+
+                            // most false-positives go off-frame
+                            if (rects[i].x < 0 || rects[i].x + rects[i].width > frame.width() ||
+                                    rects[i].y<0 || rects[i].y+rects[i].height > frame.height())
                                 continue;
-                            }
 
                             if (trigger >= 2) {
 
@@ -124,7 +126,7 @@ public class OpenCVObjectDetect {
                 }
 
                 state.delete(State.values.objectdetect);
-                Util.log("objectdetect exit", this);
+//                Util.log("objectdetect exit", this);
             }
         }).start();
 
@@ -187,7 +189,11 @@ public class OpenCVObjectDetect {
                 Rect [] rects = found.toArray();
                 if (rects.length > 0) {
                     for (int i=0; i<rects.length; i++) {
-                        if (rects[i].x<0 || rects[i].x+rects[i].width > detect.width()) continue;
+
+                        // most false-positives go off-frame
+                        if (rects[i].x<0 || rects[i].x+rects[i].width > detect.width() ||
+                                rects[i].y<0 || rects[i].y+rects[i].height > detect.height())
+                            continue;
 
                         if (trigger >= 2) {
 

@@ -806,7 +806,8 @@ public class Navigation {
 			if (state.exists(State.values.streamactivity) && ! notdetect) {
 
 				String streamactivity =  state.get(State.values.streamactivity);
-				String msg = "detected "+Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
+				String msg = "Detected: "+streamactivity+", time: "+
+						Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
 				Util.log(msg + " " + streamactivity, this);
 
 				String navlogmsg = "Detected: "+streamactivity;
