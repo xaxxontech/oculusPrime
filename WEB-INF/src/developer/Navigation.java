@@ -790,9 +790,9 @@ public class Navigation {
 
 			// enable human or motion detection
 			if (human)
-				app.driverCallServer(PlayerCommands.objectdetectgo, OpenCVObjectDetect.HUMAN);
+				app.driverCallServer(PlayerCommands.objectdetect, OpenCVObjectDetect.HUMAN);
 			else if (motion)
-				app.driverCallServer(PlayerCommands.motiondetectgo, null);
+				app.driverCallServer(PlayerCommands.motiondetect, null);
 
 			// mic takes a while to start up
 			if (sound && !lightondelay) Util.delay(2000);

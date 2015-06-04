@@ -115,7 +115,8 @@ public class OpenCVObjectDetect {
                                 state.set(State.values.streamactivity, mode);
                                 if (app != null)
                                     app.driverCallServer(PlayerCommands.messageclients, mode + " detected");
-                                break;
+
+                                state.delete(State.values.objectdetect); // end thread
 
                             } else trigger++;
 

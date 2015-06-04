@@ -820,11 +820,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 //		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
-		case motiondetectgo: new OpenCVMotionDetect(this).motionDetectGo(); break;
+		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
 
-		case objectdetectgo: new OpenCVObjectDetect(this).detectGo(str); break;
+		case objectdetect: new OpenCVObjectDetect(this).detectGo(str); break;
 		case objectdetectcancel: state.delete(values.objectdetect); break;
 		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
 

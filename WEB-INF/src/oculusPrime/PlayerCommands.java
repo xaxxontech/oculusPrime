@@ -28,7 +28,7 @@ public enum PlayerCommands {
     
     // video/audio (flash)
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
-    streamsettingsset, motiondetectgo, motiondetectcancel, motiondetectstream, framegrabtofile,
+    streamsettingsset, motiondetect, motiondetectcancel, motiondetectstream, framegrabtofile,
     
     // malg board 
     motorsreset, cameracommand, camtilt, getdrivingsettings, drivingsettingsupdate,
@@ -42,7 +42,7 @@ public enum PlayerCommands {
     
 	// un-categorized
 	speech, serverbrowser, email, state,
-    rssadd, getlightlevel, objectdetectstream, objectdetectgo, objectdetectcancel,
+    rssadd, getlightlevel, objectdetectstream, objectdetect, objectdetectcancel,
     
 	// undocumented    
     statuscheck, block, unblock, // help, 
