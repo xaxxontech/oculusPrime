@@ -81,7 +81,7 @@ public class SystemWatchdog {
 			}
 			
 			// deal with abandonded, undocked, low battery, not redocking, not already attempted redock
-			if (!state.exists(State.values.driver.toString()) && 
+			if ( // ! state.exists(State.values.driver) && 
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
 					redocking == false && lowbattredock == false &&
 					Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 10 &&
