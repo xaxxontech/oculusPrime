@@ -37,8 +37,6 @@ public class DashboardServlet extends HttpServlet {
 	
 		if( ! ban.knownAddress(request.getRemoteAddr())){
 			Util.log("unknown address: danger: "+request.getRemoteAddr(), this);
-			// out.println("unknown address: danger: "+request.getRemoteAddr() + " \n " + ban.toString());
-			// out.close();
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
@@ -51,12 +49,14 @@ public class DashboardServlet extends HttpServlet {
 		String member = null;	
 		
 		try {
+			
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
 			member = request.getParameter("member");	
 			action = request.getParameter("action");
 			router = request.getParameter("router");
 			password = request.getParameter("password");
+		
 		} catch (Exception e) {
 			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
 		}
@@ -79,14 +79,15 @@ public class DashboardServlet extends HttpServlet {
 					return;
 				}
 				
-				Util.log(request.getServerName()+" delete: " + router, this);
-				monitor.removeConnection(router);	
+				Util.log(request.getServerName()+" delete [" + router + "]", this);
+				monitor.removeConnection(router.trim());	
 				response.sendRedirect("dashboard");     
 				return;
 			}
 			
 			if(action.equals("connect")  && (router != null)){	
-				if(monitor.connectionExists(router)){
+				if(monitor.connectionExists(router)){			
+					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
 					monitor.changeWIFI(router);
 					response.sendRedirect("dashboard");                              
 					return;
@@ -141,7 +142,7 @@ public class DashboardServlet extends HttpServlet {
 			
 			if(view.equalsIgnoreCase("log")){
 				out.println("\nsystem output: <hr>\n");
-				out.println(Util.tail(15) + "\n");
+				out.println(Util.tail(20) + "\n");
 				out.println("\n<br />power log: <hr>\n");
 				out.println("\n" + PowerLogger.tail(5) + "\n");
 				out.println("\n<br />" +  ban + "<hr>\n");
@@ -220,6 +221,7 @@ public class DashboardServlet extends HttpServlet {
 		str.append("\n</table>\n");
 		return str.toString();
 	}
+	
 	public String rosDashboard(){	
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"2\"> \n");
 		
@@ -275,7 +277,7 @@ public class DashboardServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"20\" border=\"0\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">  \n");
 		
 		String list = "oculus prime <br />version <b>" + VERSION + "</b><br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		

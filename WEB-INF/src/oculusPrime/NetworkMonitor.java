@@ -42,26 +42,29 @@ public class NetworkMonitor {
 	public static NetworkMonitor getReference() {return singleton;}
 	
 	private NetworkMonitor(){
-		updateExternalIPAddress();
-
-		if(settings.getBoolean(ManualSettings.networkmonitor)){
-			pingTimer.schedule(new pingTask(), 10000, 1000);
-			networkTimer.schedule(new networkTask(), Util.ONE_MINUTE, Util.TWO_MINUTES);
-			killApplet();
-		} else return;
 		
+		updateExternalIPAddress();
 		runNetworkTool();
 		connectionsNever();		
 		connectionUpdate();
+		
+		if(settings.getBoolean(ManualSettings.networkmonitor)){
+			pingTimer.schedule(new pingTask(), 5000, 1000);
+			networkTimer.schedule(new networkTask(), 5000, Util.TWO_MINUTES);
+			killApplet();
+		} else return;
+	
+		Util.delay(500);
+		if(state.equals(values.ssid, AP)) tryAnyConnection();
+		
 	}
 
 	private void doAP(){
 		try {
 			
 			if (application != null) {
-				if(apModeCounter++ % 10 == 0){ // slow down flashes					
+				if(apModeCounter++ % 10 == 0){ 		
 					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-					// Util.log("NetworkMonitor.doAP() in AP mode: "+apModeCounter, null);
 				}
 			}
 			
@@ -70,7 +73,6 @@ public class NetworkMonitor {
 				pingLast = System.currentTimeMillis();
 				tryAnyConnection();
 			}
-			
 			
 		} catch (Exception e) {
 			Util.log("NetworkMonitor.doAP(): ", e, null);
@@ -157,7 +159,7 @@ public class NetworkMonitor {
 							networkData.add(line);
 			}
 			
-			Util.debug("networkTask: lines copied: " + networkData.size(), this);
+			// Util.debug("networkTask: lines copied: " + networkData.size(), this);
 
 			proc.waitFor();
 			readETH();
@@ -177,8 +179,10 @@ public class NetworkMonitor {
 		for(int i = 0 ; i < routers.length ; i++)
 		Util.log(i + " tryAnyConnection: " + routers[i], this);
 		String ssid = routers[ new Random().nextInt(routers.length) ];
+		
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
+		
 		// TODO: super hack... 
 		Util.log("tryAnyConnection: " + ssid, this);
 		changeWIFI(ssid);
@@ -191,7 +195,7 @@ public class NetworkMonitor {
 
 		return false;
 	}
-
+	
 	private void connectionsNever(){
 		try {
 
@@ -203,7 +207,7 @@ public class NetworkMonitor {
 				line = line.trim();
 				if(line.endsWith("never")){
 					Util.debug("connectionsNever(): " + line, this);
-					removeConnection(getName(line));
+					removeConnection(getConnectionName(line));
 				}
 			}
 		} catch (Exception e) {
@@ -220,13 +224,25 @@ public class NetworkMonitor {
 			return;
 		}
 		
+		for(int i = 0 ; i < connections.size() ; i++){
+						
+			// Util.log("name(): " + NetworkMonitor.getConnectionName(connections.get(i)), this);	
+			
+			if(NetworkMonitor.getConnectionName(connections.get(i)).equals(ssid)){
+				
+				Util.log("removing(): " + NetworkMonitor.getConnectionName(connections.get(i)), this);	
+				connections.remove(i);
+				
+			}
+		}
+		
 		new Thread(){
 			public void run() {
 				try {
 		
-					accesspoints.remove(ssid);
-					connections.remove(ssid);
+				// if(connectionExists(ssid))	Util.log("__removeConnection(): exists(): " + ssid, this);
 					
+				// 	String[] cmd = { "/bin/sh", "-c", "nmcli con delete id \""+ssid+"\""};
 					String[] cmd = new String[]{"nmcli", "con", "delete", "id", "\""+ssid+"\""};
 					String text = "";
 					for(int i = 0; i < cmd.length ; i++) text += cmd[i] + " ";
@@ -244,9 +260,6 @@ public class NetworkMonitor {
 						Util.log("removeConnection(): failed, try again, error code = " + proc.waitFor(), this);
 					}
 					
-				//	Util.delay(300);
-				//	connectionUpdate();
-					
 				} catch (Exception e) {
 					Util.log("removeConnection(): " + e.getLocalizedMessage(), this);
 				}
@@ -263,7 +276,7 @@ public class NetworkMonitor {
 		}
 	}
 
-	private static String getName(final String input){
+	private static String getConnectionName(final String input){
 		String ans = "";
 		String[] line = input.split(" ");
 		for(int j = 0 ; j < line.length ; j++) {
@@ -305,7 +318,7 @@ public class NetworkMonitor {
 			while ((line = procReader.readLine()) != null){
 				if( !line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
 					if( ! connections.contains(line))
-						connections.add(line);
+						connections.add(line); // getName(line));
 			}
 		} catch (Exception e) {
 			Util.debug("connectionUpdate(): " + e.getLocalizedMessage(), this);
@@ -337,7 +350,9 @@ public class NetworkMonitor {
 		    	try {
 		
 					long start = System.currentTimeMillis();
-					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
+					String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password};
+					Process proc = Runtime.getRuntime().exec(cmd);
+					//new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password});
 					
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
@@ -351,7 +366,8 @@ public class NetworkMonitor {
 					proc.waitFor();						
 					Util.log("changeWIFI(password): exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(password): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
-					Util.delay(500);
+					
+					Util.delay(300);
 					runNetworkTool();
 					connectionUpdate();
 					changingWIFI = false;
@@ -389,8 +405,8 @@ public class NetworkMonitor {
 		    public void run() {
 		    	try {
 
-		    		long start = System.currentTimeMillis();                                                // TODO: spaces in ssid? 
-					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid}); //  "\""+ssid+"\"" }); 
+		    		long start = System.currentTimeMillis();                        // TODO: spaces in ssid? 
+					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid}); // "\""+ssid+"\"" }); 
 					
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
@@ -414,7 +430,8 @@ public class NetworkMonitor {
 					proc.waitFor();
 					Util.log("changeWIFI(): exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
-					Util.delay(500);
+					
+					Util.delay(300);
 					runNetworkTool();
 					connectionUpdate();
 					changingWIFI = false;
@@ -434,7 +451,7 @@ public class NetworkMonitor {
 		}
 		
 		if(getAccessPoints() == null){
-			Util.log(".. no access points, can't be an ap.. ", this);
+			Util.log("... no access points, can't be an ap.", this);
 			return;
 		}
 		
@@ -594,15 +611,8 @@ public class NetworkMonitor {
 			}	
 		}
 		
-		if(!star) {
-			
-			Util.debug("nm-tool.. disconnected? no star", this);
-			// TODO: 
-			// application.driverCallServer(PlayerCommands.strobeflash, "on 500 50");
-			// disconnecteddWAN();
-			// start ap?
-			
-		}
+		if(!star) Util.debug("nm-tool.. disconnected? no star", this);
+		
 	}
 	
 	public String[] getAccessPoints(){
@@ -627,7 +637,7 @@ public class NetworkMonitor {
 	
 	private void updateExternalIPAddress(){
 		
-		if( externalLookup++ >= 10) {
+		if( externalLookup++ >= 20) {
 			Util.log("updateExternalIPAddress(): too many calls: " + externalLookup, this);
 			return;
 		}
