@@ -448,10 +448,10 @@ public class AutoDock {
 
 				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
 				Util.delay(comport.ACCEL_DELAY);
-				if (comport.currentMoveID != moveID) return;
-				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed2, (byte) speed2});
+				if (comport.currentMoveID == moveID)
+					comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed2, (byte) speed2});
 				Util.delay(s1FWDmilliseconds - comport.ACCEL_DELAY);
-				if (comport.currentMoveID != moveID) return;
+//				if (comport.currentMoveID != moveID) return;
 				comport.sendCommand(ArduinoPrime.STOP);
 				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 

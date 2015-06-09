@@ -794,11 +794,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case cancelroute:
-			if (navigation != null) {
+			if (navigation != null && state.exists(values.navigationroute)) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
 						navigation.routestarttime, null, state.get(values.navigationroute),
 						navigation.consecutiveroute);
-				navigation.cancelAllRoutes();}
+				navigation.cancelAllRoutes();
+			}
 			break;
 
 		case startmapping:

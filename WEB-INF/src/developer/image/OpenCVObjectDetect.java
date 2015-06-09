@@ -21,7 +21,7 @@ public class OpenCVObjectDetect {
     private Application app = null;
     public volatile boolean imageupdated = false;
     public volatile Mat detect = new Mat();
-    private final long TIMEOUT = Util.ONE_HOUR;
+    private final long TIMEOUT = Util.TEN_MINUTES * 3;
 
     public static final String HUMAN = "human";
 
@@ -43,17 +43,27 @@ public class OpenCVObjectDetect {
         state.delete(State.values.streamactivity);
         state.set(State.values.objectdetect, mode);
 
-        if (mode.equals(HUMAN)) {
-            hog = new HOGDescriptor();
-            hog.setSVMDetector(HOGDescriptor.getDefaultPeopleDetector());
-//            hog.setSVMDetector(HOGDescriptor.getDaimlerPeopleDetector());
+        // TODO: testing only
+        int n=0;
+        if (state.exists("objectdetectcount")) {
+            n = state.getInteger("objectdetectcount")+1;
         }
+        state.set("objectdetectcount", n);
+        Util.log("objectdetectcount: "+n, this);
 
+        // testing to see if alleviates jvm crash
+//        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         new Thread(new Runnable() {
             public void run() {
+                // try creating object within thread, to prevent seg faults after ~50 detect sessions
+                // tested, crashed after 69
+                HOGDescriptor hog = new HOGDescriptor();
 
-//                Util.log("objectdetect "+mode, this);
+                if (mode.equals(HUMAN)) {
+                    hog.setSVMDetector(HOGDescriptor.getDefaultPeopleDetector());
+    //            hog.setSVMDetector(HOGDescriptor.getDaimlerPeopleDetector());
+                }
 
                 Mat frame;
                 int trigger = 0;
@@ -66,6 +76,7 @@ public class OpenCVObjectDetect {
                         return;
                     }
 
+                    // get frame
                     boolean fg = app.frameGrab();
                     long waittime = System.currentTimeMillis() + 2000;
                     while (state.getBoolean(State.values.framegrabbusy) && System.currentTimeMillis() < waittime) {
@@ -79,8 +90,8 @@ public class OpenCVObjectDetect {
                         return;
                     }
                     BufferedImage img = ImageUtils.toBufferedImageOfType(app.processedImage, BufferedImage.TYPE_3BYTE_BGR);
-
                     frame = OpenCVUtils.bufferedImageToMat(img);
+
 //                    Mat result = new Mat();
 //                    frame.copyTo(result);
 
@@ -127,7 +138,8 @@ public class OpenCVObjectDetect {
                 }
 
                 state.delete(State.values.objectdetect);
-//                Util.log("objectdetect exit", this);
+                Util.log("objectdetect exit", this);
+
             }
         }).start();
 
@@ -202,6 +214,7 @@ public class OpenCVObjectDetect {
                             Core.rectangle(detect, new Point(rects[i].x, rects[i].y),
                                     new Point(rects[i].x + rects[i].width, rects[i].y + rects[i].height),
                                     new Scalar(255, 0, 0, 255), 2);
+                            trigger = 0; // reset
 
                         } else trigger ++;
                     }

@@ -871,7 +871,12 @@ function waypointsmenu() {
 
 			str += "<a class='blackbg' href='javascript: waypointdelete("+i+");'>delete</a> &nbsp; ";
 			
-			str += "<a class='blackbg' href='javascript: gotowaypoint("+i+");'>drive to</a> <br>";
+			str += "<a class='blackbg' href='javascript: gotowaypoint("+i+");'>drive to</a>";
+			
+			if (waypoints[i] == "dock") 
+				str += " &nbsp; <a class='blackbg' href='javascript: callServer(&quot;gotodock&quot;, &quot;&quot;);'>dock</a>";
+			
+			str += "<br>";
 			
 			str += "<div id='waypointrenamediv"+i+"' style='display: none'>";
 			str += "<input id='waypointrename"+i+"' class='inputbox' type='text' size='15' "; 

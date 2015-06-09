@@ -326,19 +326,17 @@ public class Navigation {
 	}
 
 	public void runAnyActiveRoute() {
-		new Thread(new Runnable() { public void run() {
-			Document document = Util.loadXMLFromString(routesLoad());
-			NodeList routes = document.getDocumentElement().getChildNodes();
-			for (int i = 0; i< routes.getLength(); i++) {
-				String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-				String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
-				if (isactive.equals("true")) {
-					Util.delay(Util.TWO_MINUTES); // avoid boot up bog down
-					runRoute(rname);
-					break;
-				}
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		for (int i = 0; i< routes.getLength(); i++) {
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
+			if (isactive.equals("true")) {
+				runRoute(rname);
+				break;
 			}
-		}  }).start();
+		}
+
 	}
 	
 	public void runRoute(final String name) {
@@ -652,7 +650,8 @@ public class Navigation {
 					Util.delay(1000);
 				}
 
-				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES)  {
+				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES &&
+						state.getUpTime() > Util.TEN_MINUTES)  { // prevent runaway reboots
 //					app.restart();
 					app.driverCallServer(PlayerCommands.reboot, null);
 					return;
@@ -741,8 +740,11 @@ public class Navigation {
 			else // motion
     			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 
-    		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
-    	}
+			int pos = state.getInteger(State.values.cameratilt);
+//    		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
+			app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
+
+		}
 
 		// turn on cam and or mic, allow delay for normalize
 		if (camera && mic) {
@@ -850,7 +852,7 @@ public class Navigation {
 					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 				if (state.exists(State.values.motiondetect))
 					app.driverCallServer(PlayerCommands.motiondetectcancel, null);
-				else if (state.exists(State.values.objectdetect))
+				if (state.exists(State.values.objectdetect))
 					app.driverCallServer(PlayerCommands.objectdetectcancel, null);
 
 				break; // go to next waypoint, stop if rotating
@@ -861,7 +863,7 @@ public class Navigation {
 				app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 			if (state.exists(State.values.motiondetect))
 				app.driverCallServer(PlayerCommands.motiondetectcancel, null);
-			else if (state.exists(State.values.objectdetect))
+			if (state.exists(State.values.objectdetect))
 				app.driverCallServer(PlayerCommands.objectdetectcancel, null);
 
 			// ALERT if not detect

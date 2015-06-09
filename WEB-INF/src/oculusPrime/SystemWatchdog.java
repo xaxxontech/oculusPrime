@@ -55,10 +55,10 @@ public class SystemWatchdog {
 			// regular reboot if set 
 			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
 					&& !state.exists(State.values.driver.toString()) &&
-					!state.exists(State.values.powererror.toString()) && // why..? 
+					!state.exists(State.values.powererror.toString()) &&
 					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
 					state.getInteger(State.values.telnetusers) == 0 &&
-					System.currentTimeMillis() - state.getUpTime() > Util.TEN_MINUTES && // prevent runaway reboots
+					state.getUpTime() > Util.TEN_MINUTES && // prevent runaway reboots
 					(settings.getBoolean(GUISettings.reboot))){
 				
 				// String boot = new Date(state.getLong(State.values.javastartup.name())).toString();				
@@ -120,6 +120,9 @@ public class SystemWatchdog {
 			if (!warningonly) longerror += "</span>";
 			if (c == ArduinoPower.COMM_LOST) commlost = true;
 		}
+
+		// cancel any navigation routes (TODO: and other autonomous functions ??)
+		if (!warningonly) application.driverCallServer(PlayerCommands.cancelroute, null);
 		
 		if (state.exists(State.values.driver.toString())) {
 			String msg = "";

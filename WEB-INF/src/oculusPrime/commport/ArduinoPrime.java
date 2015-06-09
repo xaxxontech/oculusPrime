@@ -1121,7 +1121,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				break;
 			
 			case downabit: 
-				position= state.getInteger(State.values.cameratilt) + CAM_NUDGE*5;
+				position= state.getInteger(State.values.cameratilt) + CAM_NUDGE*3;
 				if (position >= CAM_MIN) { 
 					position = CAM_MIN;
 				}
@@ -1129,7 +1129,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				break;
 			
 			case upabit: 
-				position = state.getInteger(State.values.cameratilt) - CAM_NUDGE*5;
+				position = state.getInteger(State.values.cameratilt) - CAM_NUDGE*3;
 				if (position <= CAM_MAX) { 
 					position = CAM_MAX;
 				}
