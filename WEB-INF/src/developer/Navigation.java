@@ -723,9 +723,10 @@ public class Navigation {
 				break;
       		}	
     	}
-    	
+
+		// if no camera, what's the point in rotating
     	if (!camera) {
-			rotate = false; // if no camera, what's the point in rotating
+			rotate = false;
 			app.driverCallServer(PlayerCommands.messageclients, "rotate action ignored, camera unused");
 		}
 
@@ -848,23 +849,23 @@ public class Navigation {
 						state.get(State.values.navigationroute), consecutiveroute);
 
 				// shut down sensing
-				if (state.exists(State.values.streamactivityenabled))
-					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 				if (state.exists(State.values.motiondetect))
 					app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 				if (state.exists(State.values.objectdetect))
 					app.driverCallServer(PlayerCommands.objectdetectcancel, null);
+				if (state.exists(State.values.streamactivityenabled))
+					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 
 				break; // go to next waypoint, stop if rotating
 			}
 
 			// nothing detected, shut down sensing
-			if (state.exists(State.values.streamactivityenabled))
-				app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 			if (state.exists(State.values.motiondetect))
 				app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 			if (state.exists(State.values.objectdetect))
 				app.driverCallServer(PlayerCommands.objectdetectcancel, null);
+			if (state.exists(State.values.streamactivityenabled))
+				app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
 
 			// ALERT if not detect
 			if (notdetect) {

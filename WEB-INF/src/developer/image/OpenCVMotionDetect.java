@@ -52,7 +52,7 @@ public class OpenCVMotionDetect  {
                 BackgroundSubtractorMOG2 mog = new BackgroundSubtractorMOG2(0, 512, false);
 //                frame = cv.bufferedImageToMat(ImageUtils.getImageFromStream());
 
-                Mat frame;
+                Mat frame = new Mat();
                 Mat gr = null;
                 Mat bl = null;
                 Mat m =  new Mat();
@@ -131,7 +131,11 @@ public class OpenCVMotionDetect  {
                     f ++;
                     Util.delay(150); // cpu saver
                 }
-
+                detect.release();
+                frame.release();
+                gr.release();
+                bl.release();
+                m.release();
                 state.set(State.values.motiondetect, false);
             }
         }).start();

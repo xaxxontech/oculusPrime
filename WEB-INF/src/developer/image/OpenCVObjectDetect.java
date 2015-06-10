@@ -49,7 +49,7 @@ public class OpenCVObjectDetect {
             n = state.getInteger("objectdetectcount")+1;
         }
         state.set("objectdetectcount", n);
-        Util.log("objectdetectcount: "+n, this);
+        Util.log("objectdetectcount: " + n, this);
 
         // testing to see if alleviates jvm crash
 //        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -58,14 +58,17 @@ public class OpenCVObjectDetect {
             public void run() {
                 // try creating object within thread, to prevent seg faults after ~50 detect sessions
                 // tested, crashed after 69
-                HOGDescriptor hog = new HOGDescriptor();
+                // crash happend AFTER thread exit, BEFORE above objectdetectcount log
+                // (ie., during garbage collection??)
+//                HOGDescriptor hog = new HOGDescriptor();
+                hog = new HOGDescriptor();
 
                 if (mode.equals(HUMAN)) {
                     hog.setSVMDetector(HOGDescriptor.getDefaultPeopleDetector());
     //            hog.setSVMDetector(HOGDescriptor.getDaimlerPeopleDetector());
                 }
 
-                Mat frame;
+                Mat frame = new Mat();
                 int trigger = 0;
                 long timeout = System.currentTimeMillis() + TIMEOUT;
 
@@ -95,6 +98,9 @@ public class OpenCVObjectDetect {
 //                    Mat result = new Mat();
 //                    frame.copyTo(result);
 
+                    if (!state.exists(State.values.objectdetect)) break; // helps with timely exit
+
+                    // process frame
                     MatOfRect found = new MatOfRect();
                     MatOfDouble weight = new MatOfDouble();
 
@@ -104,6 +110,9 @@ public class OpenCVObjectDetect {
                         hog.detectMultiScale(frame, found, weight, 0, new Size(8, 8), new Size(32, 32), 1.05, 2, false);
 
                     Rect [] rects = found.toArray();
+                    weight.release();
+                    found.release();
+
                     if (rects.length > 0) { // maybe detection!
 
                         if (!state.exists(State.values.objectdetect)) break;
@@ -134,10 +143,12 @@ public class OpenCVObjectDetect {
                         }
                     } else trigger = 0;
 
-                    Util.delay(50); // cpu saver
+                    Util.delay(100); // cpu saver, maybe try increasing this if mat.release() not solution - was 50
                 }
 
+                frame.release(); // testing, cleanup saves JVM crash? NO
                 state.delete(State.values.objectdetect);
+
                 Util.log("objectdetect exit", this);
 
             }

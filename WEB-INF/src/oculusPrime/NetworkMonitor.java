@@ -44,16 +44,17 @@ public class NetworkMonitor {
 	private NetworkMonitor(){
 		
 		updateExternalIPAddress();
+
+		if(!settings.getBoolean(ManualSettings.networkmonitor)) return;
+
 		runNetworkTool();
 		connectionsNever();		
 		connectionUpdate();
 		
-		if(settings.getBoolean(ManualSettings.networkmonitor)){
-			pingTimer.schedule(new pingTask(), 5000, 1000);
-			networkTimer.schedule(new networkTask(), 5000, Util.TWO_MINUTES);
-			killApplet();
-		} else return;
-	
+		pingTimer.schedule(new pingTask(), 5000, 1000);
+		networkTimer.schedule(new networkTask(), 5000, Util.TWO_MINUTES);
+		killApplet();
+
 		Util.delay(500);
 		if(state.equals(values.ssid, AP)) tryAnyConnection();
 		
