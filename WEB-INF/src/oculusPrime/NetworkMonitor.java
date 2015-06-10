@@ -31,7 +31,7 @@ public class NetworkMonitor {
 	private static Timer networkTimer = new Timer();
 	private static Timer pingTimer = new Timer();
 	private static String pingValue = null;
-	private static int externalLookup = 0;
+	// private static int externalLookup = 0;
 	private static int failedConnetion = 0;
 	private static int apModeCounter = 0;
 	private static int pingCounter = 0;
@@ -42,30 +42,28 @@ public class NetworkMonitor {
 	public static NetworkMonitor getReference() {return singleton;}
 	
 	private NetworkMonitor(){
-		
+			
+		killApplet();
 		updateExternalIPAddress();
 		runNetworkTool();
 		connectionsNever();		
 		connectionUpdate();
 		
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
-			pingTimer.schedule(new pingTask(), 5000, 1000);
-			networkTimer.schedule(new networkTask(), 5000, Util.TWO_MINUTES);
-			killApplet();
-		} else return;
+			pingTimer.schedule(new pingTask(), 5000, 2000);
+			networkTimer.schedule(new networkTask(), 1000, Util.ONE_MINUTE);
+		} 
 	
-		Util.delay(500);
-		if(state.equals(values.ssid, AP)) tryAnyConnection();
-		
+		if(state.equals(values.ssid, AP)) tryAnyConnection();	
 	}
 
 	private void doAP(){
 		try {
 			
 			if (application != null) {
-				if(apModeCounter++ % 10 == 0){ 		
+				//if(apModeCounter++ % 2 == 0){ 		
 					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-				}
+				//}
 			}
 			
 			if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
@@ -101,7 +99,7 @@ public class NetworkMonitor {
 		}
 	}
 	
-	public class pingTask extends TimerTask {			
+	private class pingTask extends TimerTask {			
 	    @Override
 	    public void run() {
 	    	
@@ -121,7 +119,7 @@ public class NetworkMonitor {
     	}
 	}
 	
-	public class networkTask extends TimerTask {
+	private class networkTask extends TimerTask {
 		@Override
 		public void run() {
 			try{			
@@ -139,7 +137,7 @@ public class NetworkMonitor {
 		}
 	}
 	
-	public void runNetworkTool(){
+	private void runNetworkTool(){
 		try {
 			
 			networkData.clear();
@@ -173,17 +171,18 @@ public class NetworkMonitor {
 		}
 	}
 	
-	public void tryAnyConnection() {	
+	private void tryAnyConnection() {	
 		String[] routers = getConnections();
 		if(routers == null) return; 
-		for(int i = 0 ; i < routers.length ; i++)
-		Util.log(i + " tryAnyConnection: " + routers[i], this);
+		for(int i = 0 ; i < routers.length ; i++) Util.log(i + " tryAnyConnection: " + routers[i], this);
+		
 		String ssid = routers[ new Random().nextInt(routers.length) ];
 		
+		// TODO: super hack... try not to choose ap mode again
+		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		
-		// TODO: super hack... 
 		Util.log("tryAnyConnection: " + ssid, this);
 		changeWIFI(ssid);
 	}
@@ -240,9 +239,6 @@ public class NetworkMonitor {
 			public void run() {
 				try {
 		
-				// if(connectionExists(ssid))	Util.log("__removeConnection(): exists(): " + ssid, this);
-					
-				// 	String[] cmd = { "/bin/sh", "-c", "nmcli con delete id \""+ssid+"\""};
 					String[] cmd = new String[]{"nmcli", "con", "delete", "id", "\""+ssid+"\""};
 					String text = "";
 					for(int i = 0; i < cmd.length ; i++) text += cmd[i] + " ";
@@ -307,7 +303,7 @@ public class NetworkMonitor {
 		return con;
 	}
 	
-	public void connectionUpdate(){
+	private void connectionUpdate(){
 		try {
 			connections.clear();
 			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "con"});
@@ -367,9 +363,9 @@ public class NetworkMonitor {
 					Util.log("changeWIFI(password): exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(password): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
 					
-					Util.delay(300);
-					runNetworkTool();
-					connectionUpdate();
+				//	Util.delay(300);
+				//	runNetworkTool();
+				//	connectionUpdate();
 					changingWIFI = false;
 					
 		    	} catch (Exception e) {
@@ -431,9 +427,9 @@ public class NetworkMonitor {
 					Util.log("changeWIFI(): exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
 					
-					Util.delay(300);
-					runNetworkTool();
-					connectionUpdate();
+				//	Util.delay(300);
+				//	runNetworkTool();
+				//	connectionUpdate();
 					changingWIFI = false;
 					
 				} catch (Exception e) {
@@ -463,7 +459,6 @@ public class NetworkMonitor {
 	}
 
 	private void setSSID(final String line) {
-		// Util.debug("ssid: " + line, this);
 		if(line.contains("[") && line.contains("]")){
 			String router = line.substring(line.indexOf("[")+1, line.indexOf("]"));
 			if( ! state.equals(values.ssid, router))
@@ -509,7 +504,7 @@ public class NetworkMonitor {
 		state.delete(values.localaddress);
 		state.delete(values.signalspeed);
 		state.delete(values.gateway);
-		externalLookup = 0;
+		// externalLookup = 0;
 		apModeCounter = 0;
 		pingCounter = 0;
 		pingValue = "0"; 
@@ -637,10 +632,10 @@ public class NetworkMonitor {
 	
 	private void updateExternalIPAddress(){
 		
-		if( externalLookup++ >= 20) {
-			Util.log("updateExternalIPAddress(): too many calls: " + externalLookup, this);
-			return;
-		}
+//		if( externalLookup++ >= 20) {
+//			Util.log("updateExternalIPAddress(): too many calls: " + externalLookup, this);
+//			return;
+//		}
 		
 		new Thread(new Runnable() { public void run() {
 			try {
@@ -654,7 +649,7 @@ public class NetworkMonitor {
 				in.close();
 
 				if(Util.validIP(address)) {
-					externalLookup = 0;
+					// externalLookup = 0;
 					state.put(values.externaladdress, address);
 				} else {
 					state.delete(values.externaladdress);
