@@ -363,9 +363,9 @@ public class NetworkMonitor {
 					Util.log("changeWIFI(password): exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(password): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
 					
-				//	Util.delay(300);
-				//	runNetworkTool();
-				//	connectionUpdate();
+					Util.delay(400);
+					runNetworkTool();
+					// connectionUpdate();
 					changingWIFI = false;
 					
 		    	} catch (Exception e) {
@@ -427,8 +427,8 @@ public class NetworkMonitor {
 					Util.log("changeWIFI(): exit code: " + proc.exitValue(), this);
 					Util.log("changeWIFI(): [" + ssid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
 					
-				//	Util.delay(300);
-				//	runNetworkTool();
+					Util.delay(400);
+					runNetworkTool();
 				//	connectionUpdate();
 					changingWIFI = false;
 					
