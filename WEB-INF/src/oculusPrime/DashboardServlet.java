@@ -77,7 +77,7 @@ public class DashboardServlet extends HttpServlet {
 					Util.log("can't delete if conncted: " + router, this);
 					response.sendRedirect("dashboard");     
 					return;
-				}
+				} 
 				
 				Util.log(request.getServerName()+" delete [" + router + "]", this);
 				monitor.removeConnection(router.trim());	
@@ -279,7 +279,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">  \n");
 		
-		String list = "oculus prime <br />version <b>" + VERSION + "</b><br /><br />connections <hr> \n";
+		String list = "oculus prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
 		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
@@ -287,7 +287,7 @@ public class DashboardServlet extends HttpServlet {
 		for(int i = 0 ; i < ap.length ; i++)
 			list += delete + ap[i] + "\">x</a>&nbsp;&nbsp;" + router + ap[i] + "\">" + ap[i] + "</a><br />\n";
 		 
-		list += "<br />access points <hr>  \n";
+		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
 		ap = monitor.getAccessPoints();		
 		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i].toLowerCase() + "</a><br /> \n");
