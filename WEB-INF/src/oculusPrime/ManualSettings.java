@@ -5,10 +5,7 @@ import java.util.Properties;
 public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
-	soundthreshold, motionthreshold, networkmonitor, checkaddresses,
-	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
-	
-	;
+	soundthreshold, motionthreshold, networkmonitor, checkaddresses ;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){
@@ -16,8 +13,6 @@ public enum ManualSettings {
 		config.setProperty(developer.name(), Settings.FALSE);
 		config.setProperty(debugenabled.name(), Settings.FALSE);
 		config.setProperty(checkaddresses.name(), Settings.TRUE);	
-	//	config.setProperty(ignoreconnections.name(), "na");
-	//	config.setProperty(test.name(), "no-no-no");
 		config.setProperty(motorport.name(), Settings.ENABLED);
 		config.setProperty(powerport.name(), Settings.ENABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
