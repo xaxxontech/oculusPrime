@@ -277,7 +277,7 @@ public class SystemWatchdog {
 
 		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
 				settings.readRed5Setting("http.port")+"/oculusPrime/";
-		String emailto = settings.readSetting(ManualSettings.email_to_address);
+		String emailto = settings.readSetting(GUISettings.email_to_address);
 		if (!emailto.equals(Settings.DISABLED))
 			application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
 		application.driverCallServer(PlayerCommands.rssadd, "["+subject+"] "+body );

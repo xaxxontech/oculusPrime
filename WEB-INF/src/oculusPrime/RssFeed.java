@@ -87,7 +87,7 @@ public class RssFeed {
 			FileWriter fw = new FileWriter(new File(RSSFILE));
 			fw.append("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<rss version=\"2.0\" ");
 			fw.append("xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
-			fw.append("<channel>\n<title>Oculus Prims RSS feed</title>\n");
+			fw.append("<channel>\n<title>Oculus Prime RSS feed</title>\n");
 			fw.append("<link>http://"+state.get(State.values.externaladdress)+":"+
 					settings.readRed5Setting("http.port")+"/oculusPrime/rss.xml</link>\n");
 			fw.append("<description>Oculus events</description>\n");

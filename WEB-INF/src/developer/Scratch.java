@@ -100,11 +100,8 @@ public class Scratch {
 //            Util.delay(500);
 //        }
 
-        Vector<String> known = new Vector<String>();
-        if (known.contains("asdf")) return;
-
-//            String s = "*0123456789*";
-//        System.out.println(s.substring(s.indexOf("567")));
+        String str = "   ";
+        System.out.println(str.trim().length());
 
     }
 }

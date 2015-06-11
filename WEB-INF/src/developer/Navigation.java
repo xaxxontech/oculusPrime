@@ -833,7 +833,7 @@ public class Navigation {
 					}
 
 					if (email) {
-						String emailto = settings.readSetting(ManualSettings.email_to_address);
+						String emailto = settings.readSetting(GUISettings.email_to_address);
 						if (!emailto.equals(Settings.DISABLED)) {
 							app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
 							navlogmsg += "<br> email sent ";
@@ -878,7 +878,7 @@ public class Navigation {
 				}
 
 				if (email) {
-					String emailto = settings.readSetting(ManualSettings.email_to_address);
+					String emailto = settings.readSetting(GUISettings.email_to_address);
 					if (!emailto.equals(Settings.DISABLED)) {
 						app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
 						navlogmsg += "<br> email sent ";

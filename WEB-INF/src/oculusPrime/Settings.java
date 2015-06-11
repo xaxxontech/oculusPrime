@@ -166,7 +166,7 @@ public class Settings {
 		for (ManualSettings ops : ManualSettings.values()) {
 			String val = readSetting(ops.toString());
 			if (val != null)  { // never send out plain text passwords 
-				if( ! ops.equals(ManualSettings.email_password)) // { val = "***"; }
+				if( ! ops.equals(GUISettings.email_password)) // { val = "***"; }
 					result += ops.toString() + " " + val + "<br>"; // "\n\r";
 			}
 		}
@@ -283,12 +283,11 @@ public class Settings {
 	}
 	
 	public void writeSettings(ManualSettings setting, String str) {
-		
-		if(setting == null) return;
-		
-		if (str != null) 
-			if( ! str.equalsIgnoreCase("null"))
-				writeSettings(setting, str);
+		writeSettings(setting.name(), str);
+	}
+
+	public void writeSettings(GUISettings setting, String str) {
+		writeSettings(setting.name(), str);
 	}
 	
 	/**

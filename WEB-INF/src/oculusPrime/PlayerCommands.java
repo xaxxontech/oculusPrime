@@ -41,7 +41,7 @@ public enum PlayerCommands {
     fwdflood,
     
 	// un-categorized
-	speech, serverbrowser, email, state,
+	speech, serverbrowser, email, state, getemailsettings, emailsettingsupdate,
     rssadd, getlightlevel, objectdetectstream, objectdetect, objectdetectcancel,
     
 	// undocumented    
@@ -59,7 +59,7 @@ public enum PlayerCommands {
 	
 	// sub-set that are restricted to "user0"
 	public enum AdminCommands {
-		docklineposupdate, autodockcalibrate, 
+		docklineposupdate, autodockcalibrate, getemailsettings, emailsettingsupdate,
 		getdrivingsettings, drivingsettingsupdate,  
 		systemcall, 
 		new_user_add, user_list, delete_user, extrauser_password_update, username_update, 

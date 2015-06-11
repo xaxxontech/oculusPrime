@@ -672,7 +672,8 @@ onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vquality"
 <table><tr><td style="height: 10px"></td></tr></table>
 Settings and Calibration:
 <table><tr><td style="height: 7px"></td></tr></table>
-<a class="blackbg" href="javascript: drivingsettings('on');">motor settings</a> &gt;<br>
+<a class="blackbg" href="javascript: drivingsettings();">motor settings</a> &gt;<br>
+<a class="blackbg" href="javascript: emailsettings();">email settings</a> &gt;<br>
 <a class="blackbg" href="javascript: autodock('calibrate');">calibrate auto-dock</a><br>
 <a class="blackbg" href="javascript: docklinecalibrate('start');">manual dock guide</a><br>
 login notify <a class="blackbg" href="javascript: writesetting('loginnotify true');">on</a> / 
@@ -745,6 +746,45 @@ onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="tilttestp
 <span class="cancelbox">&#x2714;</span> send values</a> &nbsp;
 </div>
 
+<!-- email settings -->
+<div id="emailsettings" style="display: none;">
+<a class="blackbg"
+href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;calibration_settings&quot;).innerHTML);">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Email Settings:
+<table><tr><td style="height: 7px"></td></tr></table>
+
+smtp server
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_smtp_server" type="text" size="15" ><br>
+
+smtp port
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_smtp_port" type="text" size="4" ><br>
+
+smtp server user name
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_username" type="text" size="10" ><br>
+
+smtp server password
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_password" type="password" size="10" ><br>
+
+default From address
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_from_address" type="text" size="10" ><br>
+
+default To address
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_to_address" type="text" size="10" ><br>
+
+<table><tr><td style="height: 7px"></td></tr></table>
+<a class="blackbg" href="javascript: emailsettingssend();">
+<span class="cancelbox">&#x2714;</span> send values</a> &nbsp;
+</div>
 
 <!--  account settings -->
 <div id="account_settings" style="display: none;">
@@ -953,6 +993,18 @@ onKeyPress="if (keypress(event)==13) { systemcall('',''); }">
 <a class="blackbg" href="javascript: clicksteer('');">crosshairs on/off</a><br>
 <a class="blackbg" href="frameGrabHTTP" target="_blank">frame grab</a><br> 
 <a class="blackbg" href="rss.xml" target="_blank">rss feed</a><br>
+
+motion detect demo <a class="blackbg"
+href="javascript: callServer('motiondetectstream', ''); imgOverVideo('on');">on</a> /
+<a class="blackbg"
+href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
+human detect demo <a class="blackbg"
+href="javascript: callServer('objectdetectstream', 'human'); imgOverVideo('on');">on</a> /
+<a class="blackbg"
+href="javascript: callServer('state', 'delete objectdetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
+
 </div>
 
 <!-- developer menu -->
@@ -979,17 +1031,6 @@ floor plane top view <a class="blackbg" href="javascript: depthView('floorPlaneT
 
 processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> / 
 <a class="blackbg" href="javascript: processedImg('close');">off</a><br>
-
-motion detect demo <a class="blackbg"
-href="javascript: callServer('motiondetectstream', ''); imgOverVideo('on');">on</a> /
-<a class="blackbg"
-href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
-
-human detect demo <a class="blackbg"
-href="javascript: callServer('objectdetectstream', 'human'); imgOverVideo('on');">on</a> /
-<a class="blackbg"
-href="javascript: callServer('state', 'delete objectdetect'); imgOverVideo('off'); publish('stop')">off</a><br>
-
 
 <a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
 

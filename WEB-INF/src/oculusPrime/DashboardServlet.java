@@ -290,7 +290,7 @@ public class DashboardServlet extends HttpServlet {
 		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
 		ap = monitor.getAccessPoints();		
 		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i].toLowerCase() + "</a><br /> \n");
+		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i] + "</a><br /> \n");
 		
 		str.append("<tr><td rowspan=\"10\" valign=\"top\">"+ list +"</tr> \n");
 		

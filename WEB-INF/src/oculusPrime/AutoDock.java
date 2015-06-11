@@ -439,7 +439,7 @@ public class AutoDock {
 
 				long moveID = System.nanoTime();
 				comport.currentMoveID = moveID;
-				// do floating point speed calcs 1st, sometimes cause severe lag!
+				// do floating point speed calcs 1st, sometimes cause severe lag! **doesn't help!
 				int speed1 = (int) comport.voltsComp((double) comport.speedslow);
 				if (speed1 > 255) { speed1 = 255; }
 				int speed2= state.getInteger(State.values.motorspeed);

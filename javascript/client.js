@@ -927,7 +927,58 @@ function battStats() {
 	lagtimer = new Date().getTime();
 }
 
-function drivingsettings(state) {
+function emailsettings() {
+	var str = document.getElementById("emailsettings").innerHTML;
+	popupmenu("menu","show",null,null,str);
+	callServer("getemailsettings","");
+	message("request email settings values", sentcmdcolor);
+	lagtimer = new Date().getTime(); // has to be *after* message()
+}
+
+function emailsettingsdisplay(str) { // called by server via flashplayer
+	message("email settings values received", "green");
+	splitstr = str.split(" ");
+	document.getElementById('email_smtp_server').value = splitstr[0];
+	document.getElementById('email_smtp_port').value = splitstr[1];
+	document.getElementById('email_username').value = splitstr[2];
+	document.getElementById('email_password').value = splitstr[3];
+	document.getElementById('email_from_address').value = splitstr[4];
+	document.getElementById('email_to_address').value = splitstr[5];
+
+}
+
+function emailsettingssend() {
+	var str = "";
+	var s =  document.getElementById('email_smtp_server').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_smtp_port').value;
+	if (!/\S/.test(s)) s="25";
+	str += s.trim() + " ";
+	
+	s =  document.getElementById('email_username').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_password').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_from_address').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_to_address').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	callServer("emailsettingsupdate", str);
+	message("sending email settings", sentcmdcolor);
+	lagtimer = new Date().getTime(); // has to be *after* message()
+}
+
+function drivingsettings() {
 	var str = document.getElementById("drivingsettings").innerHTML;
 	popupmenu("menu","show",null,null,str);
 	callServer("getdrivingsettings","");
@@ -2088,6 +2139,10 @@ function account(str) { // change_password, password_update  DONE
 	if (str=="username_update") { //
 		var user = document.getElementById('usernamechanged').value;
 		var pass = document.getElementById('usernamechangedpass').value;
+		if (/\s+/.test(user)) { 
+			message("no spaces allowed in user name", "orange"); 
+			return;
+		} 
 		if (user!="") {
 			message("sending new username", sentcmdcolor);
 			callServer("username_update", user+" "+pass);

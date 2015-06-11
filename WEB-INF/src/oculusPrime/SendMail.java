@@ -15,11 +15,11 @@ import oculusPrime.Settings;
 public class SendMail {
 
 	private Settings settings = Settings.getReference();
-	private final String username = settings.readSetting(ManualSettings.email_username.toString()); 
-	private final String password = settings.readSetting(ManualSettings.email_password.toString()); 
-	private final String host = settings.readSetting(ManualSettings.email_smtp_server.toString());
-	private final int port = Integer.parseInt(settings.readSetting(ManualSettings.email_smtp_port.toString()));
-	private final String from = settings.readSetting(ManualSettings.email_from_address.toString());
+	private final String username = settings.readSetting(GUISettings.email_username.toString());
+	private final String password = settings.readSetting(GUISettings.email_password.toString());
+	private final String host = settings.readSetting(GUISettings.email_smtp_server.toString());
+	private final int port = Integer.parseInt(settings.readSetting(GUISettings.email_smtp_port.toString()));
+	private final String from = settings.readSetting(GUISettings.email_from_address.toString());
 	
 	private String subject = null;
 	private String body = null;

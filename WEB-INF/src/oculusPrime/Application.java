@@ -502,8 +502,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
 		case camtilt: comport.camtilt(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
-		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
+		case getemailsettings: getEmailSettings(); break;
+		case emailsettingsupdate: emailSettingsUpdate(str); break;
+		case motionenabletoggle:motionEnableToggle();break;
 		case clicksteer:clickSteer(str);break;
 		case streamsettingscustom:streamSettingsCustom(str);break;
 		case streamsettingsset:streamSettingsSet(str);break;
@@ -1217,6 +1219,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Runtime.getRuntime().exec(strarr);
 		} catch (IOException e) { Util.printError(e); }
 	
+	}
+
+	private void getEmailSettings() {
+		String str = settings.readSetting(GUISettings.email_smtp_server) + " "
+				+ settings.readSetting(GUISettings.email_smtp_port) + " "
+				+ settings.readSetting(GUISettings.email_username) + " "
+				+ settings.readSetting(GUISettings.email_password) + " " // display as dots
+				+ settings.readSetting(GUISettings.email_from_address) + " "
+				+ settings.readSetting(GUISettings.email_to_address);
+
+		sendplayerfunction("emailsettingsdisplay", str);
+	}
+
+	private void emailSettingsUpdate(String str) {
+		String s[] = str.split(" ");
+		settings.writeSettings(GUISettings.email_smtp_server, s[0]);
+		settings.writeSettings(GUISettings.email_smtp_port, s[1]);
+		settings.writeSettings(GUISettings.email_username, s[2]);
+		settings.writeSettings(GUISettings.email_password, s[3]);
+		settings.writeSettings(GUISettings.email_from_address, s[4]);
+		settings.writeSettings(GUISettings.email_to_address, s[5]);
+		messageplayer("email settings updated", null, null);
 	}
 
 	private void getDrivingSettings() {
