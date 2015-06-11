@@ -296,7 +296,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
 		
-		str.append("<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLast()) + "   " 
+		str.append("<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLastPing()) + "   " 
 				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
 				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
 				+ "<td><b>lan</b><td>" + state.get(values.localaddress) 

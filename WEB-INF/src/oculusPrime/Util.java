@@ -519,13 +519,25 @@ public class Util {
 		
 		if(addr==null) return null;
 		
+		//if(NetworkMonitor.getReference().wiredConnectionActive()) {
+			
+		//	Util.log("pingWIFI(): eth exist", null);
+			// return null;
+			
+		String[] cmd = new String[]{"ping", "-c1", "-W1", addr};
+		
+		// String wlan = NetworkMonitor.getReference().getWLAN();
+		// if(wlan != null) cmd = new String[]{"ping", "-c1", "-W1", "-I"+wlan, addr};
+		
+		// if(State.getReference().exists(State.values.localaddress)) Util.log("pingWIFI(): lan ping: " + cmd[3], null);
+		
 		long start = System.currentTimeMillis();
 		
 		Process proc = null;
-		try { // TODO: force interface
-			proc = Runtime.getRuntime().exec(new String[]{"ping", "-c1", "-W1", addr});
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
 		} catch (IOException e) {
-			Util.log("pingWIFI(): "+ e.getMessage(), "");
+			Util.log("pingWIFI(): "+ e.getMessage(), null);
 			Util.log("pingWIFI(): ping fail: " + (System.currentTimeMillis()-start), null);
 			return null;
 		}  

@@ -9,8 +9,7 @@ import oculusPrime.State.values;
 public class Settings {
 
 	public final static String redhome = System.getenv("RED5_HOME");
-	public final static String framefile = System.getenv("RED5_HOME") + Util.sep+"webapps"+Util.sep+
-			"oculus"+Util.sep+"images"+Util.sep+"framegrab.jpg";
+	public final static String framefile = System.getenv("RED5_HOME") + Util.sep+"webapps"+Util.sep+"oculus"+Util.sep+"images"+Util.sep+"framegrab.jpg";
 	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
 	
