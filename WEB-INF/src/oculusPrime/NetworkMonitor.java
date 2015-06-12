@@ -14,8 +14,8 @@ import oculusPrime.State.values;
 
 public class NetworkMonitor {
 
-	public static final long AP_TIME_OUT = 7000;
-	public static final long AP_PING_FAILS = 5;
+	public static final long AP_TIME_OUT = 5000;
+	public static final long AP_PING_FAILS = 4;
 	public static final String AP = "ap";
 
 	private static Vector<String> wlanData = new Vector<String>();
@@ -170,7 +170,7 @@ public class NetworkMonitor {
 		String[] routers = getConnections();
 		if(routers == null) return; 
 		
-		// for(int i = 0 ; i < routers.length ; i++) Util.log(i + " tryAnyConnection: " + routers[i], this);
+		for(int i = 0 ; i < routers.length ; i++) Util.log(i + " tryAnyConnection: " + routers[i], this);
 		
 		String ssid = routers[ new Random().nextInt(routers.length) ];
 		
@@ -205,6 +205,10 @@ public class NetworkMonitor {
 		
 		if( ! ignore.contains(ssid)) ignore.add(ssid);
 		
+		String list = settings.readSetting(ManualSettings.ignoreconnections) + ", " + ssid;
+		settings.writeSettings(ManualSettings.ignoreconnections, list);
+		
+		/*
 		if(connectionExists(ssid)){
 			
 			Util.log("removeConnection(): exists: " + ssid, this);
@@ -216,6 +220,7 @@ public class NetworkMonitor {
 
 			}
 		}
+		*/
 		
 		connectionUpdate();
 	}

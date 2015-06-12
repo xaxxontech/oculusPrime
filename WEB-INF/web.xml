@@ -47,6 +47,16 @@
 		<url-pattern>/dashboard</url-pattern>
 	</servlet-mapping>
 
+		
+	<servlet>
+		<servlet-name>NetworkServlet</servlet-name>
+		<servlet-class>oculusPrime.NetworkServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>NetworkServlet</servlet-name>
+		<url-pattern>/network</url-pattern>
+	</servlet-mapping>
+	
 	<servlet>
 		<servlet-name>StaticContentServlet</servlet-name>
 		<servlet-class>oculusPrime.StaticContentServlet</servlet-class>

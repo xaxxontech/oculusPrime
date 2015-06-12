@@ -32,15 +32,16 @@ public class DashboardServlet extends HttpServlet {
 	}
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
 	
 		if( ! ban.knownAddress(request.getRemoteAddr())){
 			Util.log("unknown address: danger: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
-
+	
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+	
 		String action = null;
 		String router = null; 
 		String password = null;
