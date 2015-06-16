@@ -166,9 +166,9 @@ public class BanList {
 		
 		if( ! Util.validIP(address)) return false;
 		
-		if(address.equals("127.0.0.1")) return true;
+		if(address.equals("0.0.0.0")) return true;
 		
-	//	if(address.equals("10.42.0.1")) return true;
+		if(address.equals("127.0.0.1")) return true;
 		
 		if(address.startsWith("10.42")) return true;
 
@@ -181,8 +181,6 @@ public class BanList {
 				return true;
 			}
 		}
-		
-		if(address.equals("0.0.0.0")) return true;
 		
 		if(isBanned(address)) return false;
 		

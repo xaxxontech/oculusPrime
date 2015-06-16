@@ -8,3 +8,4 @@ rss.xml
 *.iml
 /.idea
 /framegrabs
+/deploy/

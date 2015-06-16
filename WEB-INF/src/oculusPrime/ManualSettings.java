@@ -5,7 +5,7 @@ import java.util.Properties;
 public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
-	soundthreshold, motionthreshold, networkmonitor, checkaddresses ;
+	soundthreshold, motionthreshold, networkmonitor, checkaddresses; // ignoreconnections, preferedconnections ;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){
@@ -25,7 +25,6 @@ public enum ManualSettings {
 		config.setProperty(networkmonitor.name(), Settings.FALSE);
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "150");
-	
 		return config;
 	}
 	
