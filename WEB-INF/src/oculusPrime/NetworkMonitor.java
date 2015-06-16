@@ -29,7 +29,7 @@ public class NetworkMonitor {
 	private static State state = State.getReference();	
 	private static Application application = null; 
 	private static boolean changingWIFI = false;
-	private static Timer networkTimer = new Timer();
+//	private static Timer networkTimer = new Timer();
 	private static Timer pingTimer = new Timer();
 	private static String pingValue = null;
 	private static String wdev = null;
@@ -46,6 +46,7 @@ public class NetworkMonitor {
 	
 	private NetworkMonitor(){
 			
+		new eventThread().start();
 		updateExternalIPAddress();
 		runNetworkTool();
 
@@ -57,7 +58,7 @@ public class NetworkMonitor {
 		updateExternalIPAddress();
 		
 		pingTimer.schedule(new pingTask(), 5000, 1000);
-		networkTimer.schedule(new networkTask(), 0, Util.ONE_MINUTE);
+		// networkTimer.schedule(new networkTask(), 300, Util.FIVE_MINUTES);
 		
 		if(state.equals(values.ssid, AP)) tryAnyConnection();	
 		
@@ -115,6 +116,7 @@ public class NetworkMonitor {
     	}
 	}
 	
+	/*
 	private class networkTask extends TimerTask {
 		@Override
 		public void run() {
@@ -129,6 +131,39 @@ public class NetworkMonitor {
 				if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
 			} catch (Exception e) {
 				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
+			}
+		}
+	}
+	*/
+	
+	private class eventThread extends Thread {
+		@Override
+		public void run() {
+			try{			
+				
+				Util.log("starting..", this);
+				
+				Process proc = Runtime.getRuntime().exec(new String[]{"iwevent"});
+				BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+				String line = null;
+				while ((line = procReader.readLine()) != null){
+					
+					Util.log(line, this);
+					
+					if(line.contains("completed")) {
+						
+						// Util.debug("eventThread:_ " + line, this);
+				
+						runNetworkTool();
+						connectionUpdate();
+					}
+				}
+				
+				Util.debug("eventThread: never get here! ", this);
+
+			} catch (Exception e) {
+				Util.debug("eventThread: " + e.getLocalizedMessage(), this);
 			}
 		}
 	}
@@ -152,7 +187,7 @@ public class NetworkMonitor {
 							networkData.add(line);
 			}
 			
-			// Util.debug("networkTask: lines copied: " + networkData.size(), this);
+			Util.debug("networkTask: lines copied: " + networkData.size(), this);
 
 			proc.waitFor();
 			readETH();
@@ -189,6 +224,7 @@ public class NetworkMonitor {
 		return false;
 	}
 	
+	/*
 	public void removeConnection(final String ssid){
 		
 		Util.log("removeConnection(): called with: "+ssid, this);
@@ -208,7 +244,7 @@ public class NetworkMonitor {
 		String list = settings.readSetting(ManualSettings.ignoreconnections) + ", " + ssid;
 		settings.writeSettings(ManualSettings.ignoreconnections, list);
 		
-		/*
+		
 		if(connectionExists(ssid)){
 			
 			Util.log("removeConnection(): exists: " + ssid, this);
@@ -220,10 +256,10 @@ public class NetworkMonitor {
 
 			}
 		}
-		*/
 		
 		connectionUpdate();
 	}
+	*/
 	
 	private void killApplet(){
 		try {
