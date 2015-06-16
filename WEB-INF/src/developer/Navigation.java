@@ -109,8 +109,10 @@ public class Navigation {
 
 
 	public void startMapping() {
-		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+			app.driverCallServer(PlayerCommands.messageclients, "unable to start mapping, system already running");
 			return;
+		}
 
 		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
@@ -652,7 +654,7 @@ public class Navigation {
 
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES &&
 						state.getUpTime() > Util.TEN_MINUTES)  { // prevent runaway reboots
-//					app.restart();
+					Util.log("rebooting, max consecutive routes reached", this);
 					app.driverCallServer(PlayerCommands.reboot, null);
 					return;
 				}

@@ -133,8 +133,8 @@ public class OpenCVMotionDetect  {
                 }
                 detect.release();
                 frame.release();
-                gr.release();
-                bl.release();
+                if (gr != null) gr.release();
+                if (bl != null) bl.release();
                 m.release();
                 state.set(State.values.motiondetect, false);
             }

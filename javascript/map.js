@@ -41,6 +41,7 @@ var navrouteactiondescriptions = ["rotate in place 45 degrees at a time, at leas
 	"post new item to RSS feed if action detected", "detect motion", "detect loud noise", "detect human", 
 	"alert only if action NOT detected"];
 var activeroute = null;
+var navsystemstatustext;
 
 function navigationmenu() {
 	if (navmenuinit) {
@@ -154,7 +155,7 @@ function rosinfo() {
 			if (t - goalposesettime < 5000) nukegoalpose = false;
 			
 			var rosmaprezoom = false;
-			var systemstatustext = "STOPPED";
+			navsystemstatustext = "STOPPED";
 			activeroute = null;
 			var secondstonextroute = null;
 			
@@ -225,7 +226,7 @@ function rosinfo() {
 						break;
 						
 					case "navsystemstatus":
-						systemstatustext = ss[1].toUpperCase();
+						navsystemstatustext = ss[1].toUpperCase();
 						break;
 						
 					case "navigationroute":
@@ -247,7 +248,7 @@ function rosinfo() {
 			}
 			
 			var sysstatus = document.getElementById("navsystemstatus");
-			sysstatus.innerHTML = systemstatustext;
+			sysstatus.innerHTML = navsystemstatustext;
 			
 			var routestatus = document.getElementById("activeroutediv");
 			if (activeroute == null)  routestatus.style.display = "none";

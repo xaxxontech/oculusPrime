@@ -418,7 +418,6 @@ public class AutoDock {
 
 			comport.speedset(ArduinoPrime.speeds.fast.toString());
 
-			SystemWatchdog.waitForCpu();
 
 			if (w * h < s1) { // mode: quite far away yet, approach only
 
@@ -446,6 +445,8 @@ public class AutoDock {
 				speed2 = (int) comport.voltsComp((double) speed2);
 				if (speed2 > 255) { speed2 = 255; }
 
+				SystemWatchdog.waitForCpu(40, 8000);
+
 				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
 				Util.delay(comport.ACCEL_DELAY);
 				if (comport.currentMoveID == moveID)
@@ -463,6 +464,9 @@ public class AutoDock {
 			} // end of S1 check
 
 			else if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
+
+				SystemWatchdog.waitForCpu();
+
 				if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
 				int fl = state.getInteger(State.values.floodlightlevel);
 				if (fl > 0 && fl != 15) comport.floodLight(FLLOW);
@@ -549,6 +553,9 @@ public class AutoDock {
 				}
 			}
 			else if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
+
+				SystemWatchdog.waitForCpu();
+
 				if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
 					autodockctrattempts++;
 
