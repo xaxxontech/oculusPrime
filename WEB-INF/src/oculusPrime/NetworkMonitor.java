@@ -47,16 +47,16 @@ public class NetworkMonitor {
 	
 	private NetworkMonitor(){
 		
-		new eventThread().start();
 		updateExternalIPAddress();
-		connectionUpdate();
-		runNetworkTool();
 		
 		if(state.equals(values.ssid, AP) && ! settings.readSetting(ManualSettings.defaultuuid).equals("none")) 
 			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
 
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
 			pingTimer.schedule(new pingTask(), 1000, 1000);
+			new eventThread().start();
+			connectionUpdate();
+			runNetworkTool();
 			killApplet();
 		}
 	}
@@ -105,7 +105,7 @@ public class NetworkMonitor {
 	    			application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 	    		
 	    		if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
-	    			Util.log("NetworkMonitor().pingTask() in AP mode for five minutes: "+apModeCounter, null);
+	    			Util.log("NetworkMonitor().pingTask() in AP mode for five minutes: " + apModeCounter, null);
 	    			pingLast = System.currentTimeMillis();
 	    			tryAnyConnection();
 	    		} 
@@ -303,8 +303,8 @@ public class NetworkMonitor {
 					new InputStreamReader(proc.getInputStream()));
 
 			String line = null;
-			while ((line = procReader.readLine()) != null){
-				if( ! line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
+			while ((line = procReader.readLine()) != null){  //TODO: revisit 
+				if( ! line.startsWith("NAME") && line.contains("wireless")) // && !line.contains("never"))
 					if( ! ignore.contains(NetworkMonitor.getConnectionName(line)))
 						if( ! connections.contains(line))
 							connections.add(line); 
@@ -722,13 +722,9 @@ public class NetworkMonitor {
 				while ((i = in.read()) != -1) address += (char)i;
 				in.close();
 
-				if(Util.validIP(address)) {
-					state.put(values.externaladdress, address);
-				} else {
-					state.delete(values.externaladdress);
-					Util.log("read invalid address from server: " + connection.toString(), this);
-				}
-		
+				if(Util.validIP(address)) state.put(values.externaladdress, address);
+				else state.delete(values.externaladdress);
+				
 			} catch (Exception e) {
 				Util.log("updateExternalIPAddress():"+ e.getMessage(), this);
 				state.delete(values.externaladdress);
@@ -740,6 +736,21 @@ public class NetworkMonitor {
 		return pingValue;
 	}
 
+	public void setDefault(final String router) {
+		
+		Util.debug("target connction id: "+router, this);
+		
+		for(int i = 0 ; i < connections.size() ; i++) {
+			if(connections.get(i).startsWith(router)) {
+				String uuid = getConnectionUUID(connections.get(i));
+				if( ! settings.readSetting(ManualSettings.defaultuuid).equals(uuid)){
+					settings.writeSettings(ManualSettings.defaultuuid, uuid);
+					Util.log("writesetting: " + router + " =uuid= " + uuid, this);
+				}
+			}	
+		}
+	}
+		
 	public long getLastPing() {
 		return pingLast;
 	}
@@ -750,20 +761,6 @@ public class NetworkMonitor {
 	
 	public boolean wiredConnectionActive(){
 		return wiredConnection;
-	}
-	
-	public void setDefault(String router) {
-		
-		// if()
-		
-		for(int i = 0 ; i < connections.size() ; i++) {
-			if(connections.get(i).startsWith(router)) {
-				String uuid = getConnectionUUID(connections.get(i));
-				settings.writeSettings(ManualSettings.defaultuuid, uuid);
-				Util.log(router + " == " + uuid, this);
-				// changeUUID(uuid);
-			}	
-		}
 	}
 	
 	/*

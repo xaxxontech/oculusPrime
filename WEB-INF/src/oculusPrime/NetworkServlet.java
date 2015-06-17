@@ -58,46 +58,47 @@ public class NetworkServlet extends HttpServlet {
 		}
 		
 		if(action != null && router != null) { 
-			
 			if(action.equals("default")){	
-
+				Util.log("set default: " + router, this);
 				monitor.setDefault(router.trim());	
 				response.sendRedirect("network"); 
 				return;
 			
 			}
+		}
 			
-			if(action.equals("delete")){	
-				
-				if(state.equals(values.ssid, router)){
-					Util.log("can't delete if conncted: " + router, this);
-					response.sendRedirect("network"); 
-					return;
-				} 
-				
-				Util.log(request.getServerName()+" delete [" + router + "]", this);
-				monitor.removeConnection(router.trim());	
-				response.sendRedirect("network");  
+		if(action.equals("delete")){	
+			if(state.equals(values.ssid, router)){
+				Util.log("... can't delete if conncted: " + router, this);
+				response.sendRedirect("network"); 
 				return;
 			}
+				
+			Util.log(".. delete [" + router + "]", this);
+			monitor.removeConnection(router.trim());	
+			response.sendRedirect("network");  
+			return;
+		}
 			
-			if(action.equals("connect")){	
-				if(monitor.connectionExists(router)){			
-					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
-					monitor.changeWIFI(router);
-					response.sendRedirect("network");                    
-					return;
+		
+		if(action.equals("connect")){	
+			if(monitor.connectionExists(router)){			
+				Util.log(request.getServerName()+" connect existing [" + router + "]", this);
+				monitor.changeWIFI(router);
+				//	response.sendRedirect("network");                    
+				//	return;
 				}
 			
-				sendLogin(request, response, router);
-				return;
-			}
-		}	
+				
+			sendLogin(request, response, router);
+			return;
+		
+		}
 			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println("<html><head> \n");
-		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
+		out.println(toHTML(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/network"));
 		out.println("\n</body></html> \n");
 		out.close();	
 	}
@@ -112,27 +113,30 @@ public class NetworkServlet extends HttpServlet {
 		out.close();
 	}
 	
-	public String toDashboard(final String url){
+	public String toHTML(final String url){
+			
+		final String[] connections = monitor.getConnections(); 		
+		final String[] available = monitor.getAccessPoints();		
+		final String setdef  = "<a href=\"http://" + url + "?action=default&router=";
+		final String delete  = "<a href=\"http://" + url + "?action=delete&router=";
+		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
+	
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">  \n");
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"2\">  \n");
+		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>\n"); 
+		str.append("<tr><td colspan=\"3\"><center> access points </center><hr>\n");
 		
-		String list = "oculus_prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
-		String[] ap = monitor.getConnections(); 		
+		for(int i = 0 ; i < connections.length ; i++) 
+			str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a><td>" 
+		            + delete + connections[i] + "\"> x </a><td>" 
+					+ setdef + connections[i] + "\">set</a></tr>\n");
+	
+		str.append("<tr><td colspan=\"3\"><center> access points </center><hr>  \n");
 		
-		final String setdef = "&nbsp;<a href=\"http://" + url + "?action=defalut&router=";
-		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
-		final String router = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++)
-			list += router + ap[i] + "\">"+ ap[i] +"</a>" + delete + ap[i] + "\">&nbsp;&nbsp;&nbsp;&nbsp;[delete]</a>" 
-		          + setdef + ap[i] + "\">[set default]</a><br />\n";
-		 
-		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
-		ap = monitor.getAccessPoints();		
-		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i] + "</a><br /> \n");
-		str.append("<tr><td>"+ list +"</tr> \n");
+		for(int i = 0 ; i < available.length ; i++) 
+			str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
+	
 		str.append("\n</table>\n");
 		return str.toString();
 	}
-
 }
