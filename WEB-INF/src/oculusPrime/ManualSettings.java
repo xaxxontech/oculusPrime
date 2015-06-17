@@ -5,7 +5,7 @@ import java.util.Properties;
 public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
-	soundthreshold, motionthreshold, networkmonitor, checkaddresses; // ignoreconnections, preferedconnections ;
+	soundthreshold, motionthreshold, networkmonitor, checkaddresses;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){

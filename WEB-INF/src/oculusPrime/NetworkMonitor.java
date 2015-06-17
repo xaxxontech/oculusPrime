@@ -29,7 +29,7 @@ public class NetworkMonitor {
 	private static State state = State.getReference();	
 	private static Application application = null; 
 	private static boolean changingWIFI = false;
-//	private static Timer networkTimer = new Timer();
+	// private static Timer networkTimer = new Timer();
 	private static Timer pingTimer = new Timer();
 	private static String pingValue = null;
 	private static String wdev = null;
@@ -45,22 +45,17 @@ public class NetworkMonitor {
 	public static NetworkMonitor getReference() {return singleton;}
 	
 	private NetworkMonitor(){
-			
+		
 		new eventThread().start();
 		updateExternalIPAddress();
 		runNetworkTool();
+		
+		if(state.equals(values.ssid, AP)) tryAnyConnection();	
 
 		if(!settings.getBoolean(ManualSettings.networkmonitor)) return;
 
-		killApplet();
-		runNetworkTool();	
-		connectionUpdate();
-		updateExternalIPAddress();
-		
 		pingTimer.schedule(new pingTask(), 5000, 1000);
-		// networkTimer.schedule(new networkTask(), 300, Util.FIVE_MINUTES);
-		
-		if(state.equals(values.ssid, AP)) tryAnyConnection();	
+		killApplet();
 		
 	}
 
@@ -92,7 +87,10 @@ public class NetworkMonitor {
 	    	
 	    	if(state.equals(values.ssid, AP)) {
 	    		
-	    		if (application != null) application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+	    		if (application != null) {
+	    			if( ! state.getBoolean(State.values.autodocking))
+	    				application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+	    		}
 			
 	    		if ((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
 	    			Util.log("NetworkMonitor().pingTask() in AP mode for five minutes: "+apModeCounter, null);
@@ -116,52 +114,21 @@ public class NetworkMonitor {
     	}
 	}
 	
-	/*
-	private class networkTask extends TimerTask {
-		@Override
-		public void run() {
-			try{			
-				if(settings.getBoolean(ManualSettings.networkmonitor)) {
-					
-					runNetworkTool();
-					connectionUpdate();
-					Util.debug("networkTask: called nm-tool", this);
-				
-				}
-				if( ! state.exists(values.externaladdress)) updateExternalIPAddress();
-			} catch (Exception e) {
-				Util.debug("networkTask: " + e.getLocalizedMessage(), this);
-			}
-		}
-	}
-	*/
-	
 	private class eventThread extends Thread {
 		@Override
 		public void run() {
 			try{			
-				
-				Util.log("starting..", this);
 				
 				Process proc = Runtime.getRuntime().exec(new String[]{"iwevent"});
 				BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
 				String line = null;
 				while ((line = procReader.readLine()) != null){
-					
-					Util.log(line, this);
-					
-					if(line.contains("completed")) {
-						
-						// Util.debug("eventThread:_ " + line, this);
-				
+					if(line.contains("New")) {
+						Util.log(line, this);
 						runNetworkTool();
-						connectionUpdate();
 					}
 				}
-				
-				Util.debug("eventThread: never get here! ", this);
-
 			} catch (Exception e) {
 				Util.debug("eventThread: " + e.getLocalizedMessage(), this);
 			}
@@ -187,7 +154,7 @@ public class NetworkMonitor {
 							networkData.add(line);
 			}
 			
-			Util.debug("networkTask: lines copied: " + networkData.size(), this);
+			// Util.debug("networkTask: lines copied: " + networkData.size(), this);
 
 			proc.waitFor();
 			readETH();
@@ -224,7 +191,6 @@ public class NetworkMonitor {
 		return false;
 	}
 	
-	/*
 	public void removeConnection(final String ssid){
 		
 		Util.log("removeConnection(): called with: "+ssid, this);
@@ -241,10 +207,10 @@ public class NetworkMonitor {
 		
 		if( ! ignore.contains(ssid)) ignore.add(ssid);
 		
-		String list = settings.readSetting(ManualSettings.ignoreconnections) + ", " + ssid;
-		settings.writeSettings(ManualSettings.ignoreconnections, list);
+		//String list = settings.readSetting(ManualSettings.ignoreconnections) + ", " + ssid;
+		//settings.writeSettings(ManualSettings.ignoreconnections, list);
 		
-		
+		/*
 		if(connectionExists(ssid)){
 			
 			Util.log("removeConnection(): exists: " + ssid, this);
@@ -256,10 +222,10 @@ public class NetworkMonitor {
 
 			}
 		}
+		*/
 		
 		connectionUpdate();
 	}
-	*/
 	
 	private void killApplet(){
 		try {
@@ -743,6 +709,13 @@ public class NetworkMonitor {
 	
 	public boolean wiredConnectionActive(){
 		return wiredConnection;
+	}
+	
+	public void setDefault(String router) {
+		
+		for(int i = 0 ; i < connections.size() ; i++)
+			Util.log(router + " " + connections.get(i), this);
+	
 	}
 	
 	/*

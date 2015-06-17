@@ -72,7 +72,15 @@ public class DashboardServlet extends HttpServlet {
 		
 		if(action != null){ 
 			
-			/*if(action.equals("delete")  && (router != null)){	
+			if(action.equals("default")  && (router != null)){	
+
+				monitor.setDefault(router.trim());	
+				response.sendRedirect("network"); 
+				return;
+			
+			}
+			
+			if(action.equals("delete")  && (router != null)){	
 				
 				if(state.equals(values.ssid, router)){
 					Util.log("can't delete if conncted: " + router, this);
@@ -81,11 +89,11 @@ public class DashboardServlet extends HttpServlet {
 				} 
 				
 				Util.log(request.getServerName()+" delete [" + router + "]", this);
-				//monitor.removeConnection(router.trim());	
+				monitor.removeConnection(router.trim());	
 				response.sendRedirect("dashboard");     
 				return;
 			}
-		*/	
+			
 			if(action.equals("connect")  && (router != null)){	
 				if(monitor.connectionExists(router)){			
 					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
@@ -283,10 +291,10 @@ public class DashboardServlet extends HttpServlet {
 		String list = "oculus prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
-		// final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
+		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++)
-			list += /*delete + ap[i] + "\">x</a>&nbsp;&nbsp;" +*/ router + ap[i] + "\">" + ap[i] + "</a><br />\n";
+			list += delete + ap[i] + "\">x</a>&nbsp;&nbsp;" + router + ap[i] + "\">" + ap[i] + "</a><br />\n";
 		 
 		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
 		ap = monitor.getAccessPoints();		
