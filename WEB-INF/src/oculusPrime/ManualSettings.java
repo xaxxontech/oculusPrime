@@ -5,11 +5,12 @@ import java.util.Properties;
 public enum ManualSettings {
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
-	soundthreshold, motionthreshold, networkmonitor, checkaddresses;
+	soundthreshold, motionthreshold, networkmonitor, checkaddresses, defaultuuid;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
+		config.setProperty(defaultuuid.name(), "none");
 		config.setProperty(developer.name(), Settings.FALSE);
 		config.setProperty(debugenabled.name(), Settings.FALSE);
 		config.setProperty(checkaddresses.name(), Settings.TRUE);	

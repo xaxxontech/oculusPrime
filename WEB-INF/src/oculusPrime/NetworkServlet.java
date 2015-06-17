@@ -57,9 +57,9 @@ public class NetworkServlet extends HttpServlet {
 			return;
 		}
 		
-		if(action != null){ 
+		if(action != null && router != null) { 
 			
-			if(action.equals("default")  && (router != null)){	
+			if(action.equals("default")){	
 
 				monitor.setDefault(router.trim());	
 				response.sendRedirect("network"); 
@@ -67,7 +67,7 @@ public class NetworkServlet extends HttpServlet {
 			
 			}
 			
-			if(action.equals("delete")  && (router != null)){	
+			if(action.equals("delete")){	
 				
 				if(state.equals(values.ssid, router)){
 					Util.log("can't delete if conncted: " + router, this);
@@ -81,7 +81,7 @@ public class NetworkServlet extends HttpServlet {
 				return;
 			}
 			
-			if(action.equals("connect")  && (router != null)){	
+			if(action.equals("connect")){	
 				if(monitor.connectionExists(router)){			
 					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
 					monitor.changeWIFI(router);
@@ -114,9 +114,9 @@ public class NetworkServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"15\" border=\"2\">  \n");
 		
-		String list = "oculus prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
+		String list = "oculus_prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
 		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
