@@ -14,8 +14,8 @@ import oculusPrime.State.values;
 
 public class NetworkMonitor {
 
-	public static final long AP_TIME_OUT = 5000;
-	public static final long AP_PING_FAILS = 4;
+	public static final long AP_TIME_OUT = 9000;
+	public static final long AP_PING_FAILS = 7;
 	public static final String AP = "ap";
 
 	private static Vector<String> wlanData = new Vector<String>();
@@ -32,7 +32,8 @@ public class NetworkMonitor {
 	private static boolean wiredConnection = false;
 	private static Timer pingTimer = new Timer();
 	private static String pingValue = null;
-	private static String wdev = null;
+	private static String wdev = null;	
+	private static long scanLast = 0;
 	private static long uuidConnetionLast = 0;
 	private static int uuidConnetionAttempts = 0;
 	private static int failedConnetion = 0;
@@ -51,19 +52,18 @@ public class NetworkMonitor {
 		connectionUpdate();
 		runNetworkTool();
 		
-		if(state.equals(values.ssid, AP)) tryAnyConnection();	
+		if(state.equals(values.ssid, AP) && ! settings.readSetting(ManualSettings.defaultuuid).equals("none")) 
+			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
 
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
-			pingTimer.schedule(new pingTask(), 5000, 1000);
+			pingTimer.schedule(new pingTask(), 1000, 1000);
 			killApplet();
 		}
-		
 	}
 
 	private void panicPings(){
 		
 		pingLast = System.currentTimeMillis();
-		// changingWIFI = true;
 		
 		// ping and see if recovers, let Linux try other connections.. 
 		for(int i = 0 ; i < AP_PING_FAILS ; i++){
@@ -73,12 +73,13 @@ public class NetworkMonitor {
 			else pingLast = System.currentTimeMillis();	
 			
 			if(i%3==0 && i > 3) {
-				Util.delay(500);
-				runNetworkTool();
+				Util.delay(1500);
+				// runNetworkTool();
 				changeUUID(settings.readSetting(ManualSettings.defaultuuid));
 			}
 			
 			if(state.exists(values.ssid)) {
+				// pingLast = System.currentTimeMillis();
 				Util.log("painic pings resolved.. ", this);
 				return;
 			}
@@ -86,7 +87,6 @@ public class NetworkMonitor {
 			Util.delay(2000);
 		}
 		
-		// changingWIFI = false;
 		if(pingFails >= AP_PING_FAILS){
 			pingLast = System.currentTimeMillis();
 			pingCounter = 0;
@@ -117,10 +117,12 @@ public class NetworkMonitor {
     		
     			// try default 
     			changeUUID(settings.readSetting(ManualSettings.defaultuuid));
-    			Util.delay(8000);
+    			Util.delay(4000);
     			
     			// trouble
     			if((System.currentTimeMillis() - pingLast) > AP_TIME_OUT) panicPings();
+    			
+    			return;
     		}
     			
     		if(state.exists(values.gateway) && !changingWIFI){ 
@@ -143,9 +145,17 @@ public class NetworkMonitor {
 
 				String line = null;
 				while ((line = procReader.readLine()) != null){
+					
+					if(line.contains("completed")) scanLast = System.currentTimeMillis();
+					
 					if(line.contains("New")) {
+						
 						Util.log(line, this);
-						runNetworkTool();
+						
+						if( System.currentTimeMillis() - scanLast > Util.TWO_MINUTES) {
+							Util.log(" last scan was: " + ( System.currentTimeMillis() - scanLast ), this);
+							runNetworkTool();
+						}
 					}
 				}
 			} catch (Exception e) {
@@ -227,23 +237,6 @@ public class NetworkMonitor {
 		}
 		
 		if( ! ignore.contains(ssid)) ignore.add(ssid);
-		
-		//String list = settings.readSetting(ManualSettings.ignoreconnections) + ", " + ssid;
-		//settings.writeSettings(ManualSettings.ignoreconnections, list);
-		
-		/*
-		if(connectionExists(ssid)){
-			
-			Util.log("removeConnection(): exists: " + ssid, this);
-			
-			if(connections.contains(ssid)){
-			
-				connections.remove(ssid);
-				Util.log("removeConnection(): exists: " + ssid, this);
-
-			}
-		}
-		*/
 		
 		connectionUpdate();
 	}
@@ -378,7 +371,12 @@ public class NetworkMonitor {
 		
 		if(uuid == null) return; 
 		
-		if((System.currentTimeMillis() - pingLast) <= AP_TIME_OUT) return;
+		// if((System.currentTimeMillis() - pingLast) <= AP_TIME_OUT) return;
+		
+		if((System.currentTimeMillis() - uuidConnetionLast) <= 4000) {
+			Util.log("changeUUID: busy, rejected: " + (System.currentTimeMillis() - uuidConnetionLast) + " ms too soon", this);
+			return;
+		}
 		
 		if(changingWIFI){
 			Util.log("changeUUID: busy, rejected", this);
@@ -390,7 +388,8 @@ public class NetworkMonitor {
 		    	try {
 		    		
 		    		changingWIFI = true;
-		    		Util.log("[" +uuidConnetionAttempts + " ]changeUUID: " + (System.currentTimeMillis() - uuidConnetionLast) + " ms", this);
+		    		uuidConnetionAttempts++;
+		    		Util.log("[" +uuidConnetionAttempts + "] changeUUID: " + (System.currentTimeMillis() - uuidConnetionLast) + " ms", this);
 		    		uuidConnetionLast = System.currentTimeMillis();
 		    		
 					long start = System.currentTimeMillis();
@@ -407,19 +406,23 @@ public class NetworkMonitor {
 					Util.log("changeUUID:" + uuid + " " + (System.currentTimeMillis() - start)/1000 +  " seconds", this); 
 					
 					proc.waitFor();						
-					Util.log("changeUUID: exit code: " + proc.exitValue() + " attempts: " + uuidConnetionAttempts++, this);
+					Util.log("changeUUID: exit code: " + proc.exitValue() + " attempts: " + uuidConnetionAttempts, this);
 					Util.log("changeUUID: [" + uuid + "] time: " + (System.currentTimeMillis() - start)/1000 +  " seconds", this);
 					
 					if( proc.exitValue() == 0){
-						pingLast = System.currentTimeMillis();
-						changingWIFI = false;		
+						
+						Util.delay(3000);
+							
 						runNetworkTool();
+						pingLast = System.currentTimeMillis();
 						Util.log("changeUUID: connection up.. ", this);
+						//changingWIFI = false;	
 						return;
+						
 					}
 					
-					Util.delay(3000);
-					runNetworkTool();
+					//Util.delay(3000);
+					//runNetworkTool();
 					changingWIFI = false;
 					
 		    	} catch (Exception e) {
@@ -758,7 +761,7 @@ public class NetworkMonitor {
 				String uuid = getConnectionUUID(connections.get(i));
 				settings.writeSettings(ManualSettings.defaultuuid, uuid);
 				Util.log(router + " == " + uuid, this);
-				changeUUID(uuid);
+				// changeUUID(uuid);
 			}	
 		}
 	}

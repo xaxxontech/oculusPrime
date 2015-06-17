@@ -119,10 +119,12 @@ public class NetworkServlet extends HttpServlet {
 		String list = "oculus_prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
+		final String setdef = "&nbsp;<a href=\"http://" + url + "?action=defalut&router=";
 		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++)
-			list += delete + ap[i] + "\">x</a>&nbsp;&nbsp;" + router + ap[i] + "\">" + ap[i] + "</a><br />\n";
+			list += router + ap[i] + "\">"+ ap[i] +"</a>" + delete + ap[i] + "\">&nbsp;&nbsp;&nbsp;&nbsp;[delete]</a>" 
+		          + setdef + ap[i] + "\">[set default]</a><br />\n";
 		 
 		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
 		ap = monitor.getAccessPoints();		
