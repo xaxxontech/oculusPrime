@@ -115,15 +115,20 @@ public class NetworkServlet extends HttpServlet {
 		final String delete  = "<a href=\"http://" + url + "?action=delete&router=";
 		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
 	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\">  \n");
 		
 		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>\n"); 
 		str.append("<tr><td colspan=\"3\"><center> known connections </center><hr>\n");
 		
 		for(int i = 0 ; i < connections.length ; i++) { // if existing ssid, don't show connection link 
-			if(state.exists(values.ssid)) { // || connections[i].equals(NetworkMonitor.AP)) {
-				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i] +"<td>");	
-				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a><td>" + delete + connections[i] + "\"> x </a>");		
+			if(state.exists(values.ssid)) { 
+				
+				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]);	
+				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
+				
+				if( ! connections[i].equals(NetworkMonitor.AP) && ! state.equals(values.ssid, connections[i])) 
+					str.append("<td>" + delete + connections[i] + "\"> x </a>");
+				else str.append("<td>"); // don't show these llinks
 			}
 			
 			// TODO: don't show current default 

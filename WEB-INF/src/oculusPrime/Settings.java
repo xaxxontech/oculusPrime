@@ -302,7 +302,7 @@ public class Settings {
 		setting = setting.trim();
 		value = value.trim();
 		
-		// test if is existing setting already 
+		//TODO: revisit -- test if is existing setting already 
 		if(settings.get(setting).equals(value)) {
 			Util.log(".. seting already = " + value, this);
 			return;
