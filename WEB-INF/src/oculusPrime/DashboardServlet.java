@@ -72,6 +72,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		if(action != null){ 
 			
+			/*
 			if(action.equals("default")  && (router != null)){	
 
 				monitor.setDefault(router.trim());	
@@ -79,6 +80,7 @@ public class DashboardServlet extends HttpServlet {
 				return;
 			
 			}
+			*/
 			
 			if(action.equals("delete")  && (router != null)){	
 				

@@ -292,9 +292,6 @@ public class Settings {
 	/**
 	 * Modify value of existing setting. read whole file, replace line while
 	 * you're at it, write whole file
-	 * 
-	 * @param setting
-	 * @param value
 	 */
 	public synchronized void writeSettings(String setting, String value) {
 		
@@ -302,7 +299,15 @@ public class Settings {
 		if(value == null) return;
 		if(value.equalsIgnoreCase("null")) return;
 				
+		setting = setting.trim();
 		value = value.trim();
+		
+		//TODO: revisit -- test if is existing setting already 
+		if(settings.get(setting).equals(value)) {
+			Util.log(".. seting already = " + value, this);
+			return;
+		}
+		
 		settings.put(setting, value);
 		FileInputStream filein;
 		String[] lines = new String[999];
