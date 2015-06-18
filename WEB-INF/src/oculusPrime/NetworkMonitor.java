@@ -183,7 +183,7 @@ public class NetworkMonitor {
 							networkData.add(line);
 			}
 			
-			// Util.debug("networkTask: lines copied: " + networkData.size(), this);
+			Util.debug("networkTask: lines copied: " + networkData.size(), this);
 
 			proc.waitFor();
 			readETH();
@@ -206,7 +206,6 @@ public class NetworkMonitor {
 		String ssid = routers[ new Random().nextInt(routers.length) ];
 		
 		// try not to choose ap mode again
-		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		if(ssid.equals(AP)) ssid = routers[ new Random().nextInt(routers.length) ];
 		
@@ -304,7 +303,7 @@ public class NetworkMonitor {
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){  //TODO: revisit 
-				if( ! line.startsWith("NAME") && line.contains("wireless")) // && !line.contains("never"))
+				if( ! line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
 					if( ! ignore.contains(NetworkMonitor.getConnectionName(line)))
 						if( ! connections.contains(line))
 							connections.add(line); 

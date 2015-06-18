@@ -51,50 +51,44 @@ public class NetworkServlet extends HttpServlet {
 			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
 		}
 			
-		if(password != null){
+		if(router != null && password != null){
 			monitor.changeWIFI(router, password);
 			response.sendRedirect("network"); 
 			return;
 		}
 		
 		if(action != null && router != null) { 
+		
 			if(action.equals("default")){	
-				Util.log("set default: " + router, this);
 				monitor.setDefault(router.trim());	
 				response.sendRedirect("network"); 
 				return;
 			
 			}
-		}
 			
-		if(action.equals("delete")){	
-			if(state.equals(values.ssid, router)){
-				Util.log("... can't delete if conncted: " + router, this);
-				response.sendRedirect("network"); 
+			if(action.equals("delete")){	
+				if(state.equals(values.ssid, router)){
+					response.sendRedirect("network"); 
+					return;
+				}
+			
+				monitor.removeConnection(router.trim());	
+				response.sendRedirect("network");  
 				return;
 			}
 				
-			Util.log(".. delete [" + router + "]", this);
-			monitor.removeConnection(router.trim());	
-			response.sendRedirect("network");  
-			return;
-		}
-			
-		
-		if(action.equals("connect")){	
-			if(monitor.connectionExists(router)){			
-				Util.log(request.getServerName()+" connect existing [" + router + "]", this);
-				monitor.changeWIFI(router);
-				//	response.sendRedirect("network");                    
-				//	return;
+			if(action.equals("connect")){	
+				if(monitor.connectionExists(router)){			
+					monitor.changeWIFI(router);
+					response.sendRedirect("network");                    
+					return;
 				}
-			
-				
-			sendLogin(request, response, router);
-			return;
-		
+					
+				sendLogin(request, response, router);
+				return;
+			}		
 		}
-			
+		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println("<html><head> \n");
@@ -121,16 +115,22 @@ public class NetworkServlet extends HttpServlet {
 		final String delete  = "<a href=\"http://" + url + "?action=delete&router=";
 		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
 	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">  \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\">  \n");
 		
 		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>\n"); 
-		str.append("<tr><td colspan=\"3\"><center> access points </center><hr>\n");
+		str.append("<tr><td colspan=\"3\"><center> known connections </center><hr>\n");
 		
-		for(int i = 0 ; i < connections.length ; i++) 
-			str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a><td>" 
-		            + delete + connections[i] + "\"> x </a><td>" 
-					+ setdef + connections[i] + "\">set</a></tr>\n");
-	
+		for(int i = 0 ; i < connections.length ; i++) { // if existing ssid, don't show connection link 
+			if(state.exists(values.ssid)) { // || connections[i].equals(NetworkMonitor.AP)) {
+				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i] +"<td>");	
+				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a><td>" + delete + connections[i] + "\"> x </a>");		
+			}
+			
+			// TODO: don't show current default 
+			str.append("<td>"+ setdef + connections[i] + "\"> default </a></tr>\n");
+		
+		}
+		
 		str.append("<tr><td colspan=\"3\"><center> access points </center><hr>  \n");
 		
 		for(int i = 0 ; i < available.length ; i++) 
