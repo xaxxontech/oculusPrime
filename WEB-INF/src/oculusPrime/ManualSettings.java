@@ -6,11 +6,12 @@ public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
-	soundthreshold, motionthreshold, networkmonitor, checkaddresses, defaultuuid;
+	soundthreshold, motionthreshold, networkmonitor, checkaddresses, defaultuuid, ignoreuuids;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
+		config.setProperty(ignoreuuids.name(), "none");
 		config.setProperty(defaultuuid.name(), "none");
 		config.setProperty(developer.name(), Settings.FALSE);
 		config.setProperty(debugenabled.name(), Settings.FALSE);
