@@ -115,32 +115,35 @@ public class NetworkServlet extends HttpServlet {
 		final String delete  = "<a href=\"http://" + url + "?action=delete&router=";
 		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
 	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\">  \n");
-		
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">  \n");
 		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>\n"); 
-		str.append("<tr><td colspan=\"3\"><center> known connections </center><hr>\n");
 		
-		for(int i = 0 ; i < connections.length ; i++) { // if existing ssid, don't show connection link 
-			if(state.exists(values.ssid)) { 
+		// if(state.exists(values.ssid)) str.append("<tr><td colspan=\"3\"> -------- current: " + state.get(values.ssid) + " \n");
+		
+		if(connections.length > 0){
+			str.append("<tr><td colspan=\"3\"><hr>"+connections.length+" known connections </center><hr>\n");
+			for(int i = 0 ; i < connections.length ; i++) { 
 				
-				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]);	
+				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
 				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
-				
-				if( ! connections[i].equals(NetworkMonitor.AP) && ! state.equals(values.ssid, connections[i])) 
+					
+				if( ! connections[i].equals(NetworkMonitor.AP) && ! state.equals(values.ssid, connections[i])) {
 					str.append("<td>" + delete + connections[i] + "\"> x </a>");
-				else str.append("<td>"); // don't show these llinks
-			}
+				} else {
+					str.append("<td>"); // don't show these links
+				}
+				
+				str.append("<td>"+ setdef + connections[i] + "\"> default </a></tr>\n");
 			
-			// TODO: don't show current default 
-			str.append("<td>"+ setdef + connections[i] + "\"> default </a></tr>\n");
-		
+			}
 		}
 		
-		str.append("<tr><td colspan=\"3\"><center> access points </center><hr>  \n");
+		if(available.length > 0){
+			str.append("<tr><td colspan=\"3\"><hr>"+ available.length + " access points <hr>  \n");
+			for(int i = 0 ; i < available.length ; i++) 
+				str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
+		}
 		
-		for(int i = 0 ; i < available.length ; i++) 
-			str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
-	
 		str.append("\n</table>\n");
 		return str.toString();
 	}
