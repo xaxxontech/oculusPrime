@@ -112,8 +112,8 @@ public class NetworkServlet extends HttpServlet {
 				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
 				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
 					
-				if(monitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) str.append("<td>"); 
-				else str.append("<td>"+ setdef + connections[i] + "\"> default </a></tr>\n");	
+				if(monitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) str.append("<td>default"); 
+				else str.append("<td>"+ setdef + connections[i] + "\"> set default </a></tr>\n");	
 				
 			}
 		}
