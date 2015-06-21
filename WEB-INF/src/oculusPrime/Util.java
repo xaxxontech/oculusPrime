@@ -523,7 +523,7 @@ public class Util {
 			
 		String[] cmd = new String[]{"ping", "-c1", "-W1", addr};
 		
-		//long start = System.currentTimeMillis();
+		long start = System.currentTimeMillis();
 		
 		Process proc = null;
 		try { 
@@ -540,7 +540,8 @@ public class Util {
 		
 		try {
 			while ((line = procReader.readLine()) != null){
-				if(line.contains("time=")){
+				Util.debug("pingWIFI(): " + line, null);
+				if(line.contains("time=")) {
 					time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 					break;
 				}	
@@ -550,10 +551,10 @@ public class Util {
 		}
 
 
-		//if((System.currentTimeMillis()-start) > 1100){
-		//	Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
-		//	if(time == null) Util.log("pingWIFI(): null result for address: " + addr, null);
-		//}
+		if((System.currentTimeMillis()-start) > 1100){
+			Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
+			if(time == null) Util.log("pingWIFI(): null result for address: " + addr, null);
+		}
 
 		return time;	
 	}

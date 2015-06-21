@@ -119,7 +119,7 @@ public class NetworkMonitor implements Observer {
 				String line = null;
 				while ((line = procReader.readLine()) != null){
 					if(line.contains("completed") || line.contains("New")) {
-						Util.log("[" + ( System.currentTimeMillis() - scanLast ) + "] " + line, this);
+						// Util.log("[" + ( System.currentTimeMillis() - scanLast ) + "] " + line, this);
 						scanLast = System.currentTimeMillis();
 						runNetworkTool();
 					}
