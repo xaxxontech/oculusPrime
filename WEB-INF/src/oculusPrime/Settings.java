@@ -254,12 +254,11 @@ public class Settings {
 
 	private String[][] getUsers() {
 
-		int i = 0; // count users
+		int i = 0;
 		for (;; i++)
 			if (readSetting("user" + i) == null)
 				break;
-
-		// System.out.println("found: " + i);
+		
 		String[][] users = new String[i][2];
 
 		for (int j = 0; j < i; j++) {
@@ -318,10 +317,10 @@ public class Settings {
 			int i = 0;
 			while ((lines[i] = reader.readLine()) != null) {
 				String items[] = lines[i].split(" ");
-				if(items.length==2){
+				if(items.length==2){ //TODO: SHOULD SETTINGS BE CASE SENSITIVE? 
 					if ((items[0].toUpperCase()).equals(setting.toUpperCase())) {
 						lines[i] = setting + " " + value;
-					} // else Util.log("error wwritting: "+lines[0], this);
+					}
 				}
 				i++;
 			}
@@ -344,15 +343,9 @@ public class Settings {
 		}
 	}
 
-	/**
-	 * read whole file, add single line, write whole file
-	 * 
-	 * @param setting
-	 * @param value
-	 */
 	public void newSetting(String setting, String value) {
 
-		setting = setting.trim(); // remove trailing whitespace
+		setting = setting.trim();
 		value = value.trim();
 
 		FileInputStream filein;
@@ -389,7 +382,7 @@ public class Settings {
 
 	public void deleteSetting(String setting) {
 		// read whole file, remove offending line, write whole file
-		setting = setting.replaceAll("\\s+$", ""); // remove trailing whitespace
+		setting = setting.replaceAll("\\s+$", ""); 
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {
@@ -447,7 +440,7 @@ public class Settings {
 
 	public void writeRed5Setting(String setting, String value) { 
 		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
-		value = value.replaceAll("\\s+$", ""); // remove trailing whitespace
+		value = value.replaceAll("\\s+$", ""); 
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {
@@ -516,7 +509,7 @@ public class Settings {
 		return Long.valueOf(readSetting(setting));
 	}
 
-	public void disable(ManualSettings setting) {
+/*	public void disable(ManualSettings setting) {
 		if(setting == null) return;
 		writeSettings(setting, "false");
 	}
@@ -525,4 +518,5 @@ public class Settings {
 		if(setting == null) return;
 		writeSettings(setting, "true");
 	}
+	*/
 }

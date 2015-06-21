@@ -633,7 +633,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case docklineposupdate:
-			settings.writeSettings("vidctroffset", str);
+			settings.writeSettings(GUISettings.vidctroffset, str);
 			messageplayer("vidctroffset set to : " + str, null, null);
 			break;
 
@@ -1259,28 +1259,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (loginRecords.isAdmin()) {
 			String comps[] = str.split(" "); 
 			comport.speedslow = Integer.parseInt(comps[0]);
-			settings.writeSettings("speedslow", Integer.toString(comport.speedslow));
+			settings.writeSettings(GUISettings.speedslow, Integer.toString(comport.speedslow));
 			
 			comport.speedmed = Integer.parseInt(comps[1]);
-			settings.writeSettings("speedmed", Integer.toString(comport.speedmed));
+			settings.writeSettings(GUISettings.speedmed, Integer.toString(comport.speedmed));
 			
 			comport.nudgedelay = Integer.parseInt(comps[2]);
-			settings.writeSettings("nudgedelay", Integer.toString(comport.nudgedelay));
+			settings.writeSettings(GUISettings.nudgedelay, Integer.toString(comport.nudgedelay));
 			
 			comport.maxclicknudgedelay = Integer.parseInt(comps[3]);
-			settings.writeSettings("maxclicknudgedelay", Integer.toString(comport.maxclicknudgedelay));
+			settings.writeSettings(GUISettings.maxclicknudgedelay, Integer.toString(comport.maxclicknudgedelay));
 			
 			comport.maxclickcam = Integer.parseInt(comps[4]);
-			settings.writeSettings("maxclickcam",Integer.toString(comport.maxclickcam));
+			settings.writeSettings(GUISettings.maxclickcam,Integer.toString(comport.maxclickcam));
 			
 			comport.fullrotationdelay = Integer.parseInt(comps[5]);
-			settings.writeSettings(GUISettings.fullrotationdelay.name(), Integer.toString(comport.fullrotationdelay));
+			settings.writeSettings(GUISettings.fullrotationdelay, Integer.toString(comport.fullrotationdelay));
 
 			comport.onemeterdelay = Integer.parseInt(comps[6]);
-			settings.writeSettings(GUISettings.onemeterdelay.name(), Integer.toString(comport.onemeterdelay));
+			settings.writeSettings(GUISettings.onemeterdelay, Integer.toString(comport.onemeterdelay));
 			
 			comport.setSteeringComp(comps[7]);
-			settings.writeSettings(GUISettings.steeringcomp.name(), comps[7]);
+			settings.writeSettings(GUISettings.steeringcomp, comps[7]);
 			
 			comport.setCameraStops(Integer.parseInt(comps[8]), Integer.parseInt(comps[9]));
 
@@ -1364,8 +1364,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void streamSettingsCustom(String str) {
-		settings.writeSettings("vset", "vcustom");
-		settings.writeSettings("vcustom", str);
+		settings.writeSettings(GUISettings.vset, "vcustom");
+		settings.writeSettings(GUISettings.vcustom, str);
 		String s = "custom stream set to: " + str;
 		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
 			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
@@ -1376,7 +1376,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void streamSettingsSet(String str) {
-		settings.writeSettings("vset", "v" + str);
+		settings.writeSettings(GUISettings.vset, "v" + str);
 		String s = "stream set to: " + str;
 		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
 			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
@@ -1434,9 +1434,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
 				navigation.stopNavigation();
 			if (state.exists(values.odomlinearpwm))
-				settings.writeSettings(ManualSettings.odomlinearpwm.name(), state.get(values.odomlinearpwm));
+				settings.writeSettings(ManualSettings.odomlinearpwm, state.get(values.odomlinearpwm));
 			if (state.exists(values.odomturnpwm))
-				settings.writeSettings(ManualSettings.odomturnpwm.name(), state.get(values.odomturnpwm));
+				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
 		}
 
 		if (! settings.getBoolean(ManualSettings.debugenabled))
@@ -2032,11 +2032,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		if (oktoadd) {
-			// skipsetup
-			if (skipsetup != null) {
-				settings.writeSettings("skipsetup", skipsetup);
-			}
-
+			if (skipsetup != null) settings.writeSettings(GUISettings.skipsetup, skipsetup);
 			message = "launch server";
 			if (restartrequired) {
 				message = "shutdown";
@@ -2048,7 +2044,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	/** */
 	private void populateSettings() {
-		settings.writeSettings("skipsetup", Settings.FALSE);
+		settings.writeSettings(GUISettings.skipsetup, Settings.FALSE);
 		String result = "populatevalues ";
 
 		String str = settings.readSetting("user0");

@@ -71,31 +71,6 @@ public class DashboardServlet extends HttpServlet {
 		}
 		
 		if(action != null){ 
-			
-			/*
-			if(action.equals("default")  && (router != null)){	
-
-				monitor.setDefault(router.trim());	
-				response.sendRedirect("network"); 
-				return;
-			
-			}
-			*/
-			
-			if(action.equals("delete")  && (router != null)){	
-				
-				if(state.equals(values.ssid, router)){
-					Util.log("can't delete if conncted: " + router, this);
-					response.sendRedirect("dashboard");     
-					return;
-				} 
-				
-				Util.log(request.getServerName()+" delete [" + router + "]", this);
-				monitor.removeConnection(router.trim());	
-				response.sendRedirect("dashboard");     
-				return;
-			}
-			
 			if(action.equals("connect")  && (router != null)){	
 				if(monitor.connectionExists(router)){			
 					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
@@ -293,10 +268,10 @@ public class DashboardServlet extends HttpServlet {
 		String list = "oculus prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
 		String[] ap = monitor.getConnections(); 		
 		
-		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
+//		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++)
-			list += delete + ap[i] + "\">x</a>&nbsp;&nbsp;" + router + ap[i] + "\">" + ap[i] + "</a><br />\n";
+			list += /*delete + ap[i] + "\">x</a>&nbsp;&nbsp;" +*/ router + ap[i] + "\">" + ap[i] + "</a><br />\n";
 		 
 		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
 		ap = monitor.getAccessPoints();		
@@ -326,11 +301,7 @@ public class DashboardServlet extends HttpServlet {
 				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
 				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
 				
-		// str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(15) + "</tr> \n");		
-		// String footer = "oculus prime version <b>" + new Updater().getCurrentVersion() + "</b>";
-		// if(settings.getBoolean(ManualSettings.developer)) footer += " &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>developer mode active</i>";
-		// str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");		
+		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(15) + "</tr> \n");	
 		str.append("\n</table>\n");
 		return str.toString();
 	}

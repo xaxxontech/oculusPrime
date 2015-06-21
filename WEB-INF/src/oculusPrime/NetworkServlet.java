@@ -103,10 +103,10 @@ public class NetworkServlet extends HttpServlet {
 		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
 	
 		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">  \n");
-		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>\n"); 
+		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>  \n"); 
 				
-		if(connections.length > 0){
-			str.append("<tr><td colspan=\"3\"><hr>"+connections.length+" known connections </center><hr>\n");
+		//if(connections.length > 0){
+			str.append("<tr><td colspan=\"3\"><hr>"+connections.length+" -- known connections </center><hr>  \n");
 			for(int i = 0 ; i < connections.length ; i++) { 
 				
 				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
@@ -116,13 +116,13 @@ public class NetworkServlet extends HttpServlet {
 				else str.append("<td>"+ setdef + connections[i] + "\"> set default </a></tr>\n");	
 				
 			}
-		}
+		//}
 		
-		if(available.length > 0){
-			str.append("<tr><td colspan=\"3\"><hr>"+ available.length + " access points <hr>  \n");
+		//if(available.length > 0){
+			str.append("<tr><td colspan=\"3\"><hr>"+ available.length + " -- access points <hr>  \n");
 			for(int i = 0 ; i < available.length ; i++) 
 				str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
-		}
+		//}
 		
 		str.append("\n</table>\n");
 		return str.toString();
