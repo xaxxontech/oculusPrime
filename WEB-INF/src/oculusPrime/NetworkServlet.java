@@ -105,25 +105,24 @@ public class NetworkServlet extends HttpServlet {
 		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">  \n");
 		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>  \n"); 
 				
-		//if(connections.length > 0){
-			str.append("<tr><td colspan=\"3\"><hr>"+connections.length+" -- known connections </center><hr>  \n");
-			for(int i = 0 ; i < connections.length ; i++) { 
+		str.append("<tr><td colspan=\"3\"><hr>"+connections.length+" -- known connections </center><hr>  \n");
+		for(int i = 0 ; i < connections.length ; i++) { 
+			
+			if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
+			else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
 				
-				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
-				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
-					
-				if(monitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) str.append("<td>default"); 
-				else str.append("<td>"+ setdef + connections[i] + "\"> set default </a></tr>\n");	
-				
+			if(monitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) {
+				str.append("<td>default"); 
+			} else { 
+				if( ! connections[i].equals(NetworkMonitor.AP)) 
+					str.append("<td>"+ setdef + connections[i] + "\"> set default </a></tr>\n");	
 			}
-		//}
-		
-		//if(available.length > 0){
-			str.append("<tr><td colspan=\"3\"><hr>"+ available.length + " -- access points <hr>  \n");
-			for(int i = 0 ; i < available.length ; i++) 
-				str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
-		//}
-		
+		}
+	
+		str.append("<tr><td colspan=\"3\"><hr>"+ available.length + " -- access points <hr>  \n");
+		for(int i = 0 ; i < available.length ; i++) 
+			str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
+	
 		str.append("\n</table>\n");
 		return str.toString();
 	}
