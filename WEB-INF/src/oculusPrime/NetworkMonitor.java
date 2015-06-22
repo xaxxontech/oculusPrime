@@ -51,7 +51,8 @@ public class NetworkMonitor implements Observer {
 			state.addObserver(this);
 			connectionUpdate();
 			runNetworkTool();
-						
+			killApplet();
+				
 		}
 	}
 	
@@ -298,11 +299,11 @@ public class NetworkMonitor implements Observer {
 					
 					if(proc.exitValue()==0) {
 						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) {
-							//connectionUpdate(); 
-							//runNetworkTool();
-							//Util.delay(600);
+							connectionUpdate(); 
+							runNetworkTool();
+							Util.delay(600);
 							Util.log("....................changeWIFI(password): setting as default ["+ssid+"]", this);		
-							// setDefault(ssid);	
+							setDefault(ssid);	
 						}
 					}
 		
@@ -428,7 +429,9 @@ public class NetworkMonitor implements Observer {
 	private void killApplet(){
 		try {
 			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-		//	Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
+			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}
