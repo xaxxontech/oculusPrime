@@ -39,20 +39,19 @@ public class NetworkMonitor implements Observer {
 	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static void setApp(Application a) {application = a;}
 	public static NetworkMonitor getReference() {return singleton;}
-
+	
 	private NetworkMonitor(){
-
+		
 		updateExternalIPAddress();
-
+	
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
-
+			
+			pingTimer.schedule(new pingTask(), 2000, 2000);
+			new eventThread().start();	
+			state.addObserver(this);
 			connectionUpdate();
 			runNetworkTool();
-			changeUUID(settings.readSetting(ManualSettings.defaultuuid));
-			pingTimer.schedule(new pingTask(), 2000, 2000);
-			new eventThread().start();
-			state.addObserver(this);
-
+						
 		}
 	}
 	
@@ -71,13 +70,8 @@ public class NetworkMonitor implements Observer {
 			defaultLast = System.currentTimeMillis();
 			pingLast = System.currentTimeMillis(); 
 			
-			if(state.exists(values.ssid)) currentUUID = lookupUUID(state.get(values.ssid));
-				
 			if( ! state.equals(values.ssid, AP) && ManualSettings.isDefault(ManualSettings.defaultuuid))
 				setDefault(state.get(values.ssid));
-			
-			if(state.exists(values.ssid)) currentUUID = lookupUUID(state.get(values.ssid));
-
 		}
 	}
 	
@@ -85,39 +79,31 @@ public class NetworkMonitor implements Observer {
 		@Override
 	    public void run() {
 	    		
-	    	// TODO: revisit && ! state.getBoolean(State.values.autodocking)) 
+	    	// TODO: ??? ! state.getBoolean(State.values.autodocking)) 
 	    	if(state.equals(values.ssid, AP) || changingWIFI) { 
 	    		if(application != null && (state.getUpTime() > Util.ONE_MINUTE))
 	    			application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 	    	}
 	    	
-	    	if(state.exists(values.gateway)) runNetworkTool();
-	    	
 	    	if(state.exists(values.gateway) && !changingWIFI){ 
     			pingValue = Util.pingWIFI(state.get(values.gateway));
     			if(pingValue == null) {
     				
-    				pingFail++;
+    				Util.log("pingTask(): ping failed: fail: "+ pingFail +" last: " + (System.currentTimeMillis() - pingLast), this);
     				
-    				Util.log("pingTask(): ping failed: "+ pingFail +" last: " + (System.currentTimeMillis() - pingLast), this);
-    				if(pingFail > 100) {
-    					Util.log("pingTask(): ping failed too much, try adhoc..", this);
-    					disconnecteddWAN();
-    					startAdhoc(); // TODO:.............................. 
+    				if(pingFail++ > 60) {
+    					Util.log("pingTask(): ping failed too much, try adhoc??", this);
+    					
     				}
-    				
     			} else {
     				pingLast = System.currentTimeMillis(); 
-    				if(pingFail-- < 0) pingFail = 0;
+    				// if(pingFail-- < 0) pingFail = 0;
     			}
-    			
-    			if((System.currentTimeMillis() - apLast) > 100) pingFail = 0;
 	    	}
 	    	
 	    	if((System.currentTimeMillis() - defaultLast) > Util.TWO_MINUTES) {
 	    		Util.log("pingTask(): not connected to default, try to connect.. ", this);
     			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
-    			
 	    	}
     	
     		if((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
@@ -125,7 +111,7 @@ public class NetworkMonitor implements Observer {
     			startAdhoc();
     		}
     		
-    		if(currentUUID != null)
+			if(currentUUID != null)
 				if(currentUUID.equals(settings.readSetting(ManualSettings.defaultuuid))) 
 					defaultLast = System.currentTimeMillis();
     		
@@ -225,9 +211,11 @@ public class NetworkMonitor implements Observer {
 	
 	public String[] getConnections() {
 		
+		// Util.log("con list: " + connections.size(), this);
+		
 		String[] con = new String[connections.size()]; 
 		for(int i = 0 ; i < con.length ; i++)
-			con[i] = NetworkMonitor.getConnectionName(connections.get(i));
+			con[i] = getConnectionName(connections.get(i));
 		
 		return con;
 	}
@@ -235,7 +223,8 @@ public class NetworkMonitor implements Observer {
 	public void setDefault(final String router) {
 		
 		if(router.equals(AP)) { // TODO: COLIN
-			Util.log("changeWIFI(): user needs to be warned of this something.. ", this);
+			Util.log("changeWIFI(): user needs to be warned of this default ap.. ", this);
+			return;
 		}
 		
 		for(int i = 0 ; i < connections.size() ; i++) {
@@ -273,10 +262,14 @@ public class NetworkMonitor implements Observer {
 
 			String line = null;
 			while ((line = procReader.readLine()) != null){                 //TODO: revisit 
-				if( ! line.startsWith("NAME") && line.contains("wireless") && !line.contains("never"))
+				if( ! line.startsWith("NAME") && line.contains("wireless")) // && !line.contains("never"))
 					if( ! connections.contains(line))
 						connections.add(line); 
 			}
+			
+			//------------------------------------------------------------------------------------
+			// Util.log("con update list: " + connections.size(), this);
+			
 		} catch (Exception e) {
 			Util.debug("connectionUpdate(): " + e.getLocalizedMessage(), this);
 		}
@@ -284,7 +277,12 @@ public class NetworkMonitor implements Observer {
 	
 	public void changeWIFI(final String ssid, final String password){
 	
-		if(ssid == null || password == null || changingWIFI) return; 
+		if(ssid == null || password == null) return; 
+		
+		if(changingWIFI){
+			Util.log("changeWIFI(password): busy, rejected", this);
+			return;
+		}
 		
 		new Thread(){
 		    public void run() {
@@ -296,26 +294,24 @@ public class NetworkMonitor implements Observer {
 					Process proc = Runtime.getRuntime().exec(cmd);
 					proc.waitFor();
 					
-					Util.log("changeWIFI(password): [" + ssid + "] exit code: " + proc.exitValue(), this);			
+					Util.log("changeWIFI(password): [" + ssid + "] exit code: " + proc.exitValue(), this);					
 					
-					if(proc.exitValue() != 0){ // TODO: COLIN tell user 
-							
-						Util.log("changeWIFI(password): failed login, bad password so trying default.. ", this);
-		    			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
-					}
-					
-					if(proc.exitValue() == 0) {
+					if(proc.exitValue()==0) {
 						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) {
-							Util.log("changeWIFI(password): setting as default ["+ssid+"]", this);	
-							connectionUpdate();	
-							setDefault(ssid);	
+							//connectionUpdate(); 
+							//runNetworkTool();
+							//Util.delay(600);
+							Util.log("....................changeWIFI(password): setting as default ["+ssid+"]", this);		
+							// setDefault(ssid);	
 						}
 					}
 		
+					connectionUpdate(); 
+					runNetworkTool();
 					changingWIFI = false;		
 					
 		    	} catch (Exception e) {
-					Util.log("changeWIFI(): [" + ssid + "] ", e, this); 
+					Util.log("changeWIFI(password): [" + ssid + "] ", e, this); 
 				}
 		    }
 		}.start();
@@ -336,7 +332,8 @@ public class NetworkMonitor implements Observer {
 			startAdhoc();
 			return;
 		}
-		
+
+		/*
 		if(uuidFail > 10){
 			Util.log("changeUUID: default router failed 10 times, trying adhoc..", this);
 			settings.writeSettings(ManualSettings.defaultuuid, ManualSettings.getDefault(ManualSettings.defaultuuid));
@@ -351,7 +348,8 @@ public class NetworkMonitor implements Observer {
 			uuidFail++;
 			return;
 		}
-	
+	*/
+		
 		new Thread(){
 		    public void run() {
 		    	try {
@@ -386,15 +384,20 @@ public class NetworkMonitor implements Observer {
 
 	public void changeWIFI(final String ssid){
 		
-		if(ssid == null || changingWIFI) return; 
+		if(ssid == null) return; 
+		
+		if(changingWIFI){
+			Util.debug("changeWIFI(): busy, rejected", this);
+			return;
+		}
 		
 		if(state.equals(values.ssid, ssid)) {
 			
 			Util.debug("changeWIFI(): already is the ssid: " + ssid, this);
 			
-			if(ssid.equals(AP) && ManualSettings.isDefault(ManualSettings.defaultuuid)){
-				Util.log("changeWIFI(): ..... all hope is lost, user needs to do something..... ", this);
-			}// TODO: COLIN
+			if(ssid.equals(AP)) { // TODO: COLIN
+				Util.log("changeWIFI(): all hope is lost, user needs to do something.. ", this);
+			}
 			
 			return;
 		}
@@ -409,11 +412,9 @@ public class NetworkMonitor implements Observer {
 					proc.waitFor();
 					Util.log("changeWIFI(): [" + ssid + "] exit code: " +  proc.exitValue(), this);
 					if(proc.exitValue()==0) {
-						if(ManualSettings.isDefault(ManualSettings.defaultuuid))
-							if( ! state.equals(values.ssid, AP)) 
-								setDefault(ssid);
+						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) setDefault(ssid);
+						pingLast = System.currentTimeMillis(); 
 					}
-					
 					runNetworkTool();
 					changingWIFI = false;	
 					
@@ -427,7 +428,7 @@ public class NetworkMonitor implements Observer {
 	private void killApplet(){
 		try {
 			Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+		//	Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
 		} catch (Exception e) {
 			Util.debug("killApplet(): " + e.getLocalizedMessage(), this);
 		}
@@ -447,6 +448,9 @@ public class NetworkMonitor implements Observer {
 				return;
 			}
 		}
+		
+	//	if(lookupSSID(uuid) == null){
+	//		Util.log("changeUUID: null connection uuid for ["+lookupSSID(uuid)+"], rejected", this);
 		
 		if(getAccessPoints() == null){
 			Util.log("startAdhoc(): no access points, can't be an an access point.", this);
@@ -595,7 +599,7 @@ public class NetworkMonitor implements Observer {
 		for(int j = 0 ; j < accesspoints.size() ; j++) {
 			if(accesspoints.get(j).contains(":")){
 				String ssid = accesspoints.get(j).substring(0, accesspoints.get(j).indexOf(":")).trim();
-				if( ! aps.contains(ssid) && ! connectionExists(ssid)) //&& ! ignore.contains(ssid)) 
+				if( ! aps.contains(ssid) && ! connectionExists(ssid))
 					aps.add(ssid);
 			}
 		}
