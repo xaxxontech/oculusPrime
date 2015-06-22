@@ -72,11 +72,10 @@ public class UpdateFTP {
 					ftp.connect(host, port, user, pass);
 					ftp.cwd(folder);
 					
-					ftp.storString("ip.php", state.get(State.values.externaladdress.name()));
+					ftp.storString("ip.php", state.get(State.values.externaladdress));
 					ftp.storString("last.php", new java.util.Date().toString());
 					ftp.storString("user.php", System.getProperty("user.name"));		
 					ftp.storString("state.php", state.toString());
-					// ftp.storString("users.php",  new LoginRecords().toString());
 					
 					ftp.disconnect();
 					

@@ -131,7 +131,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public void appDisconnect(IConnection connection) {
 		if(connection==null) { return; }
 		if (connection.equals(player)) {
-			String str = state.get(State.values.driver.name()) + " disconnected";
+			String str = state.get(State.values.driver) + " disconnected";
 			
 			Util.log("appDisconnect(): " + str,this); 
 
@@ -207,8 +207,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		grabber = Red5.getConnectionLocal();
 		String str = "awaiting&nbsp;connection";
-		if (state.get(State.values.driver.name()) != null) {
-			str = state.get(State.values.driver.name()) + "&nbsp;connected";
+		if (state.get(State.values.driver) != null) {
+			str = state.get(State.values.driver) + "&nbsp;connected";
 		}
 		str += " stream " + state.get(State.values.stream);
 		messageGrabber("connected to subsystem", "connection " + str);
@@ -231,7 +231,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode=state.get(State.values.videosoundmode.name());
+		String videosoundmode=state.get(State.values.videosoundmode);
 		if (videosoundmode == null)	videosoundmode=VIDEOSOUNDMODEHIGH;  
 		
 		setGrabberVideoSoundMode(videosoundmode);
@@ -281,10 +281,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
 		grabberInitialize();	
-		state.put(State.values.lastusercommand, System.currentTimeMillis());  
+		state.set(State.values.lastusercommand, System.currentTimeMillis());  
 		docker = new AutoDock(this, comport, powerport);
 
-		state.put(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
+		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		watchdog = new SystemWatchdog(this); 
 		
 		new Thread(new Runnable() { public void run() {
@@ -356,7 +356,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					str += " storecookie " + authtoken;
 					authtoken =  null;
 				}
-				str += " someonealreadydriving " + state.get(State.values.driver.name());
+				str += " someonealreadydriving " + state.get(State.values.driver);
 
 				// this has to be last to above variables are already set in java script
 				sc.invoke("message", new Object[] { null, "green", "multiple", str });
@@ -369,19 +369,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		} else { // driver connected
 			player = Red5.getConnectionLocal();
-			state.set(State.values.driver.name(), state.get(State.values.pendinguserconnected));
+			state.set(State.values.driver, state.get(State.values.pendinguserconnected));
 			state.delete(State.values.pendinguserconnected);
-			String str = "connection connected user " + state.get(State.values.driver.name());
+			String str = "connection connected user " + state.get(values.driver);
 			if (authtoken != null) {
 				str += " storecookie " + authtoken;
 				authtoken = null;
 			}
 			str += " streamsettings " + streamSettings();
-			messageplayer(state.get(State.values.driver.name()) + " connected to OCULUS PRIME", "multiple", str);
+			messageplayer(state.get(State.values.driver) + " connected to OCULUS PRIME", "multiple", str);
 			initialstatuscalled = false;
 			
-			str = state.get(State.values.driver.name()) + " connected from: " + player.getRemoteAddress();
-			messageGrabber(str, "connection " + state.get(State.values.driver.name()) + "&nbsp;connected");
+			str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
+			messageGrabber(str, "connection " + state.get(State.values.driver) + "&nbsp;connected");
 			Util.log("playersignin(), " + str, this);
 			loginRecords.beDriver();
 			
@@ -397,9 +397,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
 		}
 	}
-
-
-
+	
 	public void driverCallServer(PlayerCommands fn, String str) {
 		playerCallServer(fn, str, true);
 	}
@@ -452,7 +450,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 			
 		// skip telnet ping broadcast
-		if(fn != PlayerCommands.statuscheck) state.put(State.values.lastusercommand, System.currentTimeMillis());
+		if(fn != PlayerCommands.statuscheck) state.set(State.values.lastusercommand, System.currentTimeMillis());
 		
 		String[] cmd = null;
 		if(str!=null) cmd = str.split(" ");
@@ -551,20 +549,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case nudge: nudge(str); break;
 		
 		case state: 
+			
 			String s[] = str.split(" ");
+
+			if(State.values.valueOf(s[0]) == null) {
+				Util.log("not a known state member, rejected", this);
+				return;
+			}
+			
 			if (s.length == 2) { // two args
-				if (s[0].equals("delete")) state.delete(s[1]);
-				else state.set(s[0], s[1]); 
+				if (s[0].equals("delete")) state.delete(State.values.valueOf(s[1]));
+				else state.set(State.values.valueOf(s[0]), s[1]); 
 			}
 			else {  
 				if (s[0].matches("\\S+")) { // one arg 
-					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
+					messageplayer("<state> "+s[0]+" "+state.get(State.values.valueOf(s[0])), null, null); 
 				} else {  // no args
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
 			}
 			break;
-		
+	
 		case writesetting:
 			if (settings.readSetting(cmd[0]) == null) {
 				settings.newSetting(cmd[0], cmd[1]);
@@ -820,6 +825,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case clearmap: Mapper.clearMap();
 			break;
 		
+			// TODO: WHAT IS THIS DOING?? 
+			/*
 		case error:
 			try {
 				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
@@ -827,6 +834,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			break;
 
+		*/
+			
 //		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
@@ -842,7 +851,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		case cpu: 
 			String cpu = String.valueOf(Util.getCPU());
-			if(cpu != null) state.put(values.cpu, cpu);
+			if(cpu != null) state.set(values.cpu, cpu);
 			break;
 			
 		}
@@ -977,7 +986,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
 		sc.invoke("videoSoundMode", new Object[] { str });
-		state.set(State.values.videosoundmode.name(), str);
+		state.set(State.values.videosoundmode, str);
 		Util.log("grabber video sound mode = "+str, this);
 	}
 	
@@ -1302,7 +1311,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void moveMacroCancel() {
 		if (state.getBoolean(State.values.docking.name())) {
 			String str = "";
-            if (!state.equals(State.values.dockstatus.name(), AutoDock.DOCKED)) {
+            if (!state.equals(State.values.dockstatus, AutoDock.DOCKED)) {
                 state.set(State.values.dockstatus, AutoDock.UNDOCKED);
                 str += "dock " + AutoDock.UNDOCKED;
             }
@@ -2139,7 +2148,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.streamactivitythreshold, str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
-			if (state.get(State.values.videosoundmode.name()).equals(VIDEOSOUNDMODEHIGH)) {
+			if (state.get(State.values.videosoundmode).equals(VIDEOSOUNDMODEHIGH)) {
 				setGrabberVideoSoundMode(VIDEOSOUNDMODELOW); // videosoundmode needs to be low to for activity threshold to work
 				if (stream != null) {
 					if (!stream.equals(streamstate.stop.toString())) { // if stream already running,

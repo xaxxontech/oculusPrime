@@ -227,7 +227,7 @@ public class TelnetServer implements Observer {
 	@Override
 	/** send to socket on state change */ 
 	public void updated(String key) {
-		String value = state.get(key);
+		String value = state.get(State.values.valueOf(key));
 		if(value==null)	sendToGroup(STATETAG + " deleted: " + key); 
 		else {
 			

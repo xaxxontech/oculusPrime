@@ -117,19 +117,19 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public ArduinoPrime(Application app) {	
 		
 		application = app;	
-		state.put(State.values.motorspeed, speedfast);
-		state.put(State.values.movingforward, false);
-		state.put(State.values.moving, false);
-		state.put(State.values.motionenabled, true);
+		state.set(State.values.motorspeed, speedfast);
+		state.set(State.values.movingforward, false);
+		state.set(State.values.moving, false);
+		state.set(State.values.motionenabled, true);
 		
-		state.put(State.values.floodlightlevel, 0);
-		state.put(State.values.spotlightbrightness, 0);
+		state.set(State.values.floodlightlevel, 0);
+		state.set(State.values.spotlightbrightness, 0);
 		
 		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
-		state.put(State.values.direction, direction.stop.name()); // .toString());
+		state.set(State.values.direction, direction.stop.name()); // .toString());
 
-		state.put(State.values.odomturnpwm, settings.readSetting(ManualSettings.odomturnpwm.name()));
-		state.put(State.values.odomlinearpwm, settings.readSetting(ManualSettings.odomlinearpwm.name()));
+		state.set(State.values.odomturnpwm, settings.readSetting(ManualSettings.odomturnpwm.name()));
+		state.set(State.values.odomlinearpwm, settings.readSetting(ManualSettings.odomlinearpwm.name()));
 		state.set(State.values.odomupdated, false);
 		
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
@@ -598,8 +598,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			}
 		}
 
-		state.put(State.values.moving, true);
-		state.put(State.values.movingforward, true);
+		state.set(State.values.moving, true);
+		state.set(State.values.movingforward, true);
 		
 		int speed1 = (int) voltsComp((double) speedslow);
 		if (speed1 > 255) { speed1 = 255; }
@@ -717,8 +717,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			}
 		}
 
-		state.put(State.values.moving, true);
-		state.put(State.values.movingforward, false);
+		state.set(State.values.moving, true);
+		state.set(State.values.movingforward, false);
 //		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
 		
@@ -832,7 +832,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		if (delay==0) {
 			sendCommand(new byte[] { RIGHT, (byte) tmpspeed, (byte) tmpspeed });
-			state.put(State.values.moving, true);
+			state.set(State.values.moving, true);
 //			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		}
 		else {
@@ -888,7 +888,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		if (delay==0) {
 			sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
-			state.put(State.values.moving, true);
+			state.set(State.values.moving, true);
 //			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		}
 		else {
@@ -1238,14 +1238,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 	    try { // check for integer
 	        Integer.parseInt(str); 
-	        state.put(State.values.motorspeed, Integer.parseInt(str));
+	        state.set(State.values.motorspeed, Integer.parseInt(str));
 	    } catch(NumberFormatException e) {  // not integer
 			final speeds update = speeds.valueOf(str);
 			
 			switch (update) {
-				case slow: state.put(State.values.motorspeed, speedslow); break;
-				case med: state.put(State.values.motorspeed, speedmed); break;
-				case fast: state.put(State.values.motorspeed, speedfast); break;
+				case slow: state.set(State.values.motorspeed, speedslow); break;
+				case med: state.set(State.values.motorspeed, speedmed); break;
+				case fast: state.set(State.values.motorspeed, speedfast); break;
 			}
 	    }
 
@@ -1277,7 +1277,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				case left: turnLeft(); break;
 				case forward: 
 					goForward();
-					state.put(State.values.movingforward, false);
+					state.set(State.values.movingforward, false);
 					n *= 4; 
 					break;
 				case backward:
@@ -1311,7 +1311,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			public void run() {
 				
 				int tempspeed = state.getInteger(State.values.motorspeed);
-				state.put(State.values.motorspeed, speedfast);
+				state.set(State.values.motorspeed, speedfast);
 				
 				
 				if (settings.getBoolean(ManualSettings.developer.name())) {
@@ -1355,7 +1355,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				}
 				
 				if (msg.equals("")) msg = null;
-				state.put(State.values.motorspeed, tempspeed);
+				state.set(State.values.motorspeed, tempspeed);
 				application.message(msg, "motion", "stopped");
 				
 			}
@@ -1367,7 +1367,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			public void run() {
 				
 				final int tempspeed = state.getInteger(State.values.motorspeed);
-				state.put(State.values.motorspeed, speedfast);
+				state.set(State.values.motorspeed, speedfast);
 				
 				
 				// openni
@@ -1459,7 +1459,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 				}
 				
-				state.put(State.values.motorspeed, tempspeed);
+				state.set(State.values.motorspeed, tempspeed);
 				application.message(msg, "motion", "stopped");
 				
 			}
@@ -1507,13 +1507,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				try {
 					
 					final int tempspeed = state.getInteger(State.values.motorspeed);
-					state.put(State.values.motorspeed, speedfast);
+					state.set(State.values.motorspeed, speedfast);
 					
 					if (x > 0) turnRight();
 					else turnLeft();
 					
 					Util.delay((int) voltsComp(clicknudgedelay));
-					state.put(State.values.motorspeed, tempspeed);
+					state.set(State.values.motorspeed, tempspeed);
 					
 					if (state.getBoolean(State.values.movingforward)) goForward();
 					else stopGoing();
@@ -1530,8 +1530,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
-		state.put(State.values.moving, false);
-		state.put(State.values.movingforward, false);
+		state.set(State.values.moving, false);
+		state.set(State.values.movingforward, false);
 //		if (settings.getBoolean(GUISettings.muteonrovmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
 
 		// needs deaccel!
@@ -1585,9 +1585,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.delete(State.values.distanceangle);
 		state.set(State.values.odometry, true);
 		state.set(State.values.stopbetweenmoves, true);
-		state.put(State.values.odomlinearmpms, METERSPERSEC / 1000);
-		state.put(State.values.odomturndpms, DEGPERMS);
-		state.put(State.values.motorspeed, state.get(State.values.odomlinearpwm));
+		state.set(State.values.odomlinearmpms, METERSPERSEC / 1000);
+		state.set(State.values.odomturndpms, DEGPERMS);
+		state.set(State.values.motorspeed, state.get(State.values.odomlinearpwm));
 
 		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
 			new Thread(new Runnable() {public void run() {

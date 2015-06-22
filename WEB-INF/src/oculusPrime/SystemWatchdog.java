@@ -97,7 +97,7 @@ public class SystemWatchdog {
 
 			int cpuNow = Util.getCPU();
 			if (cpuNow > 50) Util.log("cpu: "+cpuNow, this);
-			state.put(values.cpu, cpuNow);
+			state.set(values.cpu, cpuNow);
 
 		}
 	}

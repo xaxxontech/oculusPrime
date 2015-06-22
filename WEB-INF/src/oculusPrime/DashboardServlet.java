@@ -95,12 +95,15 @@ public class DashboardServlet extends HttpServlet {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
-				
+/*				
 				if(member != null) {
 					Util.debug("member = " + member);
 					out.println(state.get(member.trim()));
 				}
-				else out.println(state.toHTML() + "\n");
+				else 
+				
+*/
+				out.println(state.toHTML() + "\n");
 				
 				out.println("\n</body></html> \n");
 				out.close();

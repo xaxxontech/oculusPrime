@@ -73,7 +73,6 @@ public class State {
 		return singleton;
 	}
 
-	/** private constructor for this singleton class */
 	private State() {
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
 		props.put(values.telnetusers.name(), "0");
@@ -104,7 +103,7 @@ public class State {
 	}
 	
 	/** test for string equality. any nulls will return false */ 
-	public boolean equals(final String a, final String b){
+	private boolean equals(final String a, final String b){
 		String aa = get(a);
 		if(aa==null) return false; 
 		if(b==null) return false; 
@@ -129,21 +128,6 @@ public class State {
 		return str;
 	} 
 	
-	/**
-	public String toTable(){	
-		StringBuffer str = new StringBuffer("<table>");
-		Set<String> keys = props.keySet();
-		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
-			String key = i.next();
-			String value = props.get(key); 
-			str.append("<tr><td>" + key + "<td>" + value + "</tr>");
-		}
-		str.append("</table>\n");
-		return str.toString();
-	}
-	*/
-	
-	
 	public String toHTML(){ 
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\">");
 		for (values key : values.values()) { 
@@ -154,8 +138,6 @@ public class State {
 		str.append("</table>\n");
 		return str.toString();
 	}
-	
-	
 	
 	/**
 	 * block until timeout or until member == target
@@ -171,14 +153,12 @@ public class State {
 		String current = null;
 		while(true){
 			
-			// keep checking 
 			current = get(member); 
 			if(current!=null){
 				if(target.equals(current)) return true;
 				if(target.startsWith(current)) return true;
 			}
-				
-			// TODO: FIX with a call back?? 
+	
 			Util.delay(1); // no higher, used by motion, odometry
 			if (System.currentTimeMillis()-start > timeout){ 
 				Util.debug("block() timeout: " + member.name(), this);
@@ -188,7 +168,7 @@ public class State {
 	} 
 	
 	/** Put a name/value pair into the configuration */
-	public synchronized void set(final String key, final String value) {
+	private synchronized void set(final String key, final String value) {
 		
 		if(key==null) {
 			Util.log("set() null key!", this);
@@ -208,18 +188,8 @@ public class State {
 		
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());	
 	}
-
-	/** Put a name/value pair into the config */
-	public void set(final String key, final long value) {
-		set(key, Long.toString(value));
-	}
 	
-	public String get(values key){
-		return get(key.name());
-	}
-	
-	/** */
-	public synchronized String get(final String key) {
+	private synchronized String get(final String key) {
 
 		String ans = null;
 		try {
@@ -234,12 +204,13 @@ public class State {
 		return ans;
 	}
 
-
-	/** */
-	public boolean getBoolean(ManualSettings setting) {
-		return getBoolean(setting);
+	public void set(final String key, final long value) {
+		set(key, Long.toString(value));
 	}
-
+	
+	public String get(values key){
+		return get(key.name());
+	}
 	
 	/** true returns true, anything else returns false */
 	public boolean getBoolean(String key) {
@@ -257,8 +228,6 @@ public class State {
 		return value;
 	}
 
-	
-	/** */
 	public int getInteger(final String key) {
 
 		String ans = null;
@@ -276,8 +245,6 @@ public class State {
 		return value;
 	}
 	
-	
-	/** */
 	public long getLong(final String key) {
 
 		String ans = null;
@@ -305,7 +272,6 @@ public class State {
 		return System.currentTimeMillis() - getLong(values.logintime);
 	}
 
-	/** */
 	public synchronized void set(String key, boolean b) {
 		if(b) set(key, "true");
 		else set(key, "false");
@@ -319,7 +285,7 @@ public class State {
 		return props.containsKey(key.trim());
 	}
 	
-	public synchronized void delete(String key) {
+	private synchronized void delete(String key) {
 		
 		if( ! props.containsKey(key)) return;
 		
@@ -360,32 +326,12 @@ public class State {
 		set(key.name(), value);
 	}
 
-	public void put(values value, String str) {
-		set(value.name(), str);
+	public void set(values key, double d) {
+		set(key.name(), String.valueOf(d));
 	}
-
-	public void put(values value, int b) {
-		put(value, String.valueOf(b));
-	}
-
-	public void put(values value, boolean b) {
-		put(value, String.valueOf(b));
-	}
-
+	
 	public void delete(PlayerCommands cmd) {
 		delete(cmd.name());
-	}
-
-	public void put(values value, long b) {
-		put(value, String.valueOf(b));
-	}
-	
-	public void put(values value, double b) {
-		put(value, String.valueOf(b));
-	}
-	
-	public void put(values key, values update) {
-		put(key, update.name());
 	}
 	
 	public double getDouble(String key) {
@@ -405,5 +351,4 @@ public class State {
 	public double getDouble(values key) {
 		return getDouble(key.name());
 	}
-
 }

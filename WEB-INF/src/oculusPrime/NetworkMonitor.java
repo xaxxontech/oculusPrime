@@ -33,7 +33,7 @@ public class NetworkMonitor implements Observer {
 	private static String pingValue = null;
 	private static String wdev = null;	
 	private static int adhocBusy = 0;
-	private static int uuidFail = 0;
+ 	private static int uuidFail = 0;
     private static int pingFail = 0;
     
 	private static NetworkMonitor singleton = new NetworkMonitor();
@@ -104,6 +104,7 @@ public class NetworkMonitor implements Observer {
 	    	
 	    	if((System.currentTimeMillis() - defaultLast) > Util.TWO_MINUTES) {
 	    		Util.log("pingTask(): not connected to default, try to connect.. ", this);
+	    		Util.log("pingTask(): ssid: " + state.get(values.ssid), this);
     			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
 	    	}
     	
@@ -342,14 +343,25 @@ public class NetworkMonitor implements Observer {
 			startAdhoc();
 			return;
 		}
+		*/
 		
 		if(lookupSSID(uuid) == null){
+			
 			Util.log("changeUUID: null connection uuid for ["+lookupSSID(uuid)+"], rejected", this);
 			startAdhoc();
 			uuidFail++;
 			return;
+			
+		} else {
+			if(settings.readSetting(ManualSettings.defaultuuid).equals(lookupSSID(uuid))){
+
+				Util.log("changeUUID: already the default connection, rejected", this);
+				startAdhoc();
+				return;
+				
+			}
 		}
-	*/
+
 		
 		new Thread(){
 		    public void run() {
@@ -616,6 +628,12 @@ public class NetworkMonitor implements Observer {
 	}
 	
 	private void updateExternalIPAddress(){
+		
+		if(state.exists(values.externaladdress)) {
+			Util.log("updateExternalIPAddress(): called but allready have an ext addr, rejected..", this);
+			return;
+		}
+		
 		new Thread(new Runnable() { public void run() {
 			try {
 
@@ -627,7 +645,7 @@ public class NetworkMonitor implements Observer {
 				while ((i = in.read()) != -1) address += (char)i;
 				in.close();
 
-				if(Util.validIP(address)) state.put(values.externaladdress, address);
+				if(Util.validIP(address)) state.set(values.externaladdress, address);
 				else state.delete(values.externaladdress);
 				
 			} catch (Exception e) {

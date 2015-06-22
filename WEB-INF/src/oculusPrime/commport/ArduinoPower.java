@@ -66,9 +66,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 	public ArduinoPower(Application app) {
 		application = app;	
-		state.put(State.values.powerport, portname);
-		state.put(State.values.dockstatus, AutoDock.UNKNOWN);
-		state.put(State.values.batterylife, AutoDock.UNKNOWN);
+		state.set(State.values.powerport, portname);
+		state.set(State.values.dockstatus, AutoDock.UNKNOWN);
+		state.set(State.values.batterylife, AutoDock.UNKNOWN);
 
 
 		Map<String, Integer> temp = new HashMap<String, Integer>();
@@ -324,8 +324,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 		} 
 
 		else if (s[0].equals("timeout")) {
-			state.put(State.values.dockstatus, AutoDock.UNKNOWN);
-			state.put(State.values.batterylife, s[0]);
+			state.set(State.values.dockstatus, AutoDock.UNKNOWN);
+			state.set(State.values.batterylife, s[0]);
 			application.message(null, "battery", s[0]);
 			return;
 		}
@@ -360,7 +360,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "multiple", "dock "+AutoDock.DOCKED+" motion disabled");
-				state.put(State.values.dockstatus, AutoDock.DOCKED);
+				state.set(State.values.dockstatus, AutoDock.DOCKED);
 
 				if (state.getBoolean(State.values.autodocking) && !state.getBoolean(State.values.docking))
 					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
@@ -384,7 +384,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 					application.driverCallServer(PlayerCommands.redock, null);
 				}
 				
-				state.put(State.values.dockstatus, AutoDock.UNDOCKED);
+				state.set(State.values.dockstatus, AutoDock.UNDOCKED);
 				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" motion enabled");
 
 			}
@@ -421,7 +421,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			String battinfo = s[1]; 
 			battinfo = battinfo.replaceFirst("\\.\\d*", "");
 			if (!state.get(State.values.batterylife).equals(battinfo)) {
-				state.put(State.values.batterylife, battinfo);
+				state.set(State.values.batterylife, battinfo);
 			
 			}
 	
@@ -429,7 +429,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!state.exists(State.values.batteryinfo.toString()) || 
 						!state.get(State.values.batteryinfo).equals(extinfo)) {
 	
-				state.put(State.values.batteryinfo, extinfo);
+				state.set(State.values.batteryinfo, extinfo);
 	
 				// extract sysvolts '_sV:'
 //			    Pattern pat = Pattern.compile("_sV:\\d+\\.\\d+");
@@ -452,7 +452,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			    	String battvolts = mat.group().replaceFirst("_lV:", "");
 			    	if ((!state.exists(State.values.battvolts.toString()) || 
 							!state.get(State.values.battvolts).equals(battvolts))) {
-			    		state.put(State.values.battvolts, battvolts);
+			    		state.set(State.values.battvolts, battvolts);
 			    	}
 			    }
 			    
