@@ -271,7 +271,7 @@ public class Navigation {
 //					callForHelp(subject, body);
 					app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 					app.driverCallServer(PlayerCommands.floodlight, "0");
-					app.driverCallServer(PlayerCommands.messageclients, "failed to find dock");
+					app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to find dock");
 					return;
 				}
 			}
@@ -335,6 +335,7 @@ public class Navigation {
 			String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
 			if (isactive.equals("true")) {
 				runRoute(rname);
+				Util.log("Auto-starting nav route: "+rname, this);
 				break;
 			}
 		}
@@ -914,9 +915,11 @@ public class Navigation {
 				if (!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()))
 					Util.log("error, missed turnstop within 750ms", this);
 
-				Util.delay(2000);
-				if (state.getInteger(State.values.spotlightbrightness) > 0)
-					Util.delay(2000); // allow cam to normalize
+				Util.delay(4000); // 2000 if condition below enabled
+
+				// nuke this condition, delay always required, esp. if turning towards bright light source (eg., window)
+//				if (state.getInteger(State.values.spotlightbrightness) > 0)
+//					Util.delay(2000); // allow cam to normalize
 
 				turns ++;
 			}

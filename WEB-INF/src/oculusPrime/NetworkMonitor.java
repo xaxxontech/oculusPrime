@@ -44,15 +44,14 @@ public class NetworkMonitor {
 	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static void setApp(Application a) {application = a;}
 	public static NetworkMonitor getReference() {return singleton;}
-	
-	private NetworkMonitor(){
-		
-		updateExternalIPAddress();
-		
-		if(state.equals(values.ssid, AP) && ! settings.readSetting(ManualSettings.defaultuuid).equals("none")) 
-			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
 
-		if(settings.getBoolean(ManualSettings.networkmonitor)){
+	private NetworkMonitor(){
+		updateExternalIPAddress();
+
+		if(state.equals(values.ssid, AP) && ! settings.readSetting(ManualSettings.defaultuuid).equals("none"))
+			changeUUID(settings.readSetting(ManualSettings.defaultuuid));
+
+		if(settings.getBoolean(ManualSettings.networkmonitor)) {
 			pingTimer.schedule(new pingTask(), 1000, 1000);
 			new eventThread().start();
 			connectionUpdate();

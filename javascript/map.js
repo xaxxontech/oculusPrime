@@ -230,7 +230,7 @@ function rosinfo() {
 						break;
 						
 					case "navigationroute":
-						activeroute = ss[1];
+						activeroute = ss[1].replace(/&nbsp;/g, ' ');
 						break;
 						
 					case "nextroutetime":
