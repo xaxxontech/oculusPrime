@@ -63,20 +63,8 @@ public class NetworkServlet extends HttpServlet {
 				monitor.setDefault(router.trim());	
 				response.sendRedirect("network"); 
 				return;
-			
 			}
 			
-			if(action.equals("delete")){	
-				if(state.equals(values.ssid, router)){
-					response.sendRedirect("network"); 
-					return;
-				}
-			
-				monitor.removeConnection(router.trim());	
-				response.sendRedirect("network");  
-				return;
-			}
-				
 			if(action.equals("connect")){	
 				if(monitor.connectionExists(router)){			
 					monitor.changeWIFI(router);
@@ -112,35 +100,30 @@ public class NetworkServlet extends HttpServlet {
 		final String[] connections = monitor.getConnections(); 		
 		final String[] available = monitor.getAccessPoints();		
 		final String setdef  = "<a href=\"http://" + url + "?action=default&router=";
-		final String delete  = "<a href=\"http://" + url + "?action=delete&router=";
 		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
 	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\">  \n");
-		
-		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>\n"); 
-		str.append("<tr><td colspan=\"3\"><center> known connections </center><hr>\n");
-		
-		for(int i = 0 ; i < connections.length ; i++) { // if existing ssid, don't show connection link 
-			if(state.exists(values.ssid)) { 
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">  \n");
+		str.append("<tr><td colspan=\"3\"><center> Oculus Prime <br /> Version <b>" + VERSION + "</b></center>  \n"); 
 				
-				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]);	
+		//if(connections.length > 0){
+			str.append("<tr><td colspan=\"3\"><hr>"+connections.length+" -- known connections </center><hr>  \n");
+			for(int i = 0 ; i < connections.length ; i++) { 
+				
+				if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
 				else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
+					
+				if(monitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) str.append("<td>default"); 
+				else str.append("<td>"+ setdef + connections[i] + "\"> set default </a></tr>\n");	
 				
-				if( ! connections[i].equals(NetworkMonitor.AP) && ! state.equals(values.ssid, connections[i])) 
-					str.append("<td>" + delete + connections[i] + "\"> x </a>");
-				else str.append("<td>"); // don't show these llinks
 			}
-			
-			// TODO: don't show current default 
-			str.append("<td>"+ setdef + connections[i] + "\"> default </a></tr>\n");
+		//}
 		
-		}
+		//if(available.length > 0){
+			str.append("<tr><td colspan=\"3\"><hr>"+ available.length + " -- access points <hr>  \n");
+			for(int i = 0 ; i < available.length ; i++) 
+				str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
+		//}
 		
-		str.append("<tr><td colspan=\"3\"><center> access points </center><hr>  \n");
-		
-		for(int i = 0 ; i < available.length ; i++) 
-			str.append("<tr><td colspan=\"3\">" + connect + available[i] + "\">" + available[i] + "</a> \n");
-	
 		str.append("\n</table>\n");
 		return str.toString();
 	}

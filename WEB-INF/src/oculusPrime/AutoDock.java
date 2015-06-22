@@ -179,7 +179,7 @@ public class AutoDock {
 				docktarget = cmd[7] + "_" + cmd[8] + "_" + cmd[9] + "_"
 						+ cmd[10] + "_" + cmd[2] + "_" + cmd[3] + "_" + cmd[4]
 						+ "_" + cmd[5] + "_" + cmd[6];
-				settings.writeSettings("docktarget", docktarget);
+				settings.writeSettings(GUISettings.docktarget, /*"docktarget",*/ docktarget);
 				String s = cmd[2] + " " + cmd[3] + " " + cmd[4] + " " + cmd[5]
 						+ " " + cmd[6];
 				// messageplayer("dock"+cmd[1]+": "+s,"autodocklock",s);

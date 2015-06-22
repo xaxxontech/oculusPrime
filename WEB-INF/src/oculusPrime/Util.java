@@ -518,27 +518,17 @@ public class Util {
 	public static String pingWIFI(final String addr){
 		
 		if(addr==null) return null;
-		
-		//if(NetworkMonitor.getReference().wiredConnectionActive()) {
-			
-		//	Util.log("pingWIFI(): eth exist", null);
-			// return null;
-			
+					
 		String[] cmd = new String[]{"ping", "-c1", "-W1", addr};
-		
-		// String wlan = NetworkMonitor.getReference().getWLAN();
-		// if(wlan != null) cmd = new String[]{"ping", "-c1", "-W1", "-I"+wlan, addr};
-		
-		// if(State.getReference().exists(State.values.localaddress)) Util.log("pingWIFI(): lan ping: " + cmd[3], null);
 		
 		long start = System.currentTimeMillis();
 		
 		Process proc = null;
 		try { 
 			proc = Runtime.getRuntime().exec(cmd);
-		} catch (IOException e) {
+			proc.waitFor();
+		} catch (Exception e) {
 			Util.log("pingWIFI(): "+ e.getMessage(), null);
-			Util.log("pingWIFI(): ping fail: " + (System.currentTimeMillis()-start), null);
 			return null;
 		}  
 		
@@ -548,7 +538,8 @@ public class Util {
 		
 		try {
 			while ((line = procReader.readLine()) != null){
-				if(line.contains("time=")){
+				// Util.debug("pingWIFI(): " + line, null);
+				if(line.contains("time=")) {
 					time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 					break;
 				}	
@@ -557,7 +548,8 @@ public class Util {
 			Util.log("pingWIFI(): ", e.getMessage());
 		}
 
-
+		if(proc.exitValue() != 0 ) Util.debug("pingWIFI(): exit code: " + proc.exitValue(), null);
+		
 		if((System.currentTimeMillis()-start) > 1100){
 			Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
 			if(time == null) Util.log("pingWIFI(): null result for address: " + addr, null);
