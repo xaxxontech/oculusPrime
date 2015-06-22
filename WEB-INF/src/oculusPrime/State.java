@@ -16,20 +16,21 @@ public class State {
 		
 		motionenabled, moving, movingforward, motorport, cameratilt, motorspeed,   // motors
 
-		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics, // dock 
+		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics,   // dock
 
-		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel, // lights
+		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel,  // lights
 
-		driver, logintime, pendinguserconnected, telnetusers, // users
+		driver, logintime, pendinguserconnected, telnetusers,  // users
 		
-		streamactivityenabled, videosoundmode, stream, driverstream, volume, //audio video
-		framegrabbusy, controlsinverted, lightlevel, streamactivitythreshold, streamactivity,
-		motiondetect, objectdetect,
+		videosoundmode, stream, driverstream, volume,  // audio video
+		framegrabbusy, controlsinverted, lightlevel,
+		streamactivitythreshold, streamactivity,
+		motiondetect, objectdetect, streamactivityenabled,
 
 		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
-		powererror, forceundock, // power problems
+		powererror, forceundock,
 
-		javastartup, linuxboot, httpport, lastusercommand, // system
+		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
@@ -39,8 +40,8 @@ public class State {
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime,
 		
-		localaddress, externaladdress, // network things 
-		signalspeed, ssid, gateway, ethernetaddress, cpu, 
+		localaddress, externaladdress, // network
+		signalspeed, ssid, gateway, ethernetaddress,
 		
 	}
 

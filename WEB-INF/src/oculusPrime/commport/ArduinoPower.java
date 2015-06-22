@@ -25,7 +25,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int ALLOW_FOR_RESET = 10000;
 	public static final int ERROR_TIME_OUT = (int) Util.ONE_MINUTE;
 	public static final int WATCHDOG_DELAY = 5000;
-	public static final int RESET_DELAY = 4 * (int) Util.ONE_HOUR;
+	public static final int RESET_DELAY = 12 * (int) Util.ONE_HOUR; // xaxxonpower clock rollover is ~18 hrs
 	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
 	public static final int BAUD = 115200;
 	public static final String FIRMWARE_ID = "oculusPower";
@@ -224,14 +224,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 					reset();
 				}
 				
-//				if (now - lastReset > RESET_DELAY && isconnected &&
-//						!state.getBoolean(oculusPrime.State.values.autodocking) ){
-//					application.message("power PCB periodic reset", "battery", "resetting");
-//					Util.log("power PCB periodic reset", this);
-//					PowerLogger.append("power PCB periodic reset", this);
-//					lastReset = now;
-//					reset();
-//				}
+				if (now - lastReset > RESET_DELAY && isconnected &&
+						!state.getBoolean(oculusPrime.State.values.autodocking) ){
+					application.message("power PCB periodic reset", "battery", "resetting");
+					Util.log("power PCB periodic reset", this);
+					PowerLogger.append("power PCB periodic reset", this);
+					lastReset = now;
+					reset();
+				}
 
 				if (now - lastHostHeartBeat > HOST_HEARTBEAT_DELAY && isconnected) { 
 					sendCommand((byte) PING); // no response expected

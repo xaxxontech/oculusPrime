@@ -149,7 +149,8 @@ public class Ros {
 			str += " " + State.values.navsystemstatus.toString() +"_"+ state.get(State.values.navsystemstatus);
 
 		if (state.exists(State.values.navigationroute))
-			str += " " + State.values.navigationroute.toString() + "_" + state.get(State.values.navigationroute);
+			str += " " + State.values.navigationroute.toString() + "_" +
+					state.get(State.values.navigationroute).replaceAll(" ", "&nbsp;");
 
 		if (state.exists(State.values.nextroutetime)) {
 			long now = System.currentTimeMillis();

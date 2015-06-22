@@ -280,7 +280,7 @@ public class SystemWatchdog {
 		String emailto = settings.readSetting(GUISettings.email_to_address);
 		if (!emailto.equals(Settings.DISABLED))
 			application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
-		application.driverCallServer(PlayerCommands.rssadd, "["+subject+"] "+body );
+		application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
 	}
 	
 	private void forceundock() {
@@ -299,13 +299,14 @@ public class SystemWatchdog {
 	}
 
 
-	public static boolean waitForCpu() { return waitForCpu(20000); }
+	public static boolean waitForCpu() { return waitForCpu(60, 20000); }
 
-	public static boolean waitForCpu(long timeout) {
+	public static boolean waitForCpu(long timeout) { return waitForCpu(60, timeout); }
+
+	public static boolean waitForCpu(int threshold, long timeout) {
 
 		long start = System.currentTimeMillis();
 		int cpu = 0;
-		int threshold = 60;
 		while (System.currentTimeMillis() - start < timeout) {
 			cpu = Util.getCPU();
 			if (cpu < threshold) { // do it again to be sure
@@ -317,7 +318,7 @@ public class SystemWatchdog {
 			}
 			Util.delay(1000);
 		}
-		Util.log("Util.waitForCpu() warning, timed out "+ cpu, null);
+		Util.log("Util.waitForCpu() warning, timed out "+ cpu+"% after "+timeout+"ms", null);
 
 //		State.getReference().set(values.linuxboot, "0"); // force reboot next dock
 //		return false;

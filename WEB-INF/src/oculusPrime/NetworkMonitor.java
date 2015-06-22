@@ -39,20 +39,20 @@ public class NetworkMonitor implements Observer {
 	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static void setApp(Application a) {application = a;}
 	public static NetworkMonitor getReference() {return singleton;}
-	
+
 	private NetworkMonitor(){
-		
+
 		updateExternalIPAddress();
-	
+
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
-	
+
 			connectionUpdate();
 			runNetworkTool();
-			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
+			changeUUID(settings.readSetting(ManualSettings.defaultuuid));
 			pingTimer.schedule(new pingTask(), 2000, 2000);
-			new eventThread().start();	
+			new eventThread().start();
 			state.addObserver(this);
-			
+
 		}
 	}
 	
