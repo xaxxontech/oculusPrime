@@ -535,8 +535,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
-			if (str!=null) if (str.equals(AutoDock.HIGHRES))
-				docker.lowres = false;
+			if (str!=null) if (str.equals(AutoDock.HIGHRES)) docker.lowres = false;
 			docker.dockGrab(AutoDock.dockgrabmodes.start, 0, 0);
 			docker.lowres = true;
 			break;
@@ -551,12 +550,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case state: 
 			
 			String s[] = str.split(" ");
-
-			if(State.values.valueOf(s[0]) == null) {
-				Util.log("not a known state member, rejected", this);
-				return;
-			}
-			
 			if (s.length == 2) { // two args
 				if (s[0].equals("delete")) state.delete(State.values.valueOf(s[1]));
 				else state.set(State.values.valueOf(s[0]), s[1]); 
