@@ -285,7 +285,7 @@ public class State {
 		return props.containsKey(key.trim());
 	}
 	
-	private synchronized void delete(String key) {
+	synchronized void delete(String key) {
 		
 		if( ! props.containsKey(key)) return;
 		

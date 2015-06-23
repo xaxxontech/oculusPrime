@@ -551,7 +551,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
-				if (s[0].equals("delete")) state.delete(State.values.valueOf(s[1]));
+				if (s[0].equals("delete")) state.delete(s[0]); // State.values.valueOf(s[1]));
 				else state.set(s[0], s[1]); // State.values.valueOf(s[0]), s[1]); 
 			}
 			else {  
