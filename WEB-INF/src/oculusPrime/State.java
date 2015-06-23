@@ -168,7 +168,7 @@ public class State {
 	} 
 	
 	/** Put a name/value pair into the configuration */
-	private synchronized void set(final String key, final String value) {
+	synchronized void set(final String key, final String value) {
 		
 		if(key==null) {
 			Util.log("set() null key!", this);
