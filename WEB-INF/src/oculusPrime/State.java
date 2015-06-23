@@ -25,7 +25,7 @@ public class State {
 		videosoundmode, stream, driverstream, volume,  // audio video
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
-		motiondetect, objectdetect, objectdetectcount, streamactivityenabled,
+		motiondetect, objectdetect, streamactivityenabled,
 
 		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
 		powererror, forceundock,
@@ -189,7 +189,7 @@ public class State {
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());	
 	}
 	
-	private synchronized String get(final String key) {
+	synchronized String get(final String key) {
 
 		String ans = null;
 		try {
