@@ -54,6 +54,8 @@ public class NetworkMonitor implements Observer {
 			killApplet();
 				
 		}
+		
+
 	}
 	
 	@Override
@@ -71,6 +73,8 @@ public class NetworkMonitor implements Observer {
 			defaultLast = System.currentTimeMillis();
 			pingLast = System.currentTimeMillis(); 
 			
+			if(state.exists(values.ssid)) currentUUID = lookupUUID(state.get(values.ssid));
+		
 			if( ! state.equals(values.ssid, AP) && ManualSettings.isDefault(ManualSettings.defaultuuid))
 				setDefault(state.get(values.ssid));
 		}
@@ -92,20 +96,22 @@ public class NetworkMonitor implements Observer {
     				
     				Util.log("pingTask(): ping failed: fail: "+ pingFail +" last: " + (System.currentTimeMillis() - pingLast), this);
     				
-    				if(pingFail++ > 60) {
-    					Util.log("pingTask(): ping failed too much, try adhoc??", this);
+    		//		if(pingFail++ > 60) {
+    		//			Util.log("pingTask(): ping failed too much, try adhoc??", this);
     					
-    				}
+    		//		}
     			} else {
+    				
     				pingLast = System.currentTimeMillis(); 
     				// if(pingFail-- < 0) pingFail = 0;
     			}
 	    	}
 	    	
 	    	if((System.currentTimeMillis() - defaultLast) > Util.TWO_MINUTES) {
-	    		Util.log("pingTask(): not connected to default, try to connect.. ", this);
-	    		Util.log("pingTask(): ssid: " + state.get(values.ssid), this);
-    			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
+	    		Util.log("?? --- pingTask(): not connected to default, try to connect.. ", this);
+	    		Util.log("?? --- pingTask(): ssid: " + state.get(values.ssid), this);
+	    		pingLast = System.currentTimeMillis(); 
+    			// changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
 	    	}
     	
     		if((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
@@ -321,7 +327,12 @@ public class NetworkMonitor implements Observer {
 
 	public void changeUUID(final String uuid){
 		
-		if(uuid == null) return;
+		Util.debug("changeUUID: called: " +lookupSSID(uuid), this);
+		
+		if(uuid == null) {
+			Util.debug("changeUUID: null uuid target, rejected", this);
+			return;
+		}
 		
 		if(changingWIFI){
 			Util.debug("changeUUID: busy, rejected", this);
