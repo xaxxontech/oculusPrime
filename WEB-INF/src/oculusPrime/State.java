@@ -287,21 +287,25 @@ public class State {
 	
 	synchronized void delete(String key) {
 		
+		// Util.log("delete: " + key, this);
+		
 		if( ! props.containsKey(key)) return;
 		
 		props.remove(key);
 		for(int i = 0 ; i < observers.size() ; i++)
 			observers.get(i).updated(key);	
 	}
-
-	public void set(values key, values value) {
-		set(key.name(), value.name());
-	}
-
+	
 	public void delete(values key) {
+		// Util.log("delete: " + key, this);
 		if(exists(key)) delete(key.name());
 	}
-
+	
+	public void set(values key, values value) {
+		
+		set(key.name(), value.name());
+	}
+	
 	public int getInteger(values key) {
 		return getInteger(key.name());
 	}
