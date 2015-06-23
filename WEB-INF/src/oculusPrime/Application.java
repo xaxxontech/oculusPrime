@@ -556,7 +556,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			else {  
 				if (s[0].matches("\\S+")) { // one arg 
-					messageplayer("<state> "+s[0]+" "+state.get(State.values.valueOf(s[0])), null, null); 
+					messageplayer("<state> "+s[0]+" "+state.get(/*State.values.valueOf(*/ s[0]), null, null); 
 				} else {  // no args
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
