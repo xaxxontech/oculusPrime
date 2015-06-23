@@ -32,9 +32,10 @@ public class NetworkMonitor implements Observer {
 	private static String currentUUID = null;
 	private static String pingValue = null;
 	private static String wdev = null;	
-	private static int adhocBusy = 0;
- 	private static int uuidFail = 0;
-    private static int pingFail = 0;
+
+	//	private static int adhocBusy = 0;
+ //	private static int uuidFail = 0;
+   // private static int pingFail = 0;
     
 	private static NetworkMonitor singleton = new NetworkMonitor();
 	public static void setApp(Application a) {application = a;}
@@ -48,14 +49,13 @@ public class NetworkMonitor implements Observer {
 			
 			pingTimer.schedule(new pingTask(), 2000, 2000);
 			new eventThread().start();	
+// 			new pingThread().start();	
 			state.addObserver(this);
 			connectionUpdate();
 			runNetworkTool();
 			killApplet();
 				
 		}
-		
-
 	}
 	
 	@Override
@@ -67,7 +67,6 @@ public class NetworkMonitor implements Observer {
 	
 		if(key.equals(values.ssid.name())) {
 			
-			pingFail = 0;
 			changingWIFI = false;
 			apLast = System.currentTimeMillis();
 			defaultLast = System.currentTimeMillis();
@@ -84,34 +83,23 @@ public class NetworkMonitor implements Observer {
 		@Override
 	    public void run() {
 	    		
-	    	// TODO: ??? ! state.getBoolean(State.values.autodocking)) 
-	    	if(state.equals(values.ssid, AP) || changingWIFI) { 
-	    		if(application != null && (state.getUpTime() > Util.ONE_MINUTE))
-	    			application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+	    	if( ! state.getBoolean(State.values.autodocking)) { 
+		    	if(state.equals(values.ssid, AP) || changingWIFI) { 
+		    		if(application != null && (state.getUpTime() > Util.ONE_MINUTE))
+		    			application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+		    	}
 	    	}
 	    	
 	    	if(state.exists(values.gateway) && !changingWIFI){ 
     			pingValue = Util.pingWIFI(state.get(values.gateway));
-    			if(pingValue == null) {
-    				
-    				Util.log("pingTask(): ping failed: fail: "+ pingFail +" last: " + (System.currentTimeMillis() - pingLast), this);
-    				
-    		//		if(pingFail++ > 60) {
-    		//			Util.log("pingTask(): ping failed too much, try adhoc??", this);
-    					
-    		//		}
-    			} else {
-    				
-    				pingLast = System.currentTimeMillis(); 
-    				// if(pingFail-- < 0) pingFail = 0;
-    			}
+    			if(pingValue != null) pingLast = System.currentTimeMillis(); 
+    			else Util.log("pingTask(): fail: " + (System.currentTimeMillis() - pingLast), this);
 	    	}
-	    	
+	    		
 	    	if((System.currentTimeMillis() - defaultLast) > Util.TWO_MINUTES) {
-	    		Util.log("?? --- pingTask(): not connected to default, try to connect.. ", this);
-	    		Util.log("?? --- pingTask(): ssid: " + state.get(values.ssid), this);
+	    		Util.log("pingTask(): not connected to default, try to connect.. ", this);
 	    		pingLast = System.currentTimeMillis(); 
-    			// changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
+    			changeUUID(settings.readSetting(ManualSettings.defaultuuid));	
 	    	}
     	
     		if((System.currentTimeMillis() - pingLast) > Util.FIVE_MINUTES) {
@@ -149,6 +137,33 @@ public class NetworkMonitor implements Observer {
 			}
 		}
 	}
+	
+	/*
+	private class pingThread extends Thread {
+		@Override
+		public void run() {
+			try{			
+				
+				Process proc = Runtime.getRuntime().exec(new String[]{"ping", state.get(values.gateway)});
+				BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+				String line = null;
+				long last = System.currentTimeMillis();
+				while ((line = procReader.readLine()) != null){
+					//if(line.contains("completed") || line.contains("New")) {
+						
+					Util.log("pingThread [" + ( System.currentTimeMillis() - last ) + "] " + line, this);
+					
+					
+					last = System.currentTimeMillis();
+					
+				}
+			} catch (Exception e) {
+				Util.debug("eventThread: " + e.getLocalizedMessage(), this);
+			}
+		}
+	}
+	*/
 	
 	private void runNetworkTool(){
 		try {
@@ -274,10 +289,6 @@ public class NetworkMonitor implements Observer {
 					if( ! connections.contains(line))
 						connections.add(line); 
 			}
-			
-			//------------------------------------------------------------------------------------
-			// Util.log("con update list: " + connections.size(), this);
-			
 		} catch (Exception e) {
 			Util.debug("connectionUpdate(): " + e.getLocalizedMessage(), this);
 		}
@@ -301,21 +312,18 @@ public class NetworkMonitor implements Observer {
 					String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password};
 					Process proc = Runtime.getRuntime().exec(cmd);
 					proc.waitFor();
+					connectionUpdate(); 
+					runNetworkTool();
 					
 					Util.log("changeWIFI(password): [" + ssid + "] exit code: " + proc.exitValue(), this);					
 					
 					if(proc.exitValue()==0) {
 						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) {
-							connectionUpdate(); 
-							runNetworkTool();
-							Util.delay(600);
-							Util.log("....................changeWIFI(password): setting as default ["+ssid+"]", this);		
+							Util.log("changeWIFI(password): setting as default ["+ssid+"]", this);		
 							setDefault(ssid);	
 						}
 					}
 		
-					connectionUpdate(); 
-					runNetworkTool();
 					changingWIFI = false;		
 					
 		    	} catch (Exception e) {
@@ -341,7 +349,7 @@ public class NetworkMonitor implements Observer {
 		
 		if(ManualSettings.isDefault(ManualSettings.defaultuuid)) {
 			Util.log("changeUUID: no default uuid in settings, try adhoc..", this);
-			uuidFail++;
+		//	uuidFail++;
 			startAdhoc();
 			return;
 		}
@@ -360,7 +368,7 @@ public class NetworkMonitor implements Observer {
 			
 			Util.log("changeUUID: null connection uuid for ["+lookupSSID(uuid)+"], rejected", this);
 			startAdhoc();
-			uuidFail++;
+		//	uuidFail++;
 			return;
 			
 		} else {
@@ -386,15 +394,15 @@ public class NetworkMonitor implements Observer {
 					Util.log("changeUUID: [" + lookupSSID(uuid) + "] exit code: " + proc.exitValue(), this);
 					
 					if(proc.exitValue()==3) {	
-						uuidFail++;
-						Util.log( uuidFail + " changeUUID: timeout, try adhoc: " + proc.exitValue(), this);
+		//				uuidFail++;
+						Util.log("changeUUID: timeout, try adhoc: " + proc.exitValue(), this);
 						startAdhoc();
 						return;
 					}
 					
 					if(proc.exitValue()==0) {
 						runNetworkTool();
-						uuidFail = 0;
+		//				uuidFail = 0;
 					}
 					
 					changingWIFI = false;	
@@ -439,6 +447,7 @@ public class NetworkMonitor implements Observer {
 						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) setDefault(ssid);
 						pingLast = System.currentTimeMillis(); 
 					}
+					
 					runNetworkTool();
 					changingWIFI = false;	
 					
@@ -462,18 +471,22 @@ public class NetworkMonitor implements Observer {
 	
 	public void startAdhoc(){
 
+		/*
 		if(changingWIFI){
-			if( adhocBusy++ > 10) {
+		
+			//if( adhocBusy++ > 10) {
 				
 				Util.log("startAdhoc(): break through, reset busy flag.", this);
 				changingWIFI = false;
-				adhocBusy = 0;
+			//	adhocBusy = 0;
 				
 			} else {
 				Util.log("startAdhoc(): busy, rejected: " + adhocBusy, this);
 				return;
 			}
 		}
+		
+		*/
 		
 	//	if(lookupSSID(uuid) == null){
 	//		Util.log("changeUUID: null connection uuid for ["+lookupSSID(uuid)+"], rejected", this);
@@ -639,13 +652,16 @@ public class NetworkMonitor implements Observer {
 	}
 	
 	private void updateExternalIPAddress(){
-		
-		if(state.exists(values.externaladdress)) {
-			Util.log("updateExternalIPAddress(): called but allready have an ext addr, rejected..", this);
-			return;
-		}
-		
 		new Thread(new Runnable() { public void run() {
+			
+			if(state.exists(values.externaladdress)) {
+				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", this);
+				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
+					Util.log("updateExternalIPAddress(): ping sucsessful, wasted call, reject..", this);
+					return;
+				}
+			}
+			
 			try {
 
 				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();

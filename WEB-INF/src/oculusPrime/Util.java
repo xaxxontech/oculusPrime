@@ -44,7 +44,7 @@ public class Util {
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
-	private static String javaPID = getJavaPID();
+//	private static String javaPID = getJavaPID();
 
 	public static void delay(long delay) {
 		try {
@@ -463,6 +463,7 @@ public class Util {
 
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
+	/*
 	public static String getCPUTop(){
 		try {
 
@@ -477,7 +478,9 @@ public class Util {
 
 		return null;
 	}
-
+	*/
+	
+	/*
 	public static String getJavaStatus(){
 		
 		if(javaPID == null) return null;
@@ -502,7 +505,7 @@ public class Util {
 		return "42";
 		
 	}
-	
+
 	public static String getJavaPID(){	
 		try {
 			String[] cmd = { "/bin/sh", "-c", "ps -al | grep java"};
@@ -514,6 +517,7 @@ public class Util {
 			return null;
 		}
 	}	
+		*/
 	
 	public static String pingWIFI(final String addr){
 		
@@ -538,7 +542,6 @@ public class Util {
 		
 		try {
 			while ((line = procReader.readLine()) != null){
-				// Util.debug("pingWIFI(): " + line, null);
 				if(line.contains("time=")) {
 					time = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 					break;
@@ -549,12 +552,10 @@ public class Util {
 		}
 
 		if(proc.exitValue() != 0 ) Util.debug("pingWIFI(): exit code: " + proc.exitValue(), null);
-		
-		if((System.currentTimeMillis()-start) > 1100){
+		if(time == null) Util.log("pingWIFI(): null result for address: " + addr, null);
+		if((System.currentTimeMillis()-start) > 1100)
 			Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
-			if(time == null) Util.log("pingWIFI(): null result for address: " + addr, null);
-		}
-
+		
 		return time;	
 	}
 	

@@ -47,13 +47,13 @@ public class DashboardServlet extends HttpServlet {
 		String password = null;
 		String view = null;	
 		String delay = null;	
-		String member = null;	
+		/// String member = null;	
 		
 		try {
 			
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
-			member = request.getParameter("member");	
+			// member = request.getParameter("member");	
 			action = request.getParameter("action");
 			router = request.getParameter("router");
 			password = request.getParameter("password");
