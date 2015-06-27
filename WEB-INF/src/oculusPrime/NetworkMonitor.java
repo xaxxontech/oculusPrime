@@ -23,7 +23,7 @@ public class NetworkMonitor implements Observer {
 	private static long pingLast = System.currentTimeMillis();
 	private static long defaultLast = System.currentTimeMillis();
 	// private static long apStarted = System.currentTimeMillis();
-	private static long apLast = System.currentTimeMillis();
+//	private static long apLast = System.currentTimeMillis();
 	private static long scanLast = System.currentTimeMillis();
 	private static Settings settings = Settings.getReference();
 	private static State state = State.getReference();	
@@ -51,6 +51,8 @@ public class NetworkMonitor implements Observer {
 			runNetworkTool();
 			killApplet();
 		}
+		
+		iwlist();
 	}
 	
 	@Override
@@ -63,26 +65,20 @@ public class NetworkMonitor implements Observer {
 		if(key.equals(values.ssid.name())) {
 			
 			changingWIFI = false;
-			apLast = System.currentTimeMillis();
+//			apLast = System.currentTimeMillis();
 			defaultLast = System.currentTimeMillis();
 			pingLast = System.currentTimeMillis(); 
 			
 			if(state.exists(values.ssid)) currentUUID = lookupUUID(state.get(values.ssid));
-			else {
-				
-				Util.log("updated(): no ssid.. ", this);
-	//			apStarted = System.currentTimeMillis();
-				
-			}
+			else Util.log("updated(): ssid was deleted.. ", this);
 			
 			if( ! state.equals(values.ssid, AP) && ManualSettings.isDefault(ManualSettings.defaultuuid))
 				setDefault(state.get(values.ssid));
-			
-	//		if(state.equals(values.ssid, AP)) apStarted = System.currentTimeMillis();
-			
+						
 			if(getAccessPoints() == null && state.equals(values.ssid, AP)){
-				Util.log("updated(): no access points, disconnecting..", this);
+				Util.log("updated(): no access points, disconnect..", this);
 				disconnect();
+				wifiEnable();
 			}			
 		}
 	}
@@ -90,14 +86,14 @@ public class NetworkMonitor implements Observer {
 	private class pingTask extends TimerTask {
 		@Override
 	    public void run() {
-	    		
+	
 	    	if( ! state.getBoolean(State.values.autodocking)) { 
 		    	if( ! state.exists(values.ssid) || state.equals(values.ssid, AP) || changingWIFI) { 
 		    		if(application != null && (state.getUpTime() > Util.ONE_MINUTE))
 		    			application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 		    	}
 	    	}
-	    	
+	    
 	    	if(state.exists(values.gateway) && !changingWIFI){ 
     			pingValue = Util.pingWIFI(state.get(values.gateway));
     			if(pingValue != null) pingLast = System.currentTimeMillis(); 
@@ -126,7 +122,7 @@ public class NetworkMonitor implements Observer {
     				disconnect();
     			}
     			
-    			apLast = System.currentTimeMillis();
+    			// apLast = System.currentTimeMillis();
     		}
     	}
 	}
@@ -324,6 +320,10 @@ public class NetworkMonitor implements Observer {
 			return;
 		}
 		
+		// todo: finish this here.... use localhost IP only 
+		Util.log("changeWIFI(password): dissabled, use the jetty servlet.. add redirect", this);	
+		
+		/*
 		new Thread(){
 		    public void run() {
 		    	try {
@@ -333,8 +333,6 @@ public class NetworkMonitor implements Observer {
 		    		disconnect();
 		    		disconnecteddWAN();                                    
 					
-		    		Util.delay(1000);
-		    		
 		    		String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password};  //TODO: revisit 
 					Process proc = Runtime.getRuntime().exec(cmd);
 					proc.waitFor();
@@ -369,6 +367,8 @@ public class NetworkMonitor implements Observer {
 				}
 		    }
 		}.start();
+		*/
+		
 	}
 
 	public synchronized void changeUUID(final String uuid){
@@ -437,13 +437,11 @@ public class NetworkMonitor implements Observer {
 			
 			Util.debug("changeWIFI(): already is the ssid: " + ssid, this);
 			
-			if(ssid.equals(AP)) { // TODO: COLIN
-				
-				// Util.log("changeWIFI(): all hope is lost, user needs to do something.. ", this);
-				
-				if(getAccessPoints().length == 0){ //  state.equals(values.ssid, AP)){
+			if(ssid.equals(AP)) { 
+				if(getAccessPoints().length == 0){ 
 					Util.log("changeWIFI(): no access points, disconnecting..", this);
 					disconnect();
+					wifiEnable();
 				}
 			}
 			
@@ -455,21 +453,19 @@ public class NetworkMonitor implements Observer {
 		    	try {
 	
 		    		changingWIFI = true;	
-	//	    		disconnecteddWAN();
 					Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "up", "id", ssid}); // "\""+ssid+"\"" }); 
 					proc.waitFor();
 					
 					Util.log("changeWIFI(): [" + ssid + "] exit code: " +  proc.exitValue(), this);
 					
 					if(proc.exitValue()==0) {
-						
+						runNetworkTool();
 						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) {
 							Util.log("changeWIFI(): setting as default ["+ssid+"]", this);		
 							setDefault(ssid);	
 						}
 					}
 					
-					runNetworkTool();
 					changingWIFI = false;	
 					
 		    	} catch (Exception e) {
@@ -488,6 +484,7 @@ public class NetworkMonitor implements Observer {
 		}
 	}
 
+
 	private void disconnect(){
 		
 		if( wdev == null ){
@@ -499,42 +496,107 @@ public class NetworkMonitor implements Observer {
 		
 		try {
 			
-			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "disconnect", "iface", wdev});
+			// Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "disconnect", "iface", wdev});
+			// Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "dev", "disconnect", "iface", wdev});
 			
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "c", "down", "uuid", currentUUID});
+
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null){
-					
-				Util.log("disconnect(): in: " + line, this); 
+			while ((line = procReader.readLine()) != null)
+				Util.debug("disconnect(): in: " + line, this); 
 				
-			}
-			
 			procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));					
-			while ((line = procReader.readLine()) != null){
-					
-				Util.log("disconnect(): error: " + line, this); 
+			while ((line = procReader.readLine()) != null)
+				Util.debug("disconnect(): error: " + line, this); 
 				
-			}
-			
 			proc.waitFor();
 			Util.log("disconnect(): exit code: " + proc.exitValue(), this); 
 
-			if(proc.exitValue() == 0){
-				Util.log("disconnect(): worked.. ", this); 
-			}
-			
-			disconnecteddWAN();
+			if(proc.exitValue() == 0) disconnecteddWAN();
 		
 		} catch (Exception e) {
 			Util.debug("disconnect(): " + e.getLocalizedMessage(), this);
 		}
 	}
 	 
+
+	private void wifiEnable(){
+		
+		if( wdev == null ){
+			Util.log("wifiEnable(): wdev is null, can't disconnect..", this); 
+			return;
+		}
+		
+		Util.log("wifiEnable(): called to start scanning...", this); 
+		
+		try {
+			
+			Process proc = Runtime.getRuntime().exec(new String[]{"nmcli", "nm", "wifi", "on"});
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null)
+				Util.debug("wifiEnable(): in: " + line, this); 
+				
+			procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));					
+			while ((line = procReader.readLine()) != null)
+				Util.debug("wifiEnable(): error: " + line, this); 
+				
+			proc.waitFor();
+			Util.log("wifiEnable(): exit code: " + proc.exitValue(), this); 
+/*
+			if(proc.exitValue() == 0) {
+				disconnecteddWAN();
+			}
+*/
+			
+		} catch (Exception e) {
+			Util.debug("wifiEnable(): exception: " + e.getLocalizedMessage(), this);
+		}
+	}
+	
+	private void iwlist(){
+		
+		if( wdev == null ){
+			Util.log("iwlist(): wdev is null, can't disconnect..", this); 
+			return;
+		}
+		
+		try {
+			
+			Util.delay(9000);
+			
+			Util.log("iwlist(): ----called to start scanning------", this); 
+		
+			Process proc = Runtime.getRuntime().exec(new String[]{"iwlist", wdev, "scanning", "|", "grep", "SSID"});
+			
+			//new BufferedWriter proc.getOutputStream();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null)
+				Util.debug("iwlist(): in: " + line, this); 
+				
+			procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));					
+			while ((line = procReader.readLine()) != null)
+				Util.debug("iwlist(): error: " + line, this); 
+				
+			proc.waitFor();
+			Util.log("iwlist(): exit code: " + proc.exitValue(), this); 
+
+		} catch (Exception e) {
+			Util.debug("iwlist(): exception: " + e.getLocalizedMessage(), this);
+		}
+	}
+	 
+	
 	public void startAdhoc(){
 
 		if(getAccessPoints().length == 0){
 			Util.log("startAdhoc(): no access points, disconnecting..", this);
 			disconnect();
+			wifiEnable();
 			return;
 		}
 		
@@ -581,13 +643,11 @@ public class NetworkMonitor implements Observer {
 		}
 	}
 
-	/**/
 	private void disconnecteddWAN(){
 		if(state.exists(values.localaddress)) state.delete(values.localaddress);
 		if(state.exists(values.signalspeed)) state.delete(values.signalspeed);
 		if(state.exists(values.gateway)) state.delete(values.gateway);	
 		if(state.exists(values.ssid)) state.delete(values.ssid);
-		// killApplet();
 	}
 
 	private void parseETH(){
@@ -726,9 +786,9 @@ public class NetworkMonitor implements Observer {
 	}
 	
 	public String getPingTime() {
-		return 	" a: " + (System.currentTimeMillis()-apLast)/1000 + " d: " + (System.currentTimeMillis()-defaultLast)/1000 ; 
+		// return 	" a: " + (System.currentTimeMillis()-apLast)/1000 + " d: " + (System.currentTimeMillis()-defaultLast)/1000 ; 
 		// TODO: fix later 
-		//pingValue;
+		return pingValue;
 	}
 	
 	public long getLastPing() {
