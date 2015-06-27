@@ -18,7 +18,7 @@ public class DashboardServlet extends HttpServlet {
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "4";
 	static final double VERSION = new Updater().getCurrentVersion();
-	NetworkMonitor monitor = NetworkMonitor.getReference();
+// 	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
 	BanList ban = BanList.getRefrence();
 	State state = State.getReference();
@@ -65,16 +65,16 @@ public class DashboardServlet extends HttpServlet {
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 
 		if(password != null){
-			monitor.changeWIFI(router, password);
+			NetworkMonitor.changeWIFI(router, password);
 			response.sendRedirect("dashboard"); 
 			return;
 		}
 		
 		if(action != null){ 
 			if(action.equals("connect")  && (router != null)){	
-				if(monitor.connectionExists(router)){			
+				if(NetworkMonitor.connectionExists(router)){			
 					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
-					monitor.changeWIFI(router);
+					NetworkMonitor.changeWIFI(router);
 					response.sendRedirect("dashboard");                              
 					return;
 				}
@@ -269,7 +269,7 @@ public class DashboardServlet extends HttpServlet {
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">  \n");
 		
 		String list = "oculus prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
-		String[] ap = monitor.getConnections(); 		
+		String[] ap = NetworkMonitor.getConnections(); 		
 		
 //		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
 		final String router = "<a href=\"http://" + url + "?action=connect&router=";
@@ -277,7 +277,7 @@ public class DashboardServlet extends HttpServlet {
 			list += /*delete + ap[i] + "\">x</a>&nbsp;&nbsp;" +*/ router + ap[i] + "\">" + ap[i] + "</a><br />\n";
 		 
 		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
-		ap = monitor.getAccessPoints();		
+		ap = NetworkMonitor.getAccessPoints();		
 		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
 		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i] + "</a><br /> \n");
 		
@@ -285,7 +285,7 @@ public class DashboardServlet extends HttpServlet {
 		
 		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
 		
-		str.append("<td><b>ping</b><td>" + monitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-monitor.getLastPing()) + "   " 
+		str.append("<td><b>ping</b><td>" + NetworkMonitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-NetworkMonitor.getLastPing()) + "   " 
 				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
 				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
 				+ "<td><b>lan</b><td>" + state.get(values.localaddress) 

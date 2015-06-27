@@ -16,7 +16,6 @@ public class NetworkServlet extends HttpServlet {
 	static final long serialVersionUID = 1L;	
 
 	static final double VERSION = new Updater().getCurrentVersion();
-	NetworkMonitor monitor = NetworkMonitor.getReference();
 	Settings settings = Settings.getReference();
 	BanList ban = BanList.getRefrence();
 	State state = State.getReference();
@@ -52,7 +51,7 @@ public class NetworkServlet extends HttpServlet {
 		}
 			
 		if(router != null && password != null){
-			monitor.changeWIFI(router, password);
+			NetworkMonitor.changeWIFI(router, password);
 			response.sendRedirect("network"); 
 			return;
 		}
@@ -60,14 +59,14 @@ public class NetworkServlet extends HttpServlet {
 		if(action != null && router != null) { 
 		
 			if(action.equals("default")){	
-				monitor.setDefault(router.trim());	
+				NetworkMonitor.setDefault(router.trim());	
 				response.sendRedirect("network"); 
 				return;
 			}
 			
 			if(action.equals("connect")){	
-				if(monitor.connectionExists(router)){			
-					monitor.changeWIFI(router);
+				if(NetworkMonitor.connectionExists(router)){			
+					NetworkMonitor.changeWIFI(router);
 					response.sendRedirect("network");                    
 					return;
 				}
@@ -97,8 +96,8 @@ public class NetworkServlet extends HttpServlet {
 	
 	public String toHTML(final String url){
 			
-		final String[] connections = monitor.getConnections(); 		
-		final String[] available = monitor.getAccessPoints();		
+		final String[] connections = NetworkMonitor.getConnections(); 		
+		final String[] available = NetworkMonitor.getAccessPoints();		
 		final String setdef  = "<a href=\"http://" + url + "?action=default&router=";
 		final String connect = "<a href=\"http://" + url + "?action=connect&router=";
 	
@@ -111,7 +110,7 @@ public class NetworkServlet extends HttpServlet {
 			if(state.equals(values.ssid, connections[i])) str.append("<tr><td>" + connections[i]); 
 			else str.append("<tr><td>" + connect + connections[i] + "\">"+ connections[i] +"</a>"); 
 				
-			if(monitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) {
+			if(NetworkMonitor.lookupUUID( connections[i] ).equals(settings.readSetting(ManualSettings.defaultuuid))) {
 				str.append("<td>default"); 
 			} else { 
 				if( ! connections[i].equals(NetworkMonitor.AP)) 

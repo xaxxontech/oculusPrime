@@ -12,14 +12,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-
 public class TestServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1L;
 	static Vector<String> accesspoints = new Vector<String>();
 	static boolean connected = false;
 	static String wdev = null;
-	static int i = 0;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -31,21 +29,94 @@ public class TestServlet extends HttpServlet {
 	}
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		
+		String action = null;
+		String router = null; 
+		String password = null;
+		
+		try {
+			
+			action = request.getParameter("action");
+			router = request.getParameter("router");
+			password = request.getParameter("password");
+		
+		} catch (Exception e) {
+			System.out.println("doGet(): " + e.getLocalizedMessage());
+		}
+		
+		if(password != null && router != null) {
+			
+			System.out.println("doGet(): password given, try to connect...");
+			changeWIFI(router, password);
+			
+		} else {
+		
+			System.out.println("doGet(): scanning...");
+			iwlist();
+		
+		}
+		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		
-		iwlist();
-		
 		out.println("<html><head> \n");
-		out.println(accesspoints.size() + " -- available accesspoints <br><br>");		
-		for(int i = 0 ; i < accesspoints.size() ; i++) out.println(accesspoints.get(i) + "<br>");
-		out.println("<br /><br />count: " + i++ + "\n</body></html> \n");
+		out.println(toHTML(request.getServerName()));
+		out.println("\n</body></html> \n");
 		out.close();	
+	}
+	
+	private String toHTML(final String addr){
+		StringBuffer html = new StringBuffer();
+		
+		html.append(accesspoints.size() + " -- available accesspoints <br><br> \n");		
+		for(int i = 0 ; i < accesspoints.size() ; i++) {
+				html.append("<a href=\"http://"+addr+"/oculusprime?router=" 
+					+ accesspoints.get(i) + "\">" + accesspoints.get(i) + "</a><br> \n");
+		
+		}	
+	
+		return html.toString();
+	}
+	
+	// http://192.168.1.7/oculusprime/?router=bradzcave&password=xxxxx
+	private synchronized static void changeWIFI(final String ssid, final String password){
+		
+		if(ssid == null || password == null) return; 
+		
+		new Thread(){
+		    public void run() {
+		    	try {
+			
+		    		String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid ,"password", password}; 
+		    	//	String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", "\"" + ssid + "\"", "password", password}; 
+					Process proc = Runtime.getRuntime().exec(cmd);
+				
+					System.out.println("changeWIFI(password): [" + ssid + "] exit code: " + proc.exitValue());					
+
+					String line = null;
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+					while ((line = procReader.readLine()) != null){
+						System.out.println("changeWIFI(password): input: " + line);					
+					}
+
+					procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));					
+					while ((line = procReader.readLine()) != null){			
+						System.out.println("changeWIFI(password): _error_ " + line);			
+	   //				Error: No network with SSID 'bradcave' found.		
+					}
+						
+					proc.waitFor();	
+					System.out.println("changeWIFI(password): exit code = " + proc.exitValue());
+					
+		    	} catch (Exception e) {
+		    		System.out.println("changeWIFI(password): [" + ssid + "] Exception: " + e.getMessage()); 
+				}
+		    }
+		}.start();
 	}
 	
 	private void iwlist(){
 		
-		if(wdev==null || !connected) return;
+		if(wdev==null) return; //  || !connected) return;
 		
 		accesspoints.clear();
 		
