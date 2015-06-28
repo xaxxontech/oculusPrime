@@ -40,7 +40,7 @@ public class NetworkMonitor implements Observer {
 		updateExternalIPAddress();
 	
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
-			pingTimer.schedule(new pingTask(), 5000, 5000);
+			pingTimer.schedule(new pingTask(), 5000, 3000);
 			new eventThread().start();	
 			state.addObserver(this);
 			connectionUpdate();
