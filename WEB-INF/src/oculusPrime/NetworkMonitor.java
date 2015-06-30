@@ -38,15 +38,20 @@ public class NetworkMonitor implements Observer {
 	private NetworkMonitor(){
 		
 		updateExternalIPAddress();
-	
+		connectionUpdate();
+		runNetworkTool();
+		
+		/*
 		if(settings.getBoolean(ManualSettings.networkmonitor)){
 			pingTimer.schedule(new pingTask(), 5000, 3000);
 			new eventThread().start();	
 			state.addObserver(this);
 			connectionUpdate();
 			runNetworkTool();
-			killApplet();
+			//killApplet();
 		}
+		*/
+		
 	}
 	
 	@Override
@@ -142,7 +147,7 @@ public class NetworkMonitor implements Observer {
 						
 						if(( System.currentTimeMillis() - scanLast ) > 2000){	
 							
-					//		Util.log("[" + ( System.currentTimeMillis() - scanLast )/1000 + "] seconds: " + line, null);
+							Util.log("[" + ( System.currentTimeMillis() - scanLast )/1000 + "] seconds: " + line, null);
 							scanLast = System.currentTimeMillis();
 							runNetworkTool();
 							
@@ -305,66 +310,7 @@ public class NetworkMonitor implements Observer {
 		}
 	}
 	
-	public synchronized static void changeWIFI(final String ssid, final String password){
 	
-		if(ssid == null || password == null) return; 
-		
-		if(changingWIFI){
-			Util.log("changeWIFI(password): busy, rejected", null);
-			return;
-		}
-		
-		// todo: finish null here.... use localhost IP only 
-		Util.log("changeWIFI(password): dissabled, use the jetty servlet.. add redirect", null);	
-		
-		/*
-		new Thread(){
-		    public void run() {
-		    	try {
-		
-		    		changingWIFI = true;
-		    		
-		    		disconnect();
-		    		disconnecteddWAN();                                    
-					
-		    		String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid, "password", password};  //TODO: revisit 
-					Process proc = Runtime.getRuntime().exec(cmd);
-					proc.waitFor();
-										
-					Util.log("changeWIFI(password): [" + ssid + "] exit code: " + proc.exitValue(), null);					
-
-					String line = null;
-					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-					while ((line = procReader.readLine()) != null){
-						Util.log("changeWIFI(password): input: " + line, null);					
-					}
-
-					procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));					
-					while ((line = procReader.readLine()) != null){			
-						Util.log("changeWIFI(password): error: " + line, null);			
-	   //				Error: No network with SSID 'bradcave' found.		
-					}
-					
-					if(proc.exitValue() == 0) {
-						connectionUpdate(); 
-						runNetworkTool();
-						if(ManualSettings.isDefault(ManualSettings.defaultuuid)) {
-							Util.log("changeWIFI(password): setting as default ["+ssid+"]", null);		
-							setDefault(ssid);	
-						}
-					}
-		
-					changingWIFI = false;		
-					
-		    	} catch (Exception e) {
-					Util.log("changeWIFI(password): [" + ssid + "] Exception: ", e, null); 
-				}
-		    }
-		}.start();
-		*/
-		
-	}
-
 	public synchronized static void changeUUID(final String uuid){
 		
 		if(uuid == null) return;
@@ -469,14 +415,14 @@ public class NetworkMonitor implements Observer {
 		}.start();
 	}
 	
-	private void killApplet(){
-		try {
+	//private void killApplet(){
+	//	try {
 	//		Runtime.getRuntime().exec(new String[]{"pkill", "nmcli"});
-			Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
-		} catch (Exception e) {
-			Util.debug("killApplet(): " + e.getLocalizedMessage(), null);
-		}
-	}
+	//		Runtime.getRuntime().exec(new String[]{"pkill", "nm-applet"});
+	//	} catch (Exception e) {
+	//		Util.debug("killApplet(): " + e.getLocalizedMessage(), null);
+	//	}
+	//}
 
 
 	private static void disconnect(){
@@ -783,9 +729,9 @@ public class NetworkMonitor implements Observer {
 	}
 	
 	public static String getPingTime() {
-		// return 	" a: " + (System.currentTimeMillis()-apLast)/1000 + " d: " + (System.currentTimeMillis()-defaultLast)/1000 ; 
+		return /*	" a: " + (System.currentTimeMillis()-apLast)/1000 + */" d: " + (System.currentTimeMillis()-defaultLast)/1000 ; 
 		// TODO: fix later 
-		return pingValue;
+		// return pingValue;
 	}
 	
 	public static long getLastPing() {

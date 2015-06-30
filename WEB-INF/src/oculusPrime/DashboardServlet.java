@@ -44,7 +44,7 @@ public class DashboardServlet extends HttpServlet {
 	
 		String action = null;
 		String router = null; 
-		String password = null;
+		//String password = null;
 		String view = null;	
 		String delay = null;	
 		/// String member = null;	
@@ -56,7 +56,7 @@ public class DashboardServlet extends HttpServlet {
 			// member = request.getParameter("member");	
 			action = request.getParameter("action");
 			router = request.getParameter("router");
-			password = request.getParameter("password");
+			//password = request.getParameter("password");
 		
 		} catch (Exception e) {
 			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
@@ -64,11 +64,11 @@ public class DashboardServlet extends HttpServlet {
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 
-		if(password != null){
-			NetworkMonitor.changeWIFI(router, password);
-			response.sendRedirect("dashboard"); 
-			return;
-		}
+		//if(password != null){
+		//	NetworkMonitor.changeWIFI(router, password);
+		//	response.sendRedirect("dashboard"); 
+		//	return;
+		//}
 		
 		if(action != null){ 
 			if(action.equals("connect")  && (router != null)){	

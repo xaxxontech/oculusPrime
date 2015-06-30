@@ -38,22 +38,16 @@ public class NetworkServlet extends HttpServlet {
 	
 		String action = null;
 		String router = null; 
-		String password = null;
+	//	String password = null;
 		
 		try {
 			
 			action = request.getParameter("action");
 			router = request.getParameter("router");
-			password = request.getParameter("password");
+	//		password = request.getParameter("password");
 		
 		} catch (Exception e) {
 			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
-		}
-			
-		if(router != null && password != null){
-			NetworkMonitor.changeWIFI(router, password);
-			response.sendRedirect("network"); 
-			return;
 		}
 		
 		if(action != null && router != null) { 
