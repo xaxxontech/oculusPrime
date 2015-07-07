@@ -41,8 +41,8 @@ public class motionDetect {
 					while (state.getBoolean(State.values.motiondetect)) { // TODO: time out after a while
 						
 						if(state.getBoolean(State.values.framegrabbusy.name()) || 
-								 !(state.get(State.values.stream).equals("camera") || 
-										 state.get(State.values.stream).equals("camandmic"))) {
+								 !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
+										 state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 
 							app.message("framegrab busy or stream unavailable", null,null);
 							state.set(State.values.motiondetect, false);

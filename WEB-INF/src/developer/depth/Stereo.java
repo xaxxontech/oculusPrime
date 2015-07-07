@@ -65,7 +65,7 @@ public class Stereo {
 	public void DeleteThis() {
 //	public void Stereo() {
 		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
-		cv = new OpenCVUtils();
+//		cv = new OpenCVUtils();
 
 		sbmImage = new StereoSGBM();
 //		/* mode 1: cleanest depth image, though top view innacuracies

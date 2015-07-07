@@ -89,7 +89,7 @@ public class Navigation {
 
 		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.mapping.toString()) ||
 				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString())) {
-			app.driverCallServer(PlayerCommands.messageclients, "can't start navigation");
+			app.driverCallServer(PlayerCommands.messageclients, "Navigation.waitForNavSystem(): can't start navigation");
 			return false;
 		}
 
@@ -100,7 +100,7 @@ public class Navigation {
 				&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT*3) { Util.delay(50);  } // wait
 
 		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
-			app.driverCallServer(PlayerCommands.messageclients, "navigation start failure");
+			app.driverCallServer(PlayerCommands.messageclients, "Navigation.waitForNavSystem(): navigation start failure");
 			return false;
 		}
 
@@ -110,7 +110,7 @@ public class Navigation {
 
 	public void startMapping() {
 		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
-			app.driverCallServer(PlayerCommands.messageclients, "unable to start mapping, system already running");
+			app.driverCallServer(PlayerCommands.messageclients, "Navigation.startMapping(): unable to start mapping, system already running");
 			return;
 		}
 
@@ -143,7 +143,7 @@ public class Navigation {
 					state.set(State.values.rosinitialpose, "0_0_0");
 				return; // success
 			}
-			
+
 			// ========try again if needed, just once======
 
 			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) ||
@@ -200,29 +200,29 @@ public class Navigation {
 		}
 
 		SystemWatchdog.waitForCpu();
-		
+
 		Ros.setWaypointAsGoal(DOCK);
 		state.set(State.values.roscurrentgoal, "pending");
-		
+
 		new Thread(new Runnable() { public void run() {
-			
+
 			long start = System.currentTimeMillis();
-			while (state.exists(State.values.roscurrentgoal) 
+			while (state.exists(State.values.roscurrentgoal)
 					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  } // wait
-		
+
 			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 
 				Util.log("error, state rosgoalstatus null", this);
 				return;
 			}
-			
+
 			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach dock");
 				return;
 			}
 
 			Util.delay(1000);
-			
+
 			// success, should be pointing at dock, shut down nav
 			stopNavigation();
 //			Util.delay(Ros.ROSSHUTDOWNDELAY/2); // 5000 too low, massive cpu sometimes here
@@ -231,7 +231,7 @@ public class Navigation {
 			SystemWatchdog.waitForCpu();
 			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
-			
+
 			// dock
 			app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
 			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
@@ -243,12 +243,12 @@ public class Navigation {
 //			Util.delay(25);
 			app.driverCallServer(PlayerCommands.left, "180");
 			Util.delay(app.comport.fullrotationdelay/2 + 2000);
-			
+
 			// make sure dock in view before calling autodock go
 			// dock detect, rotate if necessary
 			int rot = 0;
 			while (true) {
-				
+
 				app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
 				start = System.currentTimeMillis();
 				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000)
@@ -266,7 +266,7 @@ public class Navigation {
 					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
 				}
 				rot ++;
-				
+
 				if (rot == 16) { // failure give up
 //					callForHelp(subject, body);
 					app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
@@ -278,26 +278,26 @@ public class Navigation {
 
 			SystemWatchdog.waitForCpu();
 			app.driverCallServer(PlayerCommands.autodock, autodockmodes.go.toString());
-			
-			// wait while autodocking does its thing 
+
+			// wait while autodocking does its thing
 			start = System.currentTimeMillis();
-			while (state.getBoolean(State.values.autodocking) && 
-					System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT)  
-				Util.delay(100); 
-				
+			while (state.getBoolean(State.values.autodocking) &&
+					System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT)
+				Util.delay(100);
+
 			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				Util.delay(2000);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 			} else  Util.log("dock() - unable to dock", this);
-			
-			
+
+
 		}  }).start();
 	}
-	
+
 	public static void goalCancel() {
 		state.set(State.values.rosgoalcancel, true); // pass info to ros node
 	}
-	
+
 	public static String routesLoad() {
 		String result = "";
 
@@ -313,10 +313,10 @@ public class Navigation {
 		} catch (IOException e) {
 			return "<routeslist></routeslist>";
 		}
-		
+
 		return result;
 	}
-	
+
 	public void saveRoute(String str) {
 		try {
 			FileWriter fw = new FileWriter(navroutesfile);
@@ -341,11 +341,11 @@ public class Navigation {
 		}
 
 	}
-	
+
 	public void runRoute(final String name) {
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
-		
+
 		if (state.getBoolean(State.values.autodocking)) {
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
 			return;
@@ -374,7 +374,7 @@ public class Navigation {
     			break;
     		}
 		}
-		
+
 		if (route == null) { // name not found
 			app.driverCallServer(PlayerCommands.messageclients, "route: "+name+" not found");
 			return;
@@ -392,7 +392,7 @@ public class Navigation {
 		saveRoute(xmlstring);
 
 		app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
-		
+
 		new Thread(new Runnable() { public void run() {
 
 			// get schedule info
@@ -507,6 +507,9 @@ public class Navigation {
 				}
 
 				if (!waitForNavSystem()) {
+					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
+							name, state.get(State.values.navigationroute), consecutiveroute);
+
 					cancelRoute(id);
 					return;
 				}

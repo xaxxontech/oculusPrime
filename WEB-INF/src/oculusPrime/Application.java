@@ -13,6 +13,7 @@ import java.util.Set;
 import developer.NavigationLog;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
+import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -38,7 +39,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public enum driverstreamstate { stop, mic, pending };
 	public static final String VIDEOSOUNDMODELOW = "low";
 	public static final String VIDEOSOUNDMODEHIGH = "high";
-	private static final int STREAM_CONNECT_DELAY = 2000;
+	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final String RED5_HOME = System.getenv("RED5_HOME");
 	public static final String APPFOLDER = "webapps" + Util.sep + "oculusPrime";
@@ -203,7 +204,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (mode.equals("init")) {
 			state.delete(State.values.stream);
 		} else {
-			state.set(State.values.stream, "stop");
+			state.set(State.values.stream, Application.streamstate.stop.toString());
 		}
 		grabber = Red5.getConnectionLocal();
 		String str = "awaiting&nbsp;connection";
@@ -817,19 +818,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case clearmap: Mapper.clearMap();
 			break;
-		
-			// TODO: WHAT IS THIS DOING?? 
-			/*
-		case error:
-			try {
-				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
-			} catch (Exception e)  { Util.printError(e); }
 
-			break;
-
-		*/
-			
-//		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
@@ -846,7 +835,25 @@ public class Application extends MultiThreadedApplicationAdapter {
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
 			break;
-			
+
+		// dev tool only
+		case error:
+			try {
+				if(state.getBoolean(values.jpgstream))  Util.log("true",this);  // throws null pointer
+				else Util.log("false", this);
+			} catch (Exception e)  { Util.printError(e); }
+			break;
+
+		case jpgstream:
+			if (str== null) str="";
+			if (str.equals(streamstate.stop.toString())) {
+				state.delete(values.jpgstream);
+				break;
+			}
+			if (str.equals("")) str = AutoDock.HIGHRES;
+			new OpenCVUtils(this).jpgStream(str);
+			break;
+
 		}
 	}
 
@@ -1060,8 +1067,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public boolean frameGrab() {
 
 		 if(state.getBoolean(State.values.framegrabbusy.name()) || 
-				 !(state.get(State.values.stream).equals("camera") || 
-						 state.get(State.values.stream).equals("camandmic"))) {
+				 !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
+						 state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 			 messageplayer("stream unavailable or framegrab busy, command dropped", null, null);
 			 return false;
 		 }
@@ -1369,7 +1376,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeSettings(GUISettings.vset, "vcustom");
 		settings.writeSettings(GUISettings.vcustom, str);
 		String s = "custom stream set to: " + str;
-		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
+		if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+				!state.getBoolean(State.values.autodocking)) {
 			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}
@@ -1380,7 +1388,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void streamSettingsSet(String str) {
 		settings.writeSettings(GUISettings.vset, "v" + str);
 		String s = "stream set to: " + str;
-		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
+		if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+				!state.getBoolean(State.values.autodocking)) {
 			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}

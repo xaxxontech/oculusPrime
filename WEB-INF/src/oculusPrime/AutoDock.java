@@ -284,7 +284,8 @@ public class AutoDock {
 					if (state.getBoolean(State.values.autodocking)) {
 						state.set(State.values.autodocking, false);
 						str += "cameratilt "+state.get(State.values.cameratilt)+" speed fast autodockcancelled blank";
-						if (!state.get(State.values.stream).equals("stop") && state.get(State.values.driver)==null) { 
+						if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+								state.get(State.values.driver)==null) {
 							app.publish(Application.streamstate.stop); 
 						}
 						
@@ -620,8 +621,8 @@ public class AutoDock {
 	public void getLightLevel() {
 
 		if (state.getBoolean(State.values.framegrabbusy.name())
-				|| !(state.get(State.values.stream).equals("camera") || state
-						.get(State.values.stream).equals("camandmic"))) {
+				|| !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) || state
+						.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 			app.message("framegrab busy or stream unavailable", null, null);
 			return;
 		}
@@ -706,8 +707,8 @@ public class AutoDock {
 		state.delete(oculusPrime.State.values.dockmetrics);
 
 		if (state.getBoolean(State.values.framegrabbusy.name())
-				|| ! (state.get(State.values.stream).equals("camera") 
-				|| state.get(State.values.stream).equals("camandmic"))) {
+				|| ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
+				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 			app.message("framegrab busy or stream unavailable", null, null);
 			return;
 		}
