@@ -71,7 +71,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
 	public static BufferedImage videoOverlayImage = null;
-	
+
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============", this);
@@ -262,8 +262,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 
+		// opencv
 		try {
-			System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
+			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
 			e.printStackTrace();
 			Util.log("opencv native lib not availabe", this);
@@ -801,7 +802,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
+				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
 						navigation.consecutiveroute);
 				navigation.cancelAllRoutes();
@@ -852,6 +853,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			if (str.equals("")) str = AutoDock.HIGHRES;
 			new OpenCVUtils(this).jpgStream(str);
+//			opencvutils.jpgStream(str);
 			break;
 
 		}
@@ -914,7 +916,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case chat:
 			chat(str);
 			break;
-		case dockgrabbed: 
+		case dockgrabbed: // TODO: unused?
 			docker.autoDock("dockgrabbed " + str);
 			state.set(State.values.dockgrabbusy.name(), false);
 			break;
@@ -1129,15 +1131,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 			int headersize = size - (width*height*4)-1;
 
 			frameData.position(headersize); // skip past header
-			
+
+			boolean invalid = true;
 			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 			for(int y=0; y<height; y++) {
 				for (int x=0; x<width; x++) {
-//					int rgb = frameData.getInt();    // argb ok for png only 
-					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					int rgb = frameData.getInt();    // argb ok for png only
+					if (rgb != 0) invalid = false;
+					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
 					processedImage.setRGB(x, y, rgb);
 				}
 			}
+
+			if (invalid) Util.log("error, framegrab invalid", this);
 			
 			state.set(State.values.framegrabbusy.name(), false);
 
@@ -1168,16 +1174,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			int headersize = 307248 - (width*height*4);
 			int headersize = size - (width*height*4) -1;
 			frameData.position(headersize); // skip past header
-			
+
+			boolean invalid = true;
 			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 			for(int y=0; y<height; y++) {
 				for (int x=0; x<width; x++) {
-//					int rgb = frameData.getInt();    // argb ok for png only 
-					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					int rgb = frameData.getInt();    // argb ok for png only
+					if (rgb != 0) invalid = false;
+					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
 					processedImage.setRGB(x, y, rgb);
 				}
 			}
-			
+			if (invalid) Util.log("error, framegrab empty", this);
+
 			state.set(State.values.framegrabbusy.name(), false);
 			
 		} catch (Exception e) {			Util.printError(e);		}

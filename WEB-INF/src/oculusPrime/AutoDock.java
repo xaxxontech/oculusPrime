@@ -710,6 +710,8 @@ public class AutoDock {
 				|| ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
 				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 			app.message("framegrab busy or stream unavailable", null, null);
+			Util.log("error, framegrab busy", this);
+			state.delete(State.values.framegrabbusy);
 			return;
 		}
 
@@ -757,7 +759,7 @@ public class AutoDock {
 					img = Application.processedImage;
 				}
 
-				else { Util.log("dockgrab failure", this); return; }
+				else { Util.log("dockgrab() framegrab failure", this); return; }
 
 				imgwidth= img.getWidth();
 				imgheight= img.getHeight();

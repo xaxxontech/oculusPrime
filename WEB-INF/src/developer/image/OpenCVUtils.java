@@ -20,6 +20,7 @@ import org.opencv.objdetect.CascadeClassifier;
 public class OpenCVUtils {
 	State state;
 	Application app;
+//	VideoCapture capture;
 
 	public OpenCVUtils(Application a) {    // constructor
 //		System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // moved to Application so only loaded once
@@ -92,7 +93,7 @@ public class OpenCVUtils {
 				}
 
 				VideoCapture capture = new VideoCapture(0);
-				Util.delay(1000); // alow time to init
+//				capture = new VideoCapture(0);
 
 				if (!capture.isOpened()) {
 					Util.log("unable to open camera", this);
@@ -123,12 +124,10 @@ public class OpenCVUtils {
 				}
 
 				capture.release();
-				Util.delay(1000); // alow time to init
-				capture = new VideoCapture(0); // needed to release camera...?
-				capture.release();
-
+				VideoCapture temp = new VideoCapture(0);
+				temp.release();
+				System.gc();
 				webcam_image.release();
-				System.gc(); // suggest garbage collection, unable to init camera without it!
 				Util.log("jpgstream() thread exit", this);
 
 				state.delete(State.values.jpgstream);

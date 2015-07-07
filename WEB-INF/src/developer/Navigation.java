@@ -508,10 +508,9 @@ public class Navigation {
 
 				if (!waitForNavSystem()) {
 					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							name, state.get(State.values.navigationroute), consecutiveroute);
+							null, name, consecutiveroute);
 
-					cancelRoute(id);
-					return;
+					if (!delayToNextRoute(navroute, name, id)) return;
 				}
 
 				// check if cancelled while waiting
@@ -565,7 +564,7 @@ public class Navigation {
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
 						navlog.newItem(NavigationLog.ERRORSTATUS, "unable to set waypoint", routestarttime,
-								name, state.get(State.values.navigationroute), consecutiveroute);
+								wpname, name, consecutiveroute);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" unable to set waypoint");
 						wpnum ++;
 						continue;
@@ -625,20 +624,25 @@ public class Navigation {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					// TODO: send alert
 					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock, route cancelled",
-							routestarttime, null, state.get(State.values.navigationroute), consecutiveroute);
+							routestarttime, null, name, consecutiveroute);
 					cancelRoute(id);
 					// try docking one more time, sending alert if fail
 					Util.log("calling redock()", this);
 					stopNavigation();
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
-					return; 
+
+					//return;
+					if (!delayToNextRoute(navroute, name, id)) return;
 				}
 
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null,
-						state.get(State.values.navigationroute), consecutiveroute);
+						name, consecutiveroute);
 				consecutiveroute ++;
 
+				if (!delayToNextRoute(navroute, name, id)) return;
+
+				/*
 				String msg = " min until next route: "+name+", run #"+consecutiveroute;
 				if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) {
 					msg = " min until reboot, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
@@ -662,12 +666,43 @@ public class Navigation {
 					app.driverCallServer(PlayerCommands.reboot, null);
 					return;
 				}
+				*/
 
 			}
 		
 		}  }).start();
 		
 	}
+
+
+	private boolean delayToNextRoute(Element navroute, String name, String id) {
+		// delay to next route
+
+		String msg = " min until next route: "+name+", run #"+consecutiveroute;
+		if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) {
+			msg = " min until reboot, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
+		}
+
+		String min = navroute.getElementsByTagName("minbetween").item(0).getTextContent();
+		long timebetween = Long.parseLong(min) * 1000 * 60;
+		state.set(State.values.nextroutetime, System.currentTimeMillis()+timebetween);
+		app.driverCallServer(PlayerCommands.messageclients, min +  msg);
+		long start = System.currentTimeMillis();
+		while (System.currentTimeMillis() - start < timebetween) {
+			if (!state.exists(State.values.navigationroute)) return false;
+			if (!state.get(State.values.navigationrouteid).equals(id)) return false;
+			Util.delay(1000);
+		}
+
+		if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES &&
+				state.getUpTime() > Util.TEN_MINUTES)  { // prevent runaway reboots
+			Util.log("rebooting, max consecutive routes reached", this);
+			app.driverCallServer(PlayerCommands.reboot, null);
+			return false;
+		}
+		return true;
+	}
+
 	
 	/**
 	 * process actions for single waypoint 
