@@ -17,7 +17,7 @@ public class TestServlet extends HttpServlet {
 	static final long serialVersionUID = 1L;
 	static final long PING_TIMEOUT = 60000;
 	static final String AP = "ap";
-	static boolean DEBUG = false;
+	static boolean DEBUG = true;
 
 	static Vector<String> accesspoints = new Vector<String>();
 	static Vector<String> connections = new Vector<String>();	
