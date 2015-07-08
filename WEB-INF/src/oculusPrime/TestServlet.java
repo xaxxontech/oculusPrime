@@ -41,7 +41,7 @@ public class TestServlet extends HttpServlet {
 		
 		lookupAccessPoint();
 		lookupCurrentSSID();
-		connectionsNever();
+		// connectionsNever();
 		lookupConnections();
 		lookupDevice();
 		killApplet();
@@ -499,6 +499,7 @@ public class TestServlet extends HttpServlet {
 		}
 	}
 	
+	/*
 	private static void connectionsNever(){
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f timestamp,uuid con"};
@@ -518,6 +519,7 @@ public class TestServlet extends HttpServlet {
 			System.out.println("connectionsNever(): exception: " + e.getLocalizedMessage());
 		}
 	}
+	*/
 	
 	private static String lookupAutoConnect(){
 		try {			
@@ -550,8 +552,8 @@ public class TestServlet extends HttpServlet {
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {	
 				String[] in = line.trim().split(" ");
-				if(!line.contains(apUUID)) {
-					System.out.println("connectionsPurge(): deleting duplicate: " + in[in.length-1]); 
+				if(!line.contains(apUUID)){ 
+					System.out.println("connectionsPurge(): deleting: " + in[in.length-1]); 
 					Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli con delete uuid " + in[in.length-1]});
 				}
 			}			
@@ -564,6 +566,29 @@ public class TestServlet extends HttpServlet {
 		wifiBusy = false;
 		changeWIFI(AP);
 	}
+	
+	/*
+	private static void lookupEthernet(){
+		try {			
+			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli con"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+		
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				 if(line.contains("Strength")) { 
+					 currentSSID = line.substring(line.indexOf("*")+1, line.indexOf(":"));
+					 return;
+				 }
+			}
+			
+			currentSSID = null;
+			
+		} catch (Exception e) {
+			System.out.println("connectionsNever(): exception: " + e.getLocalizedMessage());
+		}
+	}
+	*/
 	
 	private static void lookupCurrentSSID(){
 		try {			
@@ -588,15 +613,22 @@ public class TestServlet extends HttpServlet {
 	
 	private static boolean lookupConnections(){
 		try {			
-			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f name con"};
+			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f type,name con"};
 			Process proc = Runtime.getRuntime().exec(cmd);
 			proc.waitFor();
 			
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {	
-				if(!connections.contains(line) && !line.equals("NAME"))
-					connections.add(line.trim());
+				if(!connections.contains(line) && !line.equals("NAME")){
+					String[] args = line.split(" ");
+					if(args[0].contains("wireless")){
+						
+						System.out.println("**get[" + line.substring(args[0].length()).trim() + "]");
+						connections.add(line.substring(args[0].length()).trim());
+					
+					}
+				}
 			}			
 		} catch (Exception e) {
 			System.out.println("getConnections(): exception: " + e.getLocalizedMessage());
