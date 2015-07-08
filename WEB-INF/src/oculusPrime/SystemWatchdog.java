@@ -1,5 +1,6 @@
 package oculusPrime;
 
+import developer.NavigationLog;
 import developer.Ros;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.State.values;
@@ -260,7 +261,10 @@ public class SystemWatchdog {
 			application.driverCallServer(PlayerCommands.floodlight, "0");
 
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-				if (!state.exists(State.values.driver.toString()))  callForHelp(subject, body);
+				if (!state.exists(State.values.driver.toString())) {
+					if (state.exists(values.navigationroute)) application.driverCallServer(PlayerCommands.cancelroute, null);
+					callForHelp(subject, body);
+				}
 			}
 
 			redocking = false;

@@ -100,8 +100,8 @@ public class Scratch {
 //            Util.delay(500);
 //        }
 
-        String str = "   ";
-        System.out.println(str.trim().length());
+        State state = State.getReference();
+        System.out.println(State.values.values().length);
 
     }
 }

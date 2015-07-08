@@ -13,6 +13,7 @@ import java.util.Set;
 import developer.NavigationLog;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
+import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -38,7 +39,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public enum driverstreamstate { stop, mic, pending };
 	public static final String VIDEOSOUNDMODELOW = "low";
 	public static final String VIDEOSOUNDMODEHIGH = "high";
-	private static final int STREAM_CONNECT_DELAY = 2000;
+	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final String RED5_HOME = System.getenv("RED5_HOME");
 	public static final String APPFOLDER = "webapps" + Util.sep + "oculusPrime";
@@ -70,7 +71,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
 	public static BufferedImage videoOverlayImage = null;
-	
+
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============", this);
@@ -203,7 +204,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (mode.equals("init")) {
 			state.delete(State.values.stream);
 		} else {
-			state.set(State.values.stream, "stop");
+			state.set(State.values.stream, Application.streamstate.stop.toString());
 		}
 		grabber = Red5.getConnectionLocal();
 		String str = "awaiting&nbsp;connection";
@@ -261,8 +262,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 
+		// opencv
 		try {
-			System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // opencv
+			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
 			e.printStackTrace();
 			Util.log("opencv native lib not availabe", this);
@@ -800,7 +802,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
+				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
 						navigation.consecutiveroute);
 				navigation.cancelAllRoutes();
@@ -817,19 +819,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case clearmap: Mapper.clearMap();
 			break;
-		
-			// TODO: WHAT IS THIS DOING?? 
-			/*
-		case error:
-			try {
-				if(state.get("nonexistentkey").equals("")) {} // throws null pointer
-			} catch (Exception e)  { Util.printError(e); }
 
-			break;
-
-		*/
-			
-//		case motiondetectgo: new motionDetect(this, grabber, Integer.parseInt(str)); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
@@ -846,7 +836,26 @@ public class Application extends MultiThreadedApplicationAdapter {
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
 			break;
-			
+
+		// dev tool only
+		case error:
+			try {
+				if(state.getBoolean(values.jpgstream))  Util.log("true",this);  // throws null pointer
+				else Util.log("false", this);
+			} catch (Exception e)  { Util.printError(e); }
+			break;
+
+		case jpgstream:
+			if (str== null) str="";
+			if (str.equals(streamstate.stop.toString())) {
+				state.delete(values.jpgstream);
+				break;
+			}
+			if (str.equals("")) str = AutoDock.HIGHRES;
+			new OpenCVUtils(this).jpgStream(str);
+//			opencvutils.jpgStream(str);
+			break;
+
 		}
 	}
 
@@ -907,7 +916,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case chat:
 			chat(str);
 			break;
-		case dockgrabbed: 
+		case dockgrabbed: // TODO: unused?
 			docker.autoDock("dockgrabbed " + str);
 			state.set(State.values.dockgrabbusy.name(), false);
 			break;
@@ -1060,8 +1069,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public boolean frameGrab() {
 
 		 if(state.getBoolean(State.values.framegrabbusy.name()) || 
-				 !(state.get(State.values.stream).equals("camera") || 
-						 state.get(State.values.stream).equals("camandmic"))) {
+				 !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
+						 state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 			 messageplayer("stream unavailable or framegrab busy, command dropped", null, null);
 			 return false;
 		 }
@@ -1122,15 +1131,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 			int headersize = size - (width*height*4)-1;
 
 			frameData.position(headersize); // skip past header
-			
+
+			boolean invalid = true;
 			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 			for(int y=0; y<height; y++) {
 				for (int x=0; x<width; x++) {
-//					int rgb = frameData.getInt();    // argb ok for png only 
-					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					int rgb = frameData.getInt();    // argb ok for png only
+					if (rgb != 0) invalid = false;
+					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
 					processedImage.setRGB(x, y, rgb);
 				}
 			}
+
+			if (invalid) Util.log("error, framegrab invalid", this);
 			
 			state.set(State.values.framegrabbusy.name(), false);
 
@@ -1161,16 +1174,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			int headersize = 307248 - (width*height*4);
 			int headersize = size - (width*height*4) -1;
 			frameData.position(headersize); // skip past header
-			
+
+			boolean invalid = true;
 			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 			for(int y=0; y<height; y++) {
 				for (int x=0; x<width; x++) {
-//					int rgb = frameData.getInt();    // argb ok for png only 
-					int rgb = frameData.getInt() & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					int rgb = frameData.getInt();    // argb ok for png only
+					if (rgb != 0) invalid = false;
+					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
 					processedImage.setRGB(x, y, rgb);
 				}
 			}
-			
+			if (invalid) Util.log("error, framegrab empty", this);
+
 			state.set(State.values.framegrabbusy.name(), false);
 			
 		} catch (Exception e) {			Util.printError(e);		}
@@ -1369,7 +1385,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeSettings(GUISettings.vset, "vcustom");
 		settings.writeSettings(GUISettings.vcustom, str);
 		String s = "custom stream set to: " + str;
-		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
+		if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+				!state.getBoolean(State.values.autodocking)) {
 			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}
@@ -1380,7 +1397,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void streamSettingsSet(String str) {
 		settings.writeSettings(GUISettings.vset, "v" + str);
 		String s = "stream set to: " + str;
-		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
+		if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+				!state.getBoolean(State.values.autodocking)) {
 			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}

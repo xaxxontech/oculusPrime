@@ -84,7 +84,7 @@ public class StereoTesting extends JFrame {
 	}
 	
 	private void sgbmTest() {
-		developer.image.OpenCVUtils cv = new OpenCVUtils();
+//		developer.image.OpenCVUtils cv = new OpenCVUtils();
 
 //        Mat[] mats = captureImages();
         Mat[] mats = loadImages();
@@ -133,15 +133,15 @@ public class StereoTesting extends JFrame {
         topView = Stereo.topViewProbabilityRendering(topView);
 
 		
-		JLabel pic0 = new JLabel(new ImageIcon(cv.matToBufferedImage(left)));
-		JLabel pic1 = new JLabel(new ImageIcon(cv.matToBufferedImage(right)));
+		JLabel pic0 = new JLabel(new ImageIcon(OpenCVUtils.matToBufferedImage(left)));
+		JLabel pic1 = new JLabel(new ImageIcon(OpenCVUtils.matToBufferedImage(right)));
 
         Core.normalize(disparity, disparity, 0, 255, Core.NORM_MINMAX, CvType.CV_8U); 
 //		Imgproc.cvtColor(left, left,Imgproc.COLOR_BGR2GRAY);
 //		Imgproc.resize(leftc, leftc, new Size(120, 68));
 //		Imgproc.cvtColor(disparity, disparity,Imgproc.COLOR_GRAY2BGR);
 //		leftc.copyTo(new Mat(disparity, new Rect(0,0,120,68)));
-		JLabel pic2 = new JLabel(new ImageIcon(cv.matToBufferedImage(disparity)));
+		JLabel pic2 = new JLabel(new ImageIcon(OpenCVUtils.matToBufferedImage(disparity)));
 
 		Mapper.addArcPath(topView, 0, 0);
 //		Mapper.addArcPath(topView, 10, -0.6);
@@ -197,7 +197,7 @@ public class StereoTesting extends JFrame {
     private void distanceScanMatchTest() {
     	int h = 320;
     	Stereo stereo = new Stereo();
-    	developer.image.OpenCVUtils cv = new OpenCVUtils();
+//    	developer.image.OpenCVUtils cv = new OpenCVUtils();
     	
         String folder = "Z:\\xaxxon\\oculusPrime\\software\\scans-dev-temp\\stereo\\";
 //    	String folder = "/mnt/skyzorg/xaxxon/oculusPrime/software/scans-dev-temp/stereo/";
@@ -213,7 +213,7 @@ public class StereoTesting extends JFrame {
 		
 		Mat m = Stereo.convertShortToMat(topViewBefore);
 		panel.setBounds(5, 5, m.width(), m.height()+5);
-		JLabel pic0 = new JLabel(new ImageIcon(cv.matToBufferedImage(m)));
+		JLabel pic0 = new JLabel(new ImageIcon(OpenCVUtils.matToBufferedImage(m)));
 		panel.add(pic0);
 		panel.repaint();
 		
@@ -229,7 +229,7 @@ public class StereoTesting extends JFrame {
 		
 		m = Stereo.convertShortToMat(topViewAfter);
 		panel_1.setBounds(640, 5, m.width(), m.height()+5);
-		JLabel pic1 = new JLabel(new ImageIcon(cv.matToBufferedImage(m)));
+		JLabel pic1 = new JLabel(new ImageIcon(OpenCVUtils.matToBufferedImage(m)));
 		panel_1.add(pic1);
 		panel_1.repaint();
 		
@@ -274,7 +274,7 @@ public class StereoTesting extends JFrame {
 		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		System.out.println(Core.NATIVE_LIBRARY_NAME);
 
-		final developer.image.OpenCVUtils cv = new OpenCVUtils();
+//		final developer.image.OpenCVUtils cv = new OpenCVUtils();
 		
 		final VideoCapture capture1 = new VideoCapture(1);
 
@@ -303,7 +303,7 @@ public class StereoTesting extends JFrame {
 				    	if( capture1.isOpened()) {
 				    		Mat left = new Mat();
 				    		capture1.read(left);
-				    		pic0.setIcon(new ImageIcon(cv.matToBufferedImage(left)));
+				    		pic0.setIcon(new ImageIcon(OpenCVUtils.matToBufferedImage(left)));
 				    		panel.repaint(); 
 				    	}
 				    	
@@ -312,7 +312,7 @@ public class StereoTesting extends JFrame {
 				    	if( capture0.isOpened()) {
 				    		Mat right = new Mat();
 				    		capture0.read(right);
-				    		pic1.setIcon(new ImageIcon(cv.matToBufferedImage(right)));
+				    		pic1.setIcon(new ImageIcon(OpenCVUtils.matToBufferedImage(right)));
 				    		panel_1.repaint(); 
 				    	}
 					}
