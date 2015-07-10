@@ -74,15 +74,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============", this);
-		PowerLogger.append("\n==============Oculus Prime Java Start Ach:"+ System.getProperty("sun.arch.data.model")  +"===============", this);
+		Util.log("\n==============Oculus Prime Java Start Ach:" + System.getProperty("sun.arch.data.model") + "===============", this);
+		PowerLogger.append("\n==============Oculus Prime Java Start Ach:" + System.getProperty("sun.arch.data.model") + "===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
 		settings = Settings.getReference();
 		state = State.getReference();
-		NetworkMonitor.setApp(this);
+//		NetworkMonitor.setApp(this);
 		banlist = BanList.getRefrence();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
@@ -251,6 +251,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
+		Util.updateExternalIPAddress();
 		
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			openNIRead = new developer.depth.OpenNIRead();
@@ -282,12 +283,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
-		grabberInitialize();	
-		state.set(State.values.lastusercommand, System.currentTimeMillis());  
+		grabberInitialize();
+		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
 
-		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
-		watchdog = new SystemWatchdog(this); 
+		watchdog = new SystemWatchdog(this);
 		
 		new Thread(new Runnable() { public void run() {
 			Util.delay(10000);  // arduino takes 10 sec to reach full power?

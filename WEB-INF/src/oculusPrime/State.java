@@ -31,6 +31,7 @@ public class State {
 		powererror, forceundock,
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
+		localaddress, externaladdress,
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
@@ -39,8 +40,8 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime,
-		
-		localaddress, externaladdress, // network
+
+		// TODO: network, moved to jetty, nuke
 		signalspeed, ssid, gateway, ethernetaddress,
 		
 	}

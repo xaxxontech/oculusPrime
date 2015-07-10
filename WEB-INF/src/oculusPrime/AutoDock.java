@@ -85,9 +85,11 @@ public class AutoDock {
 			app.message("auto-dock in progress", "motion", "moving");
 			Util.log("autodock go", this);
 			PowerLogger.append("autodock go", this);
-					}
+		}
 		else if (cmd[0].equals(autodockmodes.dockgrabbed.toString())) {
-			
+
+			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) return; // in case stop cmd missed and charged straight into dock
+
 			if (cmd[1].equals(dockgrabmodes.find.toString()) ) { // x,y,width,height,slope
 				
  				if (!state.getBoolean(State.values.dockfound)) {
@@ -701,19 +703,24 @@ public class AutoDock {
 			Util.log("dockGrab() error, dockgrabbusy", this);
 			return;
 		}
-		
+
+		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
+				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
+			app.message("stream unavailable", null, null);
+			Util.log("error, stream unavailable", this);
+			return;
+		}
+
+		if (state.getBoolean(State.values.framegrabbusy)) {
+			app.message("framegrab busy", null, null);
+			Util.log("error, framegrab busy", this);
+			state.delete(State.values.framegrabbusy); // TODO: testing
+			return;
+		}
+
 		state.set(oculusPrime.State.values.dockgrabbusy, true);
 		state.delete(oculusPrime.State.values.dockfound);
 		state.delete(oculusPrime.State.values.dockmetrics);
-
-		if (state.getBoolean(State.values.framegrabbusy.name())
-				|| ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
-				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-			app.message("framegrab busy or stream unavailable", null, null);
-			Util.log("error, framegrab busy", this);
-			state.delete(State.values.framegrabbusy);
-			return;
-		}
 
 		if (app.grabber instanceof IServiceCapableConnection) {
 			state.set(State.values.framegrabbusy.name(), true);

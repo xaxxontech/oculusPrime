@@ -37,7 +37,7 @@ public class NetworkMonitor implements Observer {
 		
 	private NetworkMonitor(){
 		
-		updateExternalIPAddress();
+//		updateExternalIPAddress();
 		connectionUpdate();
 		runNetworkTool();
 		
@@ -59,7 +59,7 @@ public class NetworkMonitor implements Observer {
 		
 		if(key.equals(values.externaladdress.name())) 
 			if( ! state.exists(values.ethernetaddress))
-				updateExternalIPAddress();
+				Util.updateExternalIPAddress();
 	
 		if(key.equals(values.ssid.name())) {
 			
@@ -697,36 +697,7 @@ public class NetworkMonitor implements Observer {
 		return result;
 	}
 	
-	private void updateExternalIPAddress(){
-		new Thread(new Runnable() { public void run() {
-			
-			if(state.exists(values.externaladdress)) {
-				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-					Util.log("updateExternalIPAddress(): ping sucsessful, wasted call, reject..", null);
-					return;
-				}
-			}
-			
-			try {
 
-				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-
-				int i;
-				String address = "";
-				while ((i = in.read()) != -1) address += (char)i;
-				in.close();
-
-				if(Util.validIP(address)) state.set(values.externaladdress, address);
-				else state.delete(values.externaladdress);
-				
-			} catch (Exception e) {
-				Util.log("updateExternalIPAddress():"+ e.getMessage(), null);
-				state.delete(values.externaladdress);
-			}
-		} }).start();
-	}
 	
 	public static String getPingTime() {
 		return /*	" a: " + (System.currentTimeMillis()-apLast)/1000 + */" d: " + (System.currentTimeMillis()-defaultLast)/1000 ; 

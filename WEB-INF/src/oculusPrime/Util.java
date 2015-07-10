@@ -13,6 +13,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -557,6 +558,38 @@ public class Util {
 			Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
 		
 		return time;	
+	}
+
+	public static void updateExternalIPAddress(){
+		new Thread(new Runnable() { public void run() {
+			State state = State.getReference();
+
+			if(state.exists(State.values.externaladdress)) {
+				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
+				if(Util.pingWIFI(state.get(State.values.externaladdress)) != null) {
+					Util.log("updateExternalIPAddress(): ping sucsessful, wasted call, reject..", null);
+					return;
+				}
+			}
+
+			try {
+
+				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
+				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+
+				int i;
+				String address = "";
+				while ((i = in.read()) != -1) address += (char)i;
+				in.close();
+
+				if(Util.validIP(address)) state.set(State.values.externaladdress, address);
+				else state.delete(State.values.externaladdress);
+
+			} catch (Exception e) {
+				Util.log("updateExternalIPAddress():"+ e.getMessage(), null);
+				state.delete(State.values.externaladdress);
+			}
+		} }).start();
 	}
 	
 }
