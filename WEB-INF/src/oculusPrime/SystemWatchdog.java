@@ -38,6 +38,10 @@ public class SystemWatchdog {
 	
 	private class Task extends TimerTask {
 		public void run() {
+			
+			// ensure these addresses exist 
+			if( ! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
+			if( ! state.exists(values.localaddress)) Util.updateLocalIPAddress();
 
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 

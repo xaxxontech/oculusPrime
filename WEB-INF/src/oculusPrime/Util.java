@@ -13,6 +13,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -27,19 +28,21 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import oculusPrime.State.values;
+
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
 public class Util {
 	
-	private static final int PRECISION = 2;
+	public final static String sep = System.getProperty("file.separator");
+	private static final int PRECISION = 2;	
 	public static final long ONE_DAY = 86400000;
 	public static final long ONE_MINUTE = 60000;
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
-	public final static String sep = System.getProperty("file.separator");
 
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -557,6 +560,101 @@ public class Util {
 			Util.debug("pingWIFI(): ping timed out, took over a second: " + (System.currentTimeMillis()-start));
 		
 		return time;	
+	}
+	
+
+	public static boolean updateLocalIPAddress(){	
+		
+		State state = State.getReference();
+
+		try {			
+			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig | grep \"inet addr\""};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				if( ! line.contains("127.0.0.1")) {
+
+					Util.log("updateExternalIPAddress():"+ line, null);
+					
+					String addr = line.substring(line.indexOf(":")+1); 
+					addr = addr.substring(0, addr.indexOf(" ")).trim();
+									
+					if( ! validIP(addr)) {
+						
+						Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
+
+					}
+					
+					State.getReference().set(values.localaddress, addr);
+
+				}
+			}
+		} catch (Exception e) {
+
+			Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
+			state.delete(values.localaddress);		
+			
+		}
+		
+		return false;
+	}
+	
+	public static String lookupWIFIDevice(){
+		
+		String wdev = null;
+		
+		try {
+			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if( ! line.startsWith("DEVICE") && line.contains("wireless")){
+					// if(line.contains("connected")) connected = true;
+					// if(line.contains("unavailable")) connected = false;
+					String[] list = line.split(" ");
+					wdev = list[0];
+				}
+			}
+		} catch (Exception e) {
+			Util.log("lookupDevice(): exception: " + e.getLocalizedMessage(), null);
+		}
+		
+		return wdev;
+	}
+	
+	public static void updateExternalIPAddress(){
+		new Thread(new Runnable() { public void run() {
+			
+			State state = State.getReference();
+			if(state.exists(values.externaladdress)) {
+				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
+				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
+					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
+					return;
+				}
+			}
+			
+			try {
+
+				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
+				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+
+				int i;
+				String address = "";
+				while ((i = in.read()) != -1) address += (char)i;
+				in.close();
+
+				if(Util.validIP(address)) state.set(values.externaladdress, address);
+				else state.delete(values.externaladdress);
+				
+			} catch (Exception e) {
+				Util.log("updateExternalIPAddress():"+ e.getMessage(), null);
+				state.delete(values.externaladdress);
+			}
+		} }).start();
 	}
 	
 }

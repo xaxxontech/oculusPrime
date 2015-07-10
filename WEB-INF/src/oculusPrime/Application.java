@@ -81,9 +81,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
 		settings = Settings.getReference();
-		state = State.getReference();
-		NetworkMonitor.setApp(this);
 		banlist = BanList.getRefrence();
+		state = State.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
 		

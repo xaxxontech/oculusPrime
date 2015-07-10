@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.Vector;
 
 import javax.servlet.ServletConfig;
@@ -32,7 +33,8 @@ public class TestServlet extends HttpServlet {
 	static boolean wifiBusy = false;
 	static String currentSSID = null;
 	static String pingtime = null;
-	static String gateway = null;
+	static String gateway = null;	
+	static String status = null;
 	static String apUUID = null;
 	static String wdev = null;
 		
@@ -41,7 +43,6 @@ public class TestServlet extends HttpServlet {
 		
 		lookupAccessPoint();
 		lookupCurrentSSID();
-		// connectionsNever();
 		lookupConnections();
 		lookupDevice();
 		killApplet();
@@ -63,6 +64,7 @@ public class TestServlet extends HttpServlet {
 		if(!(ip.startsWith("10.42.0") || ip.startsWith("127.0.0") || ip.startsWith("0.0.0"))){
 			System.out.println("doGet(): only allow lan IP's addresses... " +ip);
 		//	return;
+		// TODO: ACTIVATE 
 		}
 			
 		String action = null;
@@ -87,6 +89,14 @@ public class TestServlet extends HttpServlet {
 		}
 	
 		if(action != null){ 
+
+			if(action.equals("status")){
+				response.setContentType("text/html");
+				PrintWriter out = response.getWriter();				
+				out.println(status);
+				out.close();
+				return;
+			}
 			
 			if(action.equals("connect")){	
 				sendLogin(request, response, router);
@@ -148,15 +158,13 @@ public class TestServlet extends HttpServlet {
 		StringBuffer html = new StringBuffer();
 		if(currentSSID == null) html.append(" -- not connected --  <br> \n");
 		else html.append("connected: <b>" + currentSSID + " </b><br> \n"); 
-			
-		if(DEBUG) html.append(gateway + "&nbsp;&nbsp;&nbsp;&nbsp;" + pingtime + "<br><br>\n");
-		
+					
 		if( ! wifiBusy){
-			html.append(" -- <a href=\"http://"+addr+"/oculusprime?action=ap\">start access point mode</a><br>\n");
-			html.append(" -- <a href=\"http://"+addr+"/oculusprime?action=purge\">purge all connections</a><br>\n");
-			html.append(" -- <a href=\"http://"+addr+"/oculusprime?action=config\">configure router</a><br>\n");	
-			html.append(" -- <a href=\"http://"+addr+"/oculusprime?action=disconnect\">disconnect</a><br>\n");
-			html.append(" -- <a href=\"http://"+addr+"/oculusprime?action=scan\">scan wifi</a><br><br>\n");
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=ap\">start access point mode</a><br>\n");
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=purge\">purge all connections</a><br>\n");
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=config\">configure router</a><br>\n");	
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=disconnect\">disconnect</a><br>\n");
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=scan\">scan wifi</a><br><br>\n");
 		}
 		
 		html.append(" -- access points -- <br>\n");
@@ -196,8 +204,8 @@ public class TestServlet extends HttpServlet {
 					if(line.contains("filtered") || !runningPingThread) break;
 					if(line.contains("time")) {
 						pingtime = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
-						if(DEBUG) System.out.println(this.getId() + " " + (System.currentTimeMillis() - lastping) 
-								+ " " + pingtime + " " + currentSSID + " " + gateway);
+						status = new Date().toString() + ", " + currentSSID + ", " + gateway + ", " 
+								+ pingtime + "ms, " + (System.currentTimeMillis() - lastping) + "ms";	
 					} 
 					
 					lastping = System.currentTimeMillis();
