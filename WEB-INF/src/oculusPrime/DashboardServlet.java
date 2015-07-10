@@ -16,15 +16,20 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "4";
-	static final double VERSION = new Updater().getCurrentVersion();
-// 	NetworkMonitor monitor = NetworkMonitor.getReference();
-	Settings settings = Settings.getReference();
-	BanList ban = BanList.getRefrence();
-	State state = State.getReference();
+	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
+	static double VERSION = 0; 
+	Settings settings = null; ;
+	BanList ban = null;
+	State state = null;
+	String wdev = null; 
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
+		VERSION = new Updater().getCurrentVersion();
+		settings = Settings.getReference();
+		ban = BanList.getRefrence();
+		state = State.getReference();
+		wdev = Util.lookupWIFIDevice();
 	}
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -42,47 +47,17 @@ public class DashboardServlet extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 	
-		String action = null;
-		String router = null; 
-		//String password = null;
 		String view = null;	
 		String delay = null;	
-		/// String member = null;	
 		
 		try {
-			
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
-			// member = request.getParameter("member");	
-			action = request.getParameter("action");
-			router = request.getParameter("router");
-			//password = request.getParameter("password");
-		
 		} catch (Exception e) {
 			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
 		}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
-
-		//if(password != null){
-		//	NetworkMonitor.changeWIFI(router, password);
-		//	response.sendRedirect("dashboard"); 
-		//	return;
-		//}
-		
-		if(action != null){ 
-			if(action.equals("connect")  && (router != null)){	
-				if(NetworkMonitor.connectionExists(router)){			
-					Util.log(request.getServerName()+" connect existing [" + router + "]", this);
-					NetworkMonitor.changeWIFI(router);
-					response.sendRedirect("dashboard");                              
-					return;
-				}
-			
-				sendLogin(request, response, router);
-				return;
-			}
-		}	
 		
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 
@@ -95,16 +70,7 @@ public class DashboardServlet extends HttpServlet {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
-/*				
-				if(member != null) {
-					Util.debug("member = " + member);
-					out.println(state.get(member.trim()));
-				}
-				else 
-				
-*/
 				out.println(state.toHTML() + "\n");
-				
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -144,16 +110,6 @@ public class DashboardServlet extends HttpServlet {
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html> \n");
 		out.close();	
-	}
-	
-	public void sendLogin(HttpServletRequest request, HttpServletResponse response, String ssid) throws IOException{
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		out.println("<html><body> \n\n");
-		out.println("connect to: " + ssid);
-		out.println("<form method=\"post\">password: <input type=\"password\" name=\"password\"></form>");
-		out.println("\n\n </body></html>");
-		out.close();
 	}
 	
 	public String toTableHTML(){
@@ -266,26 +222,9 @@ public class DashboardServlet extends HttpServlet {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"0\">  \n");
-		
-		String list = "oculus prime <br />version <b>" + VERSION + "</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br /><br />connections <hr> \n";
-		String[] ap = NetworkMonitor.getConnections(); 		
-		
-//		final String delete = "&nbsp;<a href=\"http://" + url + "?action=delete&router=";
-		final String router = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++)
-			list += /*delete + ap[i] + "\">x</a>&nbsp;&nbsp;" +*/ router + ap[i] + "\">" + ap[i] + "</a><br />\n";
-		 
-		list += "<br />access points&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <hr>  \n";
-		ap = NetworkMonitor.getAccessPoints();		
-		final String pw = "<a href=\"http://" + url + "?action=connect&router=";
-		for(int i = 0 ; i < ap.length ; i++) list += (pw + ap[i] + "\">" + ap[i] + "</a><br /> \n");
-		
-		str.append("<tr><td rowspan=\"10\" valign=\"top\">"+ list +"</tr> \n");
-		
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\">  \n");
 		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
-		
-		str.append("<td><b>ping</b><td>" + NetworkMonitor.getPingTime() + "<td><b>last</b><td>" + (System.currentTimeMillis()-NetworkMonitor.getLastPing()) + "   " 
+		str.append("<td><b>wifi</b><td>" + wdev + "<td><b>version</b><td>" + VERSION
 				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
 				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
 				+ "<td><b>lan</b><td>" + state.get(values.localaddress) 

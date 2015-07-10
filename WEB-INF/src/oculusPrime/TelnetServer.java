@@ -48,7 +48,6 @@ public class TelnetServer implements Observer {
 				}		
 			}
 
-			// connect 
 			try {
 			
 				in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -78,9 +77,9 @@ public class TelnetServer implements Observer {
 			sendToGroup(TELNETTAG+" "+printers.size() + " tcp connections active");
 			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
-			// loop on input from the client
 			String str = null;
 			while (true) {
+				
 				try {
 					str = in.readLine();
 				} catch (Exception e) {
@@ -93,18 +92,24 @@ public class TelnetServer implements Observer {
 					Util.debug("read thread, closing.", this);
 					break;
 				}
-						
-				// parse and run it 
-				str = str.trim();
-				if(str.length()>=1){
 					
-					if( ! manageCommand(str, out, in, clientSocket)) {
-						Util.debug("doPlayer(" + str + ")", this);	
-						doPlayer(str, out);
-					}
+				try {
+	
+					// parse and run it 
+					str = str.trim();
+					if(str.length()>=1){
+						
+						if( ! manageCommand(str, out, in, clientSocket)) {
+							Util.debug("doPlayer(" + str + ")", this);	
+							doPlayer(str, out);
+						}
+					}	
+							
+				} catch (Exception e) {
+					Util.log("parse error: " + e.getLocalizedMessage(), this);
 				}
 			}
-		
+	
 			// close up, must have a closed socket  
 			if (printers.contains(out)) shutDown("user disconnected", out, in, clientSocket);
 		}	
@@ -160,7 +165,6 @@ public class TelnetServer implements Observer {
 		app.driverCallServer(player, args);
 	}
 	
-	
 	/** add extra commands, macros here. Return true if the command was found */ 
 	private boolean manageCommand(final String str, PrintWriter out, BufferedReader in, Socket clientSocket){
 		
@@ -184,29 +188,6 @@ public class TelnetServer implements Observer {
 		case quit:
 		case exit: shutDown("user left", out, in, clientSocket); 
 			return true;
-		
-//		case settings:
-//			out.println("<multiline>");
-//			out.println(settings.toString());
-//			out.println("</multiline>");
-//			return true;
-//
-//		case state:
-//
-//			String s[] = str.split(" ");
-//			if (s.length == 3) {
-//				if (s[1].equals("delete")) state.delete(s[2]);
-//				else state.set(s[1], s[2]);
-//			}
-//
-//			if(s.length == 1){
-//				out.println("<multiline>");
-//				out.println(state.toString());
-//				out.println("</multiline>");
-//			}
-//
-//			return true;
-			
 		}
 		
 		// command was not managed 
@@ -295,15 +276,11 @@ public class TelnetServer implements Observer {
 				new ConnectionHandler(serverSocket.accept());
 
 			} catch (Exception e) {
-						
-				Util.log("....only happens at shutdown? can remove?", this);
-				Util.log("....failed server socket ConnectionHandler: ", e, this);
-
 				try {				
 					if(serverSocket.isBound())
 						serverSocket.close();
 				} catch (IOException ee) {
-					Util.log("....socket error: ", ee, this);
+					Util.log("socket error: ", ee, this);
 					return;					
 				}	
 				
@@ -313,8 +290,6 @@ public class TelnetServer implements Observer {
 	}
 
 	public void close() {
-		
-		// Util.log("...closing resources... ", this);
 		
 		for (int c = 0; c < printers.size(); c++) printers.get(c).close();
 		
