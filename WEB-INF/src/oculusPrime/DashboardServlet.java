@@ -3,6 +3,7 @@ package oculusPrime;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Vector;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -13,23 +14,25 @@ import javax.servlet.http.HttpServletResponse;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
-public class DashboardServlet extends HttpServlet {
+public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
-	static double VERSION = 0; 
-	Settings settings = null; ;
-	BanList ban = null;
-	State state = null;
-	String wdev = null; 
+	static double VERSION = new Updater().getCurrentVersion();
+	static Settings settings = null; ;
+	static BanList ban = null;
+	static State state = null;
+	static Vector<String> history;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
-		VERSION = new Updater().getCurrentVersion();
-		settings = Settings.getReference();
+		history = new Vector<String>();
+		settings = Settings.getReference();	
+		// wifidev = Util.lookupWIFIDevice();
+		// ethdev = Util.lookupETHDevice();
 		ban = BanList.getRefrence();
 		state = State.getReference();
-		wdev = Util.lookupWIFIDevice();
+		state.addObserver(this);
 	}
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -223,12 +226,16 @@ public class DashboardServlet extends HttpServlet {
 	public String toDashboard(final String url){
 		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\">  \n");
-		str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
-		str.append("<td><b>wifi</b><td>" + wdev + "<td><b>version</b><td>" + VERSION
-				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway)
-				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress)
-				+ "<td><b>lan</b><td>" + state.get(values.localaddress) 
-				+ "<td><b>wan</b><td>" + state.get(values.externaladdress)
+		if(state.exists(values.ssid))
+			str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
+		else
+			str.append("<tr><td><b>ssid</b><td><a href=\"http://127.0.0.1/oculusprime?action=push\">push</a><td><b>speed</b><td>");
+
+		str.append("<td><b>wifi</b><td>" + "<td><b>version</b><td>" + VERSION
+				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway) 
+				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress) // + " " + Util.ETH_DEVICE + " " + Util.WIFI_DEVICE
+				+ "<td><b>lan</b><td>" + state.get(values.localaddress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
+				+ "<td><b>wan</b><td>" + state.get(values.externaladdress) 
 				+ "</tr> \n");
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
@@ -242,10 +249,23 @@ public class DashboardServlet extends HttpServlet {
 			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
 				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
 				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
-				
-		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(15) + "</tr> \n");	
+		
+		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(7) + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\">" + getHTML() + "</tr> \n");	
 		str.append("\n</table>\n");
 		return str.toString();
 	}
+	
+	private String getHTML(){
+		String reply = "";
+		for(int i = 0 ; i < history.size() ; i++) reply += history.get(i) + " <br />\n";
+		return reply;
+	}
 
+	@Override
+	public void updated(String key) {
+		if(history.size() > 7) history.remove(0);
+		if(state.exists(key)) history.add(Util.getDateStamp() + " " +key + " = " + state.get(key));
+		else history.add(Util.getDateStamp() + " " + key + " was deleted");
+	}
 }

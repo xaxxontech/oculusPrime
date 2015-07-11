@@ -1,4 +1,4 @@
-package oculusPrime;
+package network;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,13 +13,16 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public class TestServlet extends HttpServlet {
+public class NetworkServlet extends HttpServlet {
 
 	static final long serialVersionUID = 1L;
 	static final long PING_TIMEOUT = 60000;
 	static final String AP = "ap";
-	static boolean DEBUG = true;
+	static final boolean DEBUG = true;
+//	static final boolean PURGE_BEFORE_CONNECTING = true;
 
+	
+	static TelnetClient telnet = null;
 	static Vector<String> accesspoints = new Vector<String>();
 	static Vector<String> connections = new Vector<String>();	
 		
@@ -35,19 +38,22 @@ public class TestServlet extends HttpServlet {
 	static String pingtime = null;
 	static String gateway = null;	
 	static String status = null;
+	static String ethUUID = null;
 	static String apUUID = null;
 	static String wdev = null;
 		
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 		
-		lookupAccessPoint();
+		lookupAccessPointUUID();
 		lookupCurrentSSID();
 		lookupConnections();
-		lookupDevice();
+		lookupEthernetUUID();
+		lookupWIFIDevice();
 		killApplet();
 		iwlist();
 		
+		telnet = new TelnetClient();
 		new iweventThread().start();
 		watchdogThread.start();
 		pingThread.start();
@@ -113,6 +119,7 @@ public class TestServlet extends HttpServlet {
 			if(action.equals("up")) changeWIFI(router);
 			if(action.equals(AP)) changeWIFI(AP); 		
 			if(action.equals("scan")) scan();
+			if(action.equals("push")) push();
 		
 			response.sendRedirect("/oculusprime"); 
 			return;
@@ -164,7 +171,8 @@ public class TestServlet extends HttpServlet {
 			html.append("<a href=\"http://"+addr+"/oculusprime?action=purge\">purge all connections</a><br>\n");
 			html.append("<a href=\"http://"+addr+"/oculusprime?action=config\">configure router</a><br>\n");	
 			html.append("<a href=\"http://"+addr+"/oculusprime?action=disconnect\">disconnect</a><br>\n");
-			html.append("<a href=\"http://"+addr+"/oculusprime?action=scan\">scan wifi</a><br><br>\n");
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=scan\">scan wifi</a><br>\n");
+			html.append("<a href=\"http://"+addr+"/oculusprime?action=push\">telnet push</a><br><br>\n");
 		}
 		
 		html.append(" -- access points -- <br>\n");
@@ -198,6 +206,7 @@ public class TestServlet extends HttpServlet {
 				BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
 				runningPingThread = true;
+				long cnt = 0;
 				String line = null;
 				lastping = System.currentTimeMillis();
 				while ((line = procReader.readLine()) != null){	
@@ -205,7 +214,9 @@ public class TestServlet extends HttpServlet {
 					if(line.contains("time")) {
 						pingtime = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 						status = new Date().toString() + ", " + currentSSID + ", " + gateway + ", " 
-								+ pingtime + "ms, " + (System.currentTimeMillis() - lastping) + "ms";	
+								+ pingtime + "ms, " + (System.currentTimeMillis() - lastping) + "ms" + ", ping " + cnt++;
+						
+						System.out.println(status);
 					} 
 					
 					lastping = System.currentTimeMillis();
@@ -226,22 +237,37 @@ public class TestServlet extends HttpServlet {
 		@Override
 		public void run() {		
 			try{				
-				for(;;){ 
+				for(int cnt = 0;;cnt++){ 
+						
+					// try{
 						
 					Thread.sleep(10000);
-			
-					if(currentSSID.equalsIgnoreCase(AP)) runningPingThread = false;
-					else {
-						if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT/3) reset();
-						if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT) {
-							if(DEBUG) System.out.println("watchdog the ping thread is timed out, starting AP..");
-							lastping = System.currentTimeMillis();
-							if(!wifiBusy) changeWIFI(AP);
-						}
+					
+					System.out.println("watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
+
+					if(currentSSID == null){
+						
+						System.out.println("null ssid - watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
+						runningPingThread = false;
+					
+					} else {
+						
+						System.out.println(currentSSID + " watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
+						
 					}
+					if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT/3) reset();
+					if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT) {
+						if(DEBUG) System.out.println("watchdog the ping thread is timed out, starting AP..");
+						lastping = System.currentTimeMillis();
+						if(!wifiBusy) changeWIFI(AP);
+					}
+							
+					//} catch (Exception e) {
+					//	System.out.println("watchdogThread: inner loop:" + e.getLocalizedMessage());
+					//}
 				}
 			} catch (Exception e) {
-				System.out.println("watchdogThread: " + e.getLocalizedMessage());
+				System.out.println("watchdogThread: out of loop: " + e.getLocalizedMessage());
 			}
 		}
 	}
@@ -264,7 +290,8 @@ public class TestServlet extends HttpServlet {
 					if(DEBUG) System.out.println("accesspointThread: timed out, try any connection.. ");
 					String tryme = lookupAutoConnect();
 					if(DEBUG) System.out.println("accesspointThread: try ssid: " + tryme);
-					if(tryme != null) changeWIFI(tryme);
+					// if(tryme != null) changeWIFI(tryme);
+					// TODO: FIXXXXXXXXXXX
 				}
 				
 				if(DEBUG) System.out.println("accesspointThread: exit.. ");
@@ -275,6 +302,19 @@ public class TestServlet extends HttpServlet {
 		}
 	}
 
+	private static void push(){
+		
+		if(telnet == null) telnet = new TelnetClient();
+		if(!telnet.isOpen()) telnet = new TelnetClient();
+
+		if(gateway == null) telnet.send("state delete gateway " + gateway);
+		else telnet.send("state gateway " + gateway);
+		
+		if(currentSSID == null)  telnet.send("state delete ssid");
+		else telnet.send("state ssid " + currentSSID);
+
+	}
+	
 	/* look for linux connection events beyond our control */
 	private static class iweventThread extends Thread {
 		@Override
@@ -286,11 +326,14 @@ public class TestServlet extends HttpServlet {
 				String line = null;
 				while ((line = procReader.readLine()) != null){	
 					if(line.contains("IEs:")) {
+				
 						if(DEBUG) System.out.println("iweventThread: connection changed..");
 						runningPingThread = false;
+				
 						lookupCurrentSSID();	
 						lookupConnections();
 						lookupGateway();
+						push();
 					} 
 				}
 			} catch (Exception e) {
@@ -309,14 +352,14 @@ public class TestServlet extends HttpServlet {
 		    			
 		    		wifiBusy = true;
 		    		
-		   // 		connectionsPurge(ssid);
+		//    		if(PURGE_BEFORE_CONNECTING) connectionsPurge();
 		    		
 		    		disconnect();
 		    		wifiDisable();
 		    		wifiEnable();
 		    		iwlist();
 
-		   // 		Thread.sleep(1000);
+		   // 	Thread.sleep(1000);
 		    		
 		    		String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid ,"password", password}; 
 					Process proc = Runtime.getRuntime().exec(cmd);				
@@ -378,10 +421,12 @@ public class TestServlet extends HttpServlet {
 	private synchronized static void reset(){
 		wifiBusy = true;		
 		runningPingThread = false;
-		try { Thread.sleep(2000); } catch (InterruptedException e) {} //TODO: UNNESSISARRY?? 
+		try { Thread.sleep(1000); } catch (InterruptedException e) {} 
 		lookupCurrentSSID();	
 		lookupConnections();
 		lookupGateway();
+		push();
+		
 		pingThread = new pingThread();
 		pingThread.start();
 		wifiBusy = false;
@@ -424,7 +469,7 @@ public class TestServlet extends HttpServlet {
 	
 	private void iwlist(){
 		
-		if(wdev==null) lookupDevice();
+		if(wdev==null) lookupWIFIDevice();
 		if(!connected) wifiEnable();
 		
 		// accesspoints.clear();
@@ -438,7 +483,7 @@ public class TestServlet extends HttpServlet {
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {
 				line = line.substring(line.indexOf("\"")+1, line.length()-1).trim();
-				if((line.length() > 0) && !accesspoints.contains(line)) 
+				if((line.length() > 0) && !accesspoints.contains(line) && !line.equals(AP)) 
 					accesspoints.add(line.trim());
 			}
 		} catch (Exception e) {
@@ -458,7 +503,7 @@ public class TestServlet extends HttpServlet {
 		}
 	}
 	
-	private void lookupDevice(){
+	private void lookupWIFIDevice(){
 		try {
 			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
 			String line = null;
@@ -551,6 +596,10 @@ public class TestServlet extends HttpServlet {
 	}
 
 	private static void connectionsPurge(){
+		
+		System.out.println("connectionsPurge(): ETH: " + ethUUID); 
+		System.out.println("connectionsPurge(): AP:  " + apUUID); 
+
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f uuid con"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -559,10 +608,11 @@ public class TestServlet extends HttpServlet {
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {	
-				String[] in = line.trim().split(" ");
-				if(!line.contains(apUUID)){ 
-					System.out.println("connectionsPurge(): deleting: " + in[in.length-1]); 
-					Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli con delete uuid " + in[in.length-1]});
+				if(!line.contains(apUUID) && !line.contains(ethUUID) && !line.contains("UUID")){ 
+					
+					System.out.println("connectionsPurge(): deleting: " + line); // in[in.length-1]); 
+					Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli con delete uuid " + line});
+			
 				}
 			}			
 		} catch (Exception e) {
@@ -575,8 +625,19 @@ public class TestServlet extends HttpServlet {
 		changeWIFI(AP);
 	}
 	
-	/*
-	private static void lookupEthernet(){
+	private static String getConnectionUUID(final String input){
+		String ans = null;
+		String[] line = input.split(" ");
+		for(int j = 0 ; j < line.length ; j++) {
+			if(line[j].matches("[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}")){
+				return line[j];
+			}
+		}
+		
+		return ans;
+	}
+	
+	private static void lookupEthernetUUID(){
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli con"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -584,19 +645,16 @@ public class TestServlet extends HttpServlet {
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {	
-				 if(line.contains("Strength")) { 
-					 currentSSID = line.substring(line.indexOf("*")+1, line.indexOf(":"));
+				 if(line.contains("ethernet")) { 
+					 System.out.println("lookupEthernet(): : " + line);
+					 ethUUID = getConnectionUUID(line);
 					 return;
 				 }
-			}
-			
-			currentSSID = null;
-			
+			}			
 		} catch (Exception e) {
-			System.out.println("connectionsNever(): exception: " + e.getLocalizedMessage());
+			System.out.println("lookupEthernet(): exception: " + e.getLocalizedMessage());
 		}
 	}
-	*/
 	
 	private static void lookupCurrentSSID(){
 		try {			
@@ -619,7 +677,7 @@ public class TestServlet extends HttpServlet {
 		}
 	}
 	
-	private static boolean lookupConnections(){
+	private static void lookupConnections(){
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f type,name con"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -628,24 +686,23 @@ public class TestServlet extends HttpServlet {
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {	
-				if(!connections.contains(line) && !line.equals("NAME")){
+				if(!connections.contains(line) && !line.contains("NAME")){
 					String[] args = line.split(" ");
 					if(args[0].contains("wireless")){
-						
-						System.out.println("**get[" + line.substring(args[0].length()).trim() + "]");
-						connections.add(line.substring(args[0].length()).trim());
-					
+						String con = line.substring(args[0].length()).trim();
+						if( !connections.contains(con) && !con.equals(AP)) {	
+							System.out.println("lookupConnections [" + con+ "]");
+							connections.add(con);
+						}
 					}
 				}
 			}			
 		} catch (Exception e) {
 			System.out.println("getConnections(): exception: " + e.getLocalizedMessage());
 		}
-		
-		return false;
 	}
 	
-	private static boolean lookupAccessPoint(){
+	private static void lookupAccessPointUUID(){
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f name,uuid con"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -662,8 +719,6 @@ public class TestServlet extends HttpServlet {
 		} catch (Exception e) {
 			System.out.println("lookupAccessPoint(): exception: " + e.getLocalizedMessage());
 		}
-		
-		return false;
 	}
 	
 	private static void killApplet(){

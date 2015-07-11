@@ -11,11 +11,13 @@ import oculusPrime.commport.PowerLogger;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class SystemWatchdog {
+public class SystemWatchdog implements Observer {
 	
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
-	
+
+	static final String AP = "ap"; // must match jetty's network servlet !!
+
 	private static final long DELAY = 10000; // 10 sec 
 	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
 	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
@@ -33,7 +35,17 @@ public class SystemWatchdog {
 	
 	SystemWatchdog(Application a){ 
 		application = a;
+		state.addObserver(this);
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);	
+	}
+
+	@Override
+	public void updated(String key) {
+		if(key.equals(values.ssid.name())){
+			Util.log("..........system-watchdog, state: " + key, this);
+			Util.updateExternalIPAddress();
+			Util.updateLocalIPAddress();
+		}
 	}
 	
 	private class Task extends TimerTask {
@@ -43,6 +55,15 @@ public class SystemWatchdog {
 			if( ! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
 			if( ! state.exists(values.localaddress)) Util.updateLocalIPAddress();
 
+			// show AP mode enabled if not busy 
+			if(state.equals(values.ssid, AP)){
+				if(state.getInteger(values.cpu) < 30){
+			    	if( ! state.getBoolean(State.values.autodocking)) { 
+			    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+			    	}
+				}
+			}
+			
 			// safety: check for force_undock command from battery firmware
 			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 
 				
@@ -101,8 +122,8 @@ public class SystemWatchdog {
 			else  lowbattredock = false;
 
 			int cpuNow = Util.getCPU();
-			if (cpuNow > 50) Util.log("cpu: "+cpuNow, this);
-			state.set(values.cpu, cpuNow);
+			if(cpuNow > 50) Util.log("cpu too high: "+cpuNow, this); // update in state only if changing
+			if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 9) state.set(values.cpu, cpuNow);
 
 		}
 	}

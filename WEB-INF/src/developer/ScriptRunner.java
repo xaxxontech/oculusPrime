@@ -1,10 +1,12 @@
-package oculusPrime;
+package developer;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+
+import oculusPrime.Util;
 
 /*
  * function to auto run all scripts under /oculusPrime/webapps/scripts/startup

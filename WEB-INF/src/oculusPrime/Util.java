@@ -35,6 +35,9 @@ import org.xml.sax.InputSource;
 
 public class Util {
 	
+//	public final static String WIFI_DEVICE = lookupWIFIDevice();
+//	public final static String ETH_DEVICE = lookupETHDevice();
+
 	public final static String sep = System.getProperty("file.separator");
 	private static final int PRECISION = 2;	
 	public static final long ONE_DAY = 86400000;
@@ -377,9 +380,7 @@ public class Util {
 			DocumentBuilder builder;
 		
 			builder = factory.newDocumentBuilder();
-
 			InputSource is = new InputSource(new StringReader(xml));
-
 			return builder.parse(is);
 		
 		} catch (Exception e) {
@@ -414,17 +415,12 @@ public class Util {
 	    try {
 	    	
 	        if (ip == null || ip.isEmpty()) return false;
-	        
-
 	        String[] parts = ip.split( "\\." );
 	        if ( parts.length != 4 ) return false;
-	        
-
 	        for ( String s : parts ) {
 	            int i = Integer.parseInt( s );
 	            if ( (i < 0) || (i > 255) )
 	            	return false;
-	            
 	        }
 	        
 	        if(ip.endsWith(".")) return false;
@@ -563,6 +559,82 @@ public class Util {
 	}
 
 
+	public static void updateLocalIPAddress(){	
+		
+		State state = State.getReference();
+		String wdev = lookupWIFIDevice();
+
+		try {			
+			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				if(line.contains(wdev)) {
+
+					line = procReader.readLine();
+					Util.log("updateLocalIPAddress():"+ line, null);
+					
+					String addr = line.substring(line.indexOf(":")+1); 
+					addr = addr.substring(0, addr.indexOf(" ")).trim();
+									
+					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
+					else Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
+					return;
+				}
+			}
+		} catch (Exception e) {
+			Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
+			state.delete(values.localaddress);		
+		}
+	}
+	
+	private static String lookupWIFIDevice(){
+		
+		String wdev = null;
+		
+		try {
+			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if( ! line.startsWith("DEVICE") && line.contains("wireless")){
+					String[] list = line.split(" ");
+					wdev = list[0];
+				}
+			}
+		} catch (Exception e) {
+			Util.log("lookupDevice(): exception: " + e.getLocalizedMessage(), null);
+		}
+		
+		return wdev;
+	}
+	
+	private static String lookupETHDevice(){
+		
+		String dev = null;
+		
+		try {
+			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if( ! line.startsWith("DEVICE") && line.contains("ethernet")){
+					if(line.contains("unavailable")) State.getReference().delete(values.ethernetaddress);
+					String[] list = line.split(" ");
+					dev = list[0];
+				}
+			}
+		} catch (Exception e) {
+			Util.log("lookupDevice(): exception: " + e.getLocalizedMessage(), null);
+		}
+		
+		return dev;
+	}
+	
+	/*
 	public static boolean updateLocalIPAddress(){	
 		
 		State state = State.getReference();
@@ -598,33 +670,8 @@ public class Util {
 			state.delete(values.localaddress);		
 			
 		}
-		
-		return false;
-	}
+	 */
 	
-	public static String lookupWIFIDevice(){
-		
-		String wdev = null;
-		
-		try {
-			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
-			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {
-				if( ! line.startsWith("DEVICE") && line.contains("wireless")){
-					// if(line.contains("connected")) connected = true;
-					// if(line.contains("unavailable")) connected = false;
-					String[] list = line.split(" ");
-					wdev = list[0];
-				}
-			}
-		} catch (Exception e) {
-			Util.log("lookupDevice(): exception: " + e.getLocalizedMessage(), null);
-		}
-		
-		return wdev;
-	}
-
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 
