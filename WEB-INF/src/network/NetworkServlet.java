@@ -215,8 +215,6 @@ public class NetworkServlet extends HttpServlet {
 						pingtime = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 						status = new Date().toString() + ", " + currentSSID + ", " + gateway + ", " 
 								+ pingtime + "ms, " + (System.currentTimeMillis() - lastping) + "ms" + ", ping " + cnt++;
-						
-						System.out.println(status);
 					} 
 					
 					lastping = System.currentTimeMillis();
@@ -236,38 +234,28 @@ public class NetworkServlet extends HttpServlet {
 	private static class watchdogThread extends Thread {
 		@Override
 		public void run() {		
-			try{				
-				for(int cnt = 0;;cnt++){ 
-						
-					// try{
+			for(int cnt = 0;;cnt++){ 
+				try{
 						
 					Thread.sleep(10000);
 					
 					System.out.println("watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
 
 					if(currentSSID == null){
-						
 						System.out.println("null ssid - watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
 						runningPingThread = false;
+					} 
 					
-					} else {
-						
-						System.out.println(currentSSID + " watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
-						
-					}
 					if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT/3) reset();
 					if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT) {
 						if(DEBUG) System.out.println("watchdog the ping thread is timed out, starting AP..");
 						lastping = System.currentTimeMillis();
 						if(!wifiBusy) changeWIFI(AP);
 					}
-							
-					//} catch (Exception e) {
-					//	System.out.println("watchdogThread: inner loop:" + e.getLocalizedMessage());
-					//}
-				}
-			} catch (Exception e) {
-				System.out.println("watchdogThread: out of loop: " + e.getLocalizedMessage());
+					
+				} catch (Exception e) {	
+					System.out.println("watchdogThread: in loop: " + e.getLocalizedMessage());
+				}	
 			}
 		}
 	}
@@ -290,7 +278,7 @@ public class NetworkServlet extends HttpServlet {
 					if(DEBUG) System.out.println("accesspointThread: timed out, try any connection.. ");
 					String tryme = lookupAutoConnect();
 					if(DEBUG) System.out.println("accesspointThread: try ssid: " + tryme);
-					// if(tryme != null) changeWIFI(tryme);
+					if(tryme != null) changeWIFI(tryme);
 					// TODO: FIXXXXXXXXXXX
 				}
 				
@@ -307,7 +295,7 @@ public class NetworkServlet extends HttpServlet {
 		if(telnet == null) telnet = new TelnetClient();
 		if(!telnet.isOpen()) telnet = new TelnetClient();
 
-		if(gateway == null) telnet.send("state delete gateway " + gateway);
+		if(gateway == null) telnet.send("state delete gateway");
 		else telnet.send("state gateway " + gateway);
 		
 		if(currentSSID == null)  telnet.send("state delete ssid");

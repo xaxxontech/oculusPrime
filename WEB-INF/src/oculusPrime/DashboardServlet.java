@@ -27,11 +27,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 		history = new Vector<String>();
-		settings = Settings.getReference();	
-		// wifidev = Util.lookupWIFIDevice();
-		// ethdev = Util.lookupETHDevice();
-		ban = BanList.getRefrence();
+		settings = Settings.getReference();
 		state = State.getReference();
+		ban = BanList.getRefrence();
 		state.addObserver(this);
 	}
 
@@ -225,32 +223,38 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\">  \n");
-		if(state.exists(values.ssid))
-			str.append("<tr><td><b>ssid</b><td>" + state.get(values.ssid) + "<td><b>speed</b><td>"+state.get(values.signalspeed));
-		else
-			str.append("<tr><td><b>ssid</b><td><a href=\"http://127.0.0.1/oculusprime?action=push\">push</a><td><b>speed</b><td>");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
+		
+		String ssid = "disconnected";
+		if(state.exists(values.ssid)) ssid = state.get(values.ssid);
+		
+		String eth = "disconnected";
+		if(state.exists(values.ethernetaddress)) eth = state.get(values.ethernetaddress);
+			
+		str.append("<tr><td><b>version</b><td>" + VERSION 
+				+ "<td><b>ssid</b><td>" + ssid
+				+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) 
+				+ "<td><b>cpu</b><td>" + state.get(values.cpu) 
+				+ "% </tr> \n");
 
-		str.append("<td><b>wifi</b><td>" + "<td><b>version</b><td>" + VERSION
-				+ "<tr><td><b>gate</b><td>" + state.get(values.gateway) 
-				+ "<td><b>eth</b><td>" + state.get(values.ethernetaddress) // + " " + Util.ETH_DEVICE + " " + Util.WIFI_DEVICE
+		str.append("<tr><td><b>gate</b><td>" + state.get(values.gateway) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>lan</b><td>" + state.get(values.localaddress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>wan</b><td>" + state.get(values.externaladdress) 
+				+ "<td><b>wan</b><td>" + state.get(values.externaladdress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
+				+ "<td><b>eth</b><td>" + eth + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "</tr> \n");
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
 				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
 				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + "<td><b>moving</b><td>" + state.get(values.moving)
-				// + " <b>direction </b>" + state.get(values.direction) // + " <td><b>speed </b>" + state.get(values.motorspeed) 
 				+ "</tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
-			//	+ "<td><b>volts </b>" + state.get(values.battvolts) + " <b>life </b> " + state.get(values.batterylife) 
-				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "<td><b>cpu</b> " + state.get(values.cpu) + "%"
-				+ "<td><b>telnet</b> " + state.get(values.telnetusers) + " </tr> \n");
+				+ "<td><b>life</b><td>" + state.get(values.batterylife) 
+				+ "<td><b>volts</b><td>" + state.get(values.battvolts) 
+				+ "</tr> \n");
 		
-		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(7) + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + getHTML() + "</tr> \n");	
 		str.append("\n</table>\n");
 		return str.toString();

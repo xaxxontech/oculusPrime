@@ -1,6 +1,5 @@
 package oculusPrime;
 
-import developer.NavigationLog;
 import developer.Ros;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.State.values;
@@ -42,7 +41,7 @@ public class SystemWatchdog implements Observer {
 	@Override
 	public void updated(String key) {
 		if(key.equals(values.ssid.name())){
-			Util.log("..........system-watchdog, state: " + key, this);
+			// Util.log("..........system-watchdog, state: " + key, this);
 			Util.updateExternalIPAddress();
 			Util.updateLocalIPAddress();
 		}
@@ -122,8 +121,10 @@ public class SystemWatchdog implements Observer {
 			else  lowbattredock = false;
 
 			int cpuNow = Util.getCPU();
-			if(cpuNow > 50) Util.log("cpu too high: "+cpuNow, this); // update in state only if changing
-			if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 9) state.set(values.cpu, cpuNow);
+			if(cpuNow > 50) Util.log("cpu too high: "+cpuNow, this); 
+			
+			// update in state only if changing
+			if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 5) state.set(values.cpu, cpuNow);
 
 		}
 	}
