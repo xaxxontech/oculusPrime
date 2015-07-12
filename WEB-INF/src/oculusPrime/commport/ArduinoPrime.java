@@ -1476,10 +1476,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final double nominalvolts = 12.0;
 		final double exponent = 1.6;
 
-		if (state.exists(State.values.battvolts.toString())) {
-			if (Math.abs(state.getDouble(State.values.battvolts.toString()) - volts) > 2) // sanity check
-				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.battvolts), this);
-			else  volts = Double.parseDouble(state.get(State.values.battvolts));
+		if (state.exists(State.values.batteryvolts.toString())) {
+			if (Math.abs(state.getDouble(State.values.batteryvolts.toString()) - volts) > 2) // sanity check
+				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.batteryvolts), this);
+			else  volts = Double.parseDouble(state.get(State.values.batteryvolts));
 		}
 		
 		n = n * Math.pow(nominalvolts/volts, exponent);

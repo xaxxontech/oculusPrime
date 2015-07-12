@@ -138,13 +138,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		str.append("<tr>"
 				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + state.get(values.rosmapinfo) 
-			// 	+ "<td><b>rosamcl</b><td>" + state.get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + state.state.get(values.rosglobalpath) 
 				+ "</tr> \n");
 			
 		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
 				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
-			//	+ "<td><b>rosmapwaypoints</b><td>" + state.get(values.rosmapwaypoints) 
 				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
 				+ "</tr> \n");
 		
@@ -169,7 +166,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	}
 	
 	public String rosDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"2\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\"> \n");
 		
 		str.append("<tr>" 
 				+ "<td><b>distanceangle</b><td>" + state.get(values.distanceangle)
@@ -193,13 +190,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		str.append("<tr>"
 				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + state.get(values.rosmapinfo) 
-			// 	+ "<td><b>rosamcl</b><td>" + state.get(values.rosamcl) 
-			//	+ "<td><b>rosglobalpath</b><td>" + state.get(values.rosglobalpath) 
 				+ "</tr> \n");
 			
 		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
 				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
-			//	+ "<td><b>rosmapwaypoints</b><td>" + state.get(values.rosmapwaypoints) 
 				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
 				+ "</tr> \n");
 		
@@ -223,38 +217,34 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"1\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
 		
 		String ssid = "disconnected";
 		if(state.exists(values.ssid)) ssid = state.get(values.ssid);
 		
-		String eth = "disconnected";
-		if(state.exists(values.ethernetaddress)) eth = state.get(values.ethernetaddress);
-			
 		str.append("<tr><td><b>version</b><td>" + VERSION 
 				+ "<td><b>ssid</b><td>" + ssid
-				+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) 
 				+ "<td><b>cpu</b><td>" + state.get(values.cpu) 
 				+ "% </tr> \n");
-
-		str.append("<tr><td><b>gate</b><td>" + state.get(values.gateway) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>lan</b><td>" + state.get(values.localaddress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
+		
+		str.append("<tr><td><b>lan</b><td>" + state.get(values.localaddress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>wan</b><td>" + state.get(values.externaladdress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>eth</b><td>" + eth + "&nbsp;&nbsp;&nbsp;&nbsp;"
+				+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients"
 				+ "</tr> \n");
 		
-		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
+		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
-				+ "<td><b>motion</b><td>" + state.get(values.motionenabled) + "<td><b>moving</b><td>" + state.get(values.moving)
+				+ "<td><b>life</b><td>" + state.get(values.batterylife) 
 				+ "</tr> \n");
 				
-		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport)
+		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
-				+ "<td><b>life</b><td>" + state.get(values.batterylife) 
-				+ "<td><b>volts</b><td>" + state.get(values.battvolts) 
+				+ "<td><b>volts</b><td>" + state.get(values.batteryvolts) 
 				+ "</tr> \n");
 		
+		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + getHTML() + "</tr> \n");	
 		str.append("\n</table>\n");
 		return str.toString();
@@ -268,6 +258,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	@Override
 	public void updated(String key) {
+	
+		if(key.equals(values.batteryinfo.name())) return;
+		if(key.equals(values.batterylife.name())) return;
+		if(key.equals(values.batteryvolts.name())) return;
+		
 		if(history.size() > 7) history.remove(0);
 		if(state.exists(key)) history.add(Util.getDateStamp() + " " +key + " = " + state.get(key));
 		else history.add(Util.getDateStamp() + " " + key + " was deleted");

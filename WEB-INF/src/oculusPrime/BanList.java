@@ -226,20 +226,20 @@ public class BanList {
 		@Override
 		public void run() {
 				
-			if(state.exists(values.gateway)){
-				if( ! known.contains(state.get(values.gateway)))
-					known.add(state.get(values.gateway));
-			}
+//			if(state.exists(values.gateway)){
+//				if( ! known.contains(state.get(values.gateway)))
+//					known.add(state.get(values.gateway));
+//			}
 			
 			if(state.exists(values.localaddress)){ 
 				if( ! known.contains(state.get(values.localaddress)))
 					known.add(state.get(values.localaddress));
 			}
 			
-			if(state.exists(values.ethernetaddress)){ 
-				if( ! known.contains(state.get(values.ethernetaddress)))
-					known.add(state.get(values.ethernetaddress));
-			}
+//			if(state.exists(values.ethernetaddress)){ 
+//				if( ! known.contains(state.get(values.ethernetaddress)))
+//					known.add(state.get(values.ethernetaddress));
+//			}
 			
 			if(blocked.isEmpty()) return;
 						

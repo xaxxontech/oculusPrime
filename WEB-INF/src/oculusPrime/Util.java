@@ -573,16 +573,12 @@ public class Util {
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {	
 				if(line.contains(wdev)) {
-
 					line = procReader.readLine();
-					Util.log("updateLocalIPAddress():"+ line, null);
-					
 					String addr = line.substring(line.indexOf(":")+1); 
 					addr = addr.substring(0, addr.indexOf(" ")).trim();
 									
 					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
 					else Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
-					return;
 				}
 			}
 		} catch (Exception e) {
@@ -612,6 +608,7 @@ public class Util {
 		return wdev;
 	}
 	
+	/*
 	private static String lookupETHDevice(){
 		
 		String dev = null;
@@ -633,6 +630,7 @@ public class Util {
 		
 		return dev;
 	}
+	*/
 	
 	/*
 	public static boolean updateLocalIPAddress(){	

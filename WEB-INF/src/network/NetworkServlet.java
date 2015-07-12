@@ -53,7 +53,6 @@ public class NetworkServlet extends HttpServlet {
 		killApplet();
 		iwlist();
 		
-		telnet = new TelnetClient();
 		new iweventThread().start();
 		watchdogThread.start();
 		pingThread.start();
@@ -298,9 +297,10 @@ public class NetworkServlet extends HttpServlet {
 		if(gateway == null) telnet.send("state delete gateway");
 		else telnet.send("state gateway " + gateway);
 		
-		if(currentSSID == null)  telnet.send("state delete ssid");
-		else telnet.send("state ssid " + currentSSID);
+	//	if(currentSSID == null)  telnet.send("state delete ssid");
+	//	else telnet.send("state ssid " + currentSSID);
 
+		telnet.close();
 	}
 	
 	/* look for linux connection events beyond our control */

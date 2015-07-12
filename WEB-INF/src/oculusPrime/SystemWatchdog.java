@@ -41,7 +41,6 @@ public class SystemWatchdog implements Observer {
 	@Override
 	public void updated(String key) {
 		if(key.equals(values.ssid.name())){
-			// Util.log("..........system-watchdog, state: " + key, this);
 			Util.updateExternalIPAddress();
 			Util.updateLocalIPAddress();
 		}
@@ -56,7 +55,7 @@ public class SystemWatchdog implements Observer {
 
 			// show AP mode enabled if not busy 
 			if(state.equals(values.ssid, AP)){
-				if(state.getInteger(values.cpu) < 30){
+				if(state.getInteger(values.cpu) < 50){
 			    	if( ! state.getBoolean(State.values.autodocking)) { 
 			    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 			    	}
@@ -124,7 +123,9 @@ public class SystemWatchdog implements Observer {
 			if(cpuNow > 50) Util.log("cpu too high: "+cpuNow, this); 
 			
 			// update in state only if changing
-			if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 5) state.set(values.cpu, cpuNow);
+			// if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 5)
+			
+			state.set(values.cpu, cpuNow);
 
 		}
 	}

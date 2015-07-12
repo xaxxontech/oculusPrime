@@ -27,11 +27,12 @@ public class State {
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 
-		wallpower, batterylife, powerport, batteryinfo, battvolts,  // power
+		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
 		powererror, forceundock,
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
-		localaddress, externaladdress,
+		localaddress, externaladdress, ssid, 
+		//TODO:  keep ssid, used to trigger java from jetty 
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
@@ -40,9 +41,6 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime,
-
-		// TODO: network, moved to jetty, nuke
-		signalspeed, ssid, gateway, ethernetaddress,
 		
 	}
 
