@@ -1,9 +1,12 @@
 package network;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.Date;
 import java.util.Vector;
 
@@ -16,17 +19,18 @@ import javax.servlet.http.HttpServletResponse;
 public class NetworkServlet extends HttpServlet {
 
 	static final long serialVersionUID = 1L;
-	static final long PING_TIMEOUT = 60000;
-	static final String AP = "ap";
+	static final long PING_TIMEOUT = 60000;	
 	static final boolean DEBUG = true;
-//	static final boolean PURGE_BEFORE_CONNECTING = true;
-
+	static final String AP = "ap";
 	
-	static TelnetClient telnet = null;
+//	static final boolean PURGE_BEFORE_CONNECTING = true;
+	
 	static Vector<String> accesspoints = new Vector<String>();
 	static Vector<String> connections = new Vector<String>();	
 		
 	static private Thread watchdogThread = new watchdogThread();
+	static private Thread apThread = new accesspointThread();
+	
 	static private Thread pingThread = new pingThread();
 	static long lastping = System.currentTimeMillis();
 	
@@ -35,6 +39,7 @@ public class NetworkServlet extends HttpServlet {
 	static boolean connected = false;
 	static boolean wifiBusy = false;
 	static String currentSSID = null;
+	static String telnetPort = "4444";
 	static String pingtime = null;
 	static String gateway = null;	
 	static String status = null;
@@ -74,10 +79,12 @@ public class NetworkServlet extends HttpServlet {
 			
 		String action = null;
 		String router = null; 
+		String port = null;
 		String password = null;
-	
+		
 		try {
 			
+			port = request.getParameter("port");
 			action = request.getParameter("action");
 			router = request.getParameter("router");
 			password = request.getParameter("password");
@@ -112,11 +119,12 @@ public class NetworkServlet extends HttpServlet {
 				sendConfig(request, response);
 				return;	
 			}
-			
+					
+			if(action.equals("telnet") && port!=null) telnetPort = port;
 			if(action.equals("purge")) connectionsPurge();
 			if(action.equals("disconnect")) disconnect();
 			if(action.equals("up")) changeWIFI(router);
-			if(action.equals(AP)) changeWIFI(AP); 		
+			if(action.equals(AP)) changeWIFI(AP); 	
 			if(action.equals("scan")) scan();
 			if(action.equals("push")) push();
 		
@@ -164,7 +172,10 @@ public class NetworkServlet extends HttpServlet {
 		StringBuffer html = new StringBuffer();
 		if(currentSSID == null) html.append(" -- not connected --  <br> \n");
 		else html.append("connected: <b>" + currentSSID + " </b><br> \n"); 
-					
+	
+		html.append("gateway: <b>" + gateway + " </b><br> \n"); 
+		html.append("telnet port: <b>" + telnetPort + " </b><br><br> \n"); 
+		
 		if( ! wifiBusy){
 			html.append("<a href=\"http://"+addr+"/oculusprime?action=ap\">start access point mode</a><br>\n");
 			html.append("<a href=\"http://"+addr+"/oculusprime?action=purge\">purge all connections</a><br>\n");
@@ -195,9 +206,12 @@ public class NetworkServlet extends HttpServlet {
 	private static class pingThread extends Thread {	
 		@Override
 		public void run() {
-			try{			
+			try{				
+					
+				if(currentSSID != null) if(currentSSID.equals(AP)) return;
+			
+				if(DEBUG) System.out.println("pingThread: starting thread: " + AP);
 				
-				if(DEBUG) System.out.println("pingThread: starting thread..");
 				if(gateway == null) lookupGateway();
 				if(gateway == null) return;
 				
@@ -205,7 +219,6 @@ public class NetworkServlet extends HttpServlet {
 				BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
 				runningPingThread = true;
-				long cnt = 0;
 				String line = null;
 				lastping = System.currentTimeMillis();
 				while ((line = procReader.readLine()) != null){	
@@ -213,7 +226,7 @@ public class NetworkServlet extends HttpServlet {
 					if(line.contains("time")) {
 						pingtime = line.substring(line.indexOf("time=")+5, line.indexOf(" ms"));
 						status = new Date().toString() + ", " + currentSSID + ", " + gateway + ", " 
-								+ pingtime + "ms, " + (System.currentTimeMillis() - lastping) + "ms" + ", ping " + cnt++;
+								+ pingtime + "ms, " + (System.currentTimeMillis() - lastping) + "ms";
 					} 
 					
 					lastping = System.currentTimeMillis();
@@ -233,20 +246,17 @@ public class NetworkServlet extends HttpServlet {
 	private static class watchdogThread extends Thread {
 		@Override
 		public void run() {		
-			for(int cnt = 0;;cnt++){ 
+			for(;;){ 
 				try{
 						
 					Thread.sleep(10000);
 					
-					System.out.println("watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
+					if(DEBUG) System.out.println(currentSSID + "  " +(System.currentTimeMillis() - lastping) + "ms");
 
-					if(currentSSID == null){
-						System.out.println("null ssid - watch dog: " + cnt + "  " +(System.currentTimeMillis() - lastping) + "ms");
-						runningPingThread = false;
-					} 
+					if(currentSSID == null) runningPingThread = false;
 					
-					if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT/3) reset();
-					if(( System.currentTimeMillis() - lastping ) > PING_TIMEOUT) {
+					if((System.currentTimeMillis() - lastping ) > PING_TIMEOUT/3) reset();
+					if((System.currentTimeMillis() - lastping ) > PING_TIMEOUT){
 						if(DEBUG) System.out.println("watchdog the ping thread is timed out, starting AP..");
 						lastping = System.currentTimeMillis();
 						if(!wifiBusy) changeWIFI(AP);
@@ -264,12 +274,14 @@ public class NetworkServlet extends HttpServlet {
 		@Override
 		public void run() {		
 			try{				
-				for(int i = 0 ; i < 60 ; i++){ 
-						
-					Thread.sleep(2000);
-			
+				
+				if(DEBUG) System.out.println("accesspointThread: starting....." );
+				cancelAccessPoint = false;	
+				Thread.sleep(2000);
+				
+				for(int i = 0 ; i < 120 ; i++){ 
+					Thread.sleep(1200);
 					if(DEBUG) System.out.println("accesspointThread: " + i );
-					
 					if(cancelAccessPoint) break;
 				}
 				
@@ -278,10 +290,9 @@ public class NetworkServlet extends HttpServlet {
 					String tryme = lookupAutoConnect();
 					if(DEBUG) System.out.println("accesspointThread: try ssid: " + tryme);
 					if(tryme != null) changeWIFI(tryme);
-					// TODO: FIXXXXXXXXXXX
 				}
 				
-				if(DEBUG) System.out.println("accesspointThread: exit.. ");
+				if(DEBUG) System.out.println("accesspointThread: exit.... ");
 				
 			} catch (Exception e) {
 				System.out.println("accesspointThread: " + e.getLocalizedMessage());
@@ -290,17 +301,38 @@ public class NetworkServlet extends HttpServlet {
 	}
 
 	private static void push(){
+		new Thread(){
+			public void run() {	
+				
+				String cmd = "state ";
+				if(currentSSID == null) cmd += "delete ssid";
+				else cmd += "ssid " + currentSSID;
 		
-		if(telnet == null) telnet = new TelnetClient();
-		if(!telnet.isOpen()) telnet = new TelnetClient();
-
-		if(gateway == null) telnet.send("state delete gateway");
-		else telnet.send("state gateway " + gateway);
+				PrintWriter out = null;
+				Socket socket = null;
+				try {
+				
+					socket = new Socket("127.0.0.1", Integer.parseInt(telnetPort));
+					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));	
+					Thread.sleep(500);
+					
+				} catch (Exception e) {
+					System.out.println("TelnetCient(): can not connect on port: " + telnetPort);
+					return;
+				}
+				
+				System.out.println("TelnetCient(): telnet port: " + telnetPort + " " + cmd);
+				out.println(cmd);
 		
-	//	if(currentSSID == null)  telnet.send("state delete ssid");
-	//	else telnet.send("state ssid " + currentSSID);
-
-		telnet.close();
+				try {	
+				
+					Thread.sleep(1000);
+					out.close();
+					socket.close(); 
+					
+				} catch (Exception e) {e.printStackTrace();}   
+			}
+		}.start();
 	}
 	
 	/* look for linux connection events beyond our control */
@@ -314,10 +346,8 @@ public class NetworkServlet extends HttpServlet {
 				String line = null;
 				while ((line = procReader.readLine()) != null){	
 					if(line.contains("IEs:")) {
-				
 						if(DEBUG) System.out.println("iweventThread: connection changed..");
 						runningPingThread = false;
-				
 						lookupCurrentSSID();	
 						lookupConnections();
 						lookupGateway();
@@ -346,8 +376,6 @@ public class NetworkServlet extends HttpServlet {
 		    		wifiDisable();
 		    		wifiEnable();
 		    		iwlist();
-
-		   // 	Thread.sleep(1000);
 		    		
 		    		String cmd[] = new String[]{"nmcli", "dev", "wifi", "connect", ssid ,"password", password}; 
 					Process proc = Runtime.getRuntime().exec(cmd);				
@@ -387,9 +415,10 @@ public class NetworkServlet extends HttpServlet {
 					System.out.println("changeWIFI(): [" + ssid + "] exit code: " +  proc.exitValue());
 					if(proc.exitValue() == 0) {
 						if(ssid.equalsIgnoreCase(AP)) {
-							System.out.println("changeWIFI(): [" + ssid + "] ap mode, start timer..");
 							runningPingThread = false;
-							new accesspointThread().start();
+							System.out.println("changeWIFI(): [" + ssid + "] ap mode, start timer..");
+							apThread = new accesspointThread();
+							apThread.start();
 						} else {
 							System.out.println("changeWIFI(): ap turnned off, stop timer..");
 							cancelAccessPoint = true;
@@ -459,9 +488,6 @@ public class NetworkServlet extends HttpServlet {
 		
 		if(wdev==null) lookupWIFIDevice();
 		if(!connected) wifiEnable();
-		
-		// accesspoints.clear();
-	
 		if(wdev==null) return;
 		
 		try {
@@ -539,28 +565,6 @@ public class NetworkServlet extends HttpServlet {
 			System.out.println("disconnect(): exception: " + e.getLocalizedMessage());
 		}
 	}
-	
-	/*
-	private static void connectionsNever(){
-		try {			
-			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f timestamp,uuid con"};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-			
-			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {	
-				String[] in = line.split(" ");
-				if(in[0].equals("0") && !line.contains(apUUID)) {
-					System.out.println("connectionsNever(): deleting uuid: " + in[in.length-1]); 
-					Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli con delete uuid " + in[in.length-1]});
-				}
-			}			
-		} catch (Exception e) {
-			System.out.println("connectionsNever(): exception: " + e.getLocalizedMessage());
-		}
-	}
-	*/
 	
 	private static String lookupAutoConnect(){
 		try {			
