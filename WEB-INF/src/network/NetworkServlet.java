@@ -20,7 +20,7 @@ public class NetworkServlet extends HttpServlet {
 
 	static final long serialVersionUID = 1L;
 	static final long PING_TIMEOUT = 60000;	
-	static final boolean DEBUG = true;
+	static final boolean DEBUG = false;
 	static final String AP = "ap";
 	
 //	static final boolean PURGE_BEFORE_CONNECTING = true;
