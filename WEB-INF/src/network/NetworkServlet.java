@@ -32,13 +32,9 @@ public class NetworkServlet extends HttpServlet {
 	static Vector<String> accesspoints = new Vector<String>();
 	static Vector<String> connections = new Vector<String>();	
 		
-	static private Thread watchdogThread = new watchdogThread();
-//	static private Thread apThread = new accesspointThread();
-	
-	static private Thread pingThread = new pingThread();
+	static Thread pingThread = new pingThread();
+	static Thread watchdogThread = new watchdogThread();
 	static long lastping = System.currentTimeMillis();
-	
-//	static boolean cancelAccessPoint = false;	
 	static boolean runningPingThread = true;
 	static boolean connected = false;
 	static boolean wifiBusy = false;
@@ -59,20 +55,22 @@ public class NetworkServlet extends HttpServlet {
 		lookupConnections();
 		lookupEthernetUUID();
 		lookupWIFIDevice();
-		killApplet();
+//		killApplet();
 		iwlist();
 		
 		new iweventThread().start();
 		watchdogThread.start();
 		pingThread.start();
-		
-		//createConnection("bradzphone", "killbillz");
-		
-		//if(autoConnectAP()) {
-		//	System.out.println(".... warn: accesspoint is auto connect!");
+				
+		if(autoConnectAP()) {
 			
-		createAPConnection();
-		//}
+			System.out.println("\n\n\n\n------ WARNING: accesspoint is auto connect! \n\n\n");
+			
+			// createAPConnection();
+		
+		}
+		
+//		validAPConnection();
 		
 	}
 
@@ -288,8 +286,8 @@ public class NetworkServlet extends HttpServlet {
 				if(DEBUG) System.out.println("accesspointThread: starting....." );
 				try { Thread.sleep(5000); } catch (InterruptedException e) {} 
 				
-				for(int i = 0 ; i < 100 ; i++){ 
-					try { Thread.sleep(5000); } catch (InterruptedException e) {} 
+				for(int i = 0 ; i < 120 ; i++){ 
+					try { Thread.sleep(2000); } catch (InterruptedException e) {} 
 					if(DEBUG) System.out.println("accesspointThread: " + i );
 					if(currentSSID != null) 
 						if( ! currentSSID.equals(AP))
@@ -402,7 +400,61 @@ public class NetworkServlet extends HttpServlet {
 
 	}
 
-	
+	private void validAPConnection(){
+		
+		disconnect();
+		
+		String uuid = null;
+		
+		try {			
+			
+			Thread.sleep(1000);
+			
+			String[] cmd = new String[]{"/bin/sh", "-c", "cat " + AP_PATH};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if(line.contains("uuid")) uuid = line;
+				if(line.contains("mode=adhoc")) 
+					System.out.println("validAPConnection(): not configured as AP!");
+			}
+		} catch (Exception e) {
+			System.out.println("validAPConnection(): exception: " + e.getLocalizedMessage());
+		}
+		
+		if( ! new File(AP_PATH).delete()){
+			System.out.println("validAPConnection(): can't delete file: " + AP_PATH);
+			return;
+		}
+		
+		try {
+			FileWriter fw = new FileWriter(new File(AP_PATH));
+			fw.append("[connection] \r\n");
+			fw.append("id=ap\r\n");
+			
+			fw.append(uuid + "\r\n");
+			// fw.append("uuid=00000000-0000-0000-0000-000000000000 \r\n");
+			fw.append("type=802-11-wireless \r\n");
+			fw.append("autoconnect=false \r\n");
+			fw.append(" \r\n");
+			fw.append("[802-11-wireless] \r\n");
+			fw.append("ssid=ap \r\n");
+			fw.append("mode=ap \r\n");
+			fw.append(" \r\n");
+			fw.append("[ipv6] \r\n");
+			fw.append("method=auto \r\n");	
+			fw.append("[ipv4] \r\n");
+			fw.append("method=shared \r\n");
+			fw.append(" \r\n");
+			fw.close();
+		} catch (IOException e) {
+			System.out.println("validAPConnection(): " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
 	private void createAPConnection(){
 		
 		new File(AP_PATH).delete();
@@ -412,7 +464,7 @@ public class NetworkServlet extends HttpServlet {
 			fw.append("[connection] \r\n");
 			fw.append("id=ap\r\n");
 			
-			fw.append("uuid=8d424132-db80-44c6-9689-c162a159ebed\r\n");
+			   fw.append("uuid=8d424132-db80-44c6-9689-c162a159ebed\r\n");
 			// fw.append("uuid=00000000-0000-0000-0000-000000000000 \r\n");
 			fw.append("type=802-11-wireless \r\n");
 			fw.append("autoconnect=false \r\n");
@@ -442,8 +494,9 @@ public class NetworkServlet extends HttpServlet {
 		    	try {	
 		    			
 		    		wifiBusy = true;
-		    				    		
-		    		disconnect();
+		    				    
+		    		// be sure disconnected so scanning can happen.. 
+		    		accesspoints.clear();
 		    		disconnect();
 		    		disconnect();
 	    			Thread.sleep(1000);
@@ -451,21 +504,15 @@ public class NetworkServlet extends HttpServlet {
 		    		wifiEnable();
 		    		wifiEnable();
 		    		
-		    		for(int i = 0 ; i < 20 ; i++){
-		 
-		    			Thread.sleep(1000);
-		    			iwlist();
 		    		
-	    				System.out.println("... waiting for: " + ssid + " " + i);
-	    				
-		    			if(accesspoints.contains(ssid)) {
-		    				System.out.println("... found ssid!");
-		    				break;
-		    			}
+		    		for(int i = 0 ; i < 20 ; i++){
+		    			iwlist();
+		    			if(accesspoints.contains(ssid)) break;
+		    			Thread.sleep(1000);
 		    		}
 		    		
 		    		if( ! accesspoints.contains(ssid)) {
-		    			System.out.println("...... ssid not found!");
+		    			System.out.println("changeWIFI(password): ssid not found, reject..");
 		    			wifiBusy = false;
 		    			return;
 		    		}
@@ -531,8 +578,6 @@ public class NetworkServlet extends HttpServlet {
 	private synchronized static void reset(){
 		wifiBusy = true;		
 		runningPingThread = false;
-		
-		//try { Thread.sleep(1000); } catch (InterruptedException e) {} 
 	
 		lookupCurrentSSID();	
 		lookupConnections();
@@ -677,6 +722,7 @@ public class NetworkServlet extends HttpServlet {
 	}
 	
 	private static boolean autoConnectAP(){
+		
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -f autoconnect,name con"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -686,12 +732,30 @@ public class NetworkServlet extends HttpServlet {
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {					
 				if(line.startsWith("yes") && line.contains(AP)) {	
-					System.out.println("apAuto: "+line);
+					// System.out.println("autoConnectAP: "+line);
 					return true;
 				}
 			}			
 		} catch (Exception e) {
 			System.out.println("lookupAutoConnect(): exception: " + e.getLocalizedMessage());
+		}
+		
+		// check the file too, sometimes it doesn't show up in nmcli
+		try {			
+			String[] cmd = new String[]{"/bin/sh", "-c", "cat " + AP_PATH};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				// System.out.println("autoConnectAP(): " + line);
+				if(line.contains("autoconnect=yes")) {	
+					return true;
+				}
+			}			
+		} catch (Exception e) {
+			System.out.println("autoConnectAP(): exception: " + e.getLocalizedMessage());
 		}
 		
 		return false;
@@ -716,6 +780,7 @@ public class NetworkServlet extends HttpServlet {
 				}
 			}			
 			
+			Thread.sleep(1000); // wait and check, should only be AP and Ethernet 
 			proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "ls /etc/NetworkManager/system-connections/"});
 			procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {
@@ -796,7 +861,7 @@ public class NetworkServlet extends HttpServlet {
 					if(args[0].contains("wireless")){
 						String con = line.substring(args[0].length()).trim();
 						if( !connections.contains(con) && !con.equals(AP)) {	
-							System.out.println("lookupConnections [" + con+ "]");
+							// System.out.println("lookupConnections [" + con+ "]");
 							connections.add(con);
 						}
 					}
