@@ -1,9 +1,13 @@
 package oculusPrime;
 
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
@@ -298,6 +302,29 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
 				
+		// TODO: set jetty servlet
+		new Thread(new Runnable() { public void run() {
+			Util.delay(5000);  // http://127.0.0.1/oculusprime/?action=telnet&port=4444
+			String url = "http://127.0.0.1/oculusprime/?action=telnet&port=" + settings.readSetting(ManualSettings.telnetport);
+			try {
+				
+				URLConnection connection = (URLConnection) new URL(url).openConnection();
+				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+				
+				Util.log("url: " + url, this);
+				
+				String line = null;
+				int i;
+				while ((i = in.read()) != -1) line += (char)i;
+				in.close();
+				
+				// Util.log(line, this);
+				
+			} catch (Exception e) {
+				Util.log("init():", e, this);
+			}
+		} }).start();
+		
 		Util.debug("application initialize done", this);
 
 	}
