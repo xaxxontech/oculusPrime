@@ -173,8 +173,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 				if (now - lastReset > RESET_DELAY &&
 						state.get(oculusPrime.State.values.dockstatus).equals(AutoDock.DOCKED) &&
+						!state.getBoolean(oculusPrime.State.values.autodocking) &&
 						state.get(oculusPrime.State.values.driver) == null && isconnected &&
 						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
+						commandList.size() == 0 &&
 						!state.getBoolean(oculusPrime.State.values.moving)) {
 
 					if (settings.getBoolean(GUISettings.navigation)) {

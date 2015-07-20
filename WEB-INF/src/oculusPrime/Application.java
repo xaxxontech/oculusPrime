@@ -41,6 +41,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final String VIDEOSOUNDMODEHIGH = "high";
 	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
+	public static final int GRABBERRESPAWN = 8000;
 	public static final String RED5_HOME = System.getenv("RED5_HOME");
 	public static final String APPFOLDER = "webapps" + Util.sep + "oculusPrime";
 	
@@ -182,7 +183,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			new Thread(new Runnable() {
 				public void run() {
 					try {
-						Thread.sleep(8000);
+						Thread.sleep(GRABBERRESPAWN);
 						if (grabber == null) {
 							grabberInitialize();
 						}
@@ -236,6 +237,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		setGrabberVideoSoundMode(videosoundmode);
 		Util.systemCall(System.getenv("RED5_HOME")+"/flashsymlink.sh");		
+	}
+
+	public void killGrabber() {
+		Util.systemCall("pkill chrome");    // TODO: use PID
 	}
  
 	/** */
@@ -747,14 +752,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case reboot:
 			powerport.writeStatusToEeprom();
-			Util.systemCall("pkill chrome"); // prevents error dialog on chrome startup
+			killGrabber(); // prevents error dialog on chrome startup
 			Util.delay(1000);
 			Util.reboot();
 			break;
 		
 		case systemshutdown:
 			powerport.writeStatusToEeprom();
-			Util.systemCall("pkill chrome"); // prevents error dialog on chrome startup
+			killGrabber(); // prevents error dialog on chrome startup
 			Util.delay(1000);
 			Util.shutdown();
 			break;
@@ -986,9 +991,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.log("setGrabberVideoSoundMode() error grabber reload timeout", this);
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-		sc.invoke("videoSoundMode", new Object[] { str });
+		sc.invoke("videoSoundMode", new Object[]{str});
 		state.set(State.values.videosoundmode, str);
-		Util.log("grabber video sound mode = "+str, this);
+		Util.log("grabber video sound mode = " + str, this);
 	}
 	
 	public void publish(streamstate mode) {
@@ -1459,7 +1464,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		if (! settings.getBoolean(ManualSettings.debugenabled))
-			Util.systemCall("pkill chrome");  // TODO: use PID
+			killGrabber();
 
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}

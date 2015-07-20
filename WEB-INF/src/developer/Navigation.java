@@ -240,50 +240,31 @@ public class Navigation {
 			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 
-			// dock
+			// camera, lights
 			app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
 			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
-//			Util.delay(25);
 			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
-//			Util.delay(25);
+			// do 180 deg turn
 			app.driverCallServer(PlayerCommands.left, "180");
 			Util.delay(app.comport.fullrotationdelay/2 + 2000);
 
 			// make sure dock in view before calling autodock go
-			// dock detect, rotate if necessary
-			int rot = 0;
-			while (true) {
-
-				app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
-				start = System.currentTimeMillis();
-				while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000)
-					Util.delay(10);  // wait
-
-				if (state.getBoolean(State.values.dockfound)) break; // great, onwards
-				else { // rotate a bit
-					app.comport.checkisConnectedBlocking(); // just in case
-					app.driverCallServer(PlayerCommands.left, "25");
-					Util.delay(10); // thread safe
-
-					start = System.currentTimeMillis();
-					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
-							&& System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
-					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
-				}
-				rot ++;
-
-				if (rot == 16) { // failure give up
-//					callForHelp(subject, body);
-					app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
-					app.driverCallServer(PlayerCommands.floodlight, "0");
-					app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to find dock");
-					return;
-				}
+			if (!finddock()) { // something wrong with camera capture, try again?
+				Util.delay(5000); // allow camera time to shutdown
+				app.killGrabber(); // force chrome restart
+				Util.delay(app.GRABBERRESPAWN + 4000); // allow time for grabber respawn
+				// camera, lights
+				app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
+				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
+				Util.delay(4000); // wait for cam startup, light adjust
+				app.comport.checkisConnectedBlocking(); // just in case
+				if (!finddock()) return; // give up
 			}
 
+			// onwards
 			SystemWatchdog.waitForCpu();
 			app.driverCallServer(PlayerCommands.autodock, autodockmodes.go.toString());
 
@@ -301,6 +282,44 @@ public class Navigation {
 
 		}  }).start();
 	}
+
+	// dock detect, rotate if necessary
+	private boolean finddock() {
+		int rot = 0;
+		while (true) {
+
+			app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
+			long start = System.currentTimeMillis();
+			while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000)
+				Util.delay(10);  // wait
+
+			if (state.getBoolean(State.values.dockfound)) break; // great, onwards
+			else { // rotate a bit
+				app.comport.checkisConnectedBlocking(); // just in case
+				app.driverCallServer(PlayerCommands.left, "25");
+				Util.delay(10); // thread safe
+
+				start = System.currentTimeMillis();
+				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
+						&& System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
+				Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
+			}
+			rot ++;
+
+			if (rot == 1) Util.log("error, rotation required", this);
+
+			if (rot == 16) { // failure give up
+//					callForHelp(subject, body);
+				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+				app.driverCallServer(PlayerCommands.floodlight, "0");
+				app.driverCallServer(PlayerCommands.messageclients, "Navigation.finddock() failed to find dock");
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 
 	public static void goalCancel() {
 		state.set(State.values.rosgoalcancel, true); // pass info to ros node
@@ -517,13 +536,19 @@ public class Navigation {
 				if (!waitForNavSystem()) {
 					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
 							null, name, consecutiveroute);
+
+					// check if cancelled while waiting
+					if (!state.exists(State.values.navigationroute)) return;
+					if (!state.get(State.values.navigationrouteid).equals(id)) return;
+
+					if (state.getUpTime() > Util.TEN_MINUTES) {
+						app.driverCallServer(PlayerCommands.reboot, null);
+						return;
+					}
+
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
-
-				// check if cancelled while waiting
-				if (!state.exists(State.values.navigationroute)) return;
-				if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
 				// start!
 				routestarttime = System.currentTimeMillis();
@@ -630,7 +655,7 @@ public class Navigation {
 				}
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					// TODO: send alert
+					// TODO: send alert?
 					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock",
 							routestarttime, null, name, consecutiveroute);
 //					cancelRoute(id);
