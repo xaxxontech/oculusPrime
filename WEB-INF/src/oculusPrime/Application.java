@@ -1,20 +1,26 @@
 package oculusPrime;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import org.jasypt.util.password.ConfigurablePasswordEncryptor;
+import org.opencv.core.Core;
+import org.red5.server.adapter.MultiThreadedApplicationAdapter;
+import org.red5.server.api.IConnection;
+import org.red5.server.api.Red5;
+import org.red5.server.api.service.IServiceCapableConnection;
+
+import developer.Navigation;
 import developer.NavigationLog;
+import developer.Ros;
+import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
 import developer.image.OpenCVUtils;
@@ -22,18 +28,6 @@ import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
-
-import org.opencv.core.Core;
-import org.red5.server.adapter.MultiThreadedApplicationAdapter;
-import org.red5.server.api.IConnection;
-import org.red5.server.api.Red5;
-import org.red5.server.api.service.IServiceCapableConnection;
-import org.jasypt.util.password.*;
-
-import developer.Navigation;
-import developer.UpdateFTP;
-import developer.Ros;
-import developer.depth.Mapper;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -271,8 +265,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 
-		// opencv
-		try {
+		
+		try { // opencv
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -280,13 +274,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		if (settings.getBoolean(GUISettings.navigation)) {
-
 			navigation = new developer.Navigation(this);
 			navigation.runAnyActiveRoute();
 		}
 		
-		if (UpdateFTP.configured()) new developer.UpdateFTP();
-
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
@@ -302,35 +293,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
 				
-		// TODO: set jetty servlet
-		new Thread(new Runnable() { public void run() {
-			Util.delay(5000);  
-			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(ManualSettings.telnetport);
-			try {
-				
-				URLConnection connection = (URLConnection) new URL(url).openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-				
-				Util.log("url: " + url, this);
-				
-				String line = null;
-				int i;
-				while ((i = in.read()) != -1) line += (char)i;
-				in.close();
-				
-				// Util.log(line, this);
-				
-			} catch (Exception e) {
-				Util.log("init():", e, this);
-			}
-		} }).start();
+		Util.setJettyTelnetPort();
 		
 		Util.debug("application initialize done", this);
-
 	}
 
 	private void grabberInitialize() {
-
 		if (settings.getBoolean(GUISettings.skipsetup)) {
 			grabber_launch("");
 		} else {

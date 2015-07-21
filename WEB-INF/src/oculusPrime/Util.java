@@ -702,4 +702,65 @@ public class Util {
 		} }).start();
 	}
 
+	public static void setJettyTelnetPort() {
+		new Thread(new Runnable() { public void run() {
+			Settings settings = Settings.getReference();
+			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(ManualSettings.telnetport);
+			try {
+				
+				URLConnection connection = (URLConnection) new URL(url).openConnection();
+				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+				
+				Util.log("url: " + url, this);
+				int i;
+				String line = null;
+				while ((i = in.read()) != -1) line += (char)i;
+				in.close();
+				
+				debug("setJettyTelnetPort(): "+line, this);
+				
+			} catch (Exception e) {
+				Util.log("setJettyTelnetPort():", e, this);
+			}
+		} }).start();
+	}
+	
+	public static void updateJetty() {
+		new Thread(new Runnable() { public void run() {
+			try {
+				String url = "http://127.0.0.1/?action=push";
+				URLConnection connection = (URLConnection) new URL(url).openConnection();
+				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+				
+				Util.log("url: " + url, this);
+				int i;
+				String line = null;
+				while ((i = in.read()) != -1) line += (char)i;
+				in.close();
+				
+				debug("updateJetty(): " + line, this);
+				
+			} catch (Exception e) {
+				Util.log("updateJetty():", e, this);
+			}
+		} }).start();
+	}
+
+	public static String getJettyStatus() {
+		String reply = "";
+		try {
+			String url = "http://127.0.0.1/?action=status";
+			URLConnection connection = (URLConnection) new URL(url).openConnection();
+			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+			
+			int i;
+			while ((i = in.read()) != -1) reply += (char)i;
+			in.close();
+							
+		} catch (Exception e) {
+			Util.log("getJettyStatus():" + e.getLocalizedMessage(), null);
+		}
+		return reply;
+	}
+
 }

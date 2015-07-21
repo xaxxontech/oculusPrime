@@ -221,6 +221,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String ssid = "disconnected";
 		if(state.exists(values.ssid)) ssid = state.get(values.ssid);
+		else Util.updateJetty();
 		
 		str.append("<tr><td><b>version</b><td>" + VERSION 
 				+ "<td><b>ssid</b><td>" + ssid
@@ -242,6 +243,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "<td><b>volts</b><td>" + state.get(values.batteryvolts) 
 				+ "</tr> \n");
 		
+		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
+		str.append("\n<tr><td colspan=\"11\">"+Util.getJettyStatus()+"</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
