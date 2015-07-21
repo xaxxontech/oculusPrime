@@ -263,7 +263,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.batterylife.name())) return;
 		if(key.equals(values.batteryvolts.name())) return;
 		
-		if(history.size() > 7) history.remove(0);
+		if(history.size() > 9) history.remove(0);
 		if(state.exists(key)) history.add(Util.getDateStamp() + " " +key + " = " + state.get(key));
 		else history.add(Util.getDateStamp() + " " + key + " was deleted");
 	}

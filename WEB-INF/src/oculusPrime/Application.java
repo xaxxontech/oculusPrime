@@ -304,8 +304,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 		// TODO: set jetty servlet
 		new Thread(new Runnable() { public void run() {
-			Util.delay(5000);  // http://127.0.0.1/oculusprime/?action=telnet&port=4444
-			String url = "http://127.0.0.1/oculusprime/?action=telnet&port=" + settings.readSetting(ManualSettings.telnetport);
+			Util.delay(5000);  
+			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(ManualSettings.telnetport);
 			try {
 				
 				URLConnection connection = (URLConnection) new URL(url).openConnection();
