@@ -244,7 +244,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "</tr> \n");
 		
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("\n<tr><td colspan=\"11\">"+Util.getJettyStatus()+"</tr> \n");
+		str.append("\n<tr><td colspan=\"11\">" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
@@ -261,10 +261,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	@Override
 	public void updated(String key) {
-	
 		if(key.equals(values.batteryinfo.name())) return;
 		if(key.equals(values.batterylife.name())) return;
 		if(key.equals(values.batteryvolts.name())) return;
+		if(key.equals(values.framegrabbusy.name())) return;
+		if(key.equals(values.rosscan.name())) return;
 		
 		if(history.size() > 9) history.remove(0);
 		if(state.exists(key)) history.add(Util.getDateStamp() + " " +key + " = " + state.get(key));

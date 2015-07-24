@@ -759,6 +759,7 @@ public class Util {
 							
 		} catch (Exception e) {
 			Util.log("getJettyStatus():" + e.getLocalizedMessage(), null);
+			reply = "not running, check settings..";
 		}
 		return reply;
 	}
