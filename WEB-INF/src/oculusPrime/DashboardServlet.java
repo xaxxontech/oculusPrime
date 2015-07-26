@@ -19,6 +19,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
 	static double VERSION = new Updater().getCurrentVersion();
+	static String httpport = null;
 	static Settings settings = null; ;
 	static BanList ban = null;
 	static State state = null;
@@ -27,8 +28,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 		history = new Vector<String>();
-		settings = Settings.getReference();
 		state = State.getReference();
+		httpport = state.get(State.values.httpport);
+		settings = Settings.getReference();
 		ban = BanList.getRefrence();
 		state.addObserver(this);
 	}
@@ -223,15 +225,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.exists(values.ssid)) ssid = state.get(values.ssid);
 		else Util.updateJetty();
 		
-		str.append("<tr><td><b>version</b><td>" + VERSION 
-				+ "<td><b>ssid</b><td>" + ssid
-				+ "<td><b>cpu</b><td>" + state.get(values.cpu) 
-				+ "% </tr> \n");
+		str.append("<tr><td><b>version</b><td>" + VERSION + "<td><b>ssid</b><td>" + ssid
+				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% </tr> \n");
 		
-		str.append("<tr><td><b>lan</b><td>" + state.get(values.localaddress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>wan</b><td>" + state.get(values.externaladdress) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients"
-				+ "</tr> \n");
+		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\" \">" 
+				+ state.get(values.localaddress) + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+		
+		String ext = state.get(values.externaladdress);
+		if( ext == null ) str.append("<td><b>wan</b><td>unkown");
+		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" + ext + "</a>");
+
+		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
@@ -244,7 +248,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "</tr> \n");
 		
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("\n<tr><td colspan=\"11\">"+Util.getJettyStatus()+"</tr> \n");
+		str.append("\n<tr><td colspan=\"11\">" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
@@ -261,10 +265,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	@Override
 	public void updated(String key) {
-	
 		if(key.equals(values.batteryinfo.name())) return;
 		if(key.equals(values.batterylife.name())) return;
 		if(key.equals(values.batteryvolts.name())) return;
+		if(key.equals(values.framegrabbusy.name())) return;
+		if(key.equals(values.rosscan.name())) return;
 		
 		if(history.size() > 9) history.remove(0);
 		if(state.exists(key)) history.add(Util.getDateStamp() + " " +key + " = " + state.get(key));
