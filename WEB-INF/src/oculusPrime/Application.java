@@ -510,7 +510,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case emailsettingsupdate: emailSettingsUpdate(str); break;
 		case motionenabletoggle:motionEnableToggle();break;
 		case clicksteer:clickSteer(str);break;
-		case streamsettingscustom:streamSettingsCustom(str);break;
+		case streamsettingscustom: streamSettingsCustom(str);break;
 		case streamsettingsset:streamSettingsSet(str);break;
 		case driverexit: appDisconnect(player); break;
 		case playerbroadcast: playerBroadCast(str); break;

@@ -195,6 +195,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					}
 
 					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
+					Util.delay(10000); // allow time for camera to return to horiz, if reset right after docking
 					lastReset = now;
 					reset();
 				}

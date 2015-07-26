@@ -44,7 +44,7 @@ public class Navigation {
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		app = a;
 		Ros.loadwaypoints();
-		Ros.rospackagedir = Ros.getRosPackageDir();
+//		Ros.rospackagedir = Ros.getRosPackageDir();
 		navlog = new NavigationLog();
 	}	
 	
@@ -750,6 +750,7 @@ public class Navigation {
 		boolean notdetect = false;
 		boolean sound = false;
 		boolean human = false;
+		boolean photo = false;
 		
 		boolean camera = false;
 		boolean mic = false;
@@ -779,6 +780,10 @@ public class Navigation {
 				camera = true;
 				notdetectedaction = action;
 				break;
+			case "photo":
+				photo = true;
+				camera = true;
+				break;
       		}	
     	}
 
@@ -796,12 +801,19 @@ public class Navigation {
 		if (camera) {
 			if (human)
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
-			else // motion
+			else if (motion)
     			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			else // photo
+			{
+				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+//				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.custom.toString());
+			}
 
 			int pos = state.getInteger(State.values.cameratilt);
-//    		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.upabit.toString());
-			app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
+			if (photo)
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
+			else
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
 
 		}
 
@@ -862,6 +874,33 @@ public class Navigation {
 			long start = System.currentTimeMillis();
 			while (!state.exists(State.values.streamactivity) && System.currentTimeMillis() - start < delay
 					&& state.get(State.values.navigationrouteid).equals(id)) { Util.delay(10); }
+
+
+			// PHOTO
+			if (photo) {
+				String link = FrameGrabHTTP.saveToFile("");
+				Util.delay(2000); // wait while downloads
+				String navlogmsg = "<a href='" + link + "' target='_blank'>Photo</a>";
+				String msg = "[Oculus Prime Photo] ";
+				msg += navlogmsg+", time: "+
+						Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
+
+				if (email) {
+					String emailto = settings.readSetting(GUISettings.email_to_address);
+					if (!emailto.equals(Settings.DISABLED)) {
+						app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
+						navlogmsg += "<br> email sent ";
+					}
+				}
+				if (rss) {
+					app.driverCallServer(PlayerCommands.rssadd, msg);
+					navlogmsg += "<br> new RSS item ";
+				}
+
+				navlog.newItem(NavigationLog.PHOTOSTATUS, navlogmsg, routestarttime, wpname,
+						state.get(State.values.navigationroute), consecutiveroute);
+
+			}
 
 			// ALERT
 			if (state.exists(State.values.streamactivity) && ! notdetect) {

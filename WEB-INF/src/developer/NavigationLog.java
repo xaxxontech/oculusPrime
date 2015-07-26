@@ -27,6 +27,7 @@ public class NavigationLog {
     public static final String ERRORSTATUS = "ERROR";
     public static final String COMPLETEDSTATUS = "Completed";
     public static final String INFOSTATUS = "Info";
+    public static final String PHOTOSTATUS = "Photo";
 //    private static final String PIPE = " <span style='color: #999999'>|</span> ";
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
@@ -52,7 +53,8 @@ public class NavigationLog {
             String id=String.valueOf(System.nanoTime());
             String str="<div id='"+id+"' ";
 
-            str += "class='"+status.toLowerCase()+"' ";
+            if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
+            else str += "class='"+status.toLowerCase()+"' ";
 
 //            str += "onclick=\"window.open(document.URL.replace(/#.*$/, '')+'#"+id+"', '_self'); loaded();\" ";
 //            str += "onclick=\"location.hash='"+id+"'; loaded();\" ";

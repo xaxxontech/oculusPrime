@@ -35,10 +35,13 @@ var mapshowwaypoints = true;
 var routesxml = null;
 var temproutesxml;
 var navmenuinit = false;
-var navrouteavailableactions = ["rotate", "email", "rss", "motion", "sound", "human", "not detect" ];
+var navrouteavailableactions = ["rotate", "email", "rss", "photo", 
+	"motion", "sound", "human", "not detect" ];
 var navrouteactiondescriptions = ["rotate in place 45 degrees at a time, at least 1 full rotation", 
 	"send email alert if action detected",
-	"post new item to RSS feed if action detected", "detect motion", "detect loud noise", "detect human", 
+	"post new item to RSS feed if action detected",
+	"take photo at waypoint and post to navigation log",
+	"detect motion", "detect loud noise", "detect human", 
 	"alert only if action NOT detected"];
 var activeroute = null;
 var navsystemstatustext;
@@ -1401,9 +1404,21 @@ function waypointactionaddnew(routenum, waypointnum, id) {
 		// filter any conflicting actions
 		senseactions = ["human", "motion", "sound"];
 		
-		if (actiontext == "motion") waypointDeleteAnyActionsNamed(waypoint, "human");
-		else if (actiontext == "human") waypointDeleteAnyActionsNamed(waypoint, "motion");
+		if (actiontext == "motion") { 
+			waypointDeleteAnyActionsNamed(waypoint, "human");
+			waypointDeleteAnyActionsNamed(waypoint, "photo");
+		}
+		else if (actiontext == "human") {
+			waypointDeleteAnyActionsNamed(waypoint, "motion");
+			waypointDeleteAnyActionsNamed(waypoint, "photo");
+		}
 		else if (actiontext == "not detect") waypointDeleteAllButLastAction(waypoint, senseactions);
+		else if (actiontext == "photo") {
+			waypointDeleteAnyActionsNamed(waypoint, "rotate");
+			waypointDeleteAnyActionsNamed(waypoint, "human");
+			waypointDeleteAnyActionsNamed(waypoint, "motion");
+		}
+		else if (actiontext == "rotate") waypointDeleteAnyActionsNamed(waypoint, "photo");
 		
 		// check for existing 'not detect', if so nuke any existing sense actions
 		if (senseactions.indexOf(actiontext) != -1) {
