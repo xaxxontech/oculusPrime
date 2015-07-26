@@ -178,14 +178,14 @@ public class State {
 			Util.log("set() null valu for key: " + key, this);
 			return;
 		}
-		
+
 		try {
 			props.put(key.trim(), value.trim());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());	
+
+		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());
 	}
 	
 	synchronized String get(final String key) {

@@ -180,11 +180,15 @@ public class Navigation {
 	}
 
 	public void stopNavigation() {
-		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-			return;
+//		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+//			return;
 
 		Util.log("stopping navigation", this);
 		Util.systemCall("pkill roslaunch");
+
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+			return;
+
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopping.toString());
 		new Thread(new Runnable() { public void run() {
 			Util.delay(Ros.ROSSHUTDOWNDELAY);
@@ -717,7 +721,6 @@ public class Navigation {
 		return true;
 	}
 
-	
 	/**
 	 * process actions for single waypoint 
 	 * 

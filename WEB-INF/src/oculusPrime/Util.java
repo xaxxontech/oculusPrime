@@ -607,80 +607,21 @@ public class Util {
 		
 		return wdev;
 	}
-	
-	/*
-	private static String lookupETHDevice(){
-		
-		String dev = null;
-		
-		try {
-			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
-			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {
-				if( ! line.startsWith("DEVICE") && line.contains("ethernet")){
-					if(line.contains("unavailable")) State.getReference().delete(values.ethernetaddress);
-					String[] list = line.split(" ");
-					dev = list[0];
-				}
-			}
-		} catch (Exception e) {
-			Util.log("lookupDevice(): exception: " + e.getLocalizedMessage(), null);
-		}
-		
-		return dev;
-	}
-	*/
-	
-	/*
-	public static boolean updateLocalIPAddress(){	
-		
-		State state = State.getReference();
 
-		try {			
-			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig | grep \"inet addr\""};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-			
-			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {	
-				if( ! line.contains("127.0.0.1")) {
 
-					Util.log("updateExternalIPAddress():"+ line, null);
-					
-					String addr = line.substring(line.indexOf(":")+1); 
-					addr = addr.substring(0, addr.indexOf(" ")).trim();
-									
-					if( ! validIP(addr)) {
-						
-						Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
-
-					}
-					
-					State.getReference().set(values.localaddress, addr);
-
-				}
-			}
-		} catch (Exception e) {
-
-			Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
-			state.delete(values.localaddress);		
-			
-		}
-	 */
-	
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 
 			State state = State.getReference();
-			if(state.exists(values.externaladdress)) {
-				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
-					return;
-				}
-			}
+
+			// changed: updated only called on ssid change from non null
+//			if(state.exists(values.externaladdress)) {
+//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
+//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
+//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
+//					return;
+//				}
+//			}
 
 			try {
 

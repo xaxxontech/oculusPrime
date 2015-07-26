@@ -253,8 +253,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
-		Util.updateExternalIPAddress();
-		
+
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
@@ -265,7 +264,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.debug("telnet server started", this);
 		}
 
-		
 		try { // opencv
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
@@ -286,6 +284,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
 
+		// below network stuff should be called before SystemWatchdog init (prevent redundant updates)
+		Util.updateExternalIPAddress();
+		Util.updateLocalIPAddress();
+		Util.setJettyTelnetPort();
+		Util.updateJetty();
+
+
 		watchdog = new SystemWatchdog(this);
 		
 		new Thread(new Runnable() { public void run() {
@@ -293,8 +298,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
 				
-		Util.setJettyTelnetPort();
-		
+
 		Util.debug("application initialize done", this);
 	}
 
@@ -1104,7 +1108,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
 	 * linux only for now
 	 **/
-	public void frameGrabbed() {
+	public void frameGrabbed(int width, int height) {
 	
 		try {
 			
@@ -1117,8 +1121,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			ch.close();
 			file.close();
 			
-			int width=640;
-			int height=480;
+//			int width=640;
+//			int height=480;
 			
 			if (settings.readSetting(GUISettings.vset).equals("vmed") || 
 					settings.readSetting(GUISettings.vset).equals("vlow")) {  // failed, switch to highres if avail and try again 

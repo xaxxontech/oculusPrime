@@ -448,7 +448,7 @@ public class AutoDock {
 				speed2 = (int) comport.voltsComp((double) speed2);
 				if (speed2 > 255) { speed2 = 255; }
 
-				SystemWatchdog.waitForCpu(40, 8000);
+				SystemWatchdog.waitForCpu(40, 10000);
 
 				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
 				Util.delay(comport.ACCEL_DELAY);

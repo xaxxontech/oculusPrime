@@ -31,6 +31,7 @@ public class SystemWatchdog implements Observer {
 	public boolean powererrorwarningonly = true;
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
+	private String ssid = null;
 	
 	SystemWatchdog(Application a){ 
 		application = a;
@@ -41,6 +42,8 @@ public class SystemWatchdog implements Observer {
 	@Override
 	public void updated(String key) {
 		if(key.equals(values.ssid.name())){
+			if (state.get(values.ssid).equals(ssid)) return; // only on change
+			ssid = state.get(values.ssid);
 			Util.updateExternalIPAddress();
 			Util.updateLocalIPAddress();
 		}
@@ -49,11 +52,7 @@ public class SystemWatchdog implements Observer {
 	private class Task extends TimerTask {
 		public void run() {
 			
-			// ensure these addresses exist 
-			if( ! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
-			if( ! state.exists(values.localaddress)) Util.updateLocalIPAddress();
-
-			// show AP mode enabled if not busy 
+			// show AP mode enabled if not busy
 			if(state.equals(values.ssid, AP)){
 				if(state.getInteger(values.cpu) < 50){
 			    	if( ! state.getBoolean(State.values.autodocking)) { 
