@@ -9,16 +9,17 @@ import oculusPrime.State.values;
 public class Settings {
 
 	public final static String redhome = System.getenv("RED5_HOME");
-	public final static String framefile = System.getenv("RED5_HOME") + Util.sep+"webapps"+Util.sep+"oculus"+Util.sep+"images"+Util.sep+"framegrab.jpg";
+	public final static String framefolder = redhome + Util.sep+"webapps/oculusPrime/framegrabs";
 	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
+	public final static String logfolder = redhome+Util.sep+"log";
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
 	
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
-	public static final int ERROR = -1;
 	public static final String FALSE = "false";
-	public static final String TRUE = "true";
-		
+	public static final String TRUE = "true";	
+	public static final int ERROR = -1;
+	
 	private static Settings singleton = null;
 	public static Settings getReference() {
 		if (singleton == null) singleton = new Settings();

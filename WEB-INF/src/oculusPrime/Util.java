@@ -705,4 +705,31 @@ public class Util {
 		return reply;
 	}
 
+	public static void deleteLogFiles(){
+	 	File[] files = new File(Settings.logfolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	       if (files[i].isFile()) files[i].delete();
+	   }
+	}
+	
+	public static String getLogSize(){	
+		long size = 0;
+	    File[] files = new File(Settings.logfolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	        if (files[i].isFile())size += files[i].length();
+	    }
+		    
+		return (int) (size / (1024*1024)) + "mb"; 
+	}
+	
+	public static void deleteFrames(){
+		File[] files =  new File(Settings.framefolder).listFiles();
+	    for (int i = 0; i < files.length; i++)
+	        if (files[i].isFile()) files[i].delete();
+	}
+	
+	public static int countFrameGrabs(){
+		 File path = new File(Settings.framefolder);
+		 return path.listFiles().length;
+	}
 }

@@ -65,6 +65,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 
 		if(view != null){
+			
+			if(view.equalsIgnoreCase("logs")){
+				Util.deleteLogFiles();
+				response.sendRedirect("/oculusPrime/dashboard"); 
+			}
+			
+			if(view.equalsIgnoreCase("frames")){
+				Util.deleteFrames();
+				response.sendRedirect("/oculusPrime/dashboard"); 
+			}
+			
 			if(view.equalsIgnoreCase("ban")){
 				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
@@ -221,22 +232,24 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
 		
-		String ssid = "disconnected";
-		if(state.exists(values.ssid)) ssid = state.get(values.ssid);
-		else Util.updateJetty();
-		
-		str.append("<tr><td><b>version</b><td>" + VERSION + "<td><b>ssid</b><td>" + ssid
-				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% </tr> \n");
-		
+		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
+			
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\" \">" 
 				+ state.get(values.localaddress) + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
 		
 		String ext = state.get(values.externaladdress);
-		if( ext == null ) str.append("<td><b>wan</b><td>unkown");
+		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
 		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" + ext + "</a>");
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
+		String frames = "&nbsp;&nbsp;<a href=\"dashboard?view=frames\">delete</a>";
+		String logs = "&nbsp;&nbsp;<a href=\"dashboard?view=logs\">delete</a>";
+		str.append("<tr><td><b>frames</b><td>" + + Util.countFrameGrabs() + frames 
+				+ "<td><b>logs</b><td>" + Util.getLogSize() + logs
+				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% </tr> \n");
+	
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
 				+ "<td><b>life</b><td>" + state.get(values.batterylife) 
@@ -246,9 +259,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
 				+ "<td><b>volts</b><td>" + state.get(values.batteryvolts) 
 				+ "</tr> \n");
-		
-		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("\n<tr><td colspan=\"11\">" + Util.getJettyStatus() + "</tr> \n");
+	
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
