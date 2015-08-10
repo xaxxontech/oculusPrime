@@ -317,7 +317,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			return;
 		} 
 	
-		if(s[0].equals("version")) {
+		else if(s[0].equals("version")) {
 			version = s[1];
 			application.message("power board firmware version: " + version, null, null);
 			return;
@@ -329,8 +329,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			application.message(null, "battery", s[0]);
 			return;
 		}
-		
-		
+
 		else if (s[0].equals("power_error")) {
 			
 			if (!s[1].contains(",")) {
@@ -415,6 +414,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 			state.set(State.values.forceundock, true);
 			Util.log("force undock", this);
 			PowerLogger.append("force undock", this);
+		}
+
+		else if (s[0].equals("high_current")) {
+			application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+			Util.log("error, high current warning, stopping motors", this);
 		}
 		
 		if (s.length>2) {

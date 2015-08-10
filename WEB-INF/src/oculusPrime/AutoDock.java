@@ -727,10 +727,10 @@ public class AutoDock {
 			Application.framegrabimg = null;
 			Application.processedImage = null;
 			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
-			String resolution; 
+			String resolution;
 			if (lowres) { resolution = "framegrabMedium"; }
 			else { resolution = "framegrab"; }
-			
+
 			sc.invoke(resolution, new Object[] {});
 		}
 
