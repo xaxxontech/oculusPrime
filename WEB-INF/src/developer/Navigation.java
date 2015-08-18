@@ -291,6 +291,7 @@ public class Navigation {
 	private boolean finddock() {
 		int rot = 0;
 		while (true) {
+			SystemWatchdog.waitForCpu();
 
 			app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
 			long start = System.currentTimeMillis();
@@ -562,11 +563,7 @@ public class Navigation {
 					state.set(State.values.motionenabled, true);
 					app.comport.checkisConnectedBlocking(); // just in case
 
-					if (!SystemWatchdog.waitForCpu()) {
-						stopNavigation(); // disconnects telnet clients so can reboot
-						Util.log("high cpu, rebooting before route start", this);
-						Util.delay(Util.ONE_MINUTE); // wait for reboot
-					}
+					SystemWatchdog.waitForCpu();
 
 					app.driverCallServer(PlayerCommands.forward, "0.7");
 
@@ -596,7 +593,7 @@ public class Navigation {
 
 		    		if (wpname.equals(DOCK))  break;
 
-					if (!SystemWatchdog.waitForCpu()) break; //  do not pass go, go directly to jail
+					SystemWatchdog.waitForCpu();
 
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
@@ -992,11 +989,9 @@ public class Navigation {
 
 
 			if (rotate) {
-//				if (camera) Util.delay(1000); // TODO: was at 500, still getting missed stops on rotate probably due to high cpu
-												// TODO: testing 1000, still happening
-//				app.driverCallServer(PlayerCommands.left, "45");
+
 				Util.delay(2000);
-				if (!SystemWatchdog.waitForCpu(8000)) break; // lots of missed stop commands, cpu timeouts here
+				SystemWatchdog.waitForCpu(8000); // lots of missed stop commands, cpu timeouts here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
 				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.left.toString());

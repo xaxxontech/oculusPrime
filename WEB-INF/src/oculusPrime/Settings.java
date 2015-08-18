@@ -304,7 +304,7 @@ public class Settings {
 		
 		//TODO: revisit -- test if is existing setting already 
 		if(settings.get(setting).equals(value)) {
-			Util.log("rejected, already set to: " + value, this);
+			Util.debug("setting rejected, "+setting+" already set to: " + value, this);
 			return;
 		}
 		

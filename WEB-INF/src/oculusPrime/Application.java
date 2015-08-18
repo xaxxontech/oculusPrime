@@ -400,6 +400,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 //			state.delete(State.values.controlsinverted);
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
+			watchdog.guinotified = false;
 		}
 	}
 	

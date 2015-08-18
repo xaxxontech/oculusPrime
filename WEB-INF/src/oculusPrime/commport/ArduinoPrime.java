@@ -21,6 +21,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.127;
 	public static final long DEAD_TIME_OUT = 20000;
 	public static final int WATCHDOG_DELAY = 8000;
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
@@ -75,7 +76,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	// data buffer 
 	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
-	
+	private double firmwareversion = 0;
+
 	// thread safety 
 	protected volatile boolean isconnected = false;
 	public volatile long currentMoveID;
@@ -109,7 +111,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static final Double DEGPERMS = 0.0857;
 //		degperms = 0.0857 # turnspeed
 
-
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
 	private CommandSender cs;
@@ -135,15 +136,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		setCameraStops(CAM_HORIZ, CAM_REVERSE);
 
 		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) {
-//			new CommandSender().start();
 			connect();
 			cs = new CommandSender();
 			cs.start();
+			checkFirmWareVersion();
 		}
 		initialize();
 		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
 		new WatchDog().start();
-
 	}
 	
 	public void initialize() {
@@ -214,7 +214,46 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			}		
 		}
 	}
-	
+
+	private void checkFirmWareVersion() {
+		if (!isconnected) return;
+
+		firmwareversion = 0;
+		sendCommand(GET_VERSION);
+		long start = System.currentTimeMillis();
+		while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000) { Util.delay(100);  }
+		if (firmwareversion == 0) {
+			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
+			Util.log("error, "+msg, this);
+			SystemWatchdog.guiNotify(msg);
+			return;
+		}
+		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
+			String port = state.get(State.values.motorport); // disconnect() nukes this state value
+			disconnect();
+
+			// TODO: do update here, blocking
+			Updater.updateFirmware(FIRMWARE_ID, FIRMWARE_VERSION_REQUIRED, port);
+
+			connect();
+			if (cs.isAlive())  Util.log("error, CommmandSender still alive", this);
+			cs = new CommandSender();
+			cs.start();
+
+			// check if successful
+			firmwareversion = 0;
+			sendCommand(GET_VERSION);
+			start = System.currentTimeMillis();
+			while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000)  { Util.delay(100); }
+			if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+				String msg = "unable to update " + FIRMWARE_ID + " firmware to version "+FIRMWARE_VERSION_REQUIRED;
+				Util.log("error, "+msg, this);
+				SystemWatchdog.guiNotify(msg);
+			}
+		}
+	}
+
 	public void floodLight(int target) {
 		state.set(State.values.floodlightlevel, target);
 
@@ -280,15 +319,16 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		if (!state.getBoolean(State.values.odometry)) Util.debug("serial in: " + response, this);
 		
-		if(response.equals("reset")) {
-			sendCommand(GET_VERSION);  
-			Util.debug(FIRMWARE_ID+" "+response, this);
-		} 
+//		if(response.equals("reset")) {
+//			sendCommand(GET_VERSION);
+//			Util.debug(FIRMWARE_ID+" "+response, this);
+//		}
 		
 		if(response.startsWith("version:")) {
-			String version = response.substring(response.indexOf("version:") + 8, response.length());
-			application.message("malg board firmware version: " + version, null, null);		
-		} 
+			String versionstr = response.substring(response.indexOf("version:") + 8, response.length());
+			Util.log(FIRMWARE_ID + " firmware version: "+versionstr, this);
+			firmwareversion = Double.valueOf(versionstr);
+		}
 	
 		String[] s = response.split(" ");
 

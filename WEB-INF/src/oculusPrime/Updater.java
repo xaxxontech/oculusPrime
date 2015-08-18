@@ -16,7 +16,7 @@ public class Updater {
 
 		// get current version info from txt file in root folder
 		String sep = System.getProperty("file.separator");
-		String filename = System.getenv("RED5_HOME")+sep+"version.nfo";
+		String filename = Application.RED5_HOME+Util.sep+"version.nfo";
 		
 		FileInputStream filein;
 		try {
@@ -102,5 +102,53 @@ public class Updater {
 		}
 		Util.log("update version: "+version,this);
 		return version;
+	}
+
+	/**
+	 * download hex firmware file and install via system call to avrdude
+	 * note: blocking
+	 *
+	 * @param id firmware id
+	 * @param version firmware version no.
+	 * @param port  current USB port
+	 */
+	public static void updateFirmware(final String id, final Double version, final String port) {
+
+		// download file
+		String filename = id+"_"+version+".hex";
+		String fileurl = path+filename;
+		String folder = "avrdude";
+		Util.log("Updater.updateFirmware() downloading url: " + fileurl, null);
+		Downloader dl = new Downloader();
+		if (! dl.FileDownload(fileurl, filename, folder)) {
+			Util.log("Updater.updateFirmware() error, file download failed", null);
+			return;
+		}
+
+		// run avrdude
+//		String cmd= Application.RED5_HOME+Util.sep+folder+Util.sep+"avrdude";
+		String cmd= "./avrdude";
+		String args = "-v -p atmega328p -c arduino -P "+port+
+				" -b 57600 -C avrdude.conf -D -U flash:w:"+filename+":i";
+		Util.log("Updater.updateFirmware(): "+cmd+" "+args, null);
+//		ProcessBuilder pb = new ProcessBuilder(cmd, arg);
+//		pb.directory(new File(Application.RED5_HOME + Util.sep + folder)); // working dir
+
+		try {
+//			Process process= pb.start();
+//			process.waitFor();
+
+			Process proc = Runtime.getRuntime().exec(Application.RED5_HOME+Util.sep+folder+Util.sep+"run "+cmd+" "+args);
+			proc.waitFor();
+
+			// cleanup
+			File file = new File(Application.RED5_HOME+Util.sep+folder+Util.sep+filename);
+			Util.log("Updater.updateFirmware(): deleting file "+file.getAbsolutePath(), null);
+			file.delete();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 	}
 }

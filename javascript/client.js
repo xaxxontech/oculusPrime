@@ -2448,6 +2448,18 @@ function acknowledgeerror(str) {
 
 }
 
+function guinotify(str) {
+	if (str == "ok") {
+		popupmenu("aux", "close");
+		callServer("state","delete guinotify");
+	}
+	else {
+	    var video = document.getElementById("video");
+	    var xy = findpos(video);
+	    popupmenu("aux", "show", xy[0] + video.offsetWidth - 30, xy[1] + 30, str, null, 1, 0);				
+	}
+}
+
 function maintopbar(mode) {
 	if (mode=="over") {
 		document.getElementById('main_menu_under').style.display='';

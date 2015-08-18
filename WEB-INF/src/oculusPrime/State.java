@@ -31,7 +31,7 @@ public class State {
 		powererror, forceundock,
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
-		localaddress, externaladdress, ssid, 
+		localaddress, externaladdress, ssid, guinotify,
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,

@@ -9,17 +9,11 @@ import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
-import oculusPrime.Application;
-import oculusPrime.AutoDock;
-import oculusPrime.GUISettings;
-import oculusPrime.ManualSettings;
-import oculusPrime.PlayerCommands;
-import oculusPrime.Settings;
-import oculusPrime.State;
-import oculusPrime.Util;
+import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.9409;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -53,7 +47,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected int buffSize = 0;
 	protected static Settings settings = Settings.getReference();
 	protected String portname = settings.readSetting(ManualSettings.powerport);
-	protected String version = null;
+//	protected String version = null;
+	private double firmwareversion = 0;
 
 	// errors
 	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
@@ -111,7 +106,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 		if(!settings.readSetting(ManualSettings.powerport).equals(Settings.DISABLED)) connect();
 		
-		if (isconnected) { 
+		if (isconnected) {
+			checkFirmWareVersion();
 			initialize();
 			new WatchDog().start();
 		}
@@ -267,7 +263,42 @@ public class ArduinoPower implements SerialPortEventListener  {
 				}
 			}).start();
 	}
-	
+
+	private void checkFirmWareVersion() {
+		if (!isconnected) return;
+
+		firmwareversion = 0;
+		sendCommand(GET_VERSION);
+		long start = System.currentTimeMillis();
+		while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000) { Util.delay(100);  }
+		if (firmwareversion == 0) {
+			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
+			Util.log("error, "+msg, this);
+			SystemWatchdog.guiNotify(msg);
+			return;
+		}
+		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
+			String port = state.get(State.values.powerport); // disconnect() nukes this state value
+			disconnect();
+
+			// TODO: do update here, blocking
+			Updater.updateFirmware(FIRMWARE_ID, FIRMWARE_VERSION_REQUIRED, port);
+
+			connect();
+
+			// check if successful
+			firmwareversion = 0;
+			sendCommand(GET_VERSION);
+			start = System.currentTimeMillis();
+			while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000)  { Util.delay(100); }
+			if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+				String msg = "unable to update " + FIRMWARE_ID + " firmware to version "+FIRMWARE_VERSION_REQUIRED;
+				Util.log("error, "+msg, this);
+				SystemWatchdog.guiNotify(msg);
+			}
+		}
+	}
 		
 	public void serialEvent(SerialPortEvent event) {
 		if (!event.isRXCHAR())  return;
@@ -310,16 +341,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 		PowerLogger.append("serial in: " + response, this);
 		
 		String s[] = response.split(" ");
-		
-		if(s[0].equals("reset")) {
-			version = null;
-			sendCommand(GET_VERSION); 
-			return;
-		} 
-	
-		else if(s[0].equals("version")) {
-			version = s[1];
-			application.message("power board firmware version: " + version, null, null);
+
+		if(s[0].equals("version")) {
+			Util.log(FIRMWARE_ID + " firmware version: " + s[1], this);
+			firmwareversion = Double.valueOf(s[1]);
 			return;
 		} 
 
@@ -358,7 +383,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		else if (s[0].equals("docked")) {
 
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-				application.message(null, "multiple", "dock "+AutoDock.DOCKED+" motion disabled");
+				application.message(null, "multiple", "dock " + AutoDock.DOCKED + " motion disabled");
 				state.set(State.values.dockstatus, AutoDock.DOCKED);
 
 				if (state.getBoolean(State.values.autodocking) && !state.getBoolean(State.values.docking))
@@ -384,7 +409,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				}
 				
 				state.set(State.values.dockstatus, AutoDock.UNDOCKED);
-				application.message(null, "multiple", "dock "+AutoDock.UNDOCKED+" motion enabled");
+				application.message(null, "multiple", "dock " + AutoDock.UNDOCKED + " motion enabled");
 
 			}
 

@@ -658,7 +658,7 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-				debug("setJettyTelnetPort(): "+line, this);
+//				debug("setJettyTelnetPort(): "+line, this);
 				
 			} catch (Exception e) {
 				Util.log("setJettyTelnetPort():", e, this);
@@ -729,7 +729,9 @@ public class Util {
 	}
 	
 	public static int countFrameGrabs(){
-		 File path = new File(Settings.framefolder);
-		 return path.listFiles().length;
+		File path = new File(Settings.framefolder);
+		if (path.exists())
+			return path.listFiles().length;
+		else return 0;
 	}
 }

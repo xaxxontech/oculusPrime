@@ -32,11 +32,12 @@ public class SystemWatchdog implements Observer {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private String ssid = null;
+	public boolean guinotified = false;
 	
 	SystemWatchdog(Application a){ 
 		application = a;
 		state.addObserver(this);
-		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);	
+		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 
 	@Override
@@ -119,12 +120,23 @@ public class SystemWatchdog implements Observer {
 			else  lowbattredock = false;
 
 			int cpuNow = Util.getCPU();
-			if(cpuNow > 50) Util.log("cpu too high: "+cpuNow, this); 
+			if(cpuNow > 50) Util.log("cpu: "+cpuNow, this);
 			
 			// update in state only if changing
 			// if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 5)
 			
 			state.set(values.cpu, cpuNow);
+
+			if (state.exists(values.guinotify) && !guinotified) {
+				if (state.exists(State.values.driver.toString())) {
+					guinotified = true;
+					String str= state.get(values.guinotify);
+					str += "<br><a href='javascript: guinotify(&quot;ok&quot;);'>";
+					str += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
+
+					application.sendplayerfunction("guinotify", str);
+				}
+			}
 
 		}
 	}
@@ -159,7 +171,7 @@ public class SystemWatchdog implements Observer {
 			
 			if (warningonly && !commlost) msg += "OK to clear warnings?<br><br>";
 			else if (warningonly && commlost) msg += "Try: restart application, reboot, check USB cable<br><br>"; // commlost
-			else msg += "Please UNPLUG BATTERY and contact technical support<br><br>";
+			else msg += "Please UNPLUG BATTERY and consult technical support<br><br>";
 		
 			msg += "<a href='javascript: acknowledgeerror(&quot;true&quot;);'>";
 		    msg += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
@@ -172,17 +184,18 @@ public class SystemWatchdog implements Observer {
 			
 			application.sendplayerfunction("acknowledgeerror", msg);
 		}
-		else if (!warningonly) callForHelp("Oculus Prime POWER ERROR","Please UNPLUG BATTERY and contact technical support");
+		else if (!warningonly) callForHelp("Oculus Prime POWER ERROR","Please UNPLUG BATTERY and consult technical support");
 		else if (warningonly && commlost) callForHelp("Oculus Prime POWER ERROR","Power PCB Communication Lost");
 	}
 	
 	public void redock(String str) {
 		if (redocking) return;
 
-		if (settings.getBoolean(GUISettings.navigation)) {
-			if (state.exists(values.navigationroute) && (
-					state.get(values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ||
-					state.get(values.navsystemstatus).equals(Ros.navsystemstate.starting.toString()))) {
+		if (str == null) str = "";
+
+		if (settings.getBoolean(GUISettings.navigation) && !str.equals(NOFORWARD) ) {
+			if ( !state.get(values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) &&
+					!state.get(values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
 				Util.log("warning: redock skipped, navigation running", this);
 				return;
 			}
@@ -194,7 +207,6 @@ public class SystemWatchdog implements Observer {
 			}
 		}
 		
-		if (str == null) str = "";
 		final String option = str;
 		new Thread(new Runnable() { public void run() {
 			redocking = true;
@@ -255,6 +267,8 @@ public class SystemWatchdog implements Observer {
 					res = AutoDock.HIGHRES;
 					application.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 				}
+
+				waitForCpu();
 				
 				application.driverCallServer(PlayerCommands.dockgrab, res);
 				Util.delay(10); // thread safe
@@ -329,11 +343,11 @@ public class SystemWatchdog implements Observer {
 	}
 
 
-	public static boolean waitForCpu() { return waitForCpu(60, 20000); }
+	public static void waitForCpu() { waitForCpu(60, 20000); }
 
-	public static boolean waitForCpu(long timeout) { return waitForCpu(60, timeout); }
+	public static void waitForCpu(long timeout) { waitForCpu(60, timeout); }
 
-	public static boolean waitForCpu(int threshold, long timeout) {
+	public static void waitForCpu(int threshold, long timeout) {
 
 		long start = System.currentTimeMillis();
 		int cpu = 0;
@@ -343,17 +357,19 @@ public class SystemWatchdog implements Observer {
 				cpu = Util.getCPU();
 				if (cpu <threshold) {
 					Util.log("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
-					return true;
+					return;
 				}
 			}
 			Util.delay(1000);
 		}
-		Util.log("Util.waitForCpu() warning, timed out "+ cpu+"% after "+timeout+"ms", null);
+		Util.log("Util.waitForCpu() warning, timed out " + cpu + "% after " + timeout + "ms", null);
 
-//		State.getReference().set(values.linuxboot, "0"); // force reboot next dock
-//		return false;
+	}
 
-		return true; // TODO: take action on high cpu, unused
+	public static void guiNotify(String str) {
+		State state = State.getReference();
+		if (!state.exists(values.guinotify)) state.set(values.guinotify, "");
+		state.set(values.guinotify, state.get(values.guinotify + str+"<br><br>"));
 	}
 
 

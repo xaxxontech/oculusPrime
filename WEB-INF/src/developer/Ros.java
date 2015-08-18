@@ -203,20 +203,18 @@ public class Ros {
 	}
 	
 	public static boolean setWaypointAsGoal(String str) {
-//		loadwaypoints();
-		if (!state.exists(State.values.rosmapwaypoints)) return false;
-		
 		boolean result = false;
-		
 		state.delete(State.values.roscurrentgoal);
 		
 		// try matching name
-		String waypoints[] = state.get(State.values.rosmapwaypoints).split(",");
-		for (int i = 0 ; i < waypoints.length -3 ; i+=4) {
-			if (waypoints[i].replaceAll("&nbsp;", " ").equals(str)) {
-				state.set(State.values.rossetgoal, waypoints[i+1]+","+waypoints[i+2]+","+waypoints[i+3]);
-				result = true;
-				break;
+		if (state.exists(State.values.rosmapwaypoints)) {
+			String waypoints[] = state.get(State.values.rosmapwaypoints).split(",");
+			for (int i = 0; i < waypoints.length - 3; i += 4) {
+				if (waypoints[i].replaceAll("&nbsp;", " ").equals(str)) {
+					state.set(State.values.rossetgoal, waypoints[i + 1] + "," + waypoints[i + 2] + "," + waypoints[i + 3]);
+					result = true;
+					break;
+				}
 			}
 		}
 		

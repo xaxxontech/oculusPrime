@@ -23,9 +23,9 @@ public class BanList {
 	
 	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
 	public static final long ROLL_OVER = 15000;
-	public static final int BAN_ATTEMPTS = 3;
-	public static final int MAX_ATTEMPTS = 5;	
-	public static final int MAX_HISTORY = 10;
+	public static final int BAN_ATTEMPTS = 10;
+	public static final int MAX_ATTEMPTS = 12;
+	public static final int MAX_HISTORY = 50;
 	
 	private HashMap<String, Integer> attempts = new HashMap<String, Integer>();
 	private HashMap<String, Long> blocked = new HashMap<String, Long>();
