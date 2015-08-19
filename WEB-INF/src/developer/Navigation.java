@@ -44,7 +44,7 @@ public class Navigation {
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		app = a;
 		Ros.loadwaypoints();
-//		Ros.rospackagedir = Ros.getRosPackageDir();
+		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		navlog = new NavigationLog();
 	}	
 	

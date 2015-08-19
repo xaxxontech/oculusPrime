@@ -107,7 +107,8 @@ public class AutoDock {
 								public void run() {
 									try {
 										comport.checkisConnectedBlocking();
-										comport.clickSteer(-lastcamctr , 0);
+//										comport.clickSteer(-lastcamctr , 0);
+										comport.clickNudge(-lastcamctr, true);
 										autodockingcamctr = true;
 										comport.delayWithVoltsComp(allowforClickSteer);
 										dockGrab(dockgrabmodes.find, 0, 0);
@@ -148,7 +149,8 @@ public class AutoDock {
 							public void run() {
 								try {
 									comport.checkisConnectedBlocking();
-									comport.clickSteer((x - imgwidth / 2) * rescomp, 0);
+//									comport.clickSteer((x - imgwidth / 2) * rescomp, 0);
+									comport.clickNudge((x - imgwidth / 2) * rescomp, true);
 //									Util.delay(50);
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
@@ -156,8 +158,15 @@ public class AutoDock {
 //									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
 									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
 //									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
-									comport.rotate(ArduinoPrime.direction.left, 180);
-									Thread.sleep(comport.fullrotationdelay/2+2000);
+
+//									comport.rotate(ArduinoPrime.direction.left, 180);
+
+									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + comport.FIRMWARE_TIMED_OFFSET);
+									comport.turnLeft((int) d);
+									Util.delay((long) d);
+									comport.stopGoing();
+									Thread.sleep(2000);
+
 									dockGrab(dockgrabmodes.find, 0, 0);
 									
 								} catch (Exception e) { e.printStackTrace(); }
@@ -414,13 +423,14 @@ public class AutoDock {
 			final double s2slopetolerance = 1.2; // 1.2
 			final double s1slopetolerance = 1.3; // 1.3
 
-			final int s1FWDmilliseconds = 500; // 400
-			final int s2FWDmilliseconds = 250; // 100
+			final int s1FWDmilliseconds = (int) comport.voltsComp(500); // 400
+			final int s2FWDmilliseconds = (int) comport.voltsComp(250); // 100
 			final double s1FWDmeters = 0.25;
 			final double s2FWDmeters =  0.11;
 
 			comport.speedset(ArduinoPrime.speeds.fast.toString());
 
+			SystemWatchdog.waitForCpu();
 
 			if (w * h < s1) { // mode: quite far away yet, approach only
 
@@ -429,36 +439,35 @@ public class AutoDock {
 
 	//			if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.03125) || Math.abs(y - imgheight/2) > (int) (imgheight*0.104167)) { // clicksteer and go (y was >50)
 				if (Math.abs(x - imgwidth/2) > (int) (imgwidth*0.07) )  { // clicksteer
-					comport.clickSteer((x - imgwidth / 2) * rescomp, 0);
+//					comport.clickSteer((x - imgwidth / 2) * rescomp, 0);
+					comport.clickNudge((x - imgwidth / 2) * rescomp, true); // true=firmware timed
 					comport.delayWithVoltsComp(allowforClickSteer);
 				}
 
 				// go linear
-//				comport.goForward();
-//				comport.delayWithVoltsComp(s1FWDmilliseconds);
-//				comport.stopGoing();
-//				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
-				long moveID = System.nanoTime();
-				comport.currentMoveID = moveID;
-				// do floating point speed calcs 1st, sometimes cause severe lag! **doesn't help!
-				int speed1 = (int) comport.voltsComp((double) comport.speedslow);
-				if (speed1 > 255) { speed1 = 255; }
-				int speed2= state.getInteger(State.values.motorspeed);
-				speed2 = (int) comport.voltsComp((double) speed2);
-				if (speed2 > 255) { speed2 = 255; }
+//				long moveID = System.nanoTime();
+//				comport.currentMoveID = moveID;
+//				int speed1 = (int) comport.voltsComp((double) comport.speedslow);
+//				if (speed1 > 255) { speed1 = 255; }
+//				int speed2= state.getInteger(State.values.motorspeed);
+//				speed2 = (int) comport.voltsComp((double) speed2);
+//				if (speed2 > 255) { speed2 = 255; }
+//
+//				SystemWatchdog.waitForCpu(40, 10000);
+//
+//				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
+//				Util.delay(comport.ACCEL_DELAY);
+//				if (comport.currentMoveID == moveID)
+//					comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed2, (byte) speed2});
+//				Util.delay(s1FWDmilliseconds - comport.ACCEL_DELAY);
+//				comport.sendCommand(ArduinoPrime.STOP);
+//				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
-				SystemWatchdog.waitForCpu(40, 10000);
-
-				comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed1, (byte) speed1});
-				Util.delay(comport.ACCEL_DELAY);
-				if (comport.currentMoveID == moveID)
-					comport.sendCommand(new byte[]{comport.FORWARD, (byte) speed2, (byte) speed2});
-				Util.delay(s1FWDmilliseconds - comport.ACCEL_DELAY);
-//				if (comport.currentMoveID != moveID) return;
-				comport.sendCommand(ArduinoPrime.STOP);
+				comport.goForward(s1FWDmilliseconds);
+				Util.delay(s1FWDmilliseconds);
+				comport.stopGoing();
 				Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
-
 
 				autodocknavrunning = false;
 				dockGrab(dockgrabmodes.find, 0, 0);
@@ -467,8 +476,6 @@ public class AutoDock {
 			} // end of S1 check
 
 			else if (w * h >= s1 && w * h < s2) { // medium distance, detect slope when centered and approach
-
-				SystemWatchdog.waitForCpu();
 
 				if (state.getInteger(State.values.spotlightbrightness) > 0)  comport.setSpotLightBrightness(0);
 				int fl = state.getInteger(State.values.floodlightlevel);
@@ -499,16 +506,24 @@ public class AutoDock {
 					if (Math.abs(autodockcompdir - dockx) > (int) (imgwidth*0.03125)) { // steer and go
 						lastcamctr = (autodockcompdir - dockx) * rescomp;
 
-						comport.clickSteer(lastcamctr, 0);
+//						comport.clickSteer(lastcamctr, 0);
+						comport.clickNudge(lastcamctr, true);
 						comport.delayWithVoltsComp(allowforClickSteer);
 
-						comport.goForward();
-						comport.delayWithVoltsComp(s2FWDmilliseconds);
+//						comport.goForward();
+//						comport.delayWithVoltsComp(s2FWDmilliseconds);
+//						comport.stopGoing();
+//						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+						comport.goForward(s2FWDmilliseconds);
+						Util.delay(s1FWDmilliseconds);
 						comport.stopGoing();
-						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
+
 
 						if (Math.abs(lastcamctr) > imgwidth/4) { // correct in case dock occluded by frame after large move
-							comport.clickSteer(-lastcamctr , 0);
+//							comport.clickSteer(-lastcamctr , 0);
+							comport.clickNudge(-lastcamctr, true);
 							comport.delayWithVoltsComp(allowforClickSteer);
 						}
 
@@ -518,10 +533,15 @@ public class AutoDock {
 
 					} else { // go only
 
-						comport.goForward();
-						comport.delayWithVoltsComp(s2FWDmilliseconds);
+//						comport.goForward();
+//						comport.delayWithVoltsComp(s2FWDmilliseconds);
+//						comport.stopGoing();
+//						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+						comport.goForward(s2FWDmilliseconds);
+						Util.delay(s1FWDmilliseconds);
 						comport.stopGoing();
-						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
 						autodocknavrunning = false;
 						dockGrab(dockgrabmodes.find, 0, 0);
@@ -531,7 +551,8 @@ public class AutoDock {
 					autodockingcamctr = true;
 					if (Math.abs(x - dockx) > (int) (0.03125*imgwidth) ) {
 
-						comport.clickSteer((x - dockx) * rescomp, (y - imgheight / 2) * rescomp);
+//						comport.clickSteer((x - dockx) * rescomp, (y - imgheight / 2) * rescomp);
+						comport.clickNudge((x - dockx) * rescomp, true);
 						comport.delayWithVoltsComp(allowforClickSteer);
 
 						autodocknavrunning = false;
@@ -540,10 +561,17 @@ public class AutoDock {
 
 					} else { // centered, onward!
 						autodockingcamctr = false;
-						comport.goForward();
-						comport.delayWithVoltsComp(s2FWDmilliseconds);
+
+//						comport.goForward();
+//						comport.delayWithVoltsComp(s2FWDmilliseconds);
+//						comport.stopGoing();
+//						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+						comport.goForward(s2FWDmilliseconds);
+						Util.delay(s1FWDmilliseconds);
 						comport.stopGoing();
-						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
+
 
 						dockGrab(dockgrabmodes.find, 0, 0);
 						autodocknavrunning = false;
@@ -557,19 +585,17 @@ public class AutoDock {
 			}
 			else if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
 
-				SystemWatchdog.waitForCpu();
-
 				if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
 					autodockctrattempts++;
 
-	//				comport.clickSteer((x - dockx) * rescomp, (y - 120) * rescomp);
 					int minimum_clicksteerMovement = (int) (0.035*imgwidth); //pixels out of 320 //TODO: this will vary with floor type, make settable
 					int movex = (x - dockx);
 					if (Math.abs(movex) < minimum_clicksteerMovement) {
 						if (movex > 0) { movex = minimum_clicksteerMovement; }
 						else { movex = -minimum_clicksteerMovement; }
 					}
-					comport.clickSteer(movex * rescomp, (y - imgheight / 2) * rescomp);
+//					comport.clickSteer(movex * rescomp, (y - imgheight / 2) * rescomp);
+					comport.clickNudge(movex * rescomp, true);
 					comport.delayWithVoltsComp(allowforClickSteer);
 
 					autodocknavrunning = false;
@@ -589,7 +615,8 @@ public class AutoDock {
 						}
 						x += comp;
 
-						comport.clickSteer((x - dockx) * rescomp, (y - imgheight / 2) * rescomp);
+//						comport.clickSteer((x - dockx) * rescomp, (y - imgheight / 2) * rescomp);
+						comport.clickNudge((x - dockx) * rescomp, true);
 						comport.delayWithVoltsComp(allowforClickSteer);
 
 						comport.goBackward();

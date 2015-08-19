@@ -171,7 +171,11 @@ public class Ros {
 	}
 	
 	public static void savewaypoints(String str) {
-		state.set(State.values.rosmapwaypoints, str);
+		if (str.trim().equals(""))
+			state.delete(State.values.rosmapwaypoints);
+		else
+			state.set(State.values.rosmapwaypoints, str);
+
 		try {
 			FileWriter fw = new FileWriter(waypointsfile);						
 			fw.append(str+"\r\n");

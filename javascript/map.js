@@ -131,6 +131,10 @@ function rosmap(mode) {
 		openxmlhttp("frameGrabHTTP?mode=rosmapinfo&date="+date, rosinfo);
 	}
 	
+	img.onerror= function() {
+		message("map unavailable","orange");
+	}
+	
 }
 
 function rosmapImgReload() {
@@ -777,7 +781,10 @@ function savewaypoint() {
 }
 
 function writewaypointstofile() {
-	if (waypoints.length == 0) return;
+	if (waypoints.length == 0) {
+		callServer("savewaypoints", "");
+		return;
+	}
 	
 	var str = "";
 	for (var i = 0 ; i <= waypoints.length - 4 ; i += 4) {
@@ -855,6 +862,7 @@ function drawmapwaypoints() {
 function waypointsmenu() {
 	if (waypoints.length == 0) { 
 		message("waypoints unavailble","orange");
+		navigationmenu();
 		return;
 	}
 	
@@ -912,7 +920,8 @@ function waypointdelete(i) {
 	if (!confirm("Delete waypoint: "+waypoints[i].replace(/&nbsp;/g, ' ')+"\n\nAre you sure?")) return;
 	waypoints.splice(i, 4);
 	writewaypointstofile();
-	waypointsmenu();
+	if (waypoints.length == 0) navigationmenu();
+	else waypointsmenu();
 }
 
 function renamewaypoint(i) {

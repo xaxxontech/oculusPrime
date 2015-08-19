@@ -145,6 +145,7 @@ public class SystemWatchdog implements Observer {
 		PowerLogger.append("notifyPowerError()", this);
 		lastpowererrornotify = state.get(State.values.powererror);
 		boolean warningonly = true;
+		boolean resetrequired = false;
 		String longerror = "";
 		boolean commlost = false;
 		String code[] = lastpowererrornotify.split(",");
@@ -156,6 +157,7 @@ public class SystemWatchdog implements Observer {
 			}
 			if (c != 0) longerror += ArduinoPower.pwrerr.get(c).replaceFirst("ERROR_", "") + "<br>";
 			if (!warningonly) longerror += "</span>";
+			if (c > ArduinoPower.RESET_REQUIRED_ABOVE && c != ArduinoPower.COMM_LOST) resetrequired = true;
 			if (c == ArduinoPower.COMM_LOST) commlost = true;
 		}
 
@@ -169,10 +171,18 @@ public class SystemWatchdog implements Observer {
 			
 			msg += longerror + "<br>";
 			
-			if (warningonly && !commlost) msg += "OK to clear warnings?<br><br>";
-			else if (warningonly && commlost) msg += "Try: restart application, reboot, check USB cable<br><br>"; // commlost
-			else msg += "Please UNPLUG BATTERY and consult technical support<br><br>";
-		
+			if (warningonly && !commlost) msg += "OK to clear warnings?";
+			else if (warningonly && commlost) msg += "Try: restart application, reboot, check USB cable"; // commlost
+			else msg += "Please UNPLUG BATTERY and consult technical support";
+
+			if (resetrequired)
+				msg += "<br><br>Charging is limited or disabled";
+
+			if (warningonly && resetrequired)
+				msg += "<br>until this message is cleared";
+
+			msg += "<br><br>";
+
 			msg += "<a href='javascript: acknowledgeerror(&quot;true&quot;);'>";
 		    msg += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
 

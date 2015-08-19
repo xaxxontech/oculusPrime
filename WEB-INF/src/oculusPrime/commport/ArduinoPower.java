@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.9409;
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.941;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -76,8 +76,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 		temp.put("ERROR_NO_BATTERY_CONNECTED", 						3); 
 		temp.put("ERROR_WALL_BRICK_LOW_VOLTAGE", 					4);
 		temp.put("ERROR_OVER_DISCHARGED_PACK",						5);
+		temp.put("ERROR_PACK_DRAINED_TO_ZERO_PERCENT",				6); // (MOVED, was 22)
 		//ERROR CODES, WARNING SAFE CHARGE (20-39):
-		temp.put("ERROR_PACK_DRAINED_TO_ZERO_PERCENT",				22); 
 		temp.put("ERROR_NO_HOST_DETECTED", 	   						23);
 		//ERROR CODES, FATAL NO CHARGE (40-59):		
 		temp.put("ERROR_SEVERELY_UNBALANCED_PACK",					41); 
