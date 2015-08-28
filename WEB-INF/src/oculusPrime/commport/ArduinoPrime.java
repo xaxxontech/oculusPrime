@@ -29,7 +29,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int BAUD = 115200;
 	public static final long ALLOW_FOR_RESET = 10000;
-	public static final int FIRMWARE_TIMED_OFFSET = 5;
+	public static final int FIRMWARE_TIMED_OFFSET = 10;
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
@@ -91,7 +91,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	// tracking motor moves 
 	private volatile double lastodomangle = 0; // degrees
 	private volatile int lastodomlinear = 0; // mm
-	
+
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
 	public int maxclicknudgedelay = settings.getInteger(GUISettings.maxclicknudgedelay);
@@ -345,8 +345,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			
 			state.set(State.values.distanceangle, lastodomlinear +" "+lastodomangle); //millimeters, degrees
 			state.set(State.values.odomupdated, true);
+			state.set(State.values.lastodomreceived, System.currentTimeMillis());
 			
-			// TODO: testing only ----------------
+			// testing only ----------------
 			if (settings.getBoolean(ManualSettings.developer.name())) {
 				if (Application.openNIRead.depthCamGenerating) {
 					if (!state.exists(State.values.distanceanglettl.toString())) {
@@ -362,6 +363,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				}
 			}
 			// end of testing only ----------------
+
 		}
 		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) 
 			state.set(State.values.direction, direction.stop.toString());
@@ -391,7 +393,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        	otherdevice = state.get(State.values.powerport);
 	        
 	        for (int i=0; i<portNames.length; i++) {
-        		if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
+        		if (portNames[i].matches("/dev/tty(USB|ACM).+") && !portNames[i].equals(otherdevice)) {
         			
         			Util.log("querying port "+portNames[i], this);
         			
@@ -685,7 +687,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		if (delay != 0) timeddelay = delay + FIRMWARE_TIMED_OFFSET;
 
-		// if already moving forward, go full speed
+		// if already moving forward, go full speed and exit
 		if (state.get(State.values.direction).equals(direction.forward.toString()) ) {
 			int[] comp = applyComp(speed2); 
 			int L, R;
@@ -702,23 +704,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			return;
 		}
 
-		// start slow, un-comped 
+		// always start slow, un-comped
 		if (delay == 0)
 			sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
 		else {
 			int d = timeddelay;
-			if (steeringcomp != 0) {
-				d = COMP_DELAY;
-				timeddelay -= COMP_DELAY;
-			}
-			if (speed2>speed1) { // must come below above condition
-				d= ACCEL_DELAY;
-				timeddelay -= ACCEL_DELAY;
-			}
+			if (d > ACCEL_DELAY) d = ACCEL_DELAY;
 
 			byte d1 = (byte) ((d >> 8) & 0xff);
 			byte d2 = (byte) (d & 0xff);
 			sendCommand(new byte[]{ FORWARDTIMED, (byte) speed1, (byte) speed1, d1, d2});
+			if (timeddelay <= ACCEL_DELAY) return;
 		}
 
 		final int spd = speed2;
@@ -737,22 +733,26 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						sendCommand(new byte[] { FORWARD, (byte) spd, (byte) spd});
 					else {
 						int d = timeddelay;
-						if (steeringcomp != 0)  d = COMP_DELAY;
+
+						if (steeringcomp != 0 && d > COMP_DELAY)  d = COMP_DELAY-ACCEL_DELAY;
 
 						byte d1 = (byte) ((d >> 8) & 0xff);
 						byte d2 = (byte) (d & 0xff);
 						sendCommand(new byte[]{ FORWARDTIMED, (byte) spd, (byte) spd, d1, d2});
+						timeddelay -= COMP_DELAY;
 					}
 
 				} 
 			}).start();
 		}
 
+		if (delay != 0) if (timeddelay <= COMP_DELAY) return;
+
 		// apply comp only when up to full speed
 		if (steeringcomp != 0) {  
 			new Thread(new Runnable() {
 				public void run() {
-					Util.delay(COMP_DELAY); 
+					Util.delay(COMP_DELAY);
 
 					int[] comp = applyComp(spd); // actual speed, comped
 					int L,R;
@@ -762,8 +762,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					if (delay==0)
 						sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
 					else {
-						byte d1 = (byte) ((timeddelay >> 8) & 0xff);
-						byte d2 = (byte) (timeddelay & 0xff);
+						int d = timeddelay-ACCEL_DELAY;
+						byte d1 = (byte) ((d >> 8) & 0xff);
+						byte d2 = (byte) (d & 0xff);
 						sendCommand(new byte[]{ FORWARDTIMED, (byte) spd, (byte) spd, d1, d2});
 					}
 					
@@ -1688,6 +1689,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.set(State.values.odomlinearmpms, METERSPERSEC / 1000);
 		state.set(State.values.odomturndpms, DEGPERMS);
 		state.set(State.values.motorspeed, state.get(State.values.odomlinearpwm));
+		state.set(State.values.lastodomreceived, System.currentTimeMillis());
 
 		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
 			new Thread(new Runnable() {public void run() {

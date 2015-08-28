@@ -35,7 +35,7 @@ public enum PlayerCommands {
     motorsreset, cameracommand, camtilt, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
-    odometrystart, odometryreport, odometrystop, lefttimed, righttimed,
+    odometrystart, odometryreport, odometrystop, lefttimed, righttimed, forwardtimed,
     // lights
     strobeflash, spotlight, floodlight,
     // undocumented (unused):

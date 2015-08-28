@@ -646,7 +646,7 @@ public class Util {
 	public static void setJettyTelnetPort() {
 		new Thread(new Runnable() { public void run() {
 			Settings settings = Settings.getReference();
-			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(ManualSettings.telnetport);
+			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(GUISettings.telnetport);
 			try {
 				
 				URLConnection connection = (URLConnection) new URL(url).openConnection();

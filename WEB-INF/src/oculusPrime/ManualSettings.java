@@ -4,7 +4,7 @@ import java.util.Properties;
 
 public enum ManualSettings {
 	
-	motorport, powerport, developer, debugenabled, telnetport, wheeldiameter,
+	motorport, powerport, developer, debugenabled, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
 	soundthreshold, motionthreshold, checkaddresses;
 	
@@ -16,7 +16,6 @@ public enum ManualSettings {
 		config.setProperty(checkaddresses.name(), Settings.TRUE);	
 		config.setProperty(motorport.name(), Settings.ENABLED);
 		config.setProperty(powerport.name(), Settings.ENABLED);
-		config.setProperty(telnetport.name(), Settings.DISABLED);
 		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , Settings.TRUE);

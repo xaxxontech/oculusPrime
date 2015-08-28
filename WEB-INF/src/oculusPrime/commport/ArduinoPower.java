@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.941;
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.943;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -54,6 +54,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
 	public static final int WARNING_ONLY_BELOW = 40;
 	public static final int RESET_REQUIRED_ABOVE= 19;
+	public static final int FORCE_UNDOCK_ABOVE = 79;
 	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4);  // log only, suppress gui warnings:
 
 	private volatile List<Byte> commandList = new ArrayList<>();
@@ -131,7 +132,7 @@ public class ArduinoPower implements SerialPortEventListener  {
         	otherdevice = state.get(State.values.motorport);
         
         for (int i=0; i<portNames.length; i++) {
-    		if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
+    		if (portNames[i].matches("/dev/tty(USB|ACM).+") && !portNames[i].equals(otherdevice)) {
 
     			try {
         			Util.log("querying port "+portNames[i], this);
@@ -435,11 +436,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 			Util.log("redock", this);
 		}
 		
-		else if (s[0].equals("force_undock")) {
-			state.set(State.values.forceundock, true);
-			Util.log("force undock", this);
-			PowerLogger.append("force undock", this);
-		}
+//		else if (s[0].equals("force_undock")) { // moved to watchdog
+//			state.set(State.values.forceundock, true);
+//			Util.log("force undock", this);
+//			PowerLogger.append("force undock", this);
+//		}
 
 		else if (s[0].equals("high_current")) {
 			application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());

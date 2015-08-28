@@ -609,7 +609,13 @@ public class Navigation {
 		    		// wait to reach wayypoint
 					long start = System.currentTimeMillis();
 					while (state.exists(State.values.roscurrentgoal) 
-							&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  }
+							&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
+						Util.delay(100);
+						long t = System.currentTimeMillis();
+						if (state.getLong(State.values.lastodomreceived) - t > 1000) // malg timeout?
+							Util.log("error, lastodomreceived: "+
+									String.valueOf(state.getLong(State.values.lastodomreceived)-t), this);
+					}
 					
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;

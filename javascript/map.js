@@ -874,7 +874,7 @@ function waypointsmenu() {
 			str+="<table>"
 		for (var i = 0 ; i <= waypoints.length - 4 ; i += 4) {
 			str += "<tr valign='top'><td>"
-			str += "<b>"+waypoints[i]+"</b> &nbsp; &nbsp; &nbsp; ";
+			str += "&nbsp; <b>"+waypoints[i]+"</b> &nbsp; &nbsp; &nbsp; ";
 			
 			str += "</td><td>"
 

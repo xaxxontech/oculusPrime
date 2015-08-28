@@ -61,21 +61,20 @@ public class SystemWatchdog implements Observer {
 			    	}
 				}
 			}
-			
-			// safety: check for force_undock command from battery firmware
-			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 
-				
-				Util.log("System WatchDog, force undock", this);
-				PowerLogger.append("System WatchDog, force undock", this);
-				forceundock();
-			}
-			
+
 			// notify clients of power errors
 			if (state.exists(State.values.powererror.toString())) {
 				if (lastpowererrornotify == null) notifyPowerError();
 				else if ( ! lastpowererrornotify.equals(state.get(State.values.powererror))) notifyPowerError();
 			}
-			
+
+			// safety: check for force_undock command from battery firmware
+			if (state.getBoolean(State.values.forceundock) && state.equals(values.dockstatus, AutoDock.DOCKED)){ 
+				Util.log("System WatchDog, force undock", this);
+				PowerLogger.append("System WatchDog, force undock", this);
+				forceundock();
+			}
+
 			// regular reboot if set 
 			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
 					&& !state.exists(State.values.driver.toString()) &&
@@ -108,7 +107,7 @@ public class SystemWatchdog implements Observer {
 			if ( ! state.exists(State.values.driver) &&
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
 					redocking == false && lowbattredock == false &&
-					Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 10 &&
+					Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 35 && // was 10%
 					state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					settings.getBoolean(GUISettings.redock)
 					){
@@ -159,6 +158,7 @@ public class SystemWatchdog implements Observer {
 			if (!warningonly) longerror += "</span>";
 			if (c > ArduinoPower.RESET_REQUIRED_ABOVE && c != ArduinoPower.COMM_LOST) resetrequired = true;
 			if (c == ArduinoPower.COMM_LOST) commlost = true;
+			if (c > ArduinoPower.FORCE_UNDOCK_ABOVE) state.set(State.values.forceundock, true);
 		}
 
 		// cancel any navigation routes (TODO: and other autonomous functions ??)

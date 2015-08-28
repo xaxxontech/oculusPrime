@@ -685,11 +685,16 @@ attempt auto re-dock if required
 <a class="blackbg" href="javascript: if (confirm(&quot;this will enable unexpected robot movement\nare you sure?&quot;)) {
 writesetting('redock true'); }">yes</a> /
 <a class="blackbg" href="javascript: writesetting('redock false');">no</a><br>
+
 enable navigation menu <span style="font-size: 11px">(requires server restart)</span>
-	<a class="blackbg" href="javascript: writesetting('navigation true');">yes</a> /
-<a class="blackbg" href="javascript: writesetting('navigation false');">no</a><br>
- 
-<a class="blackbg" href="javascript: saveopenwindowpositions();">save window positions</a><br>
+	<a class="blackbg" href="javascript: writesetting('navigation true');">enable</a> /
+<a class="blackbg" href="javascript: writesetting('navigation false');">disable</a><br>
+
+enable telnet on port 4444 <span style="font-size: 11px">(requires server restart)</span>
+<a class="blackbg" href="javascript: writesetting('telnetport 4444');">enable</a> /
+<a class="blackbg" href="javascript: writesetting('telnetport disabled');">disable</a><br>
+
+	<a class="blackbg" href="javascript: saveopenwindowpositions();">save window positions</a><br>
 <a class="blackbg" href="javascript: defaultwindowpositions();">default window positions</a>
 <span style="font-size: 11px">(requires browser page refresh)</span><br>
 </div>
@@ -1064,7 +1069,6 @@ Navigation Menu:<br>
 <br>
 
 <a class="blackbg" href="javascript: callServer('startnav','');">start navigation</a><br>
-<a class="blackbg" href="javascript: callServer('startmapping','');">start new map</a><br>
 <a class="blackbg" href="javascript: callServer('stopnav','');">stop navigation/mapping</a><br>
 <a class="blackbg" href="javascript: rosmap();">map</a><br>
 
@@ -1083,9 +1087,14 @@ href="javascript: if (mapshowwaypoints) { mapshowwaypoints = false; } else { map
 
 <table><tr><td style="height: 10px"></td></tr></table>
 
-<a class="blackbg" href="frameGrabHTTP?mode=rosmapdownload" target="_blank">download map</a><br>
+<a class="blackbg" href="javascript: callServer('startmapping','');">start mapping</a><br>
+<a class="blackbg" href="javascript: if (confirm('Create backup and save new map\n are you sure?'))
+{ callServer('savemap',''); }">save new map</a><br>
+<a class="blackbg" href="javascript: if (confirm('Map Saved?')){callServer('stopnav','');}">stop mapping</a><br>
+
+<a class="blackbg" href="frameGrabHTTP?mode=rosmapdownload" target="_blank">download map to edit</a><br>
 <div>
-<a class="blackbg" href="javascript:uploadrosmapdivshow();" >upload map</a><span id="uploadrosmapdiv"
+<a class="blackbg" href="javascript:uploadrosmapdivshow();" >upload edited map</a><span id="uploadrosmapdiv"
 style="display: none;">:
 <form target="upload_frame" action="frameGrabHTTP?mode=rosmapupload" method="post" enctype="multipart/form-data">
 <input id="rosmapupload" name="file" class="inputbox" type="file" size="30"
@@ -1095,8 +1104,6 @@ style="display: none;">:
 	<span class="cancelbox"><b>X</b></span></a>&thinsp;
 </form>
 </span></div>
-<a class="blackbg" href="javascript: if (confirm('Create backup and save new map\n are you sure?'))
-{ callServer('savemap',''); }">save new map</a><br>
 
 <table><tr><td style="height: 10px"></td></tr></table>
 
@@ -1112,8 +1119,13 @@ href="javascript: navigationmenu();">
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
 &nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Waypoints:
+
+<a class="blackbg" href="javascript: setwaypoint(null);">waypoint at current position</a><br>
+<a class="blackbg" href="javascript: rosmaparrow('waypoint');">waypoint drop arrow</a><br>
 <table><tr><td style="height: 10px"></td></tr></table>
+
+	Waypoints:
+<table><tr><td style="height: 5px"></td></tr></table>
 <div id="waypointslist"></div>
 </div>
 

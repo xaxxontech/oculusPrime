@@ -259,7 +259,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			scanUtils = new developer.depth.ScanUtils();
 		}
 	
-		if ( ! settings.readSetting(ManualSettings.telnetport).equals(Settings.DISABLED)) {
+		if ( ! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
 			commandServer = new TelnetServer(this);
 			Util.debug("telnet server started", this);
 		}
@@ -625,6 +625,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case lefttimed: comport.turnLeft(Integer.parseInt(str)); break;
 		case righttimed: comport.turnRight(Integer.parseInt(str)); break;
+		case forwardtimed: comport.goForward(Integer.parseInt(str)); break;
 		
 		case systemcall:
 			Util.log("received: " + str,this);

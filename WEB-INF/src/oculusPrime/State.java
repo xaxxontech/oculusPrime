@@ -34,7 +34,7 @@ public class State {
 		localaddress, externaladdress, ssid, guinotify,
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
-		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
+		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm, lastodomreceived,
 		
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,

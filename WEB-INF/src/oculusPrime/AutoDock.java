@@ -162,9 +162,12 @@ public class AutoDock {
 //									comport.rotate(ArduinoPrime.direction.left, 180);
 
 									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + comport.FIRMWARE_TIMED_OFFSET);
+									String tmpspeed = state.get(State.values.motorspeed);
+									comport.speedset(ArduinoPrime.speeds.fast.toString());
 									comport.turnLeft((int) d);
 									Util.delay((long) d);
 									comport.stopGoing();
+									comport.speedset(tmpspeed);
 									Thread.sleep(2000);
 
 									dockGrab(dockgrabmodes.find, 0, 0);
@@ -256,7 +259,7 @@ public class AutoDock {
 			public void run() {
 				comport.checkisConnectedBlocking();
 				comport.goForward();
-				Util.delay(300);
+				Util.delay((long) comport.voltsComp(300));
 				comport.stopGoing();
 				int inchforward = 0;
 				while (inchforward < 20 && !state.getBoolean(State.values.wallpower) && 
@@ -266,7 +269,7 @@ public class AutoDock {
 					app.powerport.checkisConnectedBlocking();
 
 					comport.goForward();
-					Util.delay(150);
+					Util.delay((long) comport.voltsComp(150));
 					comport.stopGoing();
 
 					state.block(oculusPrime.State.values.wallpower, "true", 400);
@@ -275,8 +278,8 @@ public class AutoDock {
 				
 				if(state.getBoolean(State.values.wallpower)) { // dock maybe successful
 					comport.checkisConnectedBlocking();
-					comport.goForward(); // on more nudge
-					Util.delay(150);
+					comport.goForward(); // one more nudge
+					Util.delay((long) comport.voltsComp(150));
 					comport.stopGoing();
 					
 					comport.strobeflash("on", 120, 20);
@@ -516,7 +519,7 @@ public class AutoDock {
 //						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
 						comport.goForward(s2FWDmilliseconds);
-						Util.delay(s1FWDmilliseconds);
+						Util.delay(s2FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
@@ -539,7 +542,7 @@ public class AutoDock {
 //						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
 						comport.goForward(s2FWDmilliseconds);
-						Util.delay(s1FWDmilliseconds);
+						Util.delay(s2FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
@@ -568,7 +571,7 @@ public class AutoDock {
 //						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
 						comport.goForward(s2FWDmilliseconds);
-						Util.delay(s1FWDmilliseconds);
+						Util.delay(s2FWDmilliseconds);
 						comport.stopGoing();
 						Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 

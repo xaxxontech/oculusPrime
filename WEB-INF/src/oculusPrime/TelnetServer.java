@@ -260,7 +260,7 @@ public class TelnetServer implements Observer {
 	private void startCommandListener(){
 		
 		try {
-			serverSocket = new ServerSocket(settings.getInteger(ManualSettings.telnetport));
+			serverSocket = new ServerSocket(settings.getInteger(GUISettings.telnetport));
 		} catch (Exception e) {
 			Util.log("server sock error: " + e.getMessage(), this);
 			return;
