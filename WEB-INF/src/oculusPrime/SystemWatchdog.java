@@ -116,7 +116,7 @@ public class SystemWatchdog implements Observer {
 				PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
 				redock(null);
 			}
-			else  lowbattredock = false;
+			else  if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 
 			int cpuNow = Util.getCPU();
 			if(cpuNow > 50) Util.log("cpu: "+cpuNow, this);

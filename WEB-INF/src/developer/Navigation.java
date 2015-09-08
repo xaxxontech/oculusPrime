@@ -219,11 +219,20 @@ public class Navigation {
 		new Thread(new Runnable() { public void run() {
 
 			long start = System.currentTimeMillis();
+
+			// store goal coords
+			while (state.get(State.values.roscurrentgoal).equals("pending") && System.currentTimeMillis() - start < 1000) Util.delay(10);
+			if (!state.exists(State.values.roscurrentgoal)) return; // avoid null pointer
+			String goalcoords = state.get(State.values.roscurrentgoal);
+
+			start = System.currentTimeMillis();
 			while (state.exists(State.values.roscurrentgoal)
-					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) { Util.delay(100);  } // wait
+					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
+				if (!state.get(State.values.roscurrentgoal).equals(goalcoords)) return; // waypoint changed while waiting
+				Util.delay(10);
+			} // wait
 
 			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
-
 				Util.log("error, state rosgoalstatus null", this);
 				return;
 			}
