@@ -2,9 +2,11 @@ package oculusPrime;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -679,7 +681,7 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-				debug("updateJetty(): " + line, this);
+				// debug("updateJetty(): " + line, this);
 				
 			} catch (Exception e) {
 				Util.log("updateJetty():", e, this);
@@ -719,19 +721,76 @@ public class Util {
 	        if (files[i].isFile())size += files[i].length();
 	    }
 		    
-		return (int) (size / (1024*1024)) + "mb"; 
+		return /*files.length + " " +*/ (long) (size / (1024*1024)) + "mb"; 
 	}
 	
-	public static void deleteFrames(){
-		File[] files =  new File(Settings.framefolder).listFiles();
-	    for (int i = 0; i < files.length; i++)
-	        if (files[i].isFile()) files[i].delete();
-	}
+//	public static void deleteFrames(){
+//		File[] files =  new File(Settings.framefolder).listFiles();
+//	    for (int i = 0; i < files.length; i++)
+//	        if (files[i].isFile()) files[i].delete();
+//	}
 	
 	public static int countFrameGrabs(){
 		File path = new File(Settings.framefolder);
-		if (path.exists())
-			return path.listFiles().length;
+		if (path.exists()) return path.listFiles().length;
 		else return 0;
 	}
+	
+	public static void truncFrames(){
+		File[] files =  new File(Settings.framefolder).listFiles();
+		for (int i = 0; i < files.length; i++) {
+	      
+			if (files[i].isFile()) {
+	        	if((System.currentTimeMillis() - files[i].lastModified()) > ONE_DAY ){
+	        		debug("too old: " + files[i].getName());
+	        		files[i].delete();
+	        	} else {
+	        		debug("...not too old: " + files[i].getName() + " - " + ((System.currentTimeMillis() - files[i].lastModified())/1000 + "sec"));
+	        	}
+	        }
+	        
+	        if( ! files[i].getName().endsWith(".jpg")){
+	        	 debug("not jpeg: " + files[i].getName());
+	        	 files[i].delete();
+	        }
+		}
+	}
+	
+	public static boolean tuncate(final String path, final int lines) {
+		
+		Vector<String> alllines = new Vector<String>();
+		File file = new File(path);
+		if( ! file.exists()) return false;
+				
+        try {
+	    	String line;
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(path)));
+            while ((line = reader.readLine()) != null) alllines.add(line); 
+            reader.close();
+            if(alllines.size() > lines){   
+            	debug("tuncate(): lines: " + alllines.size() + " " + path);   
+	            file.delete();  
+	            file.createNewFile();
+            } else {
+            	debug("tuncate(): too small: " + file.getAbsolutePath());   
+            	return false;
+            }
+	    } catch (Exception e) {
+	    	debug("tuncate():" + e.getMessage());
+	        return false;
+	    }
+	    
+        try{
+            BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+            for(int i = (alllines.size() - lines) ; i < alllines.size() ; i++)
+            	writer.append(alllines.get(i) + "\r\n");
+            writer.close();
+        } catch (Exception e) {
+        	debug("tuncate():" + e.getMessage());
+	        return false;
+	    }
+        
+		return true;
+	}
+	
 }

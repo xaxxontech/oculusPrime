@@ -19,6 +19,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
 	static double VERSION = new Updater().getCurrentVersion();
+	static final int NIN_LOG_FILE = 500;
 	static String httpport = null;
 	static Settings settings = null; ;
 	static BanList ban = null;
@@ -42,40 +43,42 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 	
 		if( ! ban.knownAddress(request.getRemoteAddr())){
-			Util.log("unknown address: danger: "+request.getRemoteAddr(), this);
+			Util.log("unknown address: sending to login: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
-	
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-	
+		
 		String view = null;	
 		String delay = null;	
+		String action = null;
 		
 		try {
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
-		} catch (Exception e) {
-			Util.debug("doGet(): " + e.getLocalizedMessage(), this);
-		}
+			action = request.getParameter("action");
+		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
+		if(action != null){
+			
+			if(action.equalsIgnoreCase("frames")) Util.truncFrames();
+		
+			if(action.equalsIgnoreCase("trunc")){
+				Util.tuncate(Settings.stdout, NIN_LOG_FILE);
+				Util.tuncate(PowerLogger.powerlog, NIN_LOG_FILE);
+				Util.tuncate(BanList.banfile, NIN_LOG_FILE);
+			}
+			
+			response.sendRedirect("/oculusPrime/dashboard"); 
+		}
+	
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
-
+	
 		if(view != null){
-			
-			if(view.equalsIgnoreCase("logs")){
-				Util.deleteLogFiles();
-				response.sendRedirect("/oculusPrime/dashboard"); 
-			}
-			
-			if(view.equalsIgnoreCase("frames")){
-				Util.deleteFrames();
-				response.sendRedirect("/oculusPrime/dashboard"); 
-			}
-			
+		
 			if(view.equalsIgnoreCase("ban")){
 				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
@@ -121,6 +124,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 		}
 		
+		// default view 
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html> \n");
 		out.close();	
@@ -230,7 +234,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	public String toDashboard(final String url){
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
+		if(httpport == null) httpport = state.get(State.values.httpport);
+		
+		StringBuffer str = new StringBuffer("<table cellspacing=\"2\" border=\"0\"> \n");
 		
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
@@ -244,21 +250,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
-		String frames = "&nbsp;&nbsp;<a href=\"dashboard?view=frames\">delete</a>";
-		String logs = "&nbsp;&nbsp;<a href=\"dashboard?view=logs\">delete</a>";
-		str.append("<tr><td><b>frames</b><td>" + + Util.countFrameGrabs() + frames 
-				+ "<td><b>logs</b><td>" + Util.getLogSize() + logs
+		final String trunc = "&nbsp;&nbsp;<a href=\"dashboard?action=trunc\">trim</a>";
+		final String frames = "&nbsp;&nbsp;<a href=\"dashboard?action=frames\">trim</a>";
+		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs() + frames 
+				+ "<td><b>logs</b><td>" + Util.getLogSize() + "</a>" + trunc
 				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% </tr> \n");
 	
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
-				+ "<td><b>life</b><td>" + state.get(values.batterylife) 
-				+ "</tr> \n");
+				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "</tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
-				+ "<td><b>volts</b><td>" + state.get(values.batteryvolts) 
-				+ "</tr> \n");
+				+ "<td><b>volts</b><td>" + state.get(values.batteryvolts) + "</tr> \n");
 	
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
@@ -280,6 +284,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.batterylife.name())) return;
 		if(key.equals(values.batteryvolts.name())) return;
 		if(key.equals(values.framegrabbusy.name())) return;
+		if(key.equals(values.rosglobalpath.name())) return;
 		if(key.equals(values.rosscan.name())) return;
 		
 		if(history.size() > 9) history.remove(0);
