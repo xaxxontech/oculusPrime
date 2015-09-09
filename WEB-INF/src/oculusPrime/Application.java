@@ -400,7 +400,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 //			state.delete(State.values.controlsinverted);
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
-			watchdog.guinotified = false;
 		}
 	}
 	
@@ -477,6 +476,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		switch (fn) {
 	
 		case move: {
+
+			if (settings.getBoolean(GUISettings.navigation)) navigation.navdockactive = false;
+
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
@@ -495,6 +497,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			move(str); 
 			break;
 		}
+
 		case battstats: messageplayer(state.get(State.values.batteryinfo), "battery", state.get(State.values.batterylife)); break; 
 		case cameracommand: 
 			if (state.getBoolean(State.values.autodocking)) {
@@ -559,6 +562,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (s.length == 2) { // two args
 				if (s[0].equals("delete")) state.delete(s[1]); // State.values.valueOf(s[1]));
 				else state.set(s[0], s[1]); // State.values.valueOf(s[0]), s[1]); 
+			}
+			else if (s.length > 2) { // 2nd arg has spaces
+				String stateval = "";
+				for (int i=1; i<s.length; i++) stateval += s[i]+" ";
+				state.set(s[0], stateval.trim());
 			}
 			else {  
 				if (s[0].matches("\\S+")) { // one arg 

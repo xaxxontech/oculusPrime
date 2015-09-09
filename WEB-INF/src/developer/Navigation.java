@@ -38,6 +38,7 @@ public class Navigation {
 	public long routestarttime;
 	public NavigationLog navlog;
 	public int consecutiveroute = 1;
+	public volatile boolean navdockactive = false;
 
 	/** Constructor */
 	public Navigation(Application a){
@@ -225,15 +226,16 @@ public class Navigation {
 			if (!state.exists(State.values.roscurrentgoal)) return; // avoid null pointer
 			String goalcoords = state.get(State.values.roscurrentgoal);
 
+			// wait to reach waypoint
 			start = System.currentTimeMillis();
 			while (state.exists(State.values.roscurrentgoal)
 					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
 				if (!state.get(State.values.roscurrentgoal).equals(goalcoords)) return; // waypoint changed while waiting
 				Util.delay(10);
-			} // wait
+			}
 
 			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
-				Util.log("error, state rosgoalstatus null", this);
+				Util.log("error, state rosgoalstatus null, waypoint may have been cancelled", this);
 				return;
 			}
 
@@ -242,6 +244,7 @@ public class Navigation {
 				return;
 			}
 
+			navdockactive = true;
 			Util.delay(1000);
 
 			// success, should be pointing at dock, shut down nav
@@ -249,6 +252,9 @@ public class Navigation {
 //			Util.delay(Ros.ROSSHUTDOWNDELAY/2); // 5000 too low, massive cpu sometimes here
 
 			Util.delay(5000); // 5000 too low, massive cpu sometimes here
+
+			if (!navdockactive) return;
+
 			SystemWatchdog.waitForCpu();
 			app.comport.checkisConnectedBlocking(); // just in case
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
@@ -264,6 +270,8 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.left, "180");
 			Util.delay(app.comport.fullrotationdelay/2 + 2000);
 
+			if (!navdockactive) return;
+
 			// make sure dock in view before calling autodock go
 			if (!finddock()) { // something wrong with camera capture, try again?
 				Util.delay(5000); // allow camera time to shutdown
@@ -274,6 +282,7 @@ public class Navigation {
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 				Util.delay(4000); // wait for cam startup, light adjust
 				app.comport.checkisConnectedBlocking(); // just in case
+				if (!navdockactive) return;
 				if (!finddock()) return; // give up
 			}
 
@@ -287,6 +296,8 @@ public class Navigation {
 					System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT)
 				Util.delay(100);
 
+			if (!navdockactive) return;
+
 			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				Util.delay(2000);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
@@ -294,12 +305,15 @@ public class Navigation {
 
 
 		}  }).start();
+
+		navdockactive = false;
 	}
 
 	// dock detect, rotate if necessary
 	private boolean finddock() {
 		int rot = 0;
-		while (true) {
+
+		while (navdockactive) {
 			SystemWatchdog.waitForCpu();
 
 			app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
@@ -330,7 +344,7 @@ public class Navigation {
 				return false;
 			}
 		}
-
+		if (!navdockactive) return false;
 		return true;
 	}
 
@@ -548,12 +562,12 @@ public class Navigation {
 				}
 
 				if (!waitForNavSystem()) {
-					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							null, name, consecutiveroute);
-
 					// check if cancelled while waiting
 					if (!state.exists(State.values.navigationroute)) return;
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
+
+					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
+							null, name, consecutiveroute);
 
 					if (state.getUpTime() > Util.TEN_MINUTES) {
 						app.driverCallServer(PlayerCommands.reboot, null);
@@ -563,6 +577,10 @@ public class Navigation {
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
+
+				// check if cancelled while waiting
+				if (!state.exists(State.values.navigationroute)) return;
+				if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
 				// start!
 				routestarttime = System.currentTimeMillis();

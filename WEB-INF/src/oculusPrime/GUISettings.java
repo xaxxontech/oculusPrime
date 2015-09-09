@@ -23,7 +23,7 @@ public enum GUISettings {
 		config.setProperty(vmed.name() , "320_240_8_95");
 		config.setProperty(vhigh.name() , "640_480_8_85");
 		config.setProperty(vfull.name() , "640_480_8_95");
-		config.setProperty(vcustom.name() , "1024_768_8_85");
+		config.setProperty(vcustom.name() , "1280_720_8_85");
 		config.setProperty(vset.name() , "vmed");
 		config.setProperty(maxclicknudgedelay.name() , "180");
 		config.setProperty(nudgedelay.name() , "80");

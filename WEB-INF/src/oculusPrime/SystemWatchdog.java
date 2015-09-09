@@ -32,8 +32,7 @@ public class SystemWatchdog implements Observer {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private String ssid = null;
-	public boolean guinotified = false;
-	
+
 	SystemWatchdog(Application a){ 
 		application = a;
 		state.addObserver(this);
@@ -118,19 +117,16 @@ public class SystemWatchdog implements Observer {
 			}
 			else  if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 
+			// check cpu useage
 			int cpuNow = Util.getCPU();
 			if(cpuNow > 50) Util.log("cpu: "+cpuNow, this);
-			
-			// update in state only if changing
-			// if(Math.abs(state.getInteger(values.cpu) - cpuNow) > 5)
-			
 			state.set(values.cpu, cpuNow);
 
-			if (state.exists(values.guinotify) && !guinotified) {
+			// notify driver if any system messages
+			if (state.exists(values.guinotify)) {
 				if (state.exists(State.values.driver.toString())) {
-					guinotified = true;
 					String str= state.get(values.guinotify);
-					str += "<br><a href='javascript: guinotify(&quot;ok&quot;);'>";
+					str += "<br><br><a href='javascript: guinotify(&quot;ok&quot;);'>";
 					str += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
 
 					application.sendplayerfunction("guinotify", str);
@@ -376,11 +372,11 @@ public class SystemWatchdog implements Observer {
 
 	}
 
-	public static void guiNotify(String str) {
-		State state = State.getReference();
-		if (!state.exists(values.guinotify)) state.set(values.guinotify, "");
-		state.set(values.guinotify, state.get(values.guinotify + str+"<br><br>"));
-	}
+//	public static void guiNotify(String str) {
+//		State state = State.getReference();
+//		if (!state.exists(values.guinotify)) state.set(values.guinotify, "");
+//		state.set(values.guinotify, state.get(values.guinotify + str+"<br><br>"));
+//	}
 
 
 }

@@ -83,7 +83,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	// thread safety 
 	protected volatile boolean isconnected = false;
-	public volatile long currentMoveID;
+	private volatile long currentMoveID;
 	protected volatile long currentCamMoveID;
 
 //	private boolean invertswap = false;
@@ -230,7 +230,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (firmwareversion == 0) {
 			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
 			Util.log("error, "+msg, this);
-			SystemWatchdog.guiNotify(msg);
+			state.set(State.values.guinotify, msg);
 			return;
 		}
 		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
@@ -254,7 +254,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
 				String msg = "unable to update " + FIRMWARE_ID + " firmware to version "+FIRMWARE_VERSION_REQUIRED;
 				Util.log("error, "+msg, this);
-				SystemWatchdog.guiNotify(msg);
+				state.set(State.values.guinotify, msg);
 			}
 		}
 	}
