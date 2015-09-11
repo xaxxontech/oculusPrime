@@ -3,6 +3,7 @@ package oculusPrime;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.Vector;
 
 import javax.servlet.ServletConfig;
@@ -19,7 +20,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
 	static double VERSION = new Updater().getCurrentVersion();
-	static final int NIN_LOG_FILE = 500;
 	static String httpport = null;
 	static Settings settings = null; ;
 	static BanList ban = null;
@@ -62,13 +62,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null){
 			
-			if(action.equalsIgnoreCase("frames")) Util.truncFrames();
-		
-			if(action.equalsIgnoreCase("trunc")){
-				Util.tuncate(Settings.stdout, NIN_LOG_FILE);
-				Util.tuncate(PowerLogger.powerlog, NIN_LOG_FILE);
-				Util.tuncate(BanList.banfile, NIN_LOG_FILE);
-			}
+			if(action.equalsIgnoreCase("reboot")) Util.callReboot();
+			
+			if(action.equalsIgnoreCase("restart")) Util.callShutdown();
+			
+		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()
+		//	if(action.equalsIgnoreCase("trunc")) Util.manageLogs();
 			
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
@@ -236,7 +235,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"2\" border=\"0\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"0\" style=\"max-width:640px;\" border=\"0\"> \n");
 		
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
@@ -250,32 +249,62 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
-		final String trunc = "&nbsp;&nbsp;<a href=\"dashboard?action=trunc\">trim</a>";
-		final String frames = "&nbsp;&nbsp;<a href=\"dashboard?action=frames\">trim</a>";
-		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs() + frames 
-				+ "<td><b>logs</b><td>" + Util.getLogSize() + "</a>" + trunc
-				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% </tr> \n");
+	//	final String trunc = "<a href=\"dashboard?action=trunc\">";
+	//	final String frames = "<a href=\"dashboard?action=frames\">";
+		final String restart = "<a href=\"dashboard?action=restart\">";
+		final String reboot = "<a href=\"dashboard?action=reboot\">";
+		
+		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
+				+ "<td><b>logs</b><td>" + Util.getLogSize() 
+				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
 	
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins"
+				+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
 				+ "<td><b>life</b><td>" + state.get(values.batterylife) + "</tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60  + " mins"
+				+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
 				+ "<td><b>volts</b><td>" + state.get(values.batteryvolts) + "</tr> \n");
 	
-		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
+	//	str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
+	//	str.append(getStatustring());
+		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("\n<tr><td colspan=\"11\">" + getHTML() + "</tr> \n");	
+		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
+		str.append(getHTML() + "\n");
 		return str.toString();
 	}
 	
+	//  private String getStatustring(){
+	//	String hr = "<tr><td colspan=\"11\"><hr></tr> \n";	
+	//	String route = state.get(values.navigationroute);
+	//	String ros = "\n<tr><td colspan=\"11\">next route: ";
+	//	String line = "";
+		
+	// 	if(state.exists(values.nextroutetime)) ros += new Date(state.getLong(values.nextroutetime)).toString();
+	//	if(route != null) line += " route: " + route;
+		
+	//	if(state.equals(values.navsystemstatus, "running")) line = ros + " running </tr> \n";	
+		
+	//	if(state.equals(values.navsystemstatus, "stopped")) line = ros + " stopped </tr> \n";
+		
 	private String getHTML(){
-		String reply = "";
-		for(int i = 0 ; i < history.size() ; i++) reply += history.get(i) + " <br />\n";
-		return reply;
+		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
+		for(int i = 0 ; i < history.size() ; i++) {
+			
+			long time = Long.parseLong(history.get(i).substring(0, history.get(i).indexOf(" ")));
+			String mesg = history.get(i).substring(history.get(i).indexOf(" "));
+			String date =  new Date(time).toString();
+			date = date.substring(10, date.length()-8).trim();
+			mesg = mesg.replaceAll("=", "<td>&nbsp;&nbsp;&nbsp;&nbsp;");
+			double delta = (double)(System.currentTimeMillis() - time) / (double) 1000;
+			String unit = " sec ";
+			if(delta > 60) { delta = delta / 60; unit = " min "; }
+			reply += "\n<tr><td>" + date + "&nbsp;&nbsp;&nbsp;&nbsp;<td>" + Util.formatFloat(delta) + unit + "<td>&nbsp;&nbsp;&nbsp;&nbsp;" + mesg; 
+			
+		}
+		return reply + "\n</table>\n";
 	}
 
 	@Override
@@ -286,9 +315,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.framegrabbusy.name())) return;
 		if(key.equals(values.rosglobalpath.name())) return;
 		if(key.equals(values.rosscan.name())) return;
+		if(key.equals(values.cpu.name())) return;
 		
-		if(history.size() > 9) history.remove(0);
-		if(state.exists(key)) history.add(Util.getDateStamp() + " " +key + " = " + state.get(key));
-		else history.add(Util.getDateStamp() + " " + key + " was deleted");
+		if(history.size() > 10) history.remove(0);
+		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
 	}
 }

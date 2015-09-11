@@ -23,7 +23,7 @@ public class SystemWatchdog implements Observer {
 	public static final String NOFORWARD = "noforward";
 
 	// stale system reboot frequency 
-	private static final long STALE = Util.ONE_DAY * 2; 
+ 	private static final long STALE = Util.ONE_DAY * 2; 
 	
 	private State state = State.getReference();
 	
@@ -36,6 +36,10 @@ public class SystemWatchdog implements Observer {
 	SystemWatchdog(Application a){ 
 		application = a;
 		state.addObserver(this);
+		
+		// kill old images
+		Util.truncFrames();
+		
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 
@@ -52,10 +56,10 @@ public class SystemWatchdog implements Observer {
 	private class Task extends TimerTask {
 		public void run() {
 			
-			// show AP mode enabled if not busy
-			if(state.equals(values.ssid, AP)){
+			// show AP mode enabled, no driver and.. if not busy cpu
+			if(state.equals(values.ssid, AP) ){ 
 				if(state.getInteger(values.cpu) < 50){
-			    	if( ! state.getBoolean(State.values.autodocking)) { 
+			    	if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) { 
 			    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 			    	}
 				}

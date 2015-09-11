@@ -6,14 +6,16 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -37,18 +39,19 @@ import org.xml.sax.InputSource;
 
 public class Util {
 	
-//	public final static String WIFI_DEVICE = lookupWIFIDevice();
-//	public final static String ETH_DEVICE = lookupETHDevice();
-
 	public final static String sep = System.getProperty("file.separator");
-	private static final int PRECISION = 2;	
+	
+	public static final int MIN_LOG_FILE_LINES = 500;
+	public static final int MAX_LOG_FILE_MBYTES = 200;
+
+	public static final int PRECISION = 2;	
 	public static final long ONE_DAY = 86400000;
 	public static final long ONE_MINUTE = 60000;
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
-
+	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
@@ -364,7 +367,8 @@ public class Util {
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-	
+
+	/*
 	public static void reboot() {
 		String str  = Settings.redhome + sep + "systemreboot.sh";
 		Util.systemCall(str);
@@ -373,6 +377,67 @@ public class Util {
 	public static void shutdown() {
 		String str  = Settings.redhome + sep + "systemshutdown.sh";
 		Util.systemCall(str);
+	}
+	*/
+	
+	static void callShutdown(){
+		new Thread(){
+			public void run() {	
+				
+				PrintWriter out = null;
+				Socket socket = null;
+				try {
+				
+					String port = Settings.getReference().readSetting(GUISettings.telnetport);
+					socket = new Socket("127.0.0.1", Integer.parseInt(port));
+					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
+				
+					Thread.sleep(500);
+					
+				} catch (Exception e) {
+					debug("callShutdown(): can not connect to telnet..");
+					return;
+				}
+				
+				out.println("chat restarting in 3, 2, 1...");
+				out.println("restart");
+		
+				try {
+					out.close();
+					socket.close(); 
+				} catch (Exception e) {e.printStackTrace();}   
+			}
+		}.start();
+	}
+	
+	static void callReboot(){
+		new Thread(){
+			public void run() {	
+				
+				PrintWriter out = null;
+				Socket socket = null;
+				try {
+				
+					String port = Settings.getReference().readSetting(GUISettings.telnetport);
+					socket = new Socket("127.0.0.1", Integer.parseInt(port));
+					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
+				
+					Thread.sleep(500);
+					
+				} catch (Exception e) {
+					debug("callShutdown(): can not connect to telnet..");
+					return;
+				}
+				
+				out.println("chat rebooting in 3, 2, 1...");
+				out.println("reboot");
+		
+				try {
+					out.close();
+					socket.close(); 
+				} catch (Exception e) {e.printStackTrace();}   
+			}
+		}.start();
 	}
 	
 	public static Document loadXMLFromString(String xml){
@@ -560,7 +625,19 @@ public class Util {
 		return time;	
 	}
 
-
+	/*public static void restart() {
+		// write file as restart flag for script
+		File f = new File(Settings.redhome + Util.sep + "restart");
+		if (!f.exists())
+			try {
+				f.createNewFile();
+			} catch (IOException e) {
+				Util.printError(e);
+			}
+		
+		shutdown();
+	}*/
+	
 	public static void updateLocalIPAddress(){	
 		
 		State state = State.getReference();
@@ -707,21 +784,26 @@ public class Util {
 		return reply;
 	}
 
-	public static void deleteLogFiles(){
-	 	File[] files = new File(Settings.logfolder).listFiles();
-	    for (int i = 0; i < files.length; i++){
-	       if (files[i].isFile()) files[i].delete();
-	   }
-	}
+//	public static void deleteLogFiles(){
+//	 	File[] files = new File(Settings.logfolder).listFiles();
+//	    for (int i = 0; i < files.length; i++){
+//	       if (files[i].isFile()) files[i].delete();
+//	   }
+//	}
 	
 	public static String getLogSize(){	
+		return getLogMBytes() + " mb"; 
+	}
+	
+	public static long getLogMBytes(){	
 		long size = 0;
 	    File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
-	        if (files[i].isFile())size += files[i].length();
+	        if (files[i].isFile())
+	        	size += files[i].length();
 	    }
 		    
-		return /*files.length + " " +*/ (long) (size / (1024*1024)) + "mb"; 
+		return (size / (1000*1000)); 
 	}
 	
 //	public static void deleteFrames(){
@@ -741,23 +823,37 @@ public class Util {
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
-	        	if((System.currentTimeMillis() - files[i].lastModified()) > ONE_DAY ){
-	        		debug("too old: " + files[i].getName());
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*30){
+	        		debug("truncFrames(): too old: " + files[i].getName());
 	        		files[i].delete();
-	        	} else {
-	        		debug("...not too old: " + files[i].getName() + " - " + ((System.currentTimeMillis() - files[i].lastModified())/1000 + "sec"));
-	        	}
+	        	} 
 	        }
 	        
 	        if( ! files[i].getName().endsWith(".jpg")){
-	        	 debug("not jpeg: " + files[i].getName());
+	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
 	        	 files[i].delete();
 	        }
 		}
 	}
+
+	/*
+	public static boolean manageLogs(){
+		long size = getLogMBytes();
+		if(size < MAX_LOG_FILE_MBYTES) return false;		
+		
+		Util.tuncate(PowerLogger.powerlog);
+		Util.tuncate(Settings.stdout);
+		Util.tuncate(BanList.banfile);
+		
+		return true;
+	}
+	
+	
+	public static boolean tuncate(final String path) {
+		return tuncate(path, MIN_LOG_FILE_LINES); 
+	}
 	
 	public static boolean tuncate(final String path, final int lines) {
-		
 		Vector<String> alllines = new Vector<String>();
 		File file = new File(path);
 		if( ! file.exists()) return false;
@@ -769,8 +865,8 @@ public class Util {
             reader.close();
             if(alllines.size() > lines){   
             	debug("tuncate(): lines: " + alllines.size() + " " + path);   
-	            file.delete();  
-	            file.createNewFile();
+	     //       file.delete();  
+	     //       file.createNewFile();
             } else {
             	debug("tuncate(): too small: " + file.getAbsolutePath());   
             	return false;
@@ -792,5 +888,5 @@ public class Util {
         
 		return true;
 	}
-	
+	*/
 }
