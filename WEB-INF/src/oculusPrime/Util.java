@@ -380,7 +380,7 @@ public class Util {
 	}
 	*/
 	
-	static void callShutdown(){
+	static void callRestart(final String reason){
 		new Thread(){
 			public void run() {	
 				
@@ -399,7 +399,8 @@ public class Util {
 					return;
 				}
 				
-				out.println("chat restarting in 3, 2, 1...");
+				log("restarting: " + reason, null);
+				out.println("chat restarting: " + reason);
 				out.println("restart");
 		
 				try {
@@ -818,6 +819,25 @@ public class Util {
 		else return 0;
 	}
 	
+	public static void truncLogs(){
+		File[] files =  new File(Settings.logfolder).listFiles();
+		for (int i = 0; i < files.length; i++) {
+	      
+			if (files[i].isFile()) {
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*30){
+	        		debug("truncFrames(): too old: " + files[i].getName());
+	        		files[i].delete();
+	        	} 
+	        }
+	        
+//	        if( ! files[i].getName().endsWith(".jpg")){
+//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
+//	        	 files[i].delete();
+//	        }
+			
+		}
+	}
+
 	public static void truncFrames(){
 		File[] files =  new File(Settings.framefolder).listFiles();
 		for (int i = 0; i < files.length; i++) {
@@ -829,10 +849,11 @@ public class Util {
 	        	} 
 	        }
 	        
-	        if( ! files[i].getName().endsWith(".jpg")){
-	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
-	        	 files[i].delete();
-	        }
+//	        if( ! files[i].getName().endsWith(".jpg")){
+//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
+//	        	 files[i].delete();
+//	        }
+			
 		}
 	}
 

@@ -302,7 +302,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)){ 
 				// && settings.getBoolean(GUISettings.redock)) {
 				Util.log("....starting up undocked, attempt redock???", this);
-				new SendMail("rebooted in space", "help me.. I'm lost again. ");
+				// new SendMail("rebooted in space", "help me.. I'm lost again. ");
 				// watchdog.redock(SystemWatchdog.NOFORWARD);
 			}
 		} }).start();

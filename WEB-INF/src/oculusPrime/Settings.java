@@ -9,11 +9,11 @@ import oculusPrime.State.values;
 public class Settings {
 
 	public final static String redhome = System.getenv("RED5_HOME");
+	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";	
 	public final static String framefolder = redhome + Util.sep+"webapps/oculusPrime/framegrabs";
-	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
-	public final static String logfolder = redhome+Util.sep+"log";
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
-	
+	public final static String logfolder = redhome+Util.sep+"log";
+
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
 	public static final String FALSE = "false";

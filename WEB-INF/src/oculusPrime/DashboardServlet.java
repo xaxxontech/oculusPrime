@@ -64,7 +64,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			if(action.equalsIgnoreCase("reboot")) Util.callReboot();
 			
-			if(action.equalsIgnoreCase("restart")) Util.callShutdown();
+			if(action.equalsIgnoreCase("restart")) Util.callRestart("dashboard command");
 			
 		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()
 		//	if(action.equalsIgnoreCase("trunc")) Util.manageLogs();
