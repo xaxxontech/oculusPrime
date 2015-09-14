@@ -9,7 +9,6 @@ import javax.mail.*;
 import javax.mail.internet.*;
 
 import oculusPrime.Application;
-import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 
 public class SendMail {

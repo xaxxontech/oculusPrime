@@ -6,14 +6,16 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -31,24 +33,26 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import oculusPrime.State.values;
+import oculusPrime.commport.PowerLogger;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
 public class Util {
 	
-//	public final static String WIFI_DEVICE = lookupWIFIDevice();
-//	public final static String ETH_DEVICE = lookupETHDevice();
-
 	public final static String sep = System.getProperty("file.separator");
-	private static final int PRECISION = 2;	
+	
+	public static final int MIN_LOG_FILE_LINES = 500;
+	public static final int MAX_LOG_FILE_MBYTES = 200;
+
+	public static final int PRECISION = 2;	
 	public static final long ONE_DAY = 86400000;
 	public static final long ONE_MINUTE = 60000;
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
-
+	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
@@ -364,7 +368,8 @@ public class Util {
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-	
+
+	/*
 	public static void reboot() {
 		String str  = Settings.redhome + sep + "systemreboot.sh";
 		Util.systemCall(str);
@@ -373,6 +378,68 @@ public class Util {
 	public static void shutdown() {
 		String str  = Settings.redhome + sep + "systemshutdown.sh";
 		Util.systemCall(str);
+	}
+	*/
+	
+	static void callRestart(final String reason){
+		new Thread(){
+			public void run() {	
+				
+				PrintWriter out = null;
+				Socket socket = null;
+				try {
+				
+					String port = Settings.getReference().readSetting(GUISettings.telnetport);
+					socket = new Socket("127.0.0.1", Integer.parseInt(port));
+					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
+				
+					Thread.sleep(500);
+					
+				} catch (Exception e) {
+					debug("callShutdown(): can not connect to telnet..");
+					return;
+				}
+				
+				log("restarting: " + reason, null);
+				out.println("chat restarting: " + reason);
+				out.println("restart");
+		
+				try {
+					out.close();
+					socket.close(); 
+				} catch (Exception e) {printError(e);}   
+			}
+		}.start();
+	}
+	
+	static void callReboot(){
+		new Thread(){
+			public void run() {	
+				
+				PrintWriter out = null;
+				Socket socket = null;
+				try {
+				
+					String port = Settings.getReference().readSetting(GUISettings.telnetport);
+					socket = new Socket("127.0.0.1", Integer.parseInt(port));
+					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
+				
+					Thread.sleep(500);
+					
+				} catch (Exception e) {
+					debug("callShutdown(): can not connect to telnet..");
+					return;
+				}
+				
+				out.println("chat rebooting in 3, 2, 1...");
+				out.println("reboot");
+		
+				try {
+					out.close();
+					socket.close(); 
+				} catch (Exception e) {printError(e);}   
+			}
+		}.start();
 	}
 	
 	public static Document loadXMLFromString(String xml){
@@ -560,7 +627,19 @@ public class Util {
 		return time;	
 	}
 
-
+	/*public static void restart() {
+		// write file as restart flag for script
+		File f = new File(Settings.redhome + Util.sep + "restart");
+		if (!f.exists())
+			try {
+				f.createNewFile();
+			} catch (IOException e) {
+				Util.printError(e);
+			}
+		
+		shutdown();
+	}*/
+	
 	public static void updateLocalIPAddress(){	
 		
 		State state = State.getReference();
@@ -584,16 +663,45 @@ public class Util {
 				}
 			}
 		} catch (Exception e) {
-			Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
-			state.delete(values.localaddress);		
+			// Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
+			state.delete(values.localaddress);
+			updateEthernetAddress();
 		}
+	}
+	
+	public static void updateEthernetAddress(){	
+		
+		State state = State.getReference();
+
+		try {			
+			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				if(line.contains("eth")) {
+					line = procReader.readLine();
+					String addr = line.substring(line.indexOf(":")+1); 
+					addr = addr.substring(0, addr.indexOf(" ")).trim();
+									
+					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
+					else Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
+				}
+			}
+		} catch (Exception e) {
+			state.set(values.localaddress, "127.0.0.1");
+		}
+		
+		if(!state.exists(values.localaddress)) state.set(values.localaddress, "127.0.0.1");
 	}
 	
 	private static String lookupWIFIDevice(){
 		
 		String wdev = null;
 		
-		try {
+		try { // this fails if no wifi is enabled 
 			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
@@ -663,7 +771,7 @@ public class Util {
 //				debug("setJettyTelnetPort(): "+line, this);
 				
 			} catch (Exception e) {
-				Util.log("setJettyTelnetPort():", e, this);
+//				Util.log("setJettyTelnetPort():", e, this);
 			}
 		} }).start();
 	}
@@ -684,7 +792,7 @@ public class Util {
 				// debug("updateJetty(): " + line, this);
 				
 			} catch (Exception e) {
-				Util.log("updateJetty():", e, this);
+//				Util.log("updateJetty():", e, this);
 			}
 		} }).start();
 	}
@@ -707,21 +815,26 @@ public class Util {
 		return reply;
 	}
 
-	public static void deleteLogFiles(){
-	 	File[] files = new File(Settings.logfolder).listFiles();
-	    for (int i = 0; i < files.length; i++){
-	       if (files[i].isFile()) files[i].delete();
-	   }
-	}
+//	public static void deleteLogFiles(){
+//	 	File[] files = new File(Settings.logfolder).listFiles();
+//	    for (int i = 0; i < files.length; i++){
+//	       if (files[i].isFile()) files[i].delete();
+//	   }
+//	}
 	
 	public static String getLogSize(){	
+		return getLogMBytes() + " mb"; 
+	}
+	
+	public static long getLogMBytes(){	
 		long size = 0;
 	    File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
-	        if (files[i].isFile())size += files[i].length();
+	        if (files[i].isFile())
+	        	size += files[i].length();
 	    }
 		    
-		return /*files.length + " " +*/ (long) (size / (1024*1024)) + "mb"; 
+		return (size / (1000*1000)); 
 	}
 	
 //	public static void deleteFrames(){
@@ -736,28 +849,81 @@ public class Util {
 		else return 0;
 	}
 	
+	public static void truncLogs(){
+		File[] files =  new File(Settings.logfolder).listFiles();
+		for (int i = 0; i < files.length; i++) {
+	      
+			if (files[i].isFile()) {
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
+	        		debug("truncFrames(): too old: " + files[i].getName());
+	        		files[i].delete();
+	        	} 
+	        }
+	        
+	        if( !files[i].getName().endsWith(".log") ||  !files[i].getName().endsWith(".stdout")){
+	        	 debug("truncFrames(): deleting, not a log: " + files[i].getName());
+	        	 files[i].delete();
+	        }
+			
+		}
+	}
+
 	public static void truncFrames(){
 		File[] files =  new File(Settings.framefolder).listFiles();
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
-	        	if((System.currentTimeMillis() - files[i].lastModified()) > ONE_DAY ){
-	        		debug("too old: " + files[i].getName());
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
+	        		debug("truncFrames(): too old: " + files[i].getName());
 	        		files[i].delete();
-	        	} else {
-	        		debug("...not too old: " + files[i].getName() + " - " + ((System.currentTimeMillis() - files[i].lastModified())/1000 + "sec"));
-	        	}
+	        	} 
 	        }
 	        
-	        if( ! files[i].getName().endsWith(".jpg")){
-	        	 debug("not jpeg: " + files[i].getName());
-	        	 files[i].delete();
-	        }
+//	        if( ! files[i].getName().endsWith(".jpg")){
+//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
+//	        	 files[i].delete();
+//	        }
+			
 		}
 	}
-	
-	public static boolean truncate(final String path, final int lines) {
+
+	private void callForHelp(String subject, String body) {
+	//	application.driverCallServer(PlayerCommands.messageclients, body);
+		Util.log("callForHelp() " + subject + " " + body, this);
+		PowerLogger.append("callForHelp() " + subject + " " + body, this);
+
+	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
+		State state = State.getReference();
+		Settings settings = Settings.getReference();
+		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
+				settings.readRed5Setting("http.port")+"/oculusPrime/";
+		String emailto = settings.readSetting(GUISettings.email_to_address);
 		
+		//if (!emailto.equals(Settings.DISABLED))
+		//	application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
+		//application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
+	}
+	
+
+	/*
+	public static boolean manageLogs(){
+		long size = getLogMBytes();
+		if(size < MAX_LOG_FILE_MBYTES) return false;		
+		
+		Util.tuncate(PowerLogger.powerlog);
+		Util.tuncate(Settings.stdout);
+		Util.tuncate(BanList.banfile);
+>>>>>>> 7f1a7841a03396135f4ce4bc5c676ec68a4fb299
+		
+		return true;
+	}
+	
+	
+	public static boolean tuncate(final String path) {
+		return tuncate(path, MIN_LOG_FILE_LINES); 
+	}
+	
+	public static boolean tuncate(final String path, final int lines) {
 		Vector<String> alllines = new Vector<String>();
 		File file = new File(path);
 		if( ! file.exists()) return false;
@@ -768,9 +934,15 @@ public class Util {
             while ((line = reader.readLine()) != null) alllines.add(line); 
             reader.close();
             if(alllines.size() > lines){   
+<<<<<<< HEAD
             	debug("truncate(): lines: " + alllines.size() + " " + path);
 	            file.delete();  
 	            file.createNewFile();
+=======
+            	debug("tuncate(): lines: " + alllines.size() + " " + path);   
+	     //       file.delete();  
+	     //       file.createNewFile();
+>>>>>>> 7f1a7841a03396135f4ce4bc5c676ec68a4fb299
             } else {
             	debug("truncate(): too small: " + file.getAbsolutePath());
             	return false;
@@ -792,5 +964,5 @@ public class Util {
         
 		return true;
 	}
-	
+	*/
 }

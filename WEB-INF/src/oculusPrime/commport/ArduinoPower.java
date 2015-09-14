@@ -427,7 +427,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			sendCommand(CONFIRMSHUTDOWN);
 			Util.log("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
 			PowerLogger.append("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
-			Util.shutdown();
+			application.shutdown();
 		}
 		
 		else if (s[0].equals("redock")) {

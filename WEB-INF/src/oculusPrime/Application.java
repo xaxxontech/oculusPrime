@@ -290,7 +290,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.setJettyTelnetPort();
 		Util.updateJetty();
 
-
 		watchdog = new SystemWatchdog(this);
 		
 		new Thread(new Runnable() { public void run() {
@@ -298,7 +297,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
 				
-
+		new Thread(new Runnable() { public void run() {
+			Util.delay(30000);  
+			if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)){ 
+				// && settings.getBoolean(GUISettings.redock)) {
+				Util.log("....starting up undocked, attempt redock???", this);
+				// new SendMail("rebooted in space", "help me.. I'm lost again. ");
+				// watchdog.redock(SystemWatchdog.NOFORWARD);
+			}
+		} }).start();
+				
 		Util.debug("application initialize done", this);
 	}
 
@@ -763,14 +771,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			powerport.writeStatusToEeprom();
 			killGrabber(); // prevents error dialog on chrome startup
 			Util.delay(1000);
-			Util.reboot();
+			reboot();
 			break;
 		
 		case systemshutdown:
 			powerport.writeStatusToEeprom();
 			killGrabber(); // prevents error dialog on chrome startup
 			Util.delay(1000);
-			Util.shutdown();
+			shutdown();
 			break;
 		
 		case roslaunch:
@@ -929,7 +937,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case chat:
 			chat(str);
 			break;
-		case dockgrabbed: // TODO: unused?
+		case dockgrabbed:
 			docker.autoDock("dockgrabbed " + str);
 			state.set(State.values.dockgrabbusy.name(), false);
 			break;
@@ -1422,27 +1430,39 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String streamSettings() {
 		String result = "";
 		result += settings.readSetting("vset") + "_";
-		result += settings.readSetting("vlow") + "_"
-				+ settings.readSetting("vmed") + "_";
-		result += settings.readSetting("vhigh") + "_"
-				+ settings.readSetting("vfull") + "_";
+		result += settings.readSetting("vlow") + "_" + settings.readSetting("vmed") + "_";
+		result += settings.readSetting("vhigh") + "_" + settings.readSetting("vfull") + "_";
 		result += settings.readSetting("vcustom");
 		return result;
 	}
 
 	public void restart() {
-		messageplayer("restarting server application", null, null);
-
+		messageplayer("restarting server application", null, null);	
+		
 		// write file as restart flag for script
 		File f = new File(Settings.redhome + Util.sep + "restart");
-		if (!f.exists())
+		if (!f.exists()){
 			try {
 				f.createNewFile();
 			} catch (IOException e) {
 				Util.printError(e);
 			}
-		
+		}
+/*		
+		f = new File(Settings.redhome + Util.sep + "trunc");
+		if (!f.exists()){
+			try {
+				f.createNewFile();
+			} catch (IOException e) {
+				Util.printError(e);
+			}
+		}
+*/		
 		shutdown();
+	}
+	
+	public static void reboot() {
+		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 	}
 	
 	public void quit() { 
@@ -1450,11 +1470,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		shutdown();
 	}
 
-	private void shutdown() {
+	public void shutdown() {
 		
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 		
+/*		Util.log("count logs: " + Util.getLogSize(), this);
+		if(Util.manageLogs()) {
+			Util.log("shutting down, managing log files first..", this);// write file as restart flag for script
+		}
+*/		
+	
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
 			commandServer.close();
@@ -1472,8 +1498,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
 		}
 
-		if (! settings.getBoolean(ManualSettings.debugenabled))
-			killGrabber();
+		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
 
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}

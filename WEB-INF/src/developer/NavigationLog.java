@@ -106,6 +106,8 @@ public class NavigationLog {
                     if (items < maxitems || line.contains(FILEEND))
                         entirefile += line + "\n";
                 }
+                
+                reader.close();
 
             } catch (Exception e) { Util.printError(e); }
         }

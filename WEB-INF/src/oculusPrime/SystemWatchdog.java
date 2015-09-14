@@ -7,6 +7,9 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -23,7 +26,7 @@ public class SystemWatchdog implements Observer {
 	public static final String NOFORWARD = "noforward";
 
 	// stale system reboot frequency 
-	private static final long STALE = Util.ONE_DAY * 2; 
+ 	private static final long STALE = Util.ONE_DAY * 2; 
 	
 	private State state = State.getReference();
 	
@@ -32,10 +35,15 @@ public class SystemWatchdog implements Observer {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private String ssid = null;
-
+	private Calendar calender = Calendar.getInstance();
+	private boolean midnight = false;
+	       
+	       
 	SystemWatchdog(Application a){ 
 		application = a;
 		state.addObserver(this);
+		Util.updateExternalIPAddress();
+		Util.updateLocalIPAddress();
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 	}
 
@@ -49,13 +57,98 @@ public class SystemWatchdog implements Observer {
 		}
 	}
 	
+	private void midnight(){	
+		
+		// kill old files
+		Util.truncFrames();
+		Util.truncLogs();
+		
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+		String formatted = format.format(calender.getTime());
+		Util.log("midnight file roll over: "+ formatted, this);
+		
+		File power = new File(PowerLogger.powerlog);
+		File power_archive = new File(Settings.logfolder+Util.sep+"power_"+formatted+".log");
+		if(power_archive.exists()) {
+			Util.log("error: existing log file: "+ power_archive.getName(), this);
+			power_archive = new File(Settings.logfolder+Util.sep+"power_"+formatted+"_"+System.currentTimeMillis()+".log");
+		}
+		power.renameTo(power_archive);
+		Util.log("new log file: "+ power_archive.getName(), this);
+	
+		File red5 = new File(Settings.logfolder+Util.sep+"red5.log");
+		File red5_archive = new File(Settings.logfolder+Util.sep+"red5_"+formatted+".log");
+		if(red5_archive.exists()) {
+			Util.log("error: existing log file: "+ red5_archive.getName(), this);
+			power_archive = new File(Settings.logfolder+Util.sep+"red5_"+formatted+"_"+System.currentTimeMillis()+".log");
+		}
+		red5.renameTo(red5_archive);
+		Util.log("new log file: "+ red5_archive.getName(), this);
+		
+		File ros = new File(Settings.logfolder+Util.sep+"ros.log");
+		File ros_archive = new File(Settings.logfolder+Util.sep+"ros_"+formatted+".log");
+		if(ros_archive.exists()) {
+			Util.log("error: existing log file: "+ ros_archive.getName(), this);
+			power_archive = new File(Settings.logfolder+Util.sep+"ros_"+formatted+"_"+System.currentTimeMillis()+".log");
+		}
+		ros.renameTo(ros_archive);
+		Util.log("new log file: "+ ros_archive.getName(), this);
+		
+		File ban = new File(BanList.banlog);
+		File ban_archive = new File(Settings.logfolder+Util.sep+"banlist_"+formatted+".log");
+		if(ban_archive.exists()) {
+			Util.log("error: existing log file: "+ ban_archive.getName(), this);
+			ban_archive = new File(Settings.logfolder+Util.sep+"ban_"+formatted+"_"+System.currentTimeMillis()+".log");
+		}
+		ban.renameTo(ban_archive);
+		Util.log("new log file: "+ ban_archive.getName(), this);
+		
+		File jvm = new File(Settings.stdout);
+		File jvm_archive = new File(Settings.logfolder+Util.sep+"jvm_"+formatted+".log");
+		if(jvm_archive.exists()) {
+			Util.log("error: existing log file: "+ jvm_archive.getName(), this);
+			jvm_archive = new File(Settings.logfolder+Util.sep+"jvm_"+formatted+"_"+System.currentTimeMillis()+".log");
+		}
+		Util.log("new log file: "+ jvm_archive.getName(), this);
+		Util.log("restarting with new log files, size: "+ Util.getLogMBytes(), this);
+		jvm.renameTo(jvm_archive); // kills logging, requires java restart..
+		// Util.delay(1000); 
+		Util.callRestart("restarting with new log files, size: "+ Util.getLogMBytes());
+		
+		//Util.delay(1000); // be sure ? or don't use telnet
+		//application.driverCallServer(PlayerCommands.restart, null);
+	}
+	
 	private class Task extends TimerTask {
 		public void run() {
 			
-			// show AP mode enabled if not busy
-			if(state.equals(values.ssid, AP)){
+			// restart logs when docked 
+			calender.setTimeInMillis(System.currentTimeMillis());
+			if((calender.get(Calendar.HOUR_OF_DAY) == 0) && (calender.get(Calendar.MINUTE) == 0)) midnight = true;
+			if(midnight && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) midnight();
+			
+			if(! state.exists(values.localaddress)) Util.updateLocalIPAddress();
+			else if(state.equals(values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
+			if(! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
+			
+			// regular reboot if set 
+			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
+					&& !state.exists(State.values.driver.toString()) &&
+					!state.exists(State.values.powererror.toString()) &&
+					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+					state.getInteger(State.values.telnetusers) == 0 &&
+					state.getUpTime() > Util.TEN_MINUTES && // prevent runaway reboots
+					(settings.getBoolean(GUISettings.reboot))){
+				
+				// String boot = new Date(state.getLong(State.values.javastartup.name())).toString();				
+				Util.log("regular reboot", this);
+				application.driverCallServer(PlayerCommands.reboot, null);
+			}
+			
+			// show AP mode enabled, no driver and.. if not busy cpu
+			if(state.equals(values.ssid, AP)){ 
 				if(state.getInteger(values.cpu) < 50){
-			    	if( ! state.getBoolean(State.values.autodocking)) { 
+			    	if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) { 
 			    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 			    	}
 				}
@@ -74,20 +167,6 @@ public class SystemWatchdog implements Observer {
 				forceundock();
 			}
 
-			// regular reboot if set 
-			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
-					&& !state.exists(State.values.driver.toString()) &&
-					!state.exists(State.values.powererror.toString()) &&
-					state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
-					state.getInteger(State.values.telnetusers) == 0 &&
-					state.getUpTime() > Util.TEN_MINUTES && // prevent runaway reboots
-					(settings.getBoolean(GUISettings.reboot))){
-				
-				// String boot = new Date(state.getLong(State.values.javastartup.name())).toString();				
-				Util.log("regular reboot", this);
-				application.driverCallServer(PlayerCommands.reboot, null);
-			}
-			
 			// deal with abandoned logins, driver still connected
 			if (state.exists(State.values.driver.toString()) && 
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN ) {
