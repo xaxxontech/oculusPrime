@@ -65,9 +65,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("frames")) Util.truncFrames();
 		
 			if(action.equalsIgnoreCase("trunc")){
-				Util.tuncate(Settings.stdout, NIN_LOG_FILE);
-				Util.tuncate(PowerLogger.powerlog, NIN_LOG_FILE);
-				Util.tuncate(BanList.banfile, NIN_LOG_FILE);
+				Util.truncate(Settings.stdout, NIN_LOG_FILE);
+				Util.truncate(PowerLogger.powerlog, NIN_LOG_FILE);
+				Util.truncate(BanList.banfile, NIN_LOG_FILE);
 			}
 			
 			response.sendRedirect("/oculusPrime/dashboard"); 

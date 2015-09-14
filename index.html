@@ -1069,7 +1069,7 @@ Navigation Menu:<br>
 <br>
 
 <a class="blackbg" href="javascript: callServer('startnav','');">start navigation</a><br>
-<a class="blackbg" href="javascript: callServer('stopnav','');">stop navigation/mapping</a><br>
+<a class="blackbg" href="javascript: callServer('stopnav','');">stop navigation</a><br>
 <a class="blackbg" href="javascript: rosmap();">map</a><br>
 
 <table><tr><td style="height: 10px"></td></tr></table>
@@ -1090,7 +1090,7 @@ href="javascript: if (mapshowwaypoints) { mapshowwaypoints = false; } else { map
 <a class="blackbg" href="javascript: callServer('startmapping','');">start mapping</a><br>
 <a class="blackbg" href="javascript: if (confirm('Create backup and save new map\n are you sure?'))
 { callServer('savemap',''); }">save new map</a><br>
-<a class="blackbg" href="javascript: if (confirm('Map Saved?')){callServer('stopnav','');}">stop mapping</a><br>
+<a class="blackbg" href="javascript: if (confirm('Shutting down mapping, save new map first')){callServer('stopnav','');}">stop mapping</a><br>
 
 <a class="blackbg" href="frameGrabHTTP?mode=rosmapdownload" target="_blank">download map to edit</a><br>
 <div>

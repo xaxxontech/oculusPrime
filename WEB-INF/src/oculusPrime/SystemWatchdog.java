@@ -15,7 +15,7 @@ public class SystemWatchdog implements Observer {
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
 
-	static final String AP = "ap"; // must match jetty's network servlet !!
+	static final String AP = "oculusprime"; // must match jetty's network servlet !!
 
 	private static final long DELAY = 10000; // 10 sec 
 	public static final long AUTODOCKTIMEOUT= 360000; // 6 min

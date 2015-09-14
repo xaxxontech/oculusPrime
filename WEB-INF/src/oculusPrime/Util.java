@@ -701,8 +701,8 @@ public class Util {
 			in.close();
 							
 		} catch (Exception e) {
-			Util.log("getJettyStatus():" + e.getLocalizedMessage(), null);
-			reply = "not running, check settings..";
+			Util.debug("getJettyStatus():" + e.getLocalizedMessage(), null);
+			reply = "Wifi manager not running, check settings..";
 		}
 		return reply;
 	}
@@ -756,7 +756,7 @@ public class Util {
 		}
 	}
 	
-	public static boolean tuncate(final String path, final int lines) {
+	public static boolean truncate(final String path, final int lines) {
 		
 		Vector<String> alllines = new Vector<String>();
 		File file = new File(path);
@@ -768,15 +768,15 @@ public class Util {
             while ((line = reader.readLine()) != null) alllines.add(line); 
             reader.close();
             if(alllines.size() > lines){   
-            	debug("tuncate(): lines: " + alllines.size() + " " + path);   
+            	debug("truncate(): lines: " + alllines.size() + " " + path);
 	            file.delete();  
 	            file.createNewFile();
             } else {
-            	debug("tuncate(): too small: " + file.getAbsolutePath());   
+            	debug("truncate(): too small: " + file.getAbsolutePath());
             	return false;
             }
 	    } catch (Exception e) {
-	    	debug("tuncate():" + e.getMessage());
+	    	debug("truncate():" + e.getMessage());
 	        return false;
 	    }
 	    
@@ -786,7 +786,7 @@ public class Util {
             	writer.append(alllines.get(i) + "\r\n");
             writer.close();
         } catch (Exception e) {
-        	debug("tuncate():" + e.getMessage());
+        	debug("truncate():" + e.getMessage());
 	        return false;
 	    }
         

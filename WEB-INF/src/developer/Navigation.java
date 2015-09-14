@@ -273,7 +273,8 @@ public class Navigation {
 			if (!navdockactive) return;
 
 			// make sure dock in view before calling autodock go
-			if (!finddock()) { // something wrong with camera capture, try again?
+			if (!finddock(AutoDock.LOWRES)) { // something wrong with camera capture, try again?
+				Util.log("error, finddock() needs to try 2nd time", this);
 				Util.delay(5000); // allow camera time to shutdown
 				app.killGrabber(); // force chrome restart
 				Util.delay(app.GRABBERRESPAWN + 4000); // allow time for grabber respawn
@@ -283,7 +284,7 @@ public class Navigation {
 				Util.delay(4000); // wait for cam startup, light adjust
 				app.comport.checkisConnectedBlocking(); // just in case
 				if (!navdockactive) return;
-				if (!finddock()) return; // give up
+				if (!finddock(AutoDock.HIGHRES)) return; // give up
 			}
 
 			// onwards
@@ -310,15 +311,15 @@ public class Navigation {
 	}
 
 	// dock detect, rotate if necessary
-	private boolean finddock() {
+	private boolean finddock(String resolution) {
 		int rot = 0;
 
 		while (navdockactive) {
 			SystemWatchdog.waitForCpu();
 
-			app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
+			app.driverCallServer(PlayerCommands.dockgrab, resolution);
 			long start = System.currentTimeMillis();
-			while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < 10000)
+			while (!state.exists(State.values.dockfound.toString()) && System.currentTimeMillis() - start < Util.ONE_MINUTE)
 				Util.delay(10);  // wait
 
 			if (state.getBoolean(State.values.dockfound)) break; // great, onwards
@@ -834,12 +835,8 @@ public class Navigation {
 			else if (motion)
     			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			else // photo
-			{
 				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
-//				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.custom.toString());
-			}
 
-			int pos = state.getInteger(State.values.cameratilt);
 			if (photo)
 				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
 			else
@@ -875,6 +872,8 @@ public class Navigation {
 
 			if (!state.exists(State.values.navigationroute)) return;
 	    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
+
+			state.delete(State.values.streamactivity);
 
 			// enable sound detection
 			if (sound) {

@@ -83,7 +83,14 @@ public class OculusImage {
 	private Boolean[] floodFill(int[] ablob, int start) {  
 		ArrayList<Integer> q= new ArrayList<Integer>();
 		q.add(start);
-		Boolean[] blob = new Boolean[width*height];
+		Boolean[] blob = new Boolean[0];
+		try {
+			blob = new Boolean[width*height];
+		} catch (Exception e) { // probably heap overflow CATCH NOT WORKING
+			Util.log("floodFill()", e, this);
+//			e.printStackTrace();
+			return new Boolean[0];
+		}
 		Arrays.fill(blob, false);
 		int n;
 		int w;
@@ -255,11 +262,15 @@ public class OculusImage {
 		int blobBox;
 		ArrayList<Integer> blobstarts = new ArrayList<Integer>();
 		for (pixel=0; pixel<width*height; pixel++) { // zero to end, find all blobs
-			if (parr[pixel]==1) { // finds a white one 
+			if (parr[pixel]==1) { // finds a white one
 				Boolean[] temp = floodFill(parr, pixel);
 				if (temp.length > minimumsize) { // discard tiny blobs  was 150
 					blobs.add(temp);
 					blobstarts.add(pixel);
+					if (blobs.size() > 255) { // probably noisy img, avoid heap overflow
+						Util.log("error, too many blobs", this);
+						return result;
+					}
 				}
 					
 			}
@@ -284,7 +295,7 @@ public class OculusImage {
 							maxx, miny, maxy) / (float) blobBox;
 					float blobRatio = (float) (maxx-minx)/(float)(maxy-miny);
 					diff = Math.abs(topRatio - lastTopRatio) + Math.abs(bottomRatio- lastBottomRatio) + Math.abs(midRatio- lastMidRatio);
-					if (diff < maxdiff && blobRatio <= lastBlobRatio*1.1) { 
+					if (diff < maxdiff && blobRatio <= lastBlobRatio*1.1) {
 						winner=blobnum;
 						maxdiff = diff;
 						winRect = r.clone();
