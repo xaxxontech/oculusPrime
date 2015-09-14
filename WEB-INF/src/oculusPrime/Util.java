@@ -33,6 +33,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import oculusPrime.State.values;
+import oculusPrime.commport.PowerLogger;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -406,7 +407,7 @@ public class Util {
 				try {
 					out.close();
 					socket.close(); 
-				} catch (Exception e) {e.printStackTrace();}   
+				} catch (Exception e) {printError(e);}   
 			}
 		}.start();
 	}
@@ -436,7 +437,7 @@ public class Util {
 				try {
 					out.close();
 					socket.close(); 
-				} catch (Exception e) {e.printStackTrace();}   
+				} catch (Exception e) {printError(e);}   
 			}
 		}.start();
 	}
@@ -662,16 +663,45 @@ public class Util {
 				}
 			}
 		} catch (Exception e) {
-			Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
-			state.delete(values.localaddress);		
+			// Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
+			state.delete(values.localaddress);
+			updateEthernetAddress();
 		}
+	}
+	
+	public static void updateEthernetAddress(){	
+		
+		State state = State.getReference();
+
+		try {			
+			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				if(line.contains("eth")) {
+					line = procReader.readLine();
+					String addr = line.substring(line.indexOf(":")+1); 
+					addr = addr.substring(0, addr.indexOf(" ")).trim();
+									
+					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
+					else Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
+				}
+			}
+		} catch (Exception e) {
+			state.set(values.localaddress, "127.0.0.1");
+		}
+		
+		if(!state.exists(values.localaddress)) state.set(values.localaddress, "127.0.0.1");
 	}
 	
 	private static String lookupWIFIDevice(){
 		
 		String wdev = null;
 		
-		try {
+		try { // this fails if no wifi is enabled 
 			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
@@ -741,7 +771,7 @@ public class Util {
 //				debug("setJettyTelnetPort(): "+line, this);
 				
 			} catch (Exception e) {
-				Util.log("setJettyTelnetPort():", e, this);
+//				Util.log("setJettyTelnetPort():", e, this);
 			}
 		} }).start();
 	}
@@ -762,7 +792,7 @@ public class Util {
 				// debug("updateJetty(): " + line, this);
 				
 			} catch (Exception e) {
-				Util.log("updateJetty():", e, this);
+//				Util.log("updateJetty():", e, this);
 			}
 		} }).start();
 	}
@@ -779,7 +809,7 @@ public class Util {
 			in.close();
 							
 		} catch (Exception e) {
-			Util.log("getJettyStatus():" + e.getLocalizedMessage(), null);
+			// Util.log("getJettyStatus():" + e.getLocalizedMessage(), null);
 			reply = "not running, check settings..";
 		}
 		return reply;
@@ -824,16 +854,16 @@ public class Util {
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*30){
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
 	        		debug("truncFrames(): too old: " + files[i].getName());
 	        		files[i].delete();
 	        	} 
 	        }
 	        
-//	        if( ! files[i].getName().endsWith(".jpg")){
-//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
-//	        	 files[i].delete();
-//	        }
+	        if( !files[i].getName().endsWith(".log") ||  !files[i].getName().endsWith(".stdout")){
+	        	 debug("truncFrames(): deleting, not a log: " + files[i].getName());
+	        	 files[i].delete();
+	        }
 			
 		}
 	}
@@ -843,7 +873,7 @@ public class Util {
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*30){
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
 	        		debug("truncFrames(): too old: " + files[i].getName());
 	        		files[i].delete();
 	        	} 
@@ -856,6 +886,25 @@ public class Util {
 			
 		}
 	}
+	
+
+	private void callForHelp(String subject, String body) {
+	//	application.driverCallServer(PlayerCommands.messageclients, body);
+		Util.log("callForHelp() " + subject + " " + body, this);
+		PowerLogger.append("callForHelp() " + subject + " " + body, this);
+
+	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
+		State state = State.getReference();
+		Settings settings = Settings.getReference();
+		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
+				settings.readRed5Setting("http.port")+"/oculusPrime/";
+		String emailto = settings.readSetting(GUISettings.email_to_address);
+		
+		//if (!emailto.equals(Settings.DISABLED))
+		//	application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
+		//application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
+	}
+	
 
 	/*
 	public static boolean manageLogs(){
