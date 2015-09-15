@@ -22,6 +22,7 @@ public class AutoDock {
 	public static final String DOCKING = "docking";
 	public static final String UNKNOWN = "unknown";
 	public static final String HIGHRES = "highres";
+	public static final String LOWRES = "lowres";
 	public enum autodockmodes{ go, dockgrabbed, calibrate, cancel};
 	public enum dockgrabmodes{ calibrate, start, find, test };
 

@@ -809,8 +809,8 @@ public class Util {
 			in.close();
 							
 		} catch (Exception e) {
-			// Util.log("getJettyStatus():" + e.getLocalizedMessage(), null);
-			reply = "not running, check settings..";
+			Util.debug("getJettyStatus():" + e.getLocalizedMessage(), null);
+			reply = "Wifi manager not running, check settings..";
 		}
 		return reply;
 	}
@@ -886,7 +886,6 @@ public class Util {
 			
 		}
 	}
-	
 
 	private void callForHelp(String subject, String body) {
 	//	application.driverCallServer(PlayerCommands.messageclients, body);
@@ -914,6 +913,7 @@ public class Util {
 		Util.tuncate(PowerLogger.powerlog);
 		Util.tuncate(Settings.stdout);
 		Util.tuncate(BanList.banfile);
+>>>>>>> 7f1a7841a03396135f4ce4bc5c676ec68a4fb299
 		
 		return true;
 	}
@@ -934,15 +934,21 @@ public class Util {
             while ((line = reader.readLine()) != null) alllines.add(line); 
             reader.close();
             if(alllines.size() > lines){   
+<<<<<<< HEAD
+            	debug("truncate(): lines: " + alllines.size() + " " + path);
+	            file.delete();  
+	            file.createNewFile();
+=======
             	debug("tuncate(): lines: " + alllines.size() + " " + path);   
 	     //       file.delete();  
 	     //       file.createNewFile();
+>>>>>>> 7f1a7841a03396135f4ce4bc5c676ec68a4fb299
             } else {
-            	debug("tuncate(): too small: " + file.getAbsolutePath());   
+            	debug("truncate(): too small: " + file.getAbsolutePath());
             	return false;
             }
 	    } catch (Exception e) {
-	    	debug("tuncate():" + e.getMessage());
+	    	debug("truncate():" + e.getMessage());
 	        return false;
 	    }
 	    
@@ -952,7 +958,7 @@ public class Util {
             	writer.append(alllines.get(i) + "\r\n");
             writer.close();
         } catch (Exception e) {
-        	debug("tuncate():" + e.getMessage());
+        	debug("truncate():" + e.getMessage());
 	        return false;
 	    }
         

@@ -61,14 +61,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
 		if(action != null){
-			
+
 			if(action.equalsIgnoreCase("reboot")) Util.callReboot();
 			
 			if(action.equalsIgnoreCase("restart")) Util.callRestart("dashboard command");
 			
 		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()
 		//	if(action.equalsIgnoreCase("trunc")) Util.manageLogs();
-			
+
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
 	

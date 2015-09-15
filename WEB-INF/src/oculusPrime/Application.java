@@ -1244,9 +1244,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
 			sc.invoke("playerfunction", new Object[] { fn, params });
 		}
-		if(commandServer!=null) {
-			commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " javascript function: " + fn + " "+ params);
-		}
+//		if(commandServer!=null) {
+//			commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " javascript function: " + fn + " "+ params);
+//		}
 	}
 
 	public void saySpeech(String str) {
