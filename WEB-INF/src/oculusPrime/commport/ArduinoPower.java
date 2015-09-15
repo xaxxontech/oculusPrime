@@ -125,7 +125,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 		isconnected = false;
 		
     	String[] portNames = SerialPortList.getPortNames();
-        if (portNames.length == 0) return;
+        if (portNames.length == 0) {
+        	state.delete(State.values.powerport);
+        	return;
+        }
         
         String otherdevice = "";
         if (state.exists(State.values.motorport.toString())) 
@@ -180,6 +183,7 @@ public class ArduinoPower implements SerialPortEventListener  {
     			} catch (Exception e) {
 					PowerLogger.append("can't connect to port: " + e.getMessage(), this);
 					Util.log("can't connect to port: " + e.getMessage(), this);
+					state.delete(State.values.powerport);
 				}
         	}
         }

@@ -34,7 +34,7 @@ public class BanList {
 	private Vector<String> known = new Vector<String>();
 	private State state = State.getReference();
 	private RandomAccessFile logfile = null;
-	private boolean override = false; 
+//	private boolean override = false; 
 	private Timer timer = new Timer();
 	
 	static BanList singleton = new BanList();
@@ -74,9 +74,11 @@ public class BanList {
 			Util.debug("BanList(): " + e.getMessage());
 		}
 		
-		override = ! Settings.getReference().getBoolean(ManualSettings.checkaddresses);
-		if(override) Util.log("BanList(): disabled", this);
-		else timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
+//		override = ! Settings.getReference().getBoolean(ManualSettings.checkaddresses);
+//		if(override) Util.log("BanList(): disabled", this);
+//		else 
+		
+		timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}
 	
 	public String tail(int lines){
@@ -134,7 +136,7 @@ public class BanList {
 	
 	public synchronized boolean isBanned(final String address) {
 		
-		if(address.equals("127.0.0.1") || override) return false;
+		if(address.equals("127.0.0.1")) return false;
 			
 		if(banned.contains(address)) {
 			appendLog("banned address: " + address);
@@ -162,7 +164,7 @@ public class BanList {
 	
 	public synchronized boolean knownAddress(final String address) {
 		
-		if(override) return true;
+//		if(override) return true;
 		
 		if( ! Util.validIP(address)) return false;
 		
@@ -205,7 +207,7 @@ public class BanList {
 	
 	public synchronized void loginFailed(final String remoteAddress, final String user) {
 		
-		if(remoteAddress.equals("127.0.0.1") || override) return;
+//		if(remoteAddress.equals("127.0.0.1") || override) return;
 	
 		if(banned.contains(remoteAddress)) Util.log("DANGEROUS..failed sanity check: " + user, this);
 		
@@ -258,7 +260,7 @@ public class BanList {
 	
 	@Override
 	public String toString(){
-		if(override) return "developer override: " + banned.toString();
+		// if(override) return "developer override: " + banned.toString();
 		return " banned: " + banned.toString() + "   known:" + known.toString();
 	}
 }

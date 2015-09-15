@@ -59,10 +59,6 @@ public class SystemWatchdog implements Observer {
 	
 	private void midnight(){	
 		
-		// kill old files
-		// Util.truncFrames();
-		// Util.truncLogs();
-		
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 		String formatted = format.format(calender.getTime());
 		Util.log("midnight file roll over: "+ formatted, this);
@@ -111,12 +107,11 @@ public class SystemWatchdog implements Observer {
 		}
 		Util.log("new log file: "+ jvm_archive.getName(), this);
 		Util.log("restarting with new log files, size: "+ Util.getLogMBytes(), this);
-		jvm.renameTo(jvm_archive); // kills logging, requires java restart..
-		// Util.delay(1000); 
-		Util.callRestart("restarting with new log files, size: "+ Util.getLogMBytes());
+		jvm.renameTo(jvm_archive); 
 		
-		//Util.delay(1000); // be sure ? or don't use telnet
-		//application.driverCallServer(PlayerCommands.restart, null);
+		// kill old files
+		// Util.truncFrames();
+		// Util.truncLogs();
 	}
 	
 	private class Task extends TimerTask {
@@ -125,8 +120,13 @@ public class SystemWatchdog implements Observer {
 			// restart logs when docked 
 			calender.setTimeInMillis(System.currentTimeMillis());
 			if((calender.get(Calendar.HOUR_OF_DAY) == 0) && (calender.get(Calendar.MINUTE) == 0)) midnight = true;
-			if(midnight && state.getUpTime() > Util.TEN_MINUTES // prevent runaway reboots
-					&& state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) midnight();
+			
+			// only do docked, navigation reasons 
+			if( midnight && !state.equals(State.values.dockstatus, AutoDock.UNDOCKED) && (state.getUpTime() > Util.TEN_MINUTES)){
+				this.cancel(); // just once in this minute, kill timer 
+				midnight();    // kills logging, requires java restart..
+				application.driverCallServer(PlayerCommands.restart, null);
+			}
 			
 			// found errors when running on vbox without hardware 
 			// also found lots of vbox time drifting 
