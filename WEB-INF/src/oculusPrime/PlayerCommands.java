@@ -7,7 +7,7 @@ public enum PlayerCommands {
     //undocumented (not typically used by scripts):
     softwareupdate, 
     
-    // system
+    // operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu,
     
     //user, accounts
@@ -26,9 +26,10 @@ public enum PlayerCommands {
 	// undocumented (not typically used by scripts):
     erroracknowledged,
     
-    // video/audio (flash)
-    streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
-    streamsettingsset, motiondetect, motiondetectcancel, motiondetectstream, framegrabtofile,
+    // video/audio
+    streamsettingscustom, playerbroadcast, videosoundmode, publish,
+    streamsettingsset, framegrabtofile,
+	// experimental (undocumented):
 	jpgstream,
     
     // malg board 
@@ -45,9 +46,15 @@ public enum PlayerCommands {
 	roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,
 	gotodock, saveroute, runroute, cancelroute, startmapping, savemap,
 
+	// sensing
+	getlightlevel, setstreamactivitythreshold,
+	objectdetect, objectdetectcancel,
+	motiondetect, motiondetectcancel,
+	// undocumented:
+	objectdetectstream, motiondetectstream,
+
 	// un-categorized
-	speech, serverbrowser, email, state,
-    rssadd, getlightlevel, objectdetectstream, objectdetect, objectdetectcancel,
+	speech, serverbrowser, email, state, rssadd,
     
 	// undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,

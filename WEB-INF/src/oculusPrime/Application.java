@@ -849,8 +849,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case objectdetectcancel: state.delete(values.objectdetect); break;
 		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
 
-		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(null), null, null); break;
-		case log: Util.log(str, this); break;
+		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		case log: Util.log("log: "+str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
 		
 		case cpu: 

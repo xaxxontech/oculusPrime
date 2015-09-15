@@ -434,10 +434,16 @@ public class ArduinoPower implements SerialPortEventListener  {
 			application.shutdown();
 		}
 		
-		else if (s[0].equals("redock")) {
-			application.driverCallServer(PlayerCommands.redock, null);
-			PowerLogger.append("redock", this);
-			Util.log("redock", this);
+		else if (s[0].equals("redock") && state.getUpTime() > Util.TWO_MINUTES) {
+			if(settings.getBoolean(ManualSettings.redockifweakconnection)) {
+				application.driverCallServer(PlayerCommands.redock, null);
+				PowerLogger.append("redock", this);
+				Util.log("redock", this);
+			}
+			else {
+				PowerLogger.append("redock due to weak connection, disabled in settings", this);
+				Util.log("redock due to weak connection, disabled in settings", this);
+			}
 		}
 		
 //		else if (s[0].equals("force_undock")) { // moved to watchdog
