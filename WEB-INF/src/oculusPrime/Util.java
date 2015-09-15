@@ -33,7 +33,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import oculusPrime.State.values;
-import oculusPrime.commport.PowerLogger;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -319,14 +318,38 @@ public class Util {
 	
 	public static String tailShort(int lines){
 		int i = 0;
+		final long now = System.currentTimeMillis();
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
 		for(; i < history.size() ; i++) {
 			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim();
+			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
 			line = line.replaceFirst("\\$[0-9]", "");
 			line = line.replaceFirst("^oculusprime.", "");
 			line = line.replaceFirst("^static, ", "");		
-			str.append(line + "<br /> \n"); 
+			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
+			String unit = " sec ";
+			if(delta > 60) { delta = delta / 60; unit = " min "; }
+			str.append(formatFloat(delta, 1) + " " + unit + "&nbsp;&nbsp;" + line + "<br /> \n"); 
+		}
+		return str.toString();
+	}
+	
+	public static String tailFormated(int lines){
+		int i = 0;
+		final long now = System.currentTimeMillis();
+		StringBuffer str = new StringBuffer();
+	 	if(history.size() > lines) i = history.size() - lines;
+		for(; i < history.size() ; i++) {
+			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim();
+			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
+			line = line.replaceFirst("\\$[0-9]", "");
+			line = line.replaceFirst("^oculusprime.", "");
+			line = line.replaceFirst("^static, ", "");		
+			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
+			String unit = " sec ";
+			if(delta > 60) { delta = delta / 60; unit = " min "; }
+			str.append("\n<tr><td colspan=\"11\">" + formatFloat(delta, 1) + "<td>" + unit + "<td>&nbsp;&nbsp;" + line + "</tr> \n"); 
 		}
 		return str.toString();
 	}
@@ -340,7 +363,7 @@ public class Util {
 		String filter = "static";
 		if(c!=null) filter = c.getClass().getName();
 		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(getTime() + ", " + filter + ", " +str);
+		history.add(System.currentTimeMillis() + ", " + filter + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " + str);
 	}
 	
@@ -348,14 +371,18 @@ public class Util {
     	if(str == null) return;
     	String filter = "static";
     	if(c!=null) filter = c.getClass().getName();
-		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) 
+		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
+			history.add(System.currentTimeMillis() + ", " +str);
+		}
 	}
     
     public static void debug(String str) {
     	if(str == null) return;
-    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled))
+    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
     		System.out.println("DEBUG: " + getTime() + ", " +str);
+    		history.add(System.currentTimeMillis() + ", " +str);
+    	}
     }
     
 	public static String memory() {
@@ -627,24 +654,11 @@ public class Util {
 		return time;	
 	}
 
-	/*public static void restart() {
-		// write file as restart flag for script
-		File f = new File(Settings.redhome + Util.sep + "restart");
-		if (!f.exists())
-			try {
-				f.createNewFile();
-			} catch (IOException e) {
-				Util.printError(e);
-			}
-		
-		shutdown();
-	}*/
-	
 	public static void updateLocalIPAddress(){	
 		
 		State state = State.getReference();
 		String wdev = lookupWIFIDevice();
-
+		
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -663,7 +677,7 @@ public class Util {
 				}
 			}
 		} catch (Exception e) {
-			// Util.log("updateLocalIPAddress():"+ e.getMessage(), null);
+			Util.log("updateLocalIPAddress(): failed to lookup wifi device", null);
 			state.delete(values.localaddress);
 			updateEthernetAddress();
 		}
@@ -712,7 +726,7 @@ public class Util {
 				}
 			}
 		} catch (Exception e) {
-			Util.log("lookupDevice(): exception: " + e.getLocalizedMessage(), null);
+			Util.log("lookupDevice():  no wifi is enabled  ", null);
 		}
 		
 		return wdev;
@@ -809,8 +823,8 @@ public class Util {
 			in.close();
 							
 		} catch (Exception e) {
-			Util.debug("getJettyStatus():" + e.getLocalizedMessage(), null);
-			reply = "Wifi manager not running, check settings..";
+			// Util.debug("getJettyStatus():" + e.getLocalizedMessage(), null);
+			reply = new Date().toString() + " <b><u>wifi manager not running..</b></i>";
 		}
 		return reply;
 	}
@@ -889,8 +903,8 @@ public class Util {
 
 	private void callForHelp(String subject, String body) {
 	//	application.driverCallServer(PlayerCommands.messageclients, body);
-		Util.log("callForHelp() " + subject + " " + body, this);
-		PowerLogger.append("callForHelp() " + subject + " " + body, this);
+	//	Util.log("callForHelp() " + subject + " " + body, this);
+	// 	PowerLogger.append("callForHelp() " + subject + " " + body, this);
 
 	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
 		State state = State.getReference();
@@ -913,8 +927,6 @@ public class Util {
 		Util.tuncate(PowerLogger.powerlog);
 		Util.tuncate(Settings.stdout);
 		Util.tuncate(BanList.banfile);
->>>>>>> 7f1a7841a03396135f4ce4bc5c676ec68a4fb299
-		
 		return true;
 	}
 	
@@ -934,15 +946,12 @@ public class Util {
             while ((line = reader.readLine()) != null) alllines.add(line); 
             reader.close();
             if(alllines.size() > lines){   
-<<<<<<< HEAD
             	debug("truncate(): lines: " + alllines.size() + " " + path);
 	            file.delete();  
 	            file.createNewFile();
-=======
             	debug("tuncate(): lines: " + alllines.size() + " " + path);   
 	     //       file.delete();  
 	     //       file.createNewFile();
->>>>>>> 7f1a7841a03396135f4ce4bc5c676ec68a4fb299
             } else {
             	debug("truncate(): too small: " + file.getAbsolutePath());
             	return false;

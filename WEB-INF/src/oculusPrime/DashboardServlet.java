@@ -241,16 +241,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 			
 		str.append("<tr><td><b>lan</b>&nbsp;&nbsp;<td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\" \">" 
-				+ state.get(values.localaddress) + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+				+ state.get(values.localaddress) + "</a>&nbsp;&nbsp;&nbsp;");
 		
 		String ext = state.get(values.externaladdress);
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
-		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" + ext + "</a>");
+		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" 
+				+ ext + "</a>&nbsp;&nbsp;&nbsp;");
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
-	//	final String trunc = "<a href=\"dashboard?action=trunc\">";
-	//	final String frames = "<a href=\"dashboard?action=frames\">";
 		final String restart = "<a href=\"dashboard?action=restart\">";
 		final String reboot = "<a href=\"dashboard?action=reboot\">";
 		
@@ -266,31 +265,25 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "<td><b>java</b>&nbsp;&nbsp;<td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
 				+ "<td><b>volts</b>&nbsp;&nbsp;<td>" + state.get(values.batteryvolts) + "</tr> \n");
 	
-	//	str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-	//	str.append(getStatustring());
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-		str.append("\n<tr><td colspan=\"11\">" + Util.tailShort(10) + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getHTML() + "\n");
+		
+		str.append(getTail() + "\n");
+		str.append(getHistory() + "\n");
 		return str.toString();
 	}
 	
-	//  private String getStatustring(){
-	//	String hr = "<tr><td colspan=\"11\"><hr></tr> \n";	
-	//	String route = state.get(values.navigationroute);
-	//	String ros = "\n<tr><td colspan=\"11\">next route: ";
-	//	String line = "";
-		
-	// 	if(state.exists(values.nextroutetime)) ros += new Date(state.getLong(values.nextroutetime)).toString();
-	//	if(route != null) line += " route: " + route;
-		
-	//	if(state.equals(values.navsystemstatus, "running")) line = ros + " running </tr> \n";	
-		
-	//	if(state.equals(values.navsystemstatus, "stopped")) line = ros + " stopped </tr> \n";
-		
-	private String getHTML(){
+	private String getTail(){
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
+	//	reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
+		reply += Util.tailFormated(15) + " \n";
+		reply += ("\n</table>\n");
+		return reply;
+	}
+	
+	private String getHistory(){
+		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
+		reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
 		for(int i = 0 ; i < history.size() ; i++) {
 			
 			long time = Long.parseLong(history.get(i).substring(0, history.get(i).indexOf(" ")));
@@ -301,8 +294,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			double delta = (double)(System.currentTimeMillis() - time) / (double) 1000;
 			String unit = " sec ";
 			if(delta > 60) { delta = delta / 60; unit = " min "; }
-			reply += "\n<tr><td>" + date + "&nbsp;&nbsp;&nbsp;&nbsp;<td>" + Util.formatFloat(delta) + unit + "<td>&nbsp;&nbsp;&nbsp;&nbsp;" + mesg; 
-			
+			reply += "\n<tr><td>" + Util.formatFloat(delta, 1) + "<td>" + unit + "<td>&nbsp;&nbsp;" + mesg; 
 		}
 		return reply + "\n</table>\n";
 	}
@@ -315,7 +307,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.framegrabbusy.name())) return;
 		if(key.equals(values.rosglobalpath.name())) return;
 		if(key.equals(values.rosscan.name())) return;
-// 		if(key.equals(values.cpu.name())) return;
+ //		if(key.equals(values.cpu.name())) return;
 		
 		if(history.size() > 10) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
