@@ -22,9 +22,9 @@ public enum PlayerCommands {
     docklineposupdate, autodockcalibrate, dockgrabtest,  
 
     // power board
-    battstats, powerreset, powershutdown,   
+    battstats, powerreset, powershutdown, powercommand,
 	// undocumented (not typically used by scripts):
-    erroracknowledged, powercommand,
+    erroracknowledged,
     
     // video/audio (flash)
     streamsettingscustom, playerbroadcast, setstreamactivitythreshold, videosoundmode, publish, 
@@ -32,29 +32,29 @@ public enum PlayerCommands {
 	jpgstream,
     
     // malg board 
-    motorsreset, cameracommand, camtilt, getdrivingsettings, drivingsettingsupdate,
+    motorsreset, getdrivingsettings, drivingsettingsupdate,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed, forwardtimed,
-    // lights
-    strobeflash, spotlight, floodlight,
-    // undocumented (unused):
+    // lights and camera tilt
+    strobeflash, spotlight, floodlight, cameracommand, camtilt,
+	// undocumented (unused):
     fwdflood,
-    
+
+	// navigation
+	roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,
+	gotodock, saveroute, runroute, cancelroute, startmapping, savemap,
+
 	// un-categorized
-	speech, serverbrowser, email, state, getemailsettings, emailsettingsupdate,
+	speech, serverbrowser, email, state,
     rssadd, getlightlevel, objectdetectstream, objectdetect, objectdetectcancel,
     
 	// undocumented    
-    statuscheck, block, unblock, // help, 
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
     
     // experimental (undocumented)
     opennisensor, clearmap, error,
-    
-    // navigation
-    roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,
-    gotodock, saveroute, runroute, cancelroute, startmapping, savemap,
-    
+
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness;
 	

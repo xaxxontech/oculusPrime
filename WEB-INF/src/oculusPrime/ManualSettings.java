@@ -20,7 +20,6 @@ public enum ManualSettings {
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , Settings.TRUE);
 		config.setProperty(soundthreshold.name(), "10");
-		config.setProperty(motionthreshold.name(), "10");
 		config.setProperty(motionthreshold.name(), "0.003");
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "150");

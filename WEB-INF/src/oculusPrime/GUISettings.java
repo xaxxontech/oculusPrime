@@ -29,9 +29,7 @@ public enum GUISettings {
 		config.setProperty(nudgedelay.name() , "80");
 		config.setProperty(maxclickcam.name() , "30");
 		config.setProperty(volume.name() , "100");
-//		config.setProperty(muteonrovmove.name() , "true"); 
 		config.setProperty(reboot.name() , Settings.FALSE);
-//		config.setProperty(pushtotalk.name() , "false");
 		config.setProperty(fullrotationdelay.name(), "2700");
 		config.setProperty(onemeterdelay.name(), "2400");
 		config.setProperty(steeringcomp.name(), "L20");

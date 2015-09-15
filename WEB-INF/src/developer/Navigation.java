@@ -275,7 +275,7 @@ public class Navigation {
 			// make sure dock in view before calling autodock go
 			if (!finddock(AutoDock.LOWRES)) { // something wrong with camera capture, try again?
 				Util.log("error, finddock() needs to try 2nd time", this);
-				Util.delay(5000); // allow camera time to shutdown
+				Util.delay(20000); // allow cam shutdown, system settle
 				app.killGrabber(); // force chrome restart
 				Util.delay(app.GRABBERRESPAWN + 4000); // allow time for grabber respawn
 				// camera, lights
@@ -337,7 +337,7 @@ public class Navigation {
 
 			if (rot == 1) Util.log("error, rotation required", this);
 
-			if (rot == 16) { // failure give up
+			if (rot == 17) { // failure give up
 //					callForHelp(subject, body);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 				app.driverCallServer(PlayerCommands.floodlight, "0");
