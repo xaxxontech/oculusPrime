@@ -245,7 +245,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String ext = state.get(values.externaladdress);
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
-		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" + ext + "</a>");
+		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" 
+				+ ext + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		

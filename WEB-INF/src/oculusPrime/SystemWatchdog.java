@@ -18,7 +18,7 @@ public class SystemWatchdog implements Observer {
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
 
-	static final String AP = "ap"; // must match jetty's network servlet !!
+	static final String AP = "oculusprimee"; // must match jetty's network servlet !!
 
 	private static final long DELAY = 10000; // 10 sec 
 	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
@@ -60,8 +60,8 @@ public class SystemWatchdog implements Observer {
 	private void midnight(){	
 		
 		// kill old files
-		Util.truncFrames();
-		Util.truncLogs();
+		// Util.truncFrames();
+		// Util.truncLogs();
 		
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 		String formatted = format.format(calender.getTime());
@@ -125,8 +125,11 @@ public class SystemWatchdog implements Observer {
 			// restart logs when docked 
 			calender.setTimeInMillis(System.currentTimeMillis());
 			if((calender.get(Calendar.HOUR_OF_DAY) == 0) && (calender.get(Calendar.MINUTE) == 0)) midnight = true;
-			if(midnight && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) midnight();
+			if(midnight && state.getUpTime() > Util.TEN_MINUTES // prevent runaway reboots
+					&& state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) midnight();
 			
+			// found errors when running on vbox without hardware 
+			// also found lots of vbox time drifting 
 			if(! state.exists(values.localaddress)) Util.updateLocalIPAddress();
 			else if(state.equals(values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
 			if(! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
