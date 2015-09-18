@@ -943,7 +943,7 @@ public class Navigation {
 
 				String link = "";
 				if (streamactivity.contains("video") || streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
-					link = FrameGrabHTTP.saveToFile("?mode=processedImg");
+					link = FrameGrabHTTP.saveToFile("?mode=processedImgJPG");
 					navlogmsg += "<br><a href='" + link + "' target='_blank'>image link</a>";
 				}
 

@@ -45,6 +45,7 @@ var navrouteactiondescriptions = ["rotate in place 45 degrees at a time, at leas
 	"alert only if action NOT detected"];
 var activeroute = null;
 var navsystemstatustext;
+var goalreachalert = false;
 
 function navigationmenu() {
 	if (navmenuinit) {
@@ -205,10 +206,12 @@ function rosinfo() {
 						var conv = fromrosmeters([arr[0], arr[1], arr[2]]);
 						mapgoalpose = [conv[0], conv[1], conv[2]];
 						str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;,"
-						str += " &quot;rosgoalcancel true&quot;)'>";
+						str += " &quot;rosgoalcancel true&quot;); goalreachalert=false'>";
 						str += "<span class='cancelbox'><b>X</b></span> ";
-						str += "CANCEL GOAL</a>"; 
+						str += "CANCEL GOAL</a> "; 
+						str += "<input id='goalcheckbox' type='checkbox' onchange='goalreachalert=this.checked;'> ALERT when goal reached";
 						document.getElementById("rosmapinfobar").innerHTML = str; 
+						if (goalreachalert) document.getElementById("goalcheckbox").checked = true;
 						break;
 					
 					case "rosmapwaypoints":
@@ -284,9 +287,14 @@ function rosinfo() {
 			
 			if (document.getElementById("rosmap_menu_over").style.display != "") return;
 			
-			if (mapgoalpose != null && nukegoalpose)  {
+			// goal reached
+			if (mapgoalpose != null && nukegoalpose )  {
 				mapgoalpose = null;
 				rosmaparrow("cancel");
+				if (goalreachalert && navsystemstatustext.toUpperCase() == "RUNNING") { 
+					alert("goal reached");
+					goalreachalert = false; 
+				}
 			}
 			
 			if (rosmaprezoom) { rosmapzoomdraw(mapzoom, 0); }
@@ -671,10 +679,12 @@ function rosmapsetgoal(pose) {
 //	callServer("state","rossetgoal "+pose[0]+","+pose[1]+","+pose[2]);
 	callServer("gotowaypoint", pose[0]+","+pose[1]+","+pose[2]);
 
-	str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;, &quot;rosgoalcancel true&quot;)'>";
+	str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;, &quot;rosgoalcancel true&quot;); goalreachalert=false;'>";
 	str += "<span class='cancelbox'><b>X</b></span> ";
-	str += "CANCEL GOAL</a>"; 
+	str += "CANCEL GOAL</a> "; 
+	str += "<input id='goalcheckbox' type='checkbox' onchange='goalreachalert=this.checked;'> ALERT when goal reached";
 	document.getElementById("rosmapinfobar").innerHTML = str; 
+	goalreachalert = false;
 }
 
 function torosmeters(arr) {

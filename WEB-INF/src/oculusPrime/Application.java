@@ -861,8 +861,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// dev tool only
 		case error:
 			try {
-				if(state.getBoolean(values.jpgstream))  Util.log("true",this);  // throws null pointer
-				else Util.log("false", this);
+				if(state.exists(values.redockifweakconnection)) Util.log("redockifweakconnection exists", this);
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 

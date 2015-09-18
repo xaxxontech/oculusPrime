@@ -28,7 +28,8 @@ public class State {
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
-		powererror, forceundock,
+		powererror, forceundock, redockifweakconnection,
+
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 		localaddress, externaladdress, ssid, guinotify,

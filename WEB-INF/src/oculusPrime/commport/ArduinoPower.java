@@ -415,9 +415,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				
 				state.set(State.values.dockstatus, AutoDock.UNDOCKED);
 				application.message(null, "multiple", "dock " + AutoDock.UNDOCKED + " motion enabled");
-
+				state.delete(State.values.redockifweakconnection);
 			}
-
 		}
 		
 		else if (s[0].equals("wallpower")) {
@@ -435,14 +434,17 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 		
 		else if (s[0].equals("redock") && state.getUpTime() > Util.TWO_MINUTES) {
-			if(settings.getBoolean(ManualSettings.redockifweakconnection)) {
+			if (!state.exists(State.values.redockifweakconnection))
+				state.set(State.values.redockifweakconnection, false);
+			if(settings.getBoolean(ManualSettings.redockifweakconnection) &&
+					state.getBoolean(State.values.redockifweakconnection)) {
 				application.driverCallServer(PlayerCommands.redock, null);
 				PowerLogger.append("redock", this);
 				Util.log("redock", this);
 			}
 			else {
-				PowerLogger.append("redock due to weak connection, disabled in settings", this);
-				Util.log("redock due to weak connection, disabled in settings", this);
+				PowerLogger.append("error, redock due to weak connection, skipped", this);
+				Util.log("error, redock due to weak connection, skipped", this);
 			}
 		}
 		
