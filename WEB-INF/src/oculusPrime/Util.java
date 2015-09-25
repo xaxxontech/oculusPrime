@@ -40,9 +40,6 @@ import org.xml.sax.InputSource;
 public class Util {
 	
 	public final static String sep = System.getProperty("file.separator");
-	
-	public static final int MIN_LOG_FILE_LINES = 500;
-	public static final int MAX_LOG_FILE_MBYTES = 200;
 
 	public static final int PRECISION = 2;	
 	public static final long ONE_DAY = 86400000;
@@ -51,11 +48,13 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
+		
+	public static final long ARCHIVE_TIME = ONE_DAY * 5;
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
-//	private static String javaPID = getJavaPID();
+	private static String javaPID = getJavaPID();
 
 	public static void delay(long delay) {
 		try {
@@ -220,8 +219,7 @@ public class Util {
 	 */
 	public static void systemCall(final String str){
 		try {
-			Runtime.getRuntime().exec(str);
-
+			Runtime.getRuntime().exec(str); 
 		} catch (Exception e) {
 			printError(e);
 		}
@@ -345,6 +343,8 @@ public class Util {
 			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
 			line = line.replaceFirst("\\$[0-9]", "");
 			line = line.replaceFirst("^oculusprime.", "");
+			line = line.replaceFirst("^oculusPrime.", "");
+			line = line.replaceFirst("^Application.", "");
 			line = line.replaceFirst("^static, ", "");		
 			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
 			String unit = " sec ";
@@ -384,19 +384,18 @@ public class Util {
     		history.add(System.currentTimeMillis() + ", " +str);
     	}
     }
-    
+    /*
 	public static String memory() {
     	String str = "";
-		str += "memory : " +
-				((double)Runtime.getRuntime().freeMemory()
-						/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
+		str += "memory : " + ((double)Runtime.getRuntime().freeMemory()
+			/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
 		
 		str += "memory total : "+Runtime.getRuntime().totalMemory()+"<br>";    
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
 
-	/*
+	
 	public static void reboot() {
 		String str  = Settings.redhome + sep + "systemreboot.sh";
 		Util.systemCall(str);
@@ -575,28 +574,25 @@ public class Util {
 	}
 	*/
 	
-	/*
 	public static String getJavaStatus(){
 		
 		if(javaPID == null) return null;
 		
-		// long start = System.currentTimeMillis();
+		long start = System.currentTimeMillis();
 		
 		String line = null;
 		try {
 			
-			// http://stackoverflow.com/questions/1420426/calculating-cpu-usage-of-a-process-in-linux
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ javaPID +"/stat")));
 			line = reader.readLine();
 			reader.close();
-			// TODO parse and compute values
 			log("getJavaStatus:" + line, null);
 					
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-	//	Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
+		Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
 		return "42";
 		
 	}
@@ -612,7 +608,6 @@ public class Util {
 			return null;
 		}
 	}	
-		*/
 	
 	public static String pingWIFI(final String addr){
 		
@@ -829,12 +824,12 @@ public class Util {
 		return reply;
 	}
 
-//	public static void deleteLogFiles(){
-//	 	File[] files = new File(Settings.logfolder).listFiles();
-//	    for (int i = 0; i < files.length; i++){
-//	       if (files[i].isFile()) files[i].delete();
-//	   }
-//	}
+	public static void deleteLogFiles(){
+	 	File[] files = new File(Settings.logfolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	       if (files[i].isFile()) files[i].delete();
+	   }
+	}
 	
 	public static String getLogSize(){	
 		return getLogMBytes() + " mb"; 
@@ -868,15 +863,15 @@ public class Util {
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
 	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		files[i].delete();
+	        		// files[i].delete();
 	        	} 
 	        }
 	        
 	        if( !files[i].getName().endsWith(".log") ||  !files[i].getName().endsWith(".stdout")){
 	        	 debug("truncFrames(): deleting, not a log: " + files[i].getName());
-	        	 files[i].delete();
+	        	 // files[i].delete();
 	        }
 			
 		}
@@ -887,9 +882,9 @@ public class Util {
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
 	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		files[i].delete();
+	        		// files[i].delete();
 	        	} 
 	        }
 	        
@@ -901,36 +896,60 @@ public class Util {
 		}
 	}
 
-	private void callForHelp(String subject, String body) {
+	// private void callForHelp(String subject, String body) {
 	//	application.driverCallServer(PlayerCommands.messageclients, body);
 	//	Util.log("callForHelp() " + subject + " " + body, this);
 	// 	PowerLogger.append("callForHelp() " + subject + " " + body, this);
 
 	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
-		State state = State.getReference();
-		Settings settings = Settings.getReference();
-		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
-				settings.readRed5Setting("http.port")+"/oculusPrime/";
-		String emailto = settings.readSetting(GUISettings.email_to_address);
+	//	State state = State.getReference();
+	//	Settings settings = Settings.getReference();
+	//	body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
+	//			settings.readRed5Setting("http.port")+"/oculusPrime/";
+	//	String emailto = settings.readSetting(GUISettings.email_to_address);
 		
 		//if (!emailto.equals(Settings.DISABLED))
 		//	application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
 		//application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
-	}
-	
 
-	/*
-	public static boolean manageLogs(){
-		long size = getLogMBytes();
-		if(size < MAX_LOG_FILE_MBYTES) return false;		
+
+	// TODO: 
+	public static void manageLogs(){
 		
-		Util.tuncate(PowerLogger.powerlog);
-		Util.tuncate(Settings.stdout);
-		Util.tuncate(BanList.banfile);
-		return true;
+		log("..java " + getJavaStatus(), null);
+		log("..pid  " + getJavaPID(), null);
+
+		new File(Settings.redhome + sep + "archive").mkdir(); 
+		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
+
+		try {			
+		
+			log("_archive file: " + path, null);
+			String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " ./log"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				Util.log("manageLogs(): tar: " + line, null);
+			}
+			
+		} catch (Exception e) {
+			Util.log("manageLogs(): fail.. " + e.getCause() + " " + e.getMessage(), null);
+			return;
+		}
+		
+		if(new File(path).exists()){
+			log("manageLogs(): .....delete old....", null);
+			truncFrames();
+			truncLogs();
+		} else {
+			Util.log("manageLogs(): tar failure...", null);
+		}
 	}
 	
-	
+		/*
 	public static boolean tuncate(final String path) {
 		return tuncate(path, MIN_LOG_FILE_LINES); 
 	}

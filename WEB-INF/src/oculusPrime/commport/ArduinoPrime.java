@@ -624,7 +624,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 			}
 
-			Util.log("CommandSender thread exit, isconnected false", this);
+			Util.log("thread exit, not connected", this);
 		}
 	}
 

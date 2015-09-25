@@ -16,7 +16,7 @@ public class Updater {
 
 		// get current version info from txt file in root folder
 		String sep = System.getProperty("file.separator");
-		String filename = Application.RED5_HOME+Util.sep+"version.nfo";
+		String filename =  Settings.redhome+Util.sep+"version.nfo";
 		
 		FileInputStream filein;
 		try {
@@ -138,11 +138,11 @@ public class Updater {
 //			Process process= pb.start();
 //			process.waitFor();
 
-			Process proc = Runtime.getRuntime().exec(Application.RED5_HOME+Util.sep+folder+Util.sep+"run "+cmd+" "+args);
+			Process proc = Runtime.getRuntime().exec( Settings.redhome+Util.sep+folder+Util.sep+"run "+cmd+" "+args);
 			proc.waitFor();
 
 			// cleanup
-			File file = new File(Application.RED5_HOME+Util.sep+folder+Util.sep+filename);
+			File file = new File( Settings.redhome+Util.sep+folder+Util.sep+filename);
 			Util.log("Updater.updateFirmware(): deleting file "+file.getAbsolutePath(), null);
 			file.delete();
 

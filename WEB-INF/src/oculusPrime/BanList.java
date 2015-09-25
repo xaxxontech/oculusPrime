@@ -18,8 +18,8 @@ import oculusPrime.State.values;
 
 public class BanList {
 	
-	public static final String banfile = Application.RED5_HOME +Util.sep+"conf"+Util.sep+"banlist.txt";
-	public static final String banlog = Application.RED5_HOME + Util.sep + "log" + Util.sep + "banlist.log";
+	public static final String banfile = Settings.redhome+Util.sep+"conf"+Util.sep+"banlist.txt";
+	public static final String banlog =  Settings.redhome+Util.sep + "log" + Util.sep + "banlist.log";
 	
 	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
 	public static final long ROLL_OVER = 15000;
@@ -202,12 +202,15 @@ public class BanList {
 		
 		if(attempts.containsKey(address)) attempts.remove(address);
 		if(blocked.containsKey(address)) blocked.remove(address);
-		if( ! known.contains(address)) known.add(address);
+		if( ! known.contains(address)) {
+			Util.log(address + " ...... is been added", this); 
+			known.add(address);
+		}
 	}
 	
 	public synchronized void loginFailed(final String remoteAddress, final String user) {
 		
-//		if(remoteAddress.equals("127.0.0.1") || override) return;
+		if(remoteAddress.equals("127.0.0.1")) return;
 	
 		if(banned.contains(remoteAddress)) Util.log("DANGEROUS..failed sanity check: " + user, this);
 		
@@ -260,7 +263,7 @@ public class BanList {
 	
 	@Override
 	public String toString(){
-		// if(override) return "developer override: " + banned.toString();
+		// if(override) return " override: " + banned.toString();
 		return " banned: " + banned.toString() + "   known:" + known.toString();
 	}
 }

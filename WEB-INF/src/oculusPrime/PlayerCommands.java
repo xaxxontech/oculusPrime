@@ -8,7 +8,7 @@ public enum PlayerCommands {
     softwareupdate, 
     
     // operating system
-    reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu,
+    reboot, systemshutdown,/* memory, */ systemcall, setsystemvolume, cpu,
     
     //user, accounts
     who, chat, disconnectotherconnections, driverexit, loginrecords, messageclients,  

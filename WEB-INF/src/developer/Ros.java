@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
+import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
 
@@ -31,7 +32,7 @@ public class Ros {
 	private static BufferedImage map = null;
 	private static double lastmapupdate = 0f;
 	
-	public static File waypointsfile = new File(Application.RED5_HOME+"/conf/waypoints.txt");
+	public static File waypointsfile = new File( Settings.redhome+"/conf/waypoints.txt");
 	public static String mapfilename = "map.pgm";
 	public static String mapyamlname = "map.yaml";
 
@@ -165,7 +166,7 @@ public class Ros {
 	}
 	
 	public static void launch(String launch) {
-		String cmd = Application.RED5_HOME+Util.sep+"ros.sh"; // setup ros environment
+		String cmd =  Settings.redhome+Util.sep+"ros.sh"; // setup ros environment
 		cmd += " roslaunch oculusprime "+launch+".launch";
 		Util.systemCall(cmd);
 	}
@@ -276,13 +277,13 @@ public class Ros {
 	public static boolean saveMap() {
 		try {
 			// nuke any existing files in root dir
-			Path sourcepath = Paths.get(Application.RED5_HOME+Util.sep+mapfilename);
+			Path sourcepath = Paths.get( Settings.redhome+Util.sep+mapfilename);
 			if (Files.exists(sourcepath)) Files.delete(sourcepath);
-			sourcepath = Paths.get(Application.RED5_HOME+Util.sep+mapyamlname);
+			sourcepath = Paths.get( Settings.redhome+Util.sep+mapyamlname);
 			if (Files.exists(sourcepath)) Files.delete(sourcepath);
 
 			// call ros map_saver
-			String cmd = Application.RED5_HOME+Util.sep+"ros.sh"; // setup ros environment
+			String cmd =  Settings.redhome+Util.sep+"ros.sh"; // setup ros environment
 			cmd += " rosrun map_server map_saver";
 			Util.systemCall(cmd);
 
@@ -291,7 +292,7 @@ public class Ros {
 			backUpYaml();
 
 			// move files from root to ros map dir
-			sourcepath = Paths.get(Application.RED5_HOME+Util.sep+mapfilename);
+			sourcepath = Paths.get( Settings.redhome+Util.sep+mapfilename);
 			Path destinationpath = Paths.get(getMapFilePath()+mapfilename);
 
 			long timeout = System.currentTimeMillis() + 10000;
@@ -303,7 +304,7 @@ public class Ros {
 			Files.move(sourcepath, destinationpath, StandardCopyOption.REPLACE_EXISTING);
 //			Files.delete(sourcepath);
 
-			sourcepath = Paths.get(Application.RED5_HOME+Util.sep+mapyamlname);
+			sourcepath = Paths.get( Settings.redhome+Util.sep+mapyamlname);
 			destinationpath = Paths.get(getMapFilePath()+mapyamlname);
 			timeout = System.currentTimeMillis() + 10000;
 			while (!Files.exists(sourcepath) && System.currentTimeMillis()< timeout) Util.delay(10);

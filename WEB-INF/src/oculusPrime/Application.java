@@ -40,8 +40,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
-	public static final String RED5_HOME = System.getenv("RED5_HOME");
-	public static final String APPFOLDER = "webapps" + Util.sep + "oculusPrime";
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
@@ -297,15 +295,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
 				
-		new Thread(new Runnable() { public void run() {
-			Util.delay(30000);  
-			if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)){ 
-				// && settings.getBoolean(GUISettings.redock)) {
-				Util.log("....starting up undocked, attempt redock???", this);
-				// new SendMail("rebooted in space", "help me.. I'm lost again. ");
-				// watchdog.redock(SystemWatchdog.NOFORWARD);
-			}
-		} }).start();
+		//new Thread(new Runnable() { public void run() {
+		//	Util.delay(Util.ONE_MINUTE);  
+		//	Util.manageLogs();
+		//} }).start();
 				
 		Util.debug("application initialize done", this);
 	}
@@ -547,7 +540,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
 // 		case help: messageplayer(PlayerCommands.help(str),null,null); break;
 //		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
-		case memory: messageplayer(Util.memory(), null, null); break;
+//		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
@@ -1447,8 +1440,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.printError(e);
 			}
 		}
-/*		
-		f = new File(Settings.redhome + Util.sep + "trunc");
+		/*
+		f = new File(Settings.redhome + Util.sep + "archive");
 		if (!f.exists()){
 			try {
 				f.createNewFile();
@@ -1456,7 +1449,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.printError(e);
 			}
 		}
-*/		
+		*/
 		shutdown();
 	}
 	
@@ -1474,11 +1467,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 		
-/*		Util.log("count logs: " + Util.getLogSize(), this);
-		if(Util.manageLogs()) {
-			Util.log("shutting down, managing log files first..", this);// write file as restart flag for script
-		}
-*/		
+		Util.log("count logs: " + Util.getLogSize(), this);
+		Util.manageLogs();
 	
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
