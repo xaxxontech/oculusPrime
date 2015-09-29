@@ -578,12 +578,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			while (isconnected) {
 				if (commandList.size() > 1 &! commandlock) { // >1 because NL required
 
-					if (!isconnected) {
-						Util.log("error, not connected", this); // TODO: not needed
-//						commandList.clear();
-						Util.delay(1);
-						continue;
-					}
+//					if (!isconnected) {
+//						Util.log("error, not connected", this); // TODO: not needed (never see this)
+//						Util.delay(1);
+//						continue;
+//					}
 
 					if (commandList.size() > 15) { // buffer in firmware is now 32 (was 8) AVR is 64?
 						commandList.clear();
@@ -609,8 +608,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 							commandList.remove(0);
 						}
 					}  catch (Exception e) {
-						Util.log("sendCommand() error, continuing: ", this); // , attempting reset", this);
+						Util.log("sendCommand() error, dropped, continuing: ", this); // , attempting reset", this);
 						Util.printError(e);
+						commandList.clear();
+						Util.delay(1);
 						continue;
 					}
 
