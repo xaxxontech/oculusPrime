@@ -603,9 +603,15 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 					// in case of multiple EOL chars, read only up to 1st
 					byte c[] = new byte[EOLindex+1];
-					for (int i = 0; i <= EOLindex; i++) {
-						c[i]=commandList.get(0);
-						commandList.remove(0);
+					try {
+						for (int i = 0; i <= EOLindex; i++) {
+							c[i] = commandList.get(0);
+							commandList.remove(0);
+						}
+					}  catch (Exception e) {
+						Util.log("sendCommand() error, continuing: ", this); // , attempting reset", this);
+						Util.printError(e);
+						continue;
 					}
 
 					try {

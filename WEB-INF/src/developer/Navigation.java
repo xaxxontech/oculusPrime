@@ -260,9 +260,15 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 
 			// camera, lights
-			app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
+
+			// highres
 			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
+			// only switch mode if camera not running, to avoid interruption of feed
+			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString()) ||
+					state.get(State.values.stream).equals(Application.streamstate.mic.toString())) {
+				app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
+				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
+			}
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
 			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
@@ -325,7 +331,7 @@ public class Navigation {
 			if (state.getBoolean(State.values.dockfound)) break; // great, onwards
 			else { // rotate a bit
 				app.comport.checkisConnectedBlocking(); // just in case
-				app.driverCallServer(PlayerCommands.left, "25");
+				app.driverCallServer(PlayerCommands.right, "25");
 				Util.delay(10); // thread safe
 
 				start = System.currentTimeMillis();

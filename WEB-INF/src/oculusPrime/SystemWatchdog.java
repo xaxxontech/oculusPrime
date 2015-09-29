@@ -118,8 +118,8 @@ public class SystemWatchdog implements Observer {
 		public void run() {
 			
 			// restart logs when docked 
-			calender.setTimeInMillis(System.currentTimeMillis());
-			if((calender.get(Calendar.HOUR_OF_DAY) == 0) && (calender.get(Calendar.MINUTE) == 0)) midnight = true;
+//			calender.setTimeInMillis(System.currentTimeMillis());
+//			if((calender.get(Calendar.HOUR_OF_DAY) == 0) && (calender.get(Calendar.MINUTE) == 0)) midnight = true;
 			
 			// only do docked, navigation reasons 
 //			if( midnight && !state.equals(State.values.dockstatus, AutoDock.UNDOCKED) && (state.getUpTime() > Util.TEN_MINUTES)){

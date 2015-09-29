@@ -592,6 +592,11 @@ onmouseup="callServer('strobeflash','off')">strobeflash</a><br>
 
 <!-- main menu admin -->
 <div id = "main_menu_admin" style="display: none;">
+	<div id="navigationmenu" style="display: none">
+		<a class="blackbg"
+		   href="javascript: navigationmenu(); ">
+			navigation</a> &gt;
+	</div>
 <a class="blackbg" 
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;calibration_settings&quot;).innerHTML);">
 settings/calibration</a> &gt;<br>
@@ -609,11 +614,7 @@ advanced</a> &gt;<br>
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;developer_menu&quot;).innerHTML);">
 developer</a> &gt;
 </div>
-<div id="navigationmenu" style="display: none"> 
-<a class="blackbg"  
-href="javascript: navigationmenu(); ">
-navigation</a> &gt;
-</div>
+
 <a class="blackbg" href="javascript: logout();">logout</a><br>
 </div>
 
