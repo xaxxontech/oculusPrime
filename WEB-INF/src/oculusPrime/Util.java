@@ -49,12 +49,11 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 		
-	public static final long ARCHIVE_TIME = ONE_DAY * 5;
+	public static final long ARCHIVE_TIME = ONE_DAY * 30;
+	public static final long MAX_lOG_MBYTES = 10;  
 	
-	static final int MAX_HISTORY = 50;
+	static final int MAX_HISTORY = 100;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
-	
-	private static String javaPID = getJavaPID();
 
 	public static void delay(long delay) {
 		try {
@@ -422,7 +421,8 @@ public class Util {
 					Thread.sleep(500);
 					
 				} catch (Exception e) {
-					debug("callShutdown(): can not connect to telnet..");
+					debug("callShutdown(): can not connect to telnet, call script.");
+					systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 					return;
 				}
 				
@@ -433,7 +433,11 @@ public class Util {
 				try {
 					out.close();
 					socket.close(); 
-				} catch (Exception e) {printError(e);}   
+				} catch (Exception e) {
+					debug("callShutdown(): can not connect to telnet, call script.");
+					systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
+					printError(e);
+				}   
 			}
 		}.start();
 	}
@@ -454,6 +458,7 @@ public class Util {
 					
 				} catch (Exception e) {
 					debug("callShutdown(): can not connect to telnet..");
+					systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 					return;
 				}
 				
@@ -463,7 +468,11 @@ public class Util {
 				try {
 					out.close();
 					socket.close(); 
-				} catch (Exception e) {printError(e);}   
+				} catch (Exception e) {
+					debug("callShutdown(): can not connect to telnet..");
+					systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+					printError(e);
+				}   
 			}
 		}.start();
 	}
@@ -558,10 +567,11 @@ public class Util {
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
 	/*
+	*/
 	public static String getCPUTop(){
 		try {
 
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 5 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 			Process proc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			return procReader.readLine();
@@ -572,18 +582,19 @@ public class Util {
 
 		return null;
 	}
-	*/
 	
 	public static String getJavaStatus(){
 		
-		if(javaPID == null) return null;
+		log("getJavaStatus: cpu = " + State.getReference().get(values.cpu), null);
+		log("getJavaStatus: top = " + getCPUTop(), null);
 		
-		long start = System.currentTimeMillis();
+	//	if(javaPID == null) return null;
+	//	long start = System.currentTimeMillis();
 		
 		String line = null;
 		try {
 			
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ javaPID +"/stat")));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ getJavaPID() +"/stat")));
 			line = reader.readLine();
 			reader.close();
 			log("getJavaStatus:" + line, null);
@@ -592,11 +603,17 @@ public class Util {
 			e.printStackTrace();
 		}
 		
-		Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
-		return "42";
+	// 1ms
+	//	Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
+		return line;
 		
+		// https://youtu.be/rkYQuuYVbBw
+		// https://www.youtube.com/embed/rkYQuuYVbBw
 	}
 
+	//
+	// TODO: WHICH JVM PID IS OCULUS? 
+	//
 	public static String getJavaPID(){	
 		try {
 			String[] cmd = { "/bin/sh", "-c", "ps -al | grep java"};
@@ -819,7 +836,7 @@ public class Util {
 							
 		} catch (Exception e) {
 			// Util.debug("getJettyStatus():" + e.getLocalizedMessage(), null);
-			reply = new Date().toString() + " <b><u>wifi manager not running..</b></i>";
+			reply = new Date().toString() + " <b>.. not running!</b>";
 		}
 		return reply;
 	}
@@ -846,45 +863,37 @@ public class Util {
 		return (size / (1000*1000)); 
 	}
 	
-//	public static void deleteFrames(){
-//		File[] files =  new File(Settings.framefolder).listFiles();
-//	    for (int i = 0; i < files.length; i++)
-//	        if (files[i].isFile()) files[i].delete();
-//	}
-	
 	public static int countFrameGrabs(){
 		File path = new File(Settings.framefolder);
 		if (path.exists()) return path.listFiles().length;
 		else return 0;
 	}
-	
-	public static void truncLogs(){
-		File[] files =  new File(Settings.logfolder).listFiles();
+
+	public static void truncStaleArchive(){
+		File[] files =  new File(Settings.archivefolder).listFiles();
 		for (int i = 0; i < files.length; i++) {
-	      
 			if (files[i].isFile()) {
 	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
-	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		// files[i].delete();
+	        		debug("truncArchive(): too old: " + files[i].getName());
+	        		files[i].delete();
 	        	} 
 	        }
 	        
-	        if( !files[i].getName().endsWith(".log") ||  !files[i].getName().endsWith(".stdout")){
-	        	 debug("truncFrames(): deleting, not a log: " + files[i].getName());
-	        	 // files[i].delete();
+	        if( ! files[i].getName().endsWith(".bz2")){
+	        	 debug("truncArchive(): deleting, not a zip: " + files[i].getName());
+	        	 files[i].delete();
 	        }
-			
 		}
 	}
-
-	public static void truncFrames(){
+	
+	public static void truncStaleFrames(){
 		File[] files =  new File(Settings.framefolder).listFiles();
 		for (int i = 0; i < files.length; i++) {
 	      
 			if (files[i].isFile()) {
 	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
 	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		// files[i].delete();
+	        		files[i].delete();
 	        	} 
 	        }
 	        
@@ -895,37 +904,32 @@ public class Util {
 			
 		}
 	}
+	public static void truncStaleLogs(){
+		File[] files =  new File(Settings.logfolder).listFiles();
+		for (int i = 0; i < files.length; i++) {    
+			if (files[i].isFile()) {
+	        	
+				// if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
+	        	
+				debug("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName());
+	        	if( files[i].length() >  3637542){
+	       			debug("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName());
+	       			files[i].delete();
+	       		} 
+	        }
+		}
+	}
+	
 
-	// private void callForHelp(String subject, String body) {
-	//	application.driverCallServer(PlayerCommands.messageclients, body);
-	//	Util.log("callForHelp() " + subject + " " + body, this);
-	// 	PowerLogger.append("callForHelp() " + subject + " " + body, this);
-
-	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
-	//	State state = State.getReference();
-	//	Settings settings = Settings.getReference();
-	//	body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
-	//			settings.readRed5Setting("http.port")+"/oculusPrime/";
-	//	String emailto = settings.readSetting(GUISettings.email_to_address);
-		
-		//if (!emailto.equals(Settings.DISABLED))
-		//	application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
-		//application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
-
-
-	// TODO: 
-	public static void manageLogs(){
-		
-		log("..java " + getJavaStatus(), null);
-		log("..pid  " + getJavaPID(), null);
-
+	public static boolean archiveLogs(){
+	
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
 
 		try {			
 		
-			log("_archive file: " + path, null);
-			String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " ./log"};
+			log("create archive file: " + path, null);
+			String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
 			Process proc = Runtime.getRuntime().exec(cmd);
 			proc.waitFor();
 			
@@ -936,23 +940,29 @@ public class Util {
 			}
 			
 		} catch (Exception e) {
-			Util.log("manageLogs(): fail.. " + e.getCause() + " " + e.getMessage(), null);
-			return;
+			Util.log("manageLogs(): fail: " + e.getCause() + " " + e.getMessage(), null);
+			return false;
 		}
 		
-		if(new File(path).exists()){
-			log("manageLogs(): .....delete old....", null);
-			truncFrames();
-			truncLogs();
-		} else {
-			Util.log("manageLogs(): tar failure...", null);
+		return new File(path).exists();
+	}
+
+	public static void manageLogs(){
+		log("manageLogs() ::: java status: " + getJavaStatus(), null);
+		if(getLogMBytes() > MAX_lOG_MBYTES){
+			log("manageLogs() ::: .. too big, archivve..", null);
+			if(archiveLogs()){
+				log("manageLogs() ::: delete old files.. ", null);
+				truncStaleArchive();
+				truncStaleFrames();
+				truncStaleLogs();
+				deleteLogFiles();
+			}
 		}
 	}
 	
 		/*
-	public static boolean tuncate(final String path) {
-		return tuncate(path, MIN_LOG_FILE_LINES); 
-	}
+	
 	
 	public static boolean tuncate(final String path, final int lines) {
 		Vector<String> alllines = new Vector<String>();
@@ -992,5 +1002,21 @@ public class Util {
         
 		return true;
 	}
-	*/
+	
+	// private void callForHelp(String subject, String body) {
+	//	application.driverCallServer(PlayerCommands.messageclients, body);
+	//	Util.log("callForHelp() " + subject + " " + body, this);
+	// 	PowerLogger.append("callForHelp() " + subject + " " + body, this);
+
+	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
+	//	State state = State.getReference();
+	//	Settings settings = Settings.getReference();
+	//	body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
+	//			settings.readRed5Setting("http.port")+"/oculusPrime/";
+	//	String emailto = settings.readSetting(GUISettings.email_to_address);
+		
+		//if (!emailto.equals(Settings.DISABLED))
+		//	application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
+		//application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
+*/
 }

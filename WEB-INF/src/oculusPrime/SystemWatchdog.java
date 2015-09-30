@@ -7,9 +7,6 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
