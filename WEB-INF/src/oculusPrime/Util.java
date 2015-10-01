@@ -605,13 +605,37 @@ public class Util {
 		return true;
 	}
 	
+	public static boolean testRTMP(){	
+		try {
+
+			final String ext = State.getReference().get(values.externaladdress); //	"127.0.0.1"; //
+			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
+
+			log("testRTMP(): http = " +ext, null);
+			
+			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + rtmp);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+			String line = procReader.readLine();
+			log("testRTMP(): " + line, null);
+			line = procReader.readLine();
+			log("testRTMP():" + line, null);
+			line = procReader.readLine();
+			log("testRTMP(): process exit value = " + proc.exitValue(), null);
+			
+			// if(line == null) return false;
+			
+		} catch (Exception e) {
+			return false;
+		}
+		
+		return true;
+	}
+	
 	public static String getJavaStatus(){
 		
 		log("getJavaStatus: cpu = " + State.getReference().get(values.cpu), null);
 		log("getJavaStatus: top = " + getCPUTop(), null);
-		
-	//	if(javaPID == null) return null;
-	//	long start = System.currentTimeMillis();
 		
 		String line = null;
 		try {
@@ -622,15 +646,10 @@ public class Util {
 			log("getJavaStatus:" + line, null);
 					
 		} catch (Exception e) {
-			e.printStackTrace();
+			printError(e);
 		}
 		
-	// 1ms
-	//	Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
 		return line;
-		
-		// https://youtu.be/rkYQuuYVbBw
-		// https://www.youtube.com/embed/rkYQuuYVbBw
 	}
 
 	//

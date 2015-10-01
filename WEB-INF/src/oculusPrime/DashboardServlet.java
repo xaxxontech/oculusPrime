@@ -70,12 +70,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 			if(action.equalsIgnoreCase("reboot")) {
 				if(app != null) app.driverCallServer(PlayerCommands.reboot, null);
-				//	Util.callReboot();
 			}
 			
-			if(action.equalsIgnoreCase("restart")) {
+			if(action.equalsIgnoreCase("restart")) { 
 				if(app != null) app.driverCallServer(PlayerCommands.restart, null);
-				//Util.callRestart("dashboard command");
 			}
 			
 		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()

@@ -294,17 +294,33 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.delay(10000);  // arduino takes 10 sec to reach full power?
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
-				
+	
+		/*
 		new Thread(new Runnable() { public void run() {
-			Util.delay(10000);  // wait to test 
+			
+			Util.delay(25000);  // wait to test 
+			
 			if( ! Util.testPortForwarding()) {
-				String msg = state.get(values.guinotify) + " check router port forwarding settings"; 
+				String msg = state.get(values.guinotify);
+				if(msg == null) msg = "HTTP port blocked "; 
+				else msg += msg = " HTTP port blocked "; 
 				state.set(values.guinotify, msg);
-				message(msg, null, null);
+				Util.log(msg, this);
 			}
+			
+			Util.delay(5000);  // wait to test 
+			
+			if( ! Util.testRTMP()) {
+				String msg = state.get(values.guinotify);
+				if(msg == null) msg = " RTMP port blocked "; 
+				else msg += " RTMP port blocked "; 
+				state.set(values.guinotify, msg);
+				Util.log(msg, this);
+			}	
 		} }).start();
-				
-		Util.debug("application initialize done", this);
+			*/
+		
+		Util.debug("application initialize done........", this);
 	}
 
 	private void grabberInitialize() {
