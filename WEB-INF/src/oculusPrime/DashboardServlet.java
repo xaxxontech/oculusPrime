@@ -25,6 +25,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static BanList ban = null;
 	static State state = null;
 	static Vector<String> history;
+	private static Application app = null;
+
+	public static void setApp(Application a) {
+		if(app != null) return;
+		app = a;
+	}
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -62,9 +68,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null){
 
-			if(action.equalsIgnoreCase("reboot")) Util.callReboot();
+			if(action.equalsIgnoreCase("reboot")) {
+				if(app != null) app.driverCallServer(PlayerCommands.reboot, null);
+				//	Util.callReboot();
+			}
 			
-			if(action.equalsIgnoreCase("restart")) Util.callRestart("dashboard command");
+			if(action.equalsIgnoreCase("restart")) {
+				if(app != null) app.driverCallServer(PlayerCommands.restart, null);
+				//Util.callRestart("dashboard command");
+			}
 			
 		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()
 		//	if(action.equalsIgnoreCase("trunc")) Util.manageLogs();

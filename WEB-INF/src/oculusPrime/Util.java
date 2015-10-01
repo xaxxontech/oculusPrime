@@ -2,7 +2,6 @@ package oculusPrime;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,12 +9,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
-import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -32,10 +28,10 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import oculusPrime.State.values;
-
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+
+import oculusPrime.State.values;
 
 public class Util {
 	
@@ -405,7 +401,7 @@ public class Util {
 		Util.systemCall(str);
 	}
 	*/
-	
+		/*
 	static void callRestart(final String reason){
 		new Thread(){
 			public void run() {	
@@ -442,6 +438,7 @@ public class Util {
 		}.start();
 	}
 	
+
 	static void callReboot(){
 		new Thread(){
 			public void run() {	
@@ -476,6 +473,7 @@ public class Util {
 			}
 		}.start();
 	}
+	*/
 	
 	public static Document loadXMLFromString(String xml){
 		try {
@@ -581,6 +579,30 @@ public class Util {
 		}
 
 		return null;
+	}
+	
+	//TODO: 
+	public static boolean testPortForwarding(){
+		
+		final String ext = State.getReference().get(values.externaladdress); 
+		final String http = State.getReference().get(State.values.httpport);
+		final String url = "http://"+ext+":"+ http +"/oculusPrime";
+		
+		if(ext == null || http == null) return false;
+	
+		try {
+			
+			log("testPortForwarding(): "+url, null);
+			URLConnection connection = (URLConnection) new URL(url).openConnection();
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			log("testPortForwarding(): "+procReader.readLine(), null);
+
+		} catch (Exception e) {
+			 log("testPortForwarding(): failed: " + url, null);
+			return false;
+		}
+		
+		return true;
 	}
 	
 	public static String getJavaStatus(){

@@ -82,7 +82,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state = State.getReference();
 		FrameGrabHTTP.setApp(this);
 		RtmpPortRequest.setApp(this);
-		
+		DashboardServlet.setApp(this);
 		initialize();
 	}
 
@@ -295,10 +295,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 		} }).start();
 				
-		//new Thread(new Runnable() { public void run() {
-		//	Util.delay(Util.ONE_MINUTE);  
-		//	Util.manageLogs();
-		//} }).start();
+		new Thread(new Runnable() { public void run() {
+			Util.delay(10000);  // wait to test 
+			if( ! Util.testPortForwarding()) {
+				String msg = state.get(values.guinotify) + " check router port forwarding settings"; 
+				state.set(values.guinotify, msg);
+				message(msg, null, null);
+			}
+		} }).start();
 				
 		Util.debug("application initialize done", this);
 	}
@@ -403,20 +407,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
 		}
 	}
-	
+
 	public void driverCallServer(PlayerCommands fn, String str) {
 		playerCallServer(fn, str, true);
 	}
-
-	/**
-	 * distribute commands 
-	 * 
-	 * @param fn
-	 *            is the function to call
-	 * 
-	 * @param str
-	 *            is the parameter to pass onto the function
-	 */
+	
 	public void playerCallServer(String fn, String str) {
 		
 		if (fn == null) return;
@@ -437,14 +432,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
-	/**
-	 * distribute commands from player
-	 * 
-	 * @param fn
-	 *            to call in flash player [file name].swf
-	 * @param str
-	 *            is the argument string to pass along
-	 */
 	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
@@ -1440,16 +1427,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.printError(e);
 			}
 		}
-		/*
-		f = new File(Settings.redhome + Util.sep + "archive");
-		if (!f.exists()){
-			try {
-				f.createNewFile();
-			} catch (IOException e) {
-				Util.printError(e);
-			}
-		}
-		*/
 		shutdown();
 	}
 	

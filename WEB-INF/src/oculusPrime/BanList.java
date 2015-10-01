@@ -158,7 +158,7 @@ public class BanList {
 			return true;
 		}
 		
-		// appendLog("passed isBanned(): " + address);
+		appendLog("passed isBanned(): " + address);
 		return false;
 	}
 	
@@ -202,10 +202,7 @@ public class BanList {
 		
 		if(attempts.containsKey(address)) attempts.remove(address);
 		if(blocked.containsKey(address)) blocked.remove(address);
-		if( ! known.contains(address)) {
-			Util.log(address + " ...... is been added", this); 
-			known.add(address);
-		}
+		if( ! known.contains(address)) known.add(address);
 	}
 	
 	public synchronized void loginFailed(final String remoteAddress, final String user) {
