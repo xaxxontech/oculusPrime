@@ -70,6 +70,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 			if(action.equalsIgnoreCase("reboot")) {
 				if(app != null) app.driverCallServer(PlayerCommands.reboot, null);
+
 			}
 			
 			if(action.equalsIgnoreCase("restart")) { 
@@ -260,8 +261,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
-		final String restart = "<a href=\"dashboard?action=restart\">";
-		final String reboot = "<a href=\"dashboard?action=reboot\">";
+		String restart = "<a href=\"dashboard?action=restart\">";
+		String reboot = "<a href=\"dashboard?action=reboot\">";
+		
+		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+			restart = ""; // break links if not docked 
+			reboot = "";
+		}
 		
 		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
 				+ "<td><b>logs</b><td>" + Util.getLogSize() 
@@ -285,8 +291,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getTail(){
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
-	//	reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
-		reply += Util.tailFormated(15) + " \n";
+		reply += Util.tailFormated(10) + " \n";
 		reply += ("\n</table>\n");
 		return reply;
 	}
@@ -317,7 +322,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.framegrabbusy.name())) return;
 		if(key.equals(values.rosglobalpath.name())) return;
 		if(key.equals(values.rosscan.name())) return;
- //		if(key.equals(values.cpu.name())) return;
+ 		if(key.equals(values.cpu.name())) return;
 		
 		if(history.size() > 10) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));

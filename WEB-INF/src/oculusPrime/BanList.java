@@ -22,7 +22,6 @@ public class BanList {
 	public static final String banlog =  Settings.redhome+Util.sep + "log" + Util.sep + "banlist.log";
 	
 	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
-	public static final long ROLL_OVER = 15000;
 	public static final int BAN_ATTEMPTS = 10;
 	public static final int MAX_ATTEMPTS = 12;
 	public static final int MAX_HISTORY = 50;
@@ -34,7 +33,6 @@ public class BanList {
 	private Vector<String> known = new Vector<String>();
 	private State state = State.getReference();
 	private RandomAccessFile logfile = null;
-//	private boolean override = false; 
 	private Timer timer = new Timer();
 	
 	static BanList singleton = new BanList();
@@ -47,12 +45,10 @@ public class BanList {
 			File ban = new File(banfile);
 			if(ban.exists()) {
 				String line = null;
-				// Util.log("BanList(): reading file: " + banfile, this); 
 				BufferedReader br = new BufferedReader(new FileReader(ban));
 				while((line = br.readLine()) != null) {
 					String addr = line.trim();
 					if(Util.validIP(addr)) banned.add(addr); 
-					// else Util.log("invalid address: " + addr, this);
 				}
 				br.close();		
 			}
@@ -60,23 +56,19 @@ public class BanList {
 			Util.log(e.getLocalizedMessage(), this);
 		}
 
-		File log = new File(banlog);
-		if (log.exists()) {
-			if (log.length() > ROLL_OVER) {
-				Util.log("BanList(): file too large, rolling over: " + log.getAbsolutePath(), this);
-				log.delete();
-			}
-		}
+//		File log = new File(banlog);
+//		if (log.exists()) {
+//			if (log.length() > ROLL_OVER) {
+//				Util.log("BanList(): file too large, rolling over: " + log.getAbsolutePath(), this);
+//				log.delete();
+//			}
+//		}
 		
 		try {
 			logfile = new RandomAccessFile(banlog, "rw");
 		} catch (Exception e) {
 			Util.debug("BanList(): " + e.getMessage());
 		}
-		
-//		override = ! Settings.getReference().getBoolean(ManualSettings.checkaddresses);
-//		if(override) Util.log("BanList(): disabled", this);
-//		else 
 		
 		timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}
@@ -137,6 +129,8 @@ public class BanList {
 	public synchronized boolean isBanned(final String address) {
 		
 		if(address.equals("127.0.0.1")) return false;
+		
+		if(Settings.getReference().getBoolean(ManualSettings.developer)) return false;
 			
 		if(banned.contains(address)) {
 			appendLog("banned address: " + address);
@@ -158,14 +152,13 @@ public class BanList {
 			return true;
 		}
 		
-		appendLog("passed isBanned(): " + address);
 		return false;
 	}
 	
 	public synchronized boolean knownAddress(final String address) {
 		
-//		if(override) return true;
-		
+		if(Settings.getReference().getBoolean(ManualSettings.developer)) return true;
+				
 		if( ! Util.validIP(address)) return false;
 		
 		if(address.equals("0.0.0.0")) return true;

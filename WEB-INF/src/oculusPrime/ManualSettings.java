@@ -6,14 +6,13 @@ public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm,
-	soundthreshold, motionthreshold, checkaddresses, redockifweakconnection;
+	soundthreshold, motionthreshold, redockifweakconnection;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
 		config.setProperty(developer.name(), Settings.FALSE);
 		config.setProperty(debugenabled.name(), Settings.FALSE);
-		config.setProperty(checkaddresses.name(), Settings.TRUE);	
 		config.setProperty(motorport.name(), Settings.ENABLED);
 		config.setProperty(powerport.name(), Settings.ENABLED);
 		config.setProperty(wheeldiameter.name(), "106");

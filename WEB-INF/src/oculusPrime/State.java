@@ -123,11 +123,12 @@ public class State {
 		Set<String> keys = props.keySet();
 		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			String key = i.next();
-			str += (key + " " + props.get(key) + "<br>"); // "\n\r");
+			str += (key + " " + props.get(key) + "<br>"); 
 		}
 		return str;
 	} 
 	
+	/*
 	public String toHTML(){ 
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\">");
 		for (values key : values.values()) { 
@@ -135,6 +136,91 @@ public class State {
 			else str.append("<tr><td> " + key.name() + "<td><b>NULL</b>");
 		}	
 		
+		str.append("</table>\n");
+		return str.toString();
+	}
+	*/
+	
+	public String getNext(){
+		/*
+		if(key.equals(values.rosglobalpath.name())) key = i.next();
+		if(key.equals(values.rosmapinfo.name())) key = i.next();
+		if(key.equals(values.rosscan.name())) key = i.next();
+		if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+		if(key.equals(values.batteryinfo.name())) key = i.next();
+		str.append("<tr><td><b>" + key + "</b><td>" + props.get(key));
+		*/
+		return null;
+		
+	}
+	
+	public String toHTML(){ 
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">");
+		
+	//	str.append("<tr><td rowspan=\"55\">");
+	//	for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " <br> \n");
+	
+		Set<String> keys = props.keySet();
+		for(Iterator<String> i = keys.iterator(); i.hasNext();){
+			try {
+				if( !i.hasNext()) break;
+				
+				String key = i.next();
+				if(key.equals(values.rosamcl.name())) key = i.next();
+				if(key.equals(values.rosglobalpath.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
+				if(key.equals(values.rosscan.name())) key = i.next();
+				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+				if(key.equals(values.batteryinfo.name())) key = i.next();
+				str.append("<tr><td><b>" + key + "</b><td> " + props.get(key));
+
+				if( !i.hasNext()) break;
+				
+				key = i.next();
+				if(key.equals(values.rosamcl.name())) key = i.next();
+				if(key.equals(values.rosglobalpath.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
+				if(key.equals(values.rosscan.name())) key = i.next();
+				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+				if(key.equals(values.batteryinfo.name())) key = i.next();
+				str.append("<td><b>" + key + "</b><td> " + props.get(key));
+				
+				if( !i.hasNext()) break;
+				
+				key = i.next();
+				if(key.equals(values.rosamcl.name())) key = i.next();
+				if(key.equals(values.rosglobalpath.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
+				if(key.equals(values.rosscan.name())) key = i.next();
+				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+				if(key.equals(values.batteryinfo.name())) key = i.next();
+				str.append("<td><b>" + key + "</b><td> " + props.get(key));
+			} catch (Exception e) {
+				break;
+			}
+		}
+			
+		if(props.containsKey(values.rosmapwaypoints.name())) {
+			String names = "";
+			String[] way =  props.get(values.rosmapwaypoints.name()).split(",");
+			for(int i = 0 ; i < way.length ; i++) 
+				if(way[i].matches("[a-zA-Z]+"))
+					names += way[i].trim() + ", "; 
+					
+			str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"9\"> " + names + " </tr> \r");
+		}
+	
+		if(props.containsKey(values.rosamcl.name())) 
+			str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
+	
+		if(props.containsKey(values.batteryinfo.name())) 
+			str.append("<tr><td colspan=\"9\"><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
+		
+		if(props.containsKey(values.rosglobalpath.name())) 
+			str.append("<tr><td><b>rosglobalpath</b><td colspan=\"9\"> " + props.get(values.rosglobalpath.name()) + " </tr> \r");
+	
+		str.append("<tr><td colspan=\"9\"><b>NULL:</b>");
+		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
 		str.append("</table>\n");
 		return str.toString();
 	}
@@ -159,7 +245,7 @@ public class State {
 				if(target.startsWith(current)) return true;
 			}
 	
-			Util.delay(1); // no higher, used by motion, odometry
+			Util.delay(1); // used by motion, odometry
 			if (System.currentTimeMillis()-start > timeout){ 
 				Util.debug("block() timeout: " + member.name(), this);
 				return false;

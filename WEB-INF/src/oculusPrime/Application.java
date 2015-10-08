@@ -293,9 +293,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		new Thread(new Runnable() { public void run() {
 			Util.delay(10000);  // arduino takes 10 sec to reach full power?
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
+			
+
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+				Util.log("application: undocked startup!!", this);
+			}
 		} }).start();
 	
-		/*
 		new Thread(new Runnable() { public void run() {
 			
 			Util.delay(25000);  // wait to test 
@@ -307,20 +311,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 				state.set(values.guinotify, msg);
 				Util.log(msg, this);
 			}
-			
+		/*	
 			Util.delay(5000);  // wait to test 
 			
 			if( ! Util.testRTMP()) {
 				String msg = state.get(values.guinotify);
 				if(msg == null) msg = " RTMP port blocked "; 
-				else msg += " RTMP port blocked "; 
+				else msg += ", RTMP port blocked "; 
 				state.set(values.guinotify, msg);
 				Util.log(msg, this);
 			}	
-		} }).start();
+			
 			*/
+			
+		} }).start();
 		
-		Util.debug("application initialize done........", this);
+			
+		Util.debug("application initialize done", this);
 	}
 
 	private void grabberInitialize() {
@@ -564,8 +571,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
-				if (s[0].equals("delete")) state.delete(s[1]); // State.values.valueOf(s[1]));
-				else state.set(s[0], s[1]); // State.values.valueOf(s[0]), s[1]); 
+				if (s[0].equals("delete")) state.delete(s[1]); 
+				else state.set(s[0], s[1]); 
 			}
 			else if (s.length > 2) { // 2nd arg has spaces
 				String stateval = "";
@@ -574,7 +581,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			else {  
 				if (s[0].matches("\\S+")) { // one arg 
-					messageplayer("<state> "+s[0]+" "+state.get(/*State.values.valueOf(*/ s[0]), null, null); 
+					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
 				} else {  // no args
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
