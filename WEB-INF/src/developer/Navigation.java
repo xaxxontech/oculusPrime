@@ -278,13 +278,23 @@ public class Navigation {
 
 			if (!navdockactive) return;
 
+			// TODO: debugging potential intermittent camera problem .. conincides with flash error 1009?
+			state.delete(State.values.lightlevel);
+			app.driverCallServer(PlayerCommands.getlightlevel, null);
+			long timeout = System.currentTimeMillis() + 5000;
+			while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() < timeout)  Util.delay(10);
+			if (state.exists(State.values.lightlevel)) Util.log("lightlevel: "+state.get(State.values.lightlevel), this);
+			else Util.log("error, lightlevel null", this);
+
 			// make sure dock in view before calling autodock go
 			if (!finddock(AutoDock.LOWRES)) { // something wrong with camera capture, try again?
 				Util.log("error, finddock() needs to try 2nd time", this);
 				Util.delay(20000); // allow cam shutdown, system settle
 				app.killGrabber(); // force chrome restart
 				Util.delay(app.GRABBERRESPAWN + 4000); // allow time for grabber respawn
-				// camera, lights
+				// camera, lights (in case malg had dropped commands)
+				app.driverCallServer(PlayerCommands.spotlight, "0");
+				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
 				app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 				Util.delay(4000); // wait for cam startup, light adjust
@@ -825,7 +835,7 @@ public class Navigation {
     	}
 
 		// if no camera, what's the point in rotating
-    	if (!camera) {
+    	if (!camera && rotate) {
 			rotate = false;
 			app.driverCallServer(PlayerCommands.messageclients, "rotate action ignored, camera unused");
 		}

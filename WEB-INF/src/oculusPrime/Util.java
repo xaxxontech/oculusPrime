@@ -259,7 +259,8 @@ public class Util {
 //	}
 
 	public static void setSystemVolume(int percent, Application app){
-		Util.systemCall("amixer set Master "+percent+"%");
+//		Util.systemCall("amixer set Master "+percent+"%"); // doesn't work in xubuntu 14.04 fresh install
+		Util.systemCall("pactl -- set-sink-volume 0 "+percent+"%"); 		// pactl -- set-sink-volume 0 80%
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
@@ -862,116 +863,17 @@ public class Util {
 		if (path.exists()) return path.listFiles().length;
 		else return 0;
 	}
-	
-	public static void truncLogs(){
-		File[] files =  new File(Settings.logfolder).listFiles();
-		for (int i = 0; i < files.length; i++) {
-	      
-			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
-	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		files[i].delete();
-	        	} 
-	        }
-	        
-	        if( !files[i].getName().endsWith(".log") ||  !files[i].getName().endsWith(".stdout")){
-	        	 debug("truncFrames(): deleting, not a log: " + files[i].getName());
-	        	 files[i].delete();
-	        }
-			
-		}
-	}
 
-	public static void truncFrames(){
-		File[] files =  new File(Settings.framefolder).listFiles();
-		for (int i = 0; i < files.length; i++) {
-	      
-			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ONE_DAY*5){
-	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		files[i].delete();
-	        	} 
-	        }
-	        
-//	        if( ! files[i].getName().endsWith(".jpg")){
-//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
-//	        	 files[i].delete();
-//	        }
-			
-		}
-	}
 
 	private void callForHelp(String subject, String body) {
-	//	application.driverCallServer(PlayerCommands.messageclients, body);
-	//	Util.log("callForHelp() " + subject + " " + body, this);
-	// 	PowerLogger.append("callForHelp() " + subject + " " + body, this);
 
-	//	if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
 		State state = State.getReference();
 		Settings settings = Settings.getReference();
 		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
 				settings.readRed5Setting("http.port")+"/oculusPrime/";
 		String emailto = settings.readSetting(GUISettings.email_to_address);
 		
-		//if (!emailto.equals(Settings.DISABLED))
-		//	application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
-		//application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
 	}
 	
 
-	/*
-	public static boolean manageLogs(){
-		long size = getLogMBytes();
-		if(size < MAX_LOG_FILE_MBYTES) return false;		
-		
-		Util.tuncate(PowerLogger.powerlog);
-		Util.tuncate(Settings.stdout);
-		Util.tuncate(BanList.banfile);
-		return true;
-	}
-	
-	
-	public static boolean tuncate(final String path) {
-		return tuncate(path, MIN_LOG_FILE_LINES); 
-	}
-	
-	public static boolean tuncate(final String path, final int lines) {
-		Vector<String> alllines = new Vector<String>();
-		File file = new File(path);
-		if( ! file.exists()) return false;
-				
-        try {
-	    	String line;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(path)));
-            while ((line = reader.readLine()) != null) alllines.add(line); 
-            reader.close();
-            if(alllines.size() > lines){   
-            	debug("truncate(): lines: " + alllines.size() + " " + path);
-	            file.delete();  
-	            file.createNewFile();
-            	debug("tuncate(): lines: " + alllines.size() + " " + path);   
-	     //       file.delete();  
-	     //       file.createNewFile();
-            } else {
-            	debug("truncate(): too small: " + file.getAbsolutePath());
-            	return false;
-            }
-	    } catch (Exception e) {
-	    	debug("truncate():" + e.getMessage());
-	        return false;
-	    }
-	    
-        try{
-            BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-            for(int i = (alllines.size() - lines) ; i < alllines.size() ; i++)
-            	writer.append(alllines.get(i) + "\r\n");
-            writer.close();
-        } catch (Exception e) {
-        	debug("truncate():" + e.getMessage());
-	        return false;
-	    }
-        
-		return true;
-	}
-	*/
 }

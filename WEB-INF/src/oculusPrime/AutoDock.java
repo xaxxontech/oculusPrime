@@ -270,7 +270,7 @@ public class AutoDock {
 					app.powerport.checkisConnectedBlocking();
 
 					comport.goForward();
-					Util.delay((long) comport.voltsComp(150));
+					Util.delay((long) comport.voltsComp(200)); // was 150
 					comport.stopGoing();
 
 					state.block(oculusPrime.State.values.wallpower, "true", 400);
@@ -280,7 +280,7 @@ public class AutoDock {
 				if(state.getBoolean(State.values.wallpower)) { // dock maybe successful
 					comport.checkisConnectedBlocking();
 					comport.goForward(); // one more nudge
-					Util.delay((long) comport.voltsComp(150));
+					Util.delay((long) 200); // comport.voltsComp(150)); // voltscomp not needed, on wallpower
 					comport.stopGoing();
 					
 					comport.strobeflash("on", 120, 20);

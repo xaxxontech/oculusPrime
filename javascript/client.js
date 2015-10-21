@@ -2026,7 +2026,7 @@ function docklinecalibrate(str) {
 	    
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
-	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, 160, 1, 0);
+	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, 180, 1, 0);
 	}
 
 	if (str == "save") {

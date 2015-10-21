@@ -541,7 +541,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case restart: restart(); break;
 		case softwareupdate: softwareUpdate(str); break;
 //		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
-		case quitserver: quit(); break;
+		case quitserver: shutdown(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
@@ -768,9 +768,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case reboot:
-			powerport.writeStatusToEeprom();
-			killGrabber(); // prevents error dialog on chrome startup
-			Util.delay(1000);
 			reboot();
 			break;
 		
@@ -950,7 +947,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			restart();
 			break;
 		case shutdown:
-			quit();
+			shutdown();
 			break;
 		case streamactivitydetected:
 			streamActivityDetected(str);
@@ -1447,40 +1444,30 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.printError(e);
 			}
 		}
-/*		
-		f = new File(Settings.redhome + Util.sep + "trunc");
-		if (!f.exists()){
-			try {
-				f.createNewFile();
-			} catch (IOException e) {
-				Util.printError(e);
-			}
-		}
-*/		
+
 		shutdown();
 	}
 	
-	public static void reboot() {
+	public  void reboot() {
+		powerport.writeStatusToEeprom();
+		killGrabber(); // prevents error dialog on chrome startup
+		Util.delay(1000);
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 	}
-	
-	public void quit() { 
-		messageplayer("server shutting down", null, null);
-		shutdown();
+
+	public void powerdown() {
+		powerport.writeStatusToEeprom();
+		killGrabber(); // prevents error dialog on chrome startup
+		Util.delay(1000);
+		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
 	}
 
 	public void shutdown() {
 		
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
-		
-/*		Util.log("count logs: " + Util.getLogSize(), this);
-		if(Util.manageLogs()) {
-			Util.log("shutting down, managing log files first..", this);// write file as restart flag for script
-		}
-*/		
-	
-		if(commandServer!=null) { 
+
+		if(commandServer!=null) {
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
 			commandServer.close();
 		}
@@ -2232,6 +2219,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	private void streamActivityDetected(String str) {
 		if (! state.exists(State.values.streamactivityenabled)) return;
+
+		// to catch false audio detect on driver login... TODO: find root cause, not just this patch
+		if (str.split(" ")[0].equals("audio")) { // note: video deprecated
+			int audiodetected = Integer.valueOf(str.split(" ")[1]);
+			int audiothreshold = Integer.valueOf(state.get(values.streamactivitythreshold).split(" ")[1]);
+//			Util.log(audiodetected+ " "+audiothreshold, this);
+			if (audiodetected < audiothreshold) {
+				setStreamActivityThreshold(state.get(values.streamactivitythreshold)); // restarts stream
+				return;
+			}
+		}
+
 		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) {
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable
