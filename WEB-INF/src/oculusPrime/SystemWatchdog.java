@@ -207,11 +207,12 @@ public class SystemWatchdog implements Observer {
 			// notify driver if any system messages
 			if (state.exists(values.guinotify)) {
 				if (state.exists(State.values.driver.toString())) {
-					String str= state.get(values.guinotify);
+//					String str="<span style='font-size: 12px'>("+Util.getDateStamp()+")</span><br><br>";
+					String str = state.get(values.guinotify);
 					str += "<br><br><a href='javascript: guinotify(&quot;ok&quot;);'>";
 					str += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
 
-					application.sendplayerfunction("guinotify", str);
+					application.sendplayerfunction("guinotify", str );
 				}
 			}
 

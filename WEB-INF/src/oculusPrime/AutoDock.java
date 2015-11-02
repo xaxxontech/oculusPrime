@@ -736,6 +736,9 @@ public class AutoDock {
 			return;
 		}
 
+		state.delete(oculusPrime.State.values.dockfound);
+		state.delete(oculusPrime.State.values.dockmetrics);
+
 		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
 				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
 			app.message("stream unavailable", null, null);
@@ -751,8 +754,6 @@ public class AutoDock {
 		}
 
 		state.set(oculusPrime.State.values.dockgrabbusy, true);
-		state.delete(oculusPrime.State.values.dockfound);
-		state.delete(oculusPrime.State.values.dockmetrics);
 
 		if (app.grabber instanceof IServiceCapableConnection) {
 			state.set(State.values.framegrabbusy.name(), true);

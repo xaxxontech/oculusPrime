@@ -547,19 +547,20 @@ public class ArduinoPower implements SerialPortEventListener  {
 		
 		PowerLogger.append(text, this);
 
-		long timeout = System.currentTimeMillis() + 5000;
-		while (commandlock && System.currentTimeMillis() < timeout) { Util.delay(1); }
-		if (commandlock) {
-			String str = "";
-			for (byte b : cmd) str += String.valueOf((int) b)+ ", ";
-			Util.log("error, commandlock timeout, command dropped: "+str, this);
+
+
+		int n = 0;
+		while (commandlock) {
+			Util.delay(1);
+			n++;
 		}
-		else {
-			commandlock = true;
-			for (byte b : cmd) commandList.add(b);
-			commandList.add((byte) 13); // EOF
-			commandlock = false;
-		}
+
+		commandlock = true;
+		if (n!=0) Util.log("error, commandlock true for "+n+"ms", this);
+		for (byte b : cmd) commandList.add(b);
+		commandList.add((byte) 13); // EOL
+		commandlock = false;
+
 	}
 	
 	private void sendCommand(final byte cmd){
@@ -578,44 +579,35 @@ public class ArduinoPower implements SerialPortEventListener  {
 			while (true) {
 				if (commandList.size() > 0 &! commandlock) {
 
-					commandlock = true;
-
-					if (!isconnected) {
-						Util.log("error, not connected", this);
-						commandList.clear();
-						commandlock = false;
-						continue;
-					}
-
 					if (commandList.size() > 15) {
 						commandList.clear();
 						Util.log("error, command stack up, all dropped", this);
-						commandlock = false;
+						Util.delay(1);
 						continue;
 					}
 
 					int EOLindex = commandList.indexOf((byte) 13);
 					if (EOLindex == -1) {
-//					if (commandList.get(commandList.size() - 1) != (byte) 13) {
-						String str = "";
-						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
-						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
-						commandlock = false;
+						Util.delay(1);
 						continue;
 					}
 
-//					byte c[] = new byte[commandList.size()];
-//					for (int i = 0; i < commandList.size(); i++) c[i]=commandList.get(i);
-//					commandList.clear();
 
-					// in case of multiple EOL chars,
+					// in case of multiple EOL chars, read only up to 1st
 					byte c[] = new byte[EOLindex+1];
-					for (int i = 0; i <= EOLindex; i++) {
-						c[i]=commandList.get(0);
-						commandList.remove(0);
+					try {
+						for (int i = 0; i <= EOLindex; i++) {
+							c[i] = commandList.get(0);
+							commandList.remove(0);
+						}
+					}  catch (Exception e) {
+						Util.log("sendCommand() error, dropped, continuing: ", this);
+						Util.printError(e);
+						commandList.clear();
+						Util.delay(1);
+						continue;
 					}
 
-					commandlock = false;
 
 					try {
 						serialPort.writeBytes(c); // writing as array ensures goes at baud rate?

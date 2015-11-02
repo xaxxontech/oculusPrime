@@ -64,22 +64,32 @@
 		<url-pattern>/navigationlog/*</url-pattern>
 	</servlet-mapping>
 
+	<servlet>
+		<servlet-name>NetworkServlet</servlet-name>
+		<servlet-class>oculusPrime.NetworkServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>NetworkServlet</servlet-name>
+		<url-pattern>/network</url-pattern>
+	</servlet-mapping>
+
 	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>Forbidden</web-resource-name>
 			<url-pattern>/WEB-INF/*</url-pattern>
+			<url-pattern>/scripts/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint />
 	</security-constraint>
 
 
-	<security-constraint>
+<!--	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>Forbidden</web-resource-name>
 			<url-pattern>/scripts/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint />
-	</security-constraint>
+	</security-constraint>-->
 	
 
 </web-app>

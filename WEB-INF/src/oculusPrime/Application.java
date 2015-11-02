@@ -83,7 +83,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		banlist = BanList.getRefrence();
 		state = State.getReference();
 		FrameGrabHTTP.setApp(this);
-		RtmpPortRequest.setApp(this);
+//		RtmpPortRequest.setApp(this);
 		
 		initialize();
 	}
