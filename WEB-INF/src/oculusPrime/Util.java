@@ -50,6 +50,10 @@ public class Util {
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
+	
+	static String jettyPID = getJettyPID();
+	static String redPID = getRed5PID();
+	
 
 	public static void delay(long delay) {
 		try {
@@ -446,7 +450,6 @@ public class Util {
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
 	/*
-	*/
 	public static String getCPUTop(){
 		try {
 
@@ -460,10 +463,10 @@ public class Util {
 		}
 
 		return null;
-	}
+	}	*/
 	
-	//TODO: 
-	public static boolean testPortForwarding(){
+	
+	public static boolean testHTTP(){
 		
 		final String ext = State.getReference().get(values.externaladdress); 
 		final String http = State.getReference().get(State.values.httpport);
@@ -486,10 +489,37 @@ public class Util {
 		return true;
 	}
 	
+	public static boolean testTelnetRouter(){			
+		try {
+
+			// "127.0.0.1"; //
+			final String port = Settings.getReference().readSetting(GUISettings.telnetport);
+			final String ext =State.getReference().get(values.externaladdress);
+			log("...telnet test: " +ext +" "+ port, null);
+			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + port);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			
+			String line = procReader.readLine();
+			if(line.toLowerCase().contains("trying")){
+				line = procReader.readLine();
+				if(line.toLowerCase().contains("connected")){
+					log("telnet test pass...", null);
+					return true;
+				}
+			}
+		} catch (Exception e) {
+			log("telnet test fail..."+e.getLocalizedMessage(), null);
+			return false;
+		}
+		log("telnet test fail...", null);
+		return false;
+	}
+	
+	//TODO: 
 	public static boolean testRTMP(){	
 		try {
 
-			final String ext = State.getReference().get(values.externaladdress); //	"127.0.0.1"; //
+			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //	
 			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
 
 			log("testRTMP(): http = " +ext, null);
@@ -515,13 +545,12 @@ public class Util {
 	
 	public static String getJavaStatus(){
 		
-	//	log("getJavaStatus: cpu = " + State.getReference().get(values.cpu), null);
-	//	log("getJavaStatus: top = " + getCPUTop(), null);
+		if(redPID==null) return "jetty not running";
 		
 		String line = null;
 		try {
 			
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ getJavaPID() +"/stat")));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ redPID +"/stat")));
 			line = reader.readLine();
 			reader.close();
 			log("getJavaStatus:" + line, null);
@@ -533,19 +562,41 @@ public class Util {
 		return line;
 	}
 
-	//
-	// TODO: WHICH JVM PID IS OCULUS? 
-	//
-	public static String getJavaPID(){	
-		try {
-			String[] cmd = { "/bin/sh", "-c", "ps -al | grep java"};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String[] reply = procReader.readLine().split(" ");
-			return reply[4];
+	public static String getRed5PID(){	
+		
+		if(redPID!=null) return redPID;
+		
+		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
+		
+		Process proc = null;
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
 		} catch (Exception e) {
+			Util.log("getRed5PID(): "+ e.getMessage(), null);
 			return null;
+		}  
+		
+		String line = null;
+		String[] tokens = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("red5")) {
+					tokens = line.split(" ");
+					for(int i = 1 ; i < tokens.length ; i++) {
+						if(tokens[i].trim().length() > 0) {
+							if(redPID==null) redPID = tokens[i].trim();							
+						}
+					}
+				}	
+			}
+		} catch (IOException e) {
+			Util.log("getRed5PID(): ", e.getMessage());
 		}
+
+		return redPID;
 	}	
 	
 	public static String pingWIFI(final String addr){
@@ -701,7 +752,48 @@ public class Util {
 		} }).start();
 	}
 
+	public static String getJettyPID(){	
+		
+	//	if(jettyPID!=null) return jettyPID;
+		
+		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
+		
+		Process proc = null;
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+		} catch (Exception e) {
+			Util.log("getJettyPID(): "+ e.getMessage(), null);
+			return null;
+		}  
+		
+		String line = null;
+		String[] tokens = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("start.jar")) {
+					tokens = line.split(" ");
+					if(tokens[0].equals("root"))
+					for(int i = 1 ; i < tokens.length ; i++) {
+						if(tokens[i].trim().length() > 0) {
+							if(jettyPID==null) jettyPID = tokens[i].trim();							
+						}
+					}
+				}	
+			}
+		} catch (IOException e) {
+			Util.log("getJettyPID(): ", e.getMessage());
+		}
+
+		return jettyPID;
+	}	
+	
 	public static void setJettyTelnetPort() {
+		
+		if(jettyPID == null) return;
+		
 		new Thread(new Runnable() { public void run() {
 			Settings settings = Settings.getReference();
 			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(GUISettings.telnetport);
@@ -716,15 +808,16 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-//				debug("setJettyTelnetPort(): "+line, this);
+				// debug("setJettyTelnetPort(): "+line, this);
 				
-			} catch (Exception e) {
-//				Util.log("setJettyTelnetPort():", e, this);
-			}
+			} catch (Exception e) {}
 		} }).start();
 	}
 	
 	public static void updateJetty() {
+		
+		if(jettyPID == null) return;
+		
 		new Thread(new Runnable() { public void run() {
 			try {
 				String url = "http://127.0.0.1/?action=push";
@@ -739,13 +832,14 @@ public class Util {
 				
 				// debug("updateJetty(): " + line, this);
 				
-			} catch (Exception e) {
-//				Util.log("updateJetty():", e, this);
-			}
+			} catch (Exception e) {}
 		} }).start();
 	}
 
 	public static String getJettyStatus() {
+	
+		if(jettyPID == null) return "no PID";
+		
 		try {
 			
 			String url = "http://127.0.0.1/?action=status";
@@ -758,7 +852,7 @@ public class Util {
 			return reply;
 				
 		} catch (Exception e) {
-			return new Date().toString() + " <b>.. not running!</b>";
+			return new Date().toString() + " DISABLED";
 		}
 	}
 
@@ -868,8 +962,6 @@ public class Util {
 	}
 
 	public static void manageLogs(){
-		// log("manageLogs() ::: java status: " + getJavaStatus(), null);
-		getJavaStatus();
 		if(getLogMBytes() > MAX_lOG_MBYTES){
 			log("manageLogs() ::: .. too big, archivve..", null);
 			if(archiveLogs()){

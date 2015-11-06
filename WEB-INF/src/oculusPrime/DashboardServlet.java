@@ -269,10 +269,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			reboot = "";
 		}
 		
-		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
-				+ "<td><b>logs</b><td>" + Util.getLogSize() 
-				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
-	
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>linux</b>&nbsp;&nbsp;<td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
 				+ "<td><b>life</b>&nbsp;&nbsp;<td>" + state.get(values.batterylife) + "</tr> \n");
@@ -280,6 +276,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>java</b>&nbsp;&nbsp;<td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
 				+ "<td><b>volts</b>&nbsp;&nbsp;<td>" + state.get(values.batteryvolts) + "</tr> \n");
+		
+		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
+				+ "<td><b>logs</b><td>" + Util.getLogSize() 
+				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
 	
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");

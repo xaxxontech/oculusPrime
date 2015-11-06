@@ -9,20 +9,22 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 
-import developer.image.OpenCVMotionDetect;
-import developer.image.OpenCVObjectDetect;
-import oculusPrime.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import developer.image.OpenCVObjectDetect;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
-import oculusPrime.PlayerCommands; 
+import oculusPrime.AutoDock.autodockmodes;
+import oculusPrime.FrameGrabHTTP;
+import oculusPrime.GUISettings;
+import oculusPrime.ManualSettings;
+import oculusPrime.PlayerCommands;
+import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
-import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.commport.ArduinoPrime;
 
 public class Navigation {
@@ -124,9 +126,7 @@ public class Navigation {
 	}
 
 	public void startNavigation() {
-		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
-			return;
-		}
+		if (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) return;
 
 		new Thread(new Runnable() { public void run() {
 			app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
@@ -138,7 +138,7 @@ public class Navigation {
 			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
 
-			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) {
+			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)){
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
 					state.set(State.values.rosinitialpose, "0_0_0");
@@ -153,18 +153,16 @@ public class Navigation {
 				return; // in case cancelled
 
 			Util.log("navigation start attempt #2", this);
-			stopNavigation();
-			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) // wait
-				Util.delay(10);
+			stopNavigation(); // styate . block(...); bretter choice? does this ever fail? 
+			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) Util.delay(10);
 			Ros.launch(Ros.REMOTE_NAV);
 
-			// wait
-			start = System.currentTimeMillis();
-			while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
-					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait, again
+			start = System.currentTimeMillis(); // wait
+			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)
+					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) Util.delay(50);
 
 			// check if running
-			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ) {
+			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)) {
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
 					state.set(State.values.rosinitialpose, "0_0_0");
@@ -181,9 +179,6 @@ public class Navigation {
 	}
 
 	public void stopNavigation() {
-//		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-//			return;
-
 		Util.log("stopping navigation", this);
 		Util.systemCall("pkill roslaunch");
 

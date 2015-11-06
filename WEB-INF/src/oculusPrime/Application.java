@@ -294,38 +294,46 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.delay(10000);  // arduino takes 10 sec to reach full power?
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
 			
-
-			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
-				Util.log("application: undocked startup!!", this);
+			Util.delay(3000); 
+			
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED))
+				Util.log("application.initalize(): undocked startup!!", null);
+			
+			if(Util.getJettyPID() == null)
+				Util.log("application.initalize(): wifi manager is not running!!", null);
+			
+			if(Util.testTelnetRouter()) {
+				String msg = state.get(values.guinotify);
+				if(msg == null) msg = "router has telnet port open! "; 
+				else msg += msg = ", router has telnet port open! "; 
+				state.set(values.guinotify, msg);
+				Util.log("application.initalize(): " + msg, null);
 			}
-		} }).start();
-	
-		new Thread(new Runnable() { public void run() {
 			
-			Util.delay(25000);  // wait to test 
-			
-			if( ! Util.testPortForwarding()) {
+			if( ! Util.testHTTP()) {
 				String msg = state.get(values.guinotify);
 				if(msg == null) msg = "HTTP port blocked "; 
-				else msg += msg = " HTTP port blocked "; 
+				else msg += msg = ", HTTP port blocked "; 
 				state.set(values.guinotify, msg);
-				Util.log(msg, this);
+				Util.log("application.initalize(): " + msg, null);
+
 			}
-		/*	
-			Util.delay(5000);  // wait to test 
 			
+		/*
 			if( ! Util.testRTMP()) {
 				String msg = state.get(values.guinotify);
 				if(msg == null) msg = " RTMP port blocked "; 
 				else msg += ", RTMP port blocked "; 
 				state.set(values.guinotify, msg);
 				Util.log(msg, this);
+				Util.log("application.initalize(): " + msg, null);
+
 			}	
+		*/	
+				
 			
-			*/
 			
 		} }).start();
-		
 			
 		Util.debug("application initialize done", this);
 	}

@@ -10,6 +10,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
 
+import developer.Ros.navsystemstate;
+import oculusPrime.State.values;
+
 public class State {
 	
 	public enum values{ 
@@ -126,36 +129,14 @@ public class State {
 			str += (key + " " + props.get(key) + "<br>"); 
 		}
 		return str;
-	} 
-	
-	/*
-	public String toHTML(){ 
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\">");
-		for (values key : values.values()) { 
-			if(props.containsKey(key.name())) str.append("<tr><td> " + key.name() + "<td>" + props.get(key.name()));
-			else str.append("<tr><td> " + key.name() + "<td><b>NULL</b>");
-		}	
-		
-		str.append("</table>\n");
-		return str.toString();
 	}
-	*/
-	
-	public String getNext(){
-		/*
-		if(key.equals(values.rosglobalpath.name())) key = i.next();
-		if(key.equals(values.rosmapinfo.name())) key = i.next();
-		if(key.equals(values.rosscan.name())) key = i.next();
-		if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-		if(key.equals(values.batteryinfo.name())) key = i.next();
-		str.append("<tr><td><b>" + key + "</b><td>" + props.get(key));
-		*/
-		return null;
-		
+
+	public boolean equals(values a, navsystemstate b) {
+		return equals(a.name(), b.name());
 	}
 	
 	public String toHTML(){ 
-		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\">");
+		StringBuffer str = new StringBuffer("<table>"); // cellspacing=\"3\" border=\"0\">");
 		
 	//	str.append("<tr><td rowspan=\"55\">");
 	//	for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " <br> \n");
@@ -210,15 +191,15 @@ public class State {
 			str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"9\"> " + names + " </tr> \r");
 		}
 	
+	//	if(props.containsKey(values.rosglobalpath.name())) 
+		//  	str.append("<tr><td><b>rosglobalpath</b><td colspan=\"9\"> " + props.get(values.rosglobalpath.name()) + " </tr> \r");
+	
 		if(props.containsKey(values.rosamcl.name())) 
 			str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
 	
 		if(props.containsKey(values.batteryinfo.name())) 
 			str.append("<tr><td colspan=\"9\"><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
 		
-		if(props.containsKey(values.rosglobalpath.name())) 
-			str.append("<tr><td><b>rosglobalpath</b><td colspan=\"9\"> " + props.get(values.rosglobalpath.name()) + " </tr> \r");
-	
 		str.append("<tr><td colspan=\"9\"><b>NULL:</b>");
 		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
 		str.append("</table>\n");
@@ -441,4 +422,5 @@ public class State {
 	public double getDouble(values key) {
 		return getDouble(key.name());
 	}
+
 }
