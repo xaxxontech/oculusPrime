@@ -40,8 +40,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
-	public static final String RED5_HOME = System.getenv("RED5_HOME");
-	public static final String APPFOLDER = "webapps" + Util.sep + "oculusPrime";
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
@@ -83,8 +81,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		banlist = BanList.getRefrence();
 		state = State.getReference();
 		FrameGrabHTTP.setApp(this);
-//		RtmpPortRequest.setApp(this);
-		
+		DashboardServlet.setApp(this);
 		initialize();
 	}
 
@@ -295,18 +292,45 @@ public class Application extends MultiThreadedApplicationAdapter {
 		new Thread(new Runnable() { public void run() {
 			Util.delay(10000);  // arduino takes 10 sec to reach full power?
 			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
-		} }).start();
-				
-		new Thread(new Runnable() { public void run() {
-			Util.delay(30000);  
-			if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)){ 
-				// && settings.getBoolean(GUISettings.redock)) {
-				Util.log("....starting up undocked, attempt redock???", this);
-				// new SendMail("rebooted in space", "help me.. I'm lost again. ");
-				// watchdog.redock(SystemWatchdog.NOFORWARD);
+			
+			Util.delay(3000); 
+			
+			if(Util.getJettyPID() == null)
+				Util.log("application.initalize(): wifi manager is not running!!", null);
+			
+			if(Util.testTelnetRouter()) {
+				String msg = state.get(values.guinotify);
+				if(msg == null) msg = "router has telnet port open! ";
+				else msg += msg = ", router has telnet port open! ";
+				state.set(values.guinotify, msg);
+				Util.log("application.initalize(): " + msg, null);
 			}
-		} }).start();
+
+			if( ! Util.testHTTP()) {
+				String msg = state.get(values.guinotify);
+				if(msg == null) msg = "HTTP port blocked ";
+				else msg += msg = ", HTTP port blocked ";
+				state.set(values.guinotify, msg);
+				Util.log("application.initalize(): " + msg, null);
+
+			}
+			
+		/*
+			if( ! Util.testRTMP()) {
+				String msg = state.get(values.guinotify);
+				if(msg == null) msg = " RTMP port blocked "; 
+				else msg += ", RTMP port blocked "; 
+				state.set(values.guinotify, msg);
+				Util.log(msg, this);
+				Util.log("application.initalize(): " + msg, null);
+
+			}	
+		*/	
 				
+			
+			
+		} }).start();
+			
 		Util.debug("application initialize done", this);
 	}
 
@@ -410,20 +434,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
 		}
 	}
-	
+
 	public void driverCallServer(PlayerCommands fn, String str) {
 		playerCallServer(fn, str, true);
 	}
-
-	/**
-	 * distribute commands 
-	 * 
-	 * @param fn
-	 *            is the function to call
-	 * 
-	 * @param str
-	 *            is the parameter to pass onto the function
-	 */
+	
 	public void playerCallServer(String fn, String str) {
 		
 		if (fn == null) return;
@@ -444,14 +459,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
-	/**
-	 * distribute commands from player
-	 * 
-	 * @param fn
-	 *            to call in flash player [file name].swf
-	 * @param str
-	 *            is the argument string to pass along
-	 */
 	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
@@ -568,8 +575,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
-				if (s[0].equals("delete")) state.delete(s[1]); // State.values.valueOf(s[1]));
-				else state.set(s[0], s[1]); // State.values.valueOf(s[0]), s[1]); 
+				if (s[0].equals("delete")) state.delete(s[1]); 
+				else state.set(s[0], s[1]); 
 			}
 			else if (s.length > 2) { // 2nd arg has spaces
 				String stateval = "";
@@ -578,7 +585,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			else {  
 				if (s[0].matches("\\S+")) { // one arg 
-					messageplayer("<state> "+s[0]+" "+state.get(/*State.values.valueOf(*/ s[0]), null, null); 
+					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
 				} else {  // no args
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
@@ -1472,7 +1479,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 
-		if(commandServer!=null) {
+		Util.log("count logs: " + Util.getLogSize(), this);
+		Util.manageLogs();
+	
+		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
 			commandServer.close();
 		}

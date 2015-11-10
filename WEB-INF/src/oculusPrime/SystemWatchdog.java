@@ -7,9 +7,6 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -35,8 +32,8 @@ public class SystemWatchdog implements Observer {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private String ssid = null;
-	private Calendar calender = Calendar.getInstance();
-	private boolean midnight = false;
+	// private Calendar calender = Calendar.getInstance();
+	// private boolean midnight = false;
 	       
 	       
 	SystemWatchdog(Application a){ 
@@ -56,7 +53,8 @@ public class SystemWatchdog implements Observer {
 			Util.updateLocalIPAddress();
 		}
 	}
-	
+
+		/*	
 	private void midnight(){	
 		
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -108,19 +106,20 @@ public class SystemWatchdog implements Observer {
 		Util.log("new log file: "+ jvm_archive.getName(), this);
 		Util.log("restarting with new log files, size: "+ Util.getLogMBytes(), this);
 		jvm.renameTo(jvm_archive); 
+	
 		
 		// kill old files
 		// Util.truncFrames();
 		// Util.truncLogs();
 	}
+		*/
 	
 	private class Task extends TimerTask {
 		public void run() {
 			
 			// restart logs when docked 
 //			calender.setTimeInMillis(System.currentTimeMillis());
-//			if((calender.get(Calendar.HOUR_OF_DAY) == 0) && (calender.get(Calendar.MINUTE) == 0)) midnight = true;
-			
+
 			// only do docked, navigation reasons 
 //			if( midnight && !state.equals(State.values.dockstatus, AutoDock.UNDOCKED) && (state.getUpTime() > Util.TEN_MINUTES)){
 //				this.cancel(); // just once in this minute, kill timer

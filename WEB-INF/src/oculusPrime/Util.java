@@ -2,7 +2,6 @@ package oculusPrime;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,12 +9,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
-import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -32,30 +28,32 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import oculusPrime.State.values;
-
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+
+import oculusPrime.State.values;
 
 public class Util {
 	
 	public final static String sep = System.getProperty("file.separator");
-	
-	public static final int MIN_LOG_FILE_LINES = 500;
-	public static final int MAX_LOG_FILE_MBYTES = 200;
 
-	public static final int PRECISION = 2;	
+	public static final int PRECISION = 3;	
 	public static final long ONE_DAY = 86400000;
 	public static final long ONE_MINUTE = 60000;
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
+		
+	public static final long ARCHIVE_TIME = ONE_DAY * 30;
+	public static final long MAX_lOG_MBYTES = 100;  
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
-//	private static String javaPID = getJavaPID();
+	static String jettyPID = getJettyPID();
+	static String redPID = getRed5PID();
+	
 
 	public static void delay(long delay) {
 		try {
@@ -220,8 +218,7 @@ public class Util {
 	 */
 	public static void systemCall(final String str){
 		try {
-			Runtime.getRuntime().exec(str);
-
+			Runtime.getRuntime().exec(str); 
 		} catch (Exception e) {
 			printError(e);
 		}
@@ -264,34 +261,6 @@ public class Util {
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
-	/*
-	public static String tail(int lines) {
-		Vector<String> alllines = new Vector<String>();
-		File file =new File(Settings.stdout);
-	    FileInputStream filein;
-	    try {
-	            filein = new FileInputStream(file.getAbsolutePath());
-	            BufferedReader reader = new BufferedReader(
-	                            new InputStreamReader(filein));
-	            String line = "";
-	            while ((line = reader.readLine()) != null) {
-                    alllines.add(line);
-	            }
-	            filein.close();
-           
-	            
-	    } catch (Exception e) {
-	            e.printStackTrace();
-	    }
-	    String result="";
-	    for(int i=alllines.size()-lines ; i < alllines.size() ; i++) {
-	    	result += alllines.elementAt(i).trim()+"<br>";
-	    }
-	    
-		return result;
-	}
-	*/
-	
 	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
         BufferedInputStream in = null;
         FileOutputStream fout = null;
@@ -317,25 +286,6 @@ public class Util {
 		return str.toString();
 	}
 	
-	public static String tailShort(int lines){
-		int i = 0;
-		final long now = System.currentTimeMillis();
-		StringBuffer str = new StringBuffer();
-	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) {
-			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim();
-			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
-			line = line.replaceFirst("\\$[0-9]", "");
-			line = line.replaceFirst("^oculusprime.", "");
-			line = line.replaceFirst("^static, ", "");		
-			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
-			String unit = " sec ";
-			if(delta > 60) { delta = delta / 60; unit = " min "; }
-			str.append(formatFloat(delta, 1) + " " + unit + "&nbsp;&nbsp;" + line + "<br /> \n"); 
-		}
-		return str.toString();
-	}
-	
 	public static String tailFormated(int lines){
 		int i = 0;
 		final long now = System.currentTimeMillis();
@@ -346,11 +296,14 @@ public class Util {
 			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
 			line = line.replaceFirst("\\$[0-9]", "");
 			line = line.replaceFirst("^oculusprime.", "");
+			line = line.replaceFirst("^oculusPrime.", "");
+			line = line.replaceFirst("^Application.", "");
 			line = line.replaceFirst("^static, ", "");		
 			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
 			String unit = " sec ";
-			if(delta > 60) { delta = delta / 60; unit = " min "; }
-			str.append("\n<tr><td colspan=\"11\">" + formatFloat(delta, 1) + "<td>" + unit + "<td>&nbsp;&nbsp;" + line + "</tr> \n"); 
+			String d = formatFloat(delta, 0);
+			if(delta > 60) { delta = delta / 60; unit = " min "; d =  formatFloat(delta, 1); }
+			str.append("\n<tr><td colspan=\"11\">" + d + "<td>" + unit + "<td>&nbsp;&nbsp;" + line + "</tr> \n"); 
 		}
 		return str.toString();
 	}
@@ -388,87 +341,13 @@ public class Util {
     
 	public static String memory() {
     	String str = "";
-		str += "memory : " +
-				((double)Runtime.getRuntime().freeMemory()
-						/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
+		str += "memory : " + ((double)Runtime.getRuntime().freeMemory()
+			/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
 		
 		str += "memory total : "+Runtime.getRuntime().totalMemory()+"<br>";    
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-
-	/*
-	public static void reboot() {
-		String str  = Settings.redhome + sep + "systemreboot.sh";
-		Util.systemCall(str);
-	}
-	
-	public static void shutdown() {
-		String str  = Settings.redhome + sep + "systemshutdown.sh";
-		Util.systemCall(str);
-	}
-	*/
-	
-	static void callRestart(final String reason){
-		new Thread(){
-			public void run() {	
-				
-				PrintWriter out = null;
-				Socket socket = null;
-				try {
-				
-					String port = Settings.getReference().readSetting(GUISettings.telnetport);
-					socket = new Socket("127.0.0.1", Integer.parseInt(port));
-					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
-				
-					Thread.sleep(500);
-					
-				} catch (Exception e) {
-					debug("callShutdown(): can not connect to telnet..");
-					return;
-				}
-				
-				log("restarting: " + reason, null);
-				out.println("chat restarting: " + reason);
-				out.println("restart");
-		
-				try {
-					out.close();
-					socket.close(); 
-				} catch (Exception e) {printError(e);}   
-			}
-		}.start();
-	}
-	
-	static void callReboot(){
-		new Thread(){
-			public void run() {	
-				
-				PrintWriter out = null;
-				Socket socket = null;
-				try {
-				
-					String port = Settings.getReference().readSetting(GUISettings.telnetport);
-					socket = new Socket("127.0.0.1", Integer.parseInt(port));
-					out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
-				
-					Thread.sleep(500);
-					
-				} catch (Exception e) {
-					debug("callShutdown(): can not connect to telnet..");
-					return;
-				}
-				
-				out.println("chat rebooting in 3, 2, 1...");
-				out.println("reboot");
-		
-				try {
-					out.close();
-					socket.close(); 
-				} catch (Exception e) {printError(e);}   
-			}
-		}.start();
-	}
 	
 	public static Document loadXMLFromString(String xml){
 		try {
@@ -563,7 +442,7 @@ public class Util {
 	public static String getCPUTop(){
 		try {
 
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 0.01 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 5 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
 			Process proc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 			return procReader.readLine();
@@ -573,47 +452,141 @@ public class Util {
 		}
 
 		return null;
-	}
-	*/
+	}	*/
 	
-	/*
+	
+	public static boolean testHTTP(){
+		
+		final String ext = State.getReference().get(values.externaladdress); 
+		final String http = State.getReference().get(State.values.httpport);
+		final String url = "http://"+ext+":"+ http +"/oculusPrime";
+		
+		if(ext == null || http == null) return false;
+	
+		try {
+			
+			log("testPortForwarding(): "+url, null);
+			URLConnection connection = (URLConnection) new URL(url).openConnection();
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			log("testPortForwarding(): "+procReader.readLine(), null);
+
+		} catch (Exception e) {
+			 log("testPortForwarding(): failed: " + url, null);
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public static boolean testTelnetRouter(){			
+		try {
+
+			// "127.0.0.1"; //
+			final String port = Settings.getReference().readSetting(GUISettings.telnetport);
+			final String ext =State.getReference().get(values.externaladdress);
+			log("...telnet test: " +ext +" "+ port, null);
+			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + port);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			
+			String line = procReader.readLine();
+			if(line.toLowerCase().contains("trying")){
+				line = procReader.readLine();
+				if(line.toLowerCase().contains("connected")){
+					log("telnet test pass...", null);
+					return true;
+				}
+			}
+		} catch (Exception e) {
+			log("telnet test fail..."+e.getLocalizedMessage(), null);
+			return false;
+		}
+		log("telnet test fail...", null);
+		return false;
+	}
+	
+	//TODO: 
+	public static boolean testRTMP(){	
+		try {
+
+			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //	
+			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
+
+			log("testRTMP(): http = " +ext, null);
+			
+			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + rtmp);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+			String line = procReader.readLine();
+			log("testRTMP(): " + line, null);
+			line = procReader.readLine();
+			log("testRTMP():" + line, null);
+			log("testRTMP(): process exit value = " + proc.exitValue(), null);
+			
+			if(line == null) return false;
+			else if(line.contains("Connected")) return true;
+			
+		} catch (Exception e) {
+			return false;
+		}
+		
+		return true;
+	}
+	
 	public static String getJavaStatus(){
 		
-		if(javaPID == null) return null;
-		
-		// long start = System.currentTimeMillis();
+		if(redPID==null) return "jetty not running";
 		
 		String line = null;
 		try {
 			
-			// http://stackoverflow.com/questions/1420426/calculating-cpu-usage-of-a-process-in-linux
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ javaPID +"/stat")));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ redPID +"/stat")));
 			line = reader.readLine();
 			reader.close();
-			// TODO parse and compute values
 			log("getJavaStatus:" + line, null);
 					
 		} catch (Exception e) {
-			e.printStackTrace();
+			printError(e);
 		}
 		
-	//	Util.log("getJavaStatus(): took: " + (System.currentTimeMillis()-start) + " ms", null);
-		return "42";
-		
+		return line;
 	}
 
-	public static String getJavaPID(){	
-		try {
-			String[] cmd = { "/bin/sh", "-c", "ps -al | grep java"};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String[] reply = procReader.readLine().split(" ");
-			return reply[4];
+	public static String getRed5PID(){	
+		
+		if(redPID!=null) return redPID;
+		
+		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
+		
+		Process proc = null;
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
 		} catch (Exception e) {
+			Util.log("getRed5PID(): "+ e.getMessage(), null);
 			return null;
+		}  
+		
+		String line = null;
+		String[] tokens = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("red5")) {
+					tokens = line.split(" ");
+					for(int i = 1 ; i < tokens.length ; i++) {
+						if(tokens[i].trim().length() > 0) {
+							if(redPID==null) redPID = tokens[i].trim();							
+						}
+					}
+				}	
+			}
+		} catch (IOException e) {
+			Util.log("getRed5PID(): ", e.getMessage());
 		}
+
+		return redPID;
 	}	
-		*/
 	
 	public static String pingWIFI(final String addr){
 		
@@ -768,7 +741,48 @@ public class Util {
 		} }).start();
 	}
 
+	public static String getJettyPID(){	
+		
+	//	if(jettyPID!=null) return jettyPID;
+		
+		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
+		
+		Process proc = null;
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+		} catch (Exception e) {
+			Util.log("getJettyPID(): "+ e.getMessage(), null);
+			return null;
+		}  
+		
+		String line = null;
+		String[] tokens = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("start.jar")) {
+					tokens = line.split(" ");
+					if(tokens[0].equals("root"))
+					for(int i = 1 ; i < tokens.length ; i++) {
+						if(tokens[i].trim().length() > 0) {
+							if(jettyPID==null) jettyPID = tokens[i].trim();							
+						}
+					}
+				}	
+			}
+		} catch (IOException e) {
+			Util.log("getJettyPID(): ", e.getMessage());
+		}
+
+		return jettyPID;
+	}	
+	
 	public static void setJettyTelnetPort() {
+		
+		if(jettyPID == null) return;
+		
 		new Thread(new Runnable() { public void run() {
 			Settings settings = Settings.getReference();
 			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(GUISettings.telnetport);
@@ -783,15 +797,16 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-//				debug("setJettyTelnetPort(): "+line, this);
+				// debug("setJettyTelnetPort(): "+line, this);
 				
-			} catch (Exception e) {
-//				Util.log("setJettyTelnetPort():", e, this);
-			}
+			} catch (Exception e) {}
 		} }).start();
 	}
 	
 	public static void updateJetty() {
+		
+		if(jettyPID == null) return;
+		
 		new Thread(new Runnable() { public void run() {
 			try {
 				String url = "http://127.0.0.1/?action=push";
@@ -806,36 +821,36 @@ public class Util {
 				
 				// debug("updateJetty(): " + line, this);
 				
-			} catch (Exception e) {
-//				Util.log("updateJetty():", e, this);
-			}
+			} catch (Exception e) {}
 		} }).start();
 	}
 
 	public static String getJettyStatus() {
-		String reply = "";
+	
+		if(jettyPID == null) return "no PID";
+		
 		try {
+			
 			String url = "http://127.0.0.1/?action=status";
 			URLConnection connection = (URLConnection) new URL(url).openConnection();
 			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 			
-			int i;
+			int i; String reply = "";
 			while ((i = in.read()) != -1) reply += (char)i;
 			in.close();
-							
+			return reply;
+				
 		} catch (Exception e) {
-			// Util.debug("getJettyStatus():" + e.getLocalizedMessage(), null);
-			reply = new Date().toString() + " <b><u>wifi manager not running..</b></i>";
+			return new Date().toString() + " DISABLED";
 		}
-		return reply;
 	}
 
-//	public static void deleteLogFiles(){
-//	 	File[] files = new File(Settings.logfolder).listFiles();
-//	    for (int i = 0; i < files.length; i++){
-//	       if (files[i].isFile()) files[i].delete();
-//	   }
-//	}
+	public static void deleteLogFiles(){
+	 	File[] files = new File(Settings.logfolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	       if (files[i].isFile()) files[i].delete();
+	   }
+	}
 	
 	public static String getLogSize(){	
 		return getLogMBytes() + " mb"; 
@@ -852,28 +867,101 @@ public class Util {
 		return (size / (1000*1000)); 
 	}
 	
-//	public static void deleteFrames(){
-//		File[] files =  new File(Settings.framefolder).listFiles();
-//	    for (int i = 0; i < files.length; i++)
-//	        if (files[i].isFile()) files[i].delete();
-//	}
-	
 	public static int countFrameGrabs(){
 		File path = new File(Settings.framefolder);
 		if (path.exists()) return path.listFiles().length;
 		else return 0;
 	}
 
-
-	private void callForHelp(String subject, String body) {
-
-		State state = State.getReference();
-		Settings settings = Settings.getReference();
-		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
-				settings.readRed5Setting("http.port")+"/oculusPrime/";
-		String emailto = settings.readSetting(GUISettings.email_to_address);
-		
+	public static void truncStaleArchive(){
+		File[] files =  new File(Settings.archivefolder).listFiles();
+		for (int i = 0; i < files.length; i++) {
+			if (files[i].isFile()) {
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
+	        		debug("truncArchive(): too old: " + files[i].getName());
+	        		files[i].delete();
+	        	} 
+	        }
+	        
+	        if( ! files[i].getName().endsWith(".bz2")){
+	        	 debug("truncArchive(): deleting, not a zip: " + files[i].getName());
+	        	 files[i].delete();
+	        }
+		}
 	}
 	
+	public static void truncStaleFrames(){
+		File[] files =  new File(Settings.framefolder).listFiles();
+		for (int i = 0; i < files.length; i++) {
+	      
+			if (files[i].isFile()) {
+	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
+	        		debug("truncFrames(): too old: " + files[i].getName());
+	        		files[i].delete();
+	        	} 
+	        }
+	        
+//	        if( ! files[i].getName().endsWith(".jpg")){
+//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
+//	        	 files[i].delete();
+//	        }
+			
+		}
+	}
+	public static void truncStaleLogs(){
+		File[] files =  new File(Settings.logfolder).listFiles();
+		for (int i = 0; i < files.length; i++) {    
+			if (files[i].isFile()) {
+	        	
+				// if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
+	        	
+				log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), "truncStaleLogs");
+	        	if( files[i].length() >  3637542){
+	       			log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), "truncStaleLogs");
+	       			files[i].delete();
+	       		} 
+	        }
+		}
+	}
+	
+	public static boolean archiveLogs(){
+	
+		new File(Settings.redhome + sep + "archive").mkdir(); 
+		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
+
+
+		try {			
+		
+			log("create archive file: " + path, null);
+			String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {	
+				Util.log("manageLogs(): tar: " + line, null);
+			}
+			
+		} catch (Exception e) {
+			Util.log("manageLogs(): fail: " + e.getCause() + " " + e.getMessage(), null);
+			return false;
+		}
+		
+		return new File(path).exists();
+	}
+
+	public static void manageLogs(){
+		if(getLogMBytes() > MAX_lOG_MBYTES){
+			log("manageLogs() ::: .. too big, archivve..", null);
+			if(archiveLogs()){
+				log("manageLogs() ::: delete old files.. ", null);
+	 			truncStaleArchive();
+				truncStaleFrames();
+				truncStaleLogs();
+				deleteLogFiles();
+			}
+		}
+	}
 
 }

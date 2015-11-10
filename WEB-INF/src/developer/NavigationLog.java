@@ -1,6 +1,7 @@
 package developer;
 
 import oculusPrime.Application;
+import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
 
@@ -17,7 +18,7 @@ import java.io.*;
  */
 public class NavigationLog {
 
-    public static final String navigationlogpath = Application.RED5_HOME + Util.sep + "webapps" + Util.sep +
+    public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
             "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
 
     // testing:

@@ -25,6 +25,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static BanList ban = null;
 	static State state = null;
 	static Vector<String> history;
+	private static Application app = null;
+
+	public static void setApp(Application a) {
+		if(app != null) return;
+		app = a;
+	}
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -62,9 +68,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null){
 
-			if(action.equalsIgnoreCase("reboot")) Util.callReboot();
+			if(action.equalsIgnoreCase("reboot")) {
+				if(app != null) app.driverCallServer(PlayerCommands.reboot, null);
+
+			}
 			
-			if(action.equalsIgnoreCase("restart")) Util.callRestart("dashboard command");
+			if(action.equalsIgnoreCase("restart")) { 
+				if(app != null) app.driverCallServer(PlayerCommands.restart, null);
+			}
 			
 		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()
 		//	if(action.equalsIgnoreCase("trunc")) Util.manageLogs();
@@ -250,13 +261,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
 		
-		final String restart = "<a href=\"dashboard?action=restart\">";
-		final String reboot = "<a href=\"dashboard?action=reboot\">";
+		String restart = "<a href=\"dashboard?action=restart\">";
+		String reboot = "<a href=\"dashboard?action=reboot\">";
 		
-		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
-				+ "<td><b>logs</b><td>" + Util.getLogSize() 
-				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
-	
+		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+			restart = ""; // break links if not docked 
+			reboot = "";
+		}
+		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>linux</b>&nbsp;&nbsp;<td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
 				+ "<td><b>life</b>&nbsp;&nbsp;<td>" + state.get(values.batterylife) + "</tr> \n");
@@ -264,6 +276,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
 				+ "<td><b>java</b>&nbsp;&nbsp;<td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
 				+ "<td><b>volts</b>&nbsp;&nbsp;<td>" + state.get(values.batteryvolts) + "</tr> \n");
+		
+		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
+				+ "<td><b>logs</b><td>" + Util.getLogSize() 
+				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
 	
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
@@ -275,8 +291,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getTail(){
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
-	//	reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
-		reply += Util.tailFormated(15) + " \n";
+		reply += Util.tailFormated(10) + " \n";
 		reply += ("\n</table>\n");
 		return reply;
 	}
@@ -307,7 +322,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.framegrabbusy.name())) return;
 		if(key.equals(values.rosglobalpath.name())) return;
 		if(key.equals(values.rosscan.name())) return;
- //		if(key.equals(values.cpu.name())) return;
+ 		if(key.equals(values.cpu.name())) return;
 		
 		if(history.size() > 10) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
