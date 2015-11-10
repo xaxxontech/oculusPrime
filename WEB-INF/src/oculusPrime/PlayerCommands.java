@@ -33,7 +33,7 @@ public enum PlayerCommands {
 	jpgstream,
     
     // malg board 
-    motorsreset, getdrivingsettings, drivingsettingsupdate,
+    motorsreset, getdrivingsettings, drivingsettingsupdate, malgcommand,
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed, forwardtimed,

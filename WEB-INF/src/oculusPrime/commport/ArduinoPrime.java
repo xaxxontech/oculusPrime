@@ -1163,38 +1163,20 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		} }).start();
 		
 	}
-	
-//	private class cameraUpTask extends TimerTask {
-//		@Override
-//		public void run(){
-//
-//			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - CAM_NUDGE);
-//
-//			if (state.getInteger(State.values.cameratilt) <= CAM_MAX && !camLimitOverride) {
-//				cameraTimer.cancel();
-//				state.set(State.values.cameratilt, CAM_MAX);
-//				return;
-//			}
-//
-//			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
-//		}
-//	}
-//
-//	private class cameraDownTask extends TimerTask {
-//		@Override
-//		public void run(){
-//
-//			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) + CAM_NUDGE);
-//
-//			if (state.getInteger(State.values.cameratilt) >= CAM_MIN && !camLimitOverride) {
-//				cameraTimer.cancel();
-//				state.set(State.values.cameratilt, CAM_MIN);
-//				return;
-//			}
-//
-//			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
-//		}
-//	}
+
+	/** @param str command character followed by nothing or integers between 0-255 */
+	public void malgcommand(String str) {
+		String s[] = str.split(" ");
+		if (s.length == 0) return;
+		byte[] cmd = new byte[s.length];
+		cmd[0] = s[0].getBytes()[0];
+		for (int i = 1; i<s.length; i++ ) {
+			cmd[i] = (byte) ((int) Integer.valueOf(s[i]));
+		}
+
+		sendCommand(cmd);
+	}
+
 	
 	public void camCommand(cameramove move){
 		
@@ -1289,14 +1271,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					}
 
 					// check if inverted
-					if (Math.abs(currentpos - CAM_REVERSE) < 5 ) {
-						if (!state.getBoolean(State.values.controlsinverted))
-							state.set(State.values.controlsinverted, true);
-					}
-					else {
-						if (state.getBoolean(State.values.controlsinverted))
-							state.set(State.values.controlsinverted, false);
-					}
+					checkIfInverted();
 
 					// define new position
 					int newposition;
@@ -1324,6 +1299,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			}
 
 		}).start();
+	}
+
+	public static void  checkIfInverted() {
+		int currentpos = state.getInteger(State.values.cameratilt);
+		if (Math.abs(currentpos - CAM_REVERSE) < 5) {
+			if (!state.getBoolean(State.values.controlsinverted))
+				state.set(State.values.controlsinverted, true);
+		} else {
+			if (state.getBoolean(State.values.controlsinverted))
+				state.set(State.values.controlsinverted, false);
+		}
 	}
 
 	private void camRelease(final long camMoveID) {

@@ -320,7 +320,8 @@ public class SystemWatchdog implements Observer {
 			// go forward momentarily
 			application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
 			state.set(State.values.motionenabled, true);
-			state.set(State.values.controlsinverted, false);
+//			state.set(State.values.controlsinverted, false);
+			ArduinoPrime.checkIfInverted();
 
 			if (!option.equals(NOFORWARD)) {
 				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
@@ -421,7 +422,8 @@ public class SystemWatchdog implements Observer {
 		// go forward momentarily
 		application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
 		state.set(State.values.motionenabled, true);
-		state.set(State.values.controlsinverted, false); 
+//		state.set(State.values.controlsinverted, false);
+		ArduinoPrime.checkIfInverted();
 		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
 		Util.delay(800);
 		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());

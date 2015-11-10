@@ -739,6 +739,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			powerport.powercommand(str);
 			break;
 
+		case malgcommand:
+				messageplayer("malgcommand: "+str, null, null);
+				comport.malgcommand(str);
+				break;
+
 		case erroracknowledged:
 			if (str.equals("true")) {
 				Util.log("power error acknowledged",this);
@@ -1044,8 +1049,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.log("publish() error " + e.getMessage(),this);
 			Util.printError(e);
 		}
-		
-		if (state.exists(State.values.controlsinverted.toString())) state.delete(State.values.controlsinverted);
+
+		ArduinoPrime.checkIfInverted();
 	}
 
 	public void muteROVMic() {
