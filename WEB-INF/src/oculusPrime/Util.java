@@ -53,7 +53,7 @@ public class Util {
 	
 	static String jettyPID = getJettyPID();
 	static String redPID = getRed5PID();
-	
+	static boolean shuttingdown = false;
 
 	public static void delay(long delay) {
 		try {
@@ -952,6 +952,11 @@ public class Util {
 	}
 
 	public static void manageLogs(){
+		
+		// only call once 
+		if(shuttingdown) return;
+		else shuttingdown = true;
+		
 		if(getLogMBytes() > MAX_lOG_MBYTES){
 			log("manageLogs() ::: .. too big, archivve..", null);
 			if(archiveLogs()){

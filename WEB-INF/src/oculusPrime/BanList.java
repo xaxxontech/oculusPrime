@@ -130,8 +130,7 @@ public class BanList {
 		
 		if(address.equals("127.0.0.1")) return false;
 		
-		if(Settings.getReference().getBoolean(ManualSettings.developer) ||
-			!Settings.getReference().getBoolean(ManualSettings.checkaddresses)) return false;
+		if(Settings.getReference().getBoolean(ManualSettings.developer)) return false;
 			
 		if(banned.contains(address)) {
 			appendLog("banned address: " + address);

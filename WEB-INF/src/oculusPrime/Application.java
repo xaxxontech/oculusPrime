@@ -554,7 +554,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
 // 		case help: messageplayer(PlayerCommands.help(str),null,null); break;
 //		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
-		case memory: messageplayer(Util.memory(), null, null); break;
+//		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
