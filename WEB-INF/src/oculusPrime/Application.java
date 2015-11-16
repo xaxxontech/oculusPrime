@@ -286,6 +286,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateLocalIPAddress();
 		Util.setJettyTelnetPort();
 		Util.updateJetty();
+		
+
+		if(Util.getLogMBytes() > Util.MAX_lOG_MBYTES) {
+			String msg = state.get(values.guinotify);
+			if(msg == null) msg = "";
+			else msg += ", ";
+			msg += " log files too large";
+			state.set(values.guinotify, msg);
+		}
+		
+		if(Util.getFrameMBytes() > Util.MAX_lOG_MBYTES) {
+			String msg = state.get(values.guinotify);
+			if(msg == null) msg = "";
+			else msg += ", ";
+			msg += " images folder too large";
+			state.set(values.guinotify, msg);
+		}
 
 		watchdog = new SystemWatchdog(this);
 		
@@ -1479,8 +1496,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 
-		Util.log("count logs: " + Util.getLogSize(), this);
-		Util.manageLogs();
+		Util.log("log size: " + Util.getLogMBytes() + " mb", this);
+		Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
+		
+		// Util.manageLogs();
 	
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");

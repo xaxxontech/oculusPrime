@@ -46,7 +46,7 @@ public class Util {
 	public static final long ONE_HOUR = 3600000;
 		
 	public static final long ARCHIVE_TIME = ONE_DAY * 30;
-	public static final long MAX_lOG_MBYTES = 100;  
+	public static final long MAX_lOG_MBYTES = 300;  
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -852,10 +852,6 @@ public class Util {
 	   }
 	}
 	
-	public static String getLogSize(){	
-		return getLogMBytes() + " mb"; 
-	}
-	
 	public static long getLogMBytes(){	
 		long size = 0;
 	    File[] files = new File(Settings.logfolder).listFiles();
@@ -867,12 +863,25 @@ public class Util {
 		return (size / (1000*1000)); 
 	}
 	
+	public static long getFrameMBytes(){	
+		long size = 0;
+	    File[] files = new File(Settings.framefolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	        if (files[i].isFile())
+	        	size += files[i].length();
+	    }
+		    
+		return (size / (1000*1000)); 
+	}
+
+	/*
 	public static int countFrameGrabs(){
 		File path = new File(Settings.framefolder);
 		if (path.exists()) return path.listFiles().length;
 		else return 0;
 	}
-
+    */
+	
 	public static void truncStaleArchive(){
 		File[] files =  new File(Settings.archivefolder).listFiles();
 		for (int i = 0; i < files.length; i++) {
@@ -892,32 +901,22 @@ public class Util {
 	
 	public static void truncStaleFrames(){
 		File[] files =  new File(Settings.framefolder).listFiles();
-		for (int i = 0; i < files.length; i++) {
-	      
-			if (files[i].isFile()) {
+		for (int i = 0; i < files.length; i++){
+			if (files[i].isFile()){
 	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
 	        		debug("truncFrames(): too old: " + files[i].getName());
 	        		files[i].delete();
 	        	} 
 	        }
-	        
-//	        if( ! files[i].getName().endsWith(".jpg")){
-//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
-//	        	 files[i].delete();
-//	        }
-			
 		}
 	}
 	public static void truncStaleLogs(){
 		File[] files =  new File(Settings.logfolder).listFiles();
 		for (int i = 0; i < files.length; i++) {    
 			if (files[i].isFile()) {
-	        	
-				// if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
-	        	
-				log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), "truncStaleLogs");
+				log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), null);
 	        	if( files[i].length() >  3637542){
-	       			log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), "truncStaleLogs");
+	       			log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), null);
 	       			files[i].delete();
 	       		} 
 	        }
@@ -951,22 +950,27 @@ public class Util {
 		return new File(path).exists();
 	}
 
-	public static void manageLogs(){
+	public static synchronized void manageLogs(){
 		
 		// only call once 
 		if(shuttingdown) return;
 		else shuttingdown = true;
 		
 		if(getLogMBytes() > MAX_lOG_MBYTES){
-			log("manageLogs() ::: .. too big, archivve..", null);
+			log("manageLogs() .... too big, archivve logs", null);
 			if(archiveLogs()){
-				log("manageLogs() ::: delete old files.. ", null);
-	 			truncStaleArchive();
-				truncStaleFrames();
-				truncStaleLogs();
+				log("manageLogs() .... call to delete files", null);
 				deleteLogFiles();
 			}
 		}
-	}
+		
+		if(getFrameMBytes() > MAX_lOG_MBYTES){
+			log("manageLogs() .... too big, delete frames", null);
+//			if(archiveLogs()){
+//				log("manageLogs() .... call to delete files", null);
+//				truncStaleFrames();
+//			}
 
+		}	
+	}
 }

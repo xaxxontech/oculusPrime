@@ -246,7 +246,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		
-		StringBuffer str = new StringBuffer("<table cellspacing=\"0\" style=\"max-width:640px;\" border=\"0\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
 		
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
@@ -277,8 +277,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "<td><b>java</b>&nbsp;&nbsp;<td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
 				+ "<td><b>volts</b>&nbsp;&nbsp;<td>" + state.get(values.batteryvolts) + "</tr> \n");
 		
-		str.append("<tr><td><b>frames</b><td>" + Util.countFrameGrabs()  
-				+ "<td><b>logs</b><td>" + Util.getLogSize() 
+		str.append("<tr><td><b>images&nbsp;&nbsp;</b><td>" + Util.getFrameMBytes() + " mb"  
+				+ "<td><b>logs&nbsp;&nbsp;</b><td>" + Util.getLogMBytes() + "mb" 
 				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
 	
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
