@@ -218,6 +218,7 @@ public class Ros {
 				if (waypoints[i].replaceAll("&nbsp;", " ").equals(str)) {
 					state.set(State.values.rossetgoal, waypoints[i + 1] + "," + waypoints[i + 2] + "," + waypoints[i + 3]);
 					result = true;
+					state.set(State.values.roswaypoint, str);
 					break;
 				}
 			}

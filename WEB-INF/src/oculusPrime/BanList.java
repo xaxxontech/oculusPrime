@@ -130,8 +130,7 @@ public class BanList {
 		
 		if(address.equals("127.0.0.1")) return false;
 		
-		if(Settings.getReference().getBoolean(ManualSettings.developer) ||
-			!Settings.getReference().getBoolean(ManualSettings.checkaddresses)) return false;
+		if(!Settings.getReference().getBoolean(ManualSettings.checkaddresses)) return false;
 			
 		if(banned.contains(address)) {
 			appendLog("banned address: " + address);
@@ -157,8 +156,8 @@ public class BanList {
 	}
 	
 	public synchronized boolean knownAddress(final String address) {
-		
-		if(Settings.getReference().getBoolean(ManualSettings.developer)) return true;
+
+		if(!Settings.getReference().getBoolean(ManualSettings.checkaddresses)) return true;
 				
 		if( ! Util.validIP(address)) return false;
 		
@@ -168,8 +167,11 @@ public class BanList {
 		
 		if(address.startsWith("10.42")) return true;
 
+		if (known.contains(address)) return true;
+
 		if (state.exists(values.localaddress)) {
-			if (address.startsWith(state.get(values.localaddress).substring(0, 4))) {
+			String firsttwonums = state.get(values.localaddress).replaceFirst("\\.\\d+\\.\\d+$", "");
+			if (address.replaceFirst("\\.\\d+\\.\\d+$", "").equals(firsttwonums)) {
 				if (!known.contains(address)) {
 					appendLog("added lan ip: " + address);
 					known.add(address);

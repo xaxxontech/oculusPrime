@@ -2609,11 +2609,13 @@ function processedImg(mode) {
 		var xy = findpos(v);
 		var x = xy[0]+v.offsetWidth;
 		var y=xy[1];
-		var str ="<div style='height: 240px; line-height: 10px;'>";
+		var str ="<a href='javascript: processedImg(&quot;close&quot;);'>"
+    str+= "<span class='cancelbox'><b>X</b></span> CLOSE</a><br><br>"
+		str +="<div style='height: 240px; line-height: 10px;'>";
 		str +="<img src='frameGrabHTTP?mode=processedImg&date=" + new Date().getTime();
 		str +=	"' alt='' width='320' height='240'>";
 		str += "</div>"
-		popupmenu('context', 'show', x, y, str, 320, 1, 0);
+		popupmenu('context', 'show', x, y, str, 320, 0, 0);
 	//	radarimagereload();
 	}
 	if (mode=="close") {

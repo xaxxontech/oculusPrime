@@ -16,7 +16,7 @@ import developer.depth.Mapper;
  */
 public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
-	public enum direction { stop, right, left, forward, backward, unknown };
+	public enum direction { stop, right, left, forward, backward, unknown, arcright, arcleft };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
@@ -91,6 +91,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	// tracking motor moves 
 	private volatile double lastodomangle = 0; // degrees
 	private volatile int lastodomlinear = 0; // mm
+	private volatile double arcodomcomp = 1;
 
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
@@ -339,8 +340,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		if (s[0].equals("moved")) {
 			lastodomlinear = (int) (Double.parseDouble(s[1]) * Math.PI * settings.getInteger(ManualSettings.wheeldiameter));
+			if (state.get(State.values.direction).equals(direction.arcleft.toString()) ||
+					state.get(State.values.direction).equals(direction.arcright.toString()))
+				lastodomlinear *= arcodomcomp;
+
 			lastodomangle = Double.parseDouble(s[2]);
-//			a *= state.getDouble(State.values.gyrocomp.toString()); // apply comp
 			lastodomangle *= settings.getDouble(ManualSettings.gyrocomp.toString());
 			
 			state.set(State.values.distanceangle, lastodomlinear +" "+lastodomangle); //millimeters, degrees
@@ -369,12 +373,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			state.set(State.values.direction, direction.stop.toString());
 		else if (s[0].equals("stopdetectfail")) {
 //			if (settings.getBoolean(ManualSettings.debugenabled))
-				application.message("FIRMWARE STOP DETECT FAIL", null, null);
-				Util.log("FIRMWARE STOP DETECT FAIL", this);
+//				application.message("FIRMWARE STOP DETECT FAIL", null, null);
+				Util.debug("FIRMWARE STOP DETECT FAIL", this);
 			if (state.getBoolean(State.values.stopbetweenmoves)) 
 				state.set(State.values.direction, direction.stop.toString());
 		}
-
 	}
 
 	/**
@@ -680,7 +683,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			tracklinearrate(moveID);
 		}
 		else speed2= state.getInteger(State.values.motorspeed);
-
 
 		if (speed2<speed1) { 		// voltcomp on slow speed only
 			speed2 = (int) voltsComp((double) speed2);
@@ -1472,7 +1474,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				
 				switch (dir) {
 					case forward:
-						
+
+						// openni, experimental
 						if (settings.getBoolean(ManualSettings.developer.name())) {
 							if (Application.openNIRead.depthCamGenerating) {   // openni
 								depthFrameBefore = Application.openNIRead.readFullFrame();	
@@ -1485,7 +1488,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
                         goForward(); 
 						break;
 						
-					case backward: 
+					case backward:
+
+						// openni, experimental
 						if (settings.getBoolean(ManualSettings.developer.name())) {
 							if (Application.openNIRead.depthCamGenerating) {  // openni
 								depthFrameAfter = Application.openNIRead.readFullFrame();						
@@ -1497,16 +1502,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						}
                         
 						goBackward();
-				case left:
-					break;
-				case right:
-					break;
-				case stop:
-					break;
-				case unknown:
-					break;
-				default:
-					break; 
+						break;
 				}
 				
 				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
@@ -1520,7 +1516,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				stopGoing();
 				
 				String msg = null;
-				
+
+				// openni, experimental
 				if (settings.getBoolean(ManualSettings.developer.name())) {
 
 					if (depthFrameBefore != null) { // went forward, openni
@@ -1556,6 +1553,103 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			}
 		}).start();
 	}
+
+	public void arcmove(final double arclengthmeters, final int angledegrees) {
+//		if degrees per arcmeter are below threshold, go straight
+		if (arclengthmeters ==0) return;
+		final int degreespermeter = (int) (Math.abs(angledegrees)/arclengthmeters);
+		if (degreespermeter < 6) {
+			Boolean sbtm = state.getBoolean(State.values.stopbetweenmoves);
+			if (sbtm) {
+				state.set(State.values.stopbetweenmoves, false);
+				state.set(State.values.direction, direction.unknown.toString());
+			}
+
+			movedistance(direction.forward, arclengthmeters);
+
+			if(sbtm) {
+				new Thread(new Runnable() { public void run() {
+					state.block(State.values.direction, direction.forward.toString(), 1000);
+					state.set(State.values.stopbetweenmoves, true);
+				} }).start();
+			}
+
+			return;
+		}
+
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+
+		state.set(State.values.moving, true);
+
+		// move forward slowly to start (if not already moving forward)
+		final String dir = state.get(State.values.direction);
+		if (!dir.equals(direction.arcleft.toString()) && !dir.equals(direction.arcright.toString()) &&
+				!dir.equals(direction.forward.toString()) ) {
+			int speed1 = (int) voltsComp((double) speedslow);
+			if (speed1 > 255) { speed1 = 255; }
+			sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
+		}
+
+		new Thread(new Runnable() {
+			public void run() {
+
+				// apply accel delay if required
+				if (!dir.equals(direction.arcleft.toString()) && !dir.equals(direction.arcright.toString()) &&
+						!dir.equals(direction.forward.toString()) ) {
+					Util.delay(ACCEL_DELAY);
+					if (currentMoveID != moveID) return;
+				}
+
+				/* steeringcomp < 0 is left
+				 right turns are weaker
+				 votlscomp(20) is min
+				 voltscomp(100) is max
+				 1/2 width of bot is 0.13m
+				  turn radius is arclength/(angle in radians)
+
+
+				choose right values
+					-apply comp to left wheel on RIGHT turns only
+				track linear seconds-per-meter and angular rate degrees-per-meter
+				try default values 1st, track later
+				 */
+
+				double angleradians = Math.toRadians(angledegrees);
+				double radius = arclengthmeters/angleradians;
+
+				final int degreespermetermin = 6; // pwm 100
+				final int degreespermetermax = 70; // pwm 25
+
+				int rate = degreespermeter;
+				if (rate > degreespermetermax) rate = degreespermetermax;
+				if (rate < degreespermetermin) rate = degreespermetermin;
+				int pwm = (int) (20 + (degreespermetermax-rate)*1.328); // linear, not that accurate
+				pwm = (int) voltsComp(pwm);
+
+				if (angledegrees < 0) { // right, apply comp to left wheel
+					state.set(State.values.direction, direction.arcright.toString());
+					arcodomcomp = arclengthmeters / ((radius-0.13)*angleradians);
+					sendCommand(new byte[] { FORWARD, (byte) (speedfast-Math.abs(steeringcomp)), (byte) pwm});
+				}
+				else { // left
+					state.set(State.values.direction, direction.arcleft.toString());
+					arcodomcomp = arclengthmeters / ((radius+0.13)*angleradians);
+					sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) speedfast});
+				}
+
+				Util.delay((long) (arclengthmeters/0.32*1000));
+
+				// end of thread
+				if (currentMoveID == moveID) {
+					stopGoing();
+					state.set(State.values.moving, false);
+				}
+
+			}
+		}).start();
+	}
+
 	
 	/**
 	 * compensates timer for drooping system voltage

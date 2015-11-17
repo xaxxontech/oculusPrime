@@ -1,5 +1,6 @@
 package oculusPrime;
 
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -61,22 +62,22 @@ public class OculusImage {
 	}
 	
 	private void sendToImage(Boolean[] pixelRGB) { // dev tool
-//		Util.debug("sendtoImageBoolean "+pixelRGB.length,this);
-//
-//		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-//		for(int y=0; y<height; y++) {
-//			for (int x=0; x<width; x++) {
-//				int p = x + y*width;
-//				int argb;
-//				if (pixelRGB[p]==true) { argb = (255<<16) + (0<<8) + 0; } // fillsize ++; } // red
-//				else {  
-//					int grey = parrorig[p]; 
-//					argb = (grey<<16) + (grey<<8) + grey; 
-//				}
-//				Application.processedImage.setRGB(x, y, argb);
-//
-//			}
-//		}
+		Util.debug("sendtoImageBoolean "+pixelRGB.length,this);
+
+		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		for(int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				int p = x + y*width;
+				int argb;
+				if (pixelRGB[p]==true) { argb = (255<<16) + (0<<8) + 0; } // fillsize ++; } // red
+				else {
+					int grey = parrorig[p];
+					argb = (grey<<16) + (grey<<8) + grey;
+				}
+				Application.processedImage.setRGB(x, y, argb);
+
+			}
+		}
 
 	}
 	
@@ -123,7 +124,7 @@ public class OculusImage {
 	public String[] findBlobStart(int x, int y, int w, int h, int[] bar) { // calibrate only...
 		lastThreshhold = 0;
 		String r[];
-		findBlobStartSub(x,y,w,h,bar);
+//		findBlobStartSub(x, y, w, h, bar);
 		r = findBlobStartSub(x,y,w,h,bar); // do it again, with contrast averaged
 		return r;
 	}
@@ -175,6 +176,7 @@ public class OculusImage {
 			}
 			lastThreshhold = (int) ((runningttl/blobSize)*threshholdMult); // adaptive threshhold
 		}
+		sendToImage(blob);
 		return result;
 	}
 	
@@ -345,9 +347,11 @@ public class OculusImage {
 			}
 			lastThreshhold = (int) ((runningttl/blobSize)*threshholdMult); // adaptive threshhold
 			
-			sendToImage(blobs.get(winner)); // testing
+//			sendToImage(blobs.get(winner)); // testing
 		}
-		else { sendToImage(parrorig); } // testing
+		else {
+//			sendToImage(parrorig);  // testing
+		}
 		return result;
 	}
 	

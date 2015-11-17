@@ -45,13 +45,13 @@ public class State {
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		navigationrouteid, nextroutetime,
+		navigationrouteid, nextroutetime, roswaypoint,
 		
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu}
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived}
 	
 	/** @return true if given command is in the sub-set */
 	public static boolean isNonTelnetBroadCast(final String str) {

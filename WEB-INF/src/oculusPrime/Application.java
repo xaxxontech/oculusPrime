@@ -298,13 +298,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if(Util.getJettyPID() == null)
 				Util.log("application.initalize(): wifi manager is not running!!", null);
 			
-			if(Util.testTelnetRouter()) {
-				String msg = state.get(values.guinotify);
-				if(msg == null) msg = "router has telnet port open! ";
-				else msg += msg = ", router has telnet port open! ";
-				state.set(values.guinotify, msg);
-				Util.log("application.initalize(): " + msg, null);
-			}
+//			if(Util.testTelnetRouter()) {
+//				String msg = state.get(values.guinotify);
+//				if(msg == null) msg = "router has telnet port open! ";
+//				else msg += msg = ", router has telnet port open! ";
+//				state.set(values.guinotify, msg);
+//				Util.log("application.initalize(): " + msg, null);
+//			}
 
 			if( ! Util.testHTTP()) {
 				String msg = state.get(values.guinotify);
@@ -545,15 +545,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case publish: publish(streamstate.valueOf(str)); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
+
 		case restart: restart(); break;
+		case powershutdown: powerport.shutdown(); break;
+		case reboot: reboot(); break;
+		case systemshutdown: powerdown(); break;
+
 		case softwareupdate: softwareUpdate(str); break;
 //		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
-		case quitserver: shutdown(); break;
+		case quitserver: shutdownApplication(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
-// 		case help: messageplayer(PlayerCommands.help(str),null,null); break;
-//		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
@@ -572,7 +575,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case nudge: nudge(str); break;
 		
 		case state: 
-			
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
 				if (s[0].equals("delete")) state.delete(s[1]); 
@@ -640,6 +642,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 			moveMacroCancel();
 			comport.movedistance(ArduinoPrime.direction.valueOf(fn.toString()),Double.parseDouble(str));
 			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
+			break;
+
+		case arcmove:
+			if (!state.getBoolean(values.motionenabled) || state.getBoolean(values.autodocking)) return;
+			moveMacroCancel();
+			String[] metersdegrees = str.split(" ");
+			comport.arcmove(Double.parseDouble(metersdegrees[0]), Integer.parseInt(metersdegrees[1]));
 			break;
 			
 		case odometrystart:	 	comport.odometryStart(); break;
@@ -774,22 +783,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case unblock:
 			banlist.removeblockedFile(str);
 			break;
-		
-		case powershutdown:
-			powerport.shutdown();
-			break;
-			
-		case reboot:
-			reboot();
-			break;
-		
-		case systemshutdown:
-			powerport.writeStatusToEeprom();
-			killGrabber(); // prevents error dialog on chrome startup
-			Util.delay(1000);
-			shutdown();
-			break;
-		
+
 		case roslaunch:
 			Ros.launch(str);
 			messageplayer("roslaunch "+str+".launch", null, null);
@@ -959,7 +953,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			restart();
 			break;
 		case shutdown:
-			shutdown();
+			shutdownApplication();
 			break;
 		case streamactivitydetected:
 			streamActivityDetected(str);
@@ -1457,30 +1451,47 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		shutdown();
+		shutdownApplication();
 	}
 	
 	public  void reboot() {
+		Util.log("rebooting system", this);
+		PowerLogger.append("rebooting system", this);
+
+		Util.log("count logs: " + Util.getLogSize(), this);
+//		Util.manageLogs();
+
 		powerport.writeStatusToEeprom();
+
 		killGrabber(); // prevents error dialog on chrome startup
+
+		if (navigation != null) {
+			if (state.exists(values.odomlinearpwm))
+				settings.writeSettings(ManualSettings.odomlinearpwm, state.get(values.odomlinearpwm));
+			if (state.exists(values.odomturnpwm))
+				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
+		}
+
 		Util.delay(1000);
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 	}
 
-	public void powerdown() {
+	public void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
+		Util.log("powering down system", this);
+		PowerLogger.append("powering down system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
 		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
 	}
 
-	public void shutdown() {
+	public void shutdownApplication() {
 		
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 
 		Util.log("count logs: " + Util.getLogSize(), this);
-		Util.manageLogs();
+//		Util.manageLogs();
 	
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");

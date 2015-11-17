@@ -199,6 +199,7 @@ public class AutoDock {
 						+ " " + cmd[6];
 				// messageplayer("dock"+cmd[1]+": "+s,"autodocklock",s);
 				app.message("auto-dock calibrated", "autodocklock", s);
+				app.sendplayerfunction("processedImg", "load");
 			}
 		}
 		else if (cmd[0].equals(autodockmodes.calibrate.toString())) {
@@ -213,6 +214,8 @@ public class AutoDock {
 
 						Thread.sleep(2000); // allow light to adjust
 						dockGrab(dockgrabmodes.calibrate, x, y);
+						Thread.sleep(2000);
+						comport.floodLight(0);
 
 					} catch (Exception e) { e.printStackTrace(); }
 				}

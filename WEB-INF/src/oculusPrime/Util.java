@@ -465,13 +465,13 @@ public class Util {
 	
 		try {
 			
-			log("testPortForwarding(): "+url, null);
+			log("testPortForwarding(): "+url, "testHTTP()");
 			URLConnection connection = (URLConnection) new URL(url).openConnection();
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-			log("testPortForwarding(): "+procReader.readLine(), null);
+			log("testPortForwarding(): "+procReader.readLine(), "testHTTP()");
 
 		} catch (Exception e) {
-			 log("testPortForwarding(): failed: " + url, null);
+			 log("testPortForwarding(): failed: " + url, "testHTTP()");
 			return false;
 		}
 		

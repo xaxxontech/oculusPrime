@@ -6,10 +6,7 @@ import java.util.regex.Pattern;
 
 public class Scratch {
 
-
-
-    public static void main(String[] args) {
-
+    public void regexp() {
         Pattern quality = Pattern.compile("^\\s*asdf asdf");
         Matcher mat;
         mat = quality.matcher("fdsaf"); //    /^\s*Quality=/
@@ -17,10 +14,22 @@ public class Scratch {
             mat.find();
         }
 
-        System.out.println("update required");
+        System.out.println("192.168.0.107".substring(0,4));
 
         if ("Gableem".matches(".*ei.*"))
             System.out.println("match");
+
+        System.out.println("ok here we go");
+        System.out.println("192.168.0.107".replaceFirst("\\.\\d+\\.\\d+$", ""));
+    }
+
+    public static void main(String[] args) {
+//        new Scratch().regexp();
+
+        int i = 6;
+        double d = 1.487;
+        System.out.println(d/i);
+
 
     }
 }

@@ -921,6 +921,11 @@ function waypointsmenu() {
 	popupmenu("menu","show",null,null,str);
 }
 
+function waypointstoggle() {
+	 if (mapshowwaypoints) { mapshowwaypoints = false; } 
+	 else { mapshowwaypoints = true; }
+}
+
 function waypointenternewname(i) {
 	openbox("waypointrenamediv"+i);
 	document.getElementById("waypointrename"+i).focus();

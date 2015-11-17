@@ -37,6 +37,7 @@ public enum PlayerCommands {
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed, forwardtimed,
+	arcmove,
     // lights and camera tilt
     strobeflash, spotlight, floodlight, cameracommand, camtilt,
 	// undocumented (unused):

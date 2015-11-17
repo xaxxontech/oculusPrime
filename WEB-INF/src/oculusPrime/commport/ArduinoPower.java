@@ -30,6 +30,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte STATUSTOEEPROM = 'A';
 	public static final byte TESTFORCEERRORCODE = '9';
 	public static final byte CLEARALLWARNINGERRORS = 'B';
+	public static final byte READCAPACITY = '6';
 	public static final byte PING = 'X'; 
 	public static final byte GET_PRODUCT = 'x';
 	public static final int COMM_LOST = -99;
@@ -119,6 +120,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		Util.debug("initialize", this);
 		sendCommand(READERROR);
 		lastReset = System.currentTimeMillis();
+		sendCommand(READCAPACITY);
 	}
 	
 	private void connect() {

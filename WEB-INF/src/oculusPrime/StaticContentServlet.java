@@ -14,7 +14,7 @@ public class StaticContentServlet extends HttpServlet {
 			throws ServletException, IOException {
 
 		if (!ban.knownAddress(req.getRemoteAddr())) {
-			Util.log("unknown address: danger: " + req.getRemoteAddr(), this);
+			Util.log("unknown address: sending to login: " + req.getRemoteAddr(), this);
 			resp.sendRedirect("/oculusPrime");   
 			return;
 		}

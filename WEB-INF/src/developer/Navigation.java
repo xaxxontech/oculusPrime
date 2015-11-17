@@ -363,6 +363,7 @@ public class Navigation {
 
 	public static void goalCancel() {
 		state.set(State.values.rosgoalcancel, true); // pass info to ros node
+		state.delete(State.values.roswaypoint);
 	}
 
 	public static String routesLoad() {
