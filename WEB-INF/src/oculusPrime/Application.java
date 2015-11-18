@@ -281,13 +281,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
 
-		// below network stuff should be called before SystemWatchdog init (prevent redundant updates)
+		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
-		Util.setJettyTelnetPort();
-		Util.updateJetty();
 		
+		if(Util.getJettyPID() != null) {
+			Util.setJettyTelnetPort();
+			Util.updateJetty();
+		} else Util.log("application.initalize(): wifi manager is not running!!", this);
+		
+		giveWarnings();
+		watchdog = new SystemWatchdog(this);		
+		Util.debug("application initialize done", this);
+	}
 
+	private void giveWarnings(){
+		
 		if(Util.getLogMBytes() > Util.MAX_lOG_MBYTES) {
 			String msg = state.get(values.guinotify);
 			if(msg == null) msg = "";
@@ -302,23 +311,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			else msg += ", ";
 			msg += " images folder too large";
 			state.set(values.guinotify, msg);
+			Util.truncStaleFrames();
 		}
 
-		watchdog = new SystemWatchdog(this);
-		
-		new Thread(new Runnable() { public void run() {
-			Util.delay(10000);  // arduino takes 10 sec to reach full power?
-			comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
-			
-			Util.delay(3000); 
-			
-			if(Util.getJettyPID() == null)
-				Util.log("application.initalize(): wifi manager is not running!!", null);
-			
+		/*	
 			if(Util.testTelnetRouter()) {
 				String msg = state.get(values.guinotify);
 				if(msg == null) msg = "router has telnet port open! ";
-				else msg += msg = ", router has telnet port open! ";
+				else msg += msg = "<br> router has telnet port open! ";
 				state.set(values.guinotify, msg);
 				Util.log("application.initalize(): " + msg, null);
 			}
@@ -326,13 +326,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if( ! Util.testHTTP()) {
 				String msg = state.get(values.guinotify);
 				if(msg == null) msg = "HTTP port blocked ";
-				else msg += msg = ", HTTP port blocked ";
+				else msg += msg = "<br> HTTP port blocked ";
 				state.set(values.guinotify, msg);
 				Util.log("application.initalize(): " + msg, null);
 
 			}
 			
-		/*
+		
 			if( ! Util.testRTMP()) {
 				String msg = state.get(values.guinotify);
 				if(msg == null) msg = " RTMP port blocked "; 
@@ -343,14 +343,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			}	
 		*/	
-				
 			
-			
-		} }).start();
-			
-		Util.debug("application initialize done", this);
+		
 	}
-
+	
 	private void grabberInitialize() {
 		if (settings.getBoolean(GUISettings.skipsetup)) {
 			grabber_launch("");
@@ -780,7 +776,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			else { 
 				Util.log("power error purposefully dismissed",this);
-				Util.log("power error purposefully dismissed","Application_power");
 			}
 			break;
 			
@@ -1499,7 +1494,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("log size: " + Util.getLogMBytes() + " mb", this);
 		Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
 		
-		// Util.manageLogs();
+		Util.manageLogs();
 	
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");

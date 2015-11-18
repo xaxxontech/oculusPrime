@@ -157,6 +157,12 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;		
+		new Thread(new Runnable() {
+			public void run() {
+				Util.delay(10000);  // arduino takes 10 sec to reach full power?
+				strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
+			}
+		}).start();
 	}
 	
 	/** inner class to check if getting responses in timely manor */
