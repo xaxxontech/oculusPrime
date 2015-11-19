@@ -16,7 +16,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Vector;
 
@@ -45,15 +47,16 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 		
-	public static final long ARCHIVE_TIME = ONE_DAY * 30;
-	public static final long MAX_lOG_MBYTES = 100;  
+	public static final long MAX_lOG_MBYTES = 200;  
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
 	static String jettyPID = getJettyPID();
 	static String redPID = getRed5PID();
-	
+	private static boolean shuttingdown = false;
+	private static Process archiveProc = null; 
+	private static boolean busyArchiving;
 
 	public static void delay(long delay) {
 		try {
@@ -852,10 +855,6 @@ public class Util {
 	   }
 	}
 	
-	public static String getLogSize(){	
-		return getLogMBytes() + " mb"; 
-	}
-	
 	public static long getLogMBytes(){	
 		long size = 0;
 	    File[] files = new File(Settings.logfolder).listFiles();
@@ -867,101 +866,124 @@ public class Util {
 		return (size / (1000*1000)); 
 	}
 	
+	public static long getFrameMBytes(){	
+		long size = 0;
+	    File[] files = new File(Settings.framefolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	        if (files[i].isFile())
+	        	size += files[i].length();
+	    }
+		   
+	    // log("getFrameMBytes: " + files.length + " files, mbytes " + (size / (1000*1000)), null);
+		return (size / (1000*1000)); 
+	}
+
 	public static int countFrameGrabs(){
 		File path = new File(Settings.framefolder);
 		if (path.exists()) return path.listFiles().length;
 		else return 0;
 	}
-
-	public static void truncStaleArchive(){
-		File[] files =  new File(Settings.archivefolder).listFiles();
-		for (int i = 0; i < files.length; i++) {
-			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
-	        		debug("truncArchive(): too old: " + files[i].getName());
-	        		files[i].delete();
-	        	} 
-	        }
-	        
-	        if( ! files[i].getName().endsWith(".bz2")){
-	        	 debug("truncArchive(): deleting, not a zip: " + files[i].getName());
-	        	 files[i].delete();
-	        }
-		}
-	}
 	
 	public static void truncStaleFrames(){
-		File[] files =  new File(Settings.framefolder).listFiles();
-		for (int i = 0; i < files.length; i++) {
-	      
-			if (files[i].isFile()) {
-	        	if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
-	        		debug("truncFrames(): too old: " + files[i].getName());
-	        		files[i].delete();
-	        	} 
+		File[] files  = new File(Settings.framefolder).listFiles();
+		sortFiles(files); // prune back by a 3rd 
+        for (int i = (files.length/3); i < files.length; i++){
+			if (files[i].isFile()){
+				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
+				files[i].delete();
 	        }
-	        
-//	        if( ! files[i].getName().endsWith(".jpg")){
-//	        	 debug("truncFrames(): deleting, not jpeg: " + files[i].getName());
-//	        	 files[i].delete();
-//	        }
-			
-		}
+		} 
+        
+        // do it again? 
+        /*
+        if(getFrameMBytes() > MAX_lOG_MBYTES){
+        	files  = new File(Settings.framefolder).listFiles();
+    		sortFiles(files);
+            for (int i = (files.length/3); i < files.length; i++){
+    			if (files[i].isFile()){
+    				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
+    				files[i].delete();
+    	        }
+    		} 
+        }*/
+        
 	}
-	public static void truncStaleLogs(){
-		File[] files =  new File(Settings.logfolder).listFiles();
-		for (int i = 0; i < files.length; i++) {    
-			if (files[i].isFile()) {
-	        	
-				// if(((System.currentTimeMillis() - files[i].lastModified())) > ARCHIVE_TIME){
-	        	
-				log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), "truncStaleLogs");
-	        	if( files[i].length() >  3637542){
-	       			log("===== truncLogs(): "  +  files[i].length() + " " +files[i].getName(), "truncStaleLogs");
-	       			files[i].delete();
-	       		} 
-	        }
-		}
+
+	private static void sortFiles(File[] files) {
+		Arrays.sort(files, new Comparator<File>(){
+			public int compare( File f1, File f2){
+                long result = f2.lastModified() - f1.lastModified();
+                if( result > 0 ){
+                    return 1;
+                } else if( result < 0 ){
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
+        });	
 	}
 	
 	public static boolean archiveLogs(){
 	
-		new File(Settings.redhome + sep + "archive").mkdir(); 
+		final long start = System.currentTimeMillis();
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
-
-
-		try {			
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
+		new File(Settings.redhome + sep + "archive").mkdir(); 
 		
-			log("create archive file: " + path, null);
-			String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-			
+		log("create archive file: " + path, null);
+		
+		new Thread(new Runnable() { public void run() {
+			try {
+				if((System.currentTimeMillis() - start) > ONE_MINUTE) {
+					log("archiveLogs(): timout, deleting " + path, null);
+					busyArchiving = false;
+//					archiveProc.destroyForcibly();
+					archiveProc.destroy();
+					new File(path).delete();
+				}
+			} catch (Exception e) {}
+		} }).start();
+		
+		try {			
+			busyArchiving = true;
+			archiveProc = Runtime.getRuntime().exec(cmd);
 			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {	
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(archiveProc.getInputStream()));					
+			while ((line = procReader.readLine()) != null && busyArchiving)  	
 				Util.log("manageLogs(): tar: " + line, null);
-			}
 			
+			archiveProc.waitFor();
 		} catch (Exception e) {
 			Util.log("manageLogs(): fail: " + e.getCause() + " " + e.getMessage(), null);
 			return false;
 		}
 		
+		busyArchiving = false;
+		log("log tarball took: " + ((System.currentTimeMillis() - start)/1000) + " seconds", null);
 		return new File(path).exists();
 	}
 
-	public static void manageLogs(){
+	public static synchronized void manageLogs(){
+
+		// only call once 
+		if(shuttingdown) return;
+		else shuttingdown = true;
+		
 		if(getLogMBytes() > MAX_lOG_MBYTES){
-			log("manageLogs() ::: .. too big, archivve..", null);
+			log("...manageLogs() .... too big, archivve logs", null);
 			if(archiveLogs()){
-				log("manageLogs() ::: delete old files.. ", null);
-	 			truncStaleArchive();
-				truncStaleFrames();
-				truncStaleLogs();
+				log("manageLogs() .... call to delete log files after zipping", null);
 				deleteLogFiles();
 			}
 		}
+		
+		if(getFrameMBytes() > MAX_lOG_MBYTES){
+			log(".....manageLogs() .... too big, delete frames", null);
+			truncStaleFrames();
+		}	
+		
+		// log("...manageLogs() ............. exit....", null);
+		
 	}
-
 }

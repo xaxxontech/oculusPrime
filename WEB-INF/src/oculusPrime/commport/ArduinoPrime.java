@@ -158,6 +158,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		lastRead = System.currentTimeMillis();
 		lastReset = lastRead;		
+
 	}
 	
 	/** inner class to check if getting responses in timely manor */
