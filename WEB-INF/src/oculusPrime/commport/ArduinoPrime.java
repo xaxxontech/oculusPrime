@@ -652,7 +652,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
 				
-			if ( !state.get(State.values.direction).equals(direction.stop.toString()) ) {
+			if ( !state.get(State.values.direction).equals(direction.stop.toString())  &&
+					!state.get(State.values.direction).equals(direction.forward.toString())) {
 			
 				stopGoing();
 				currentMoveID = moveID;
@@ -1510,7 +1511,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay((int) voltsComp(n));
 				} 
 				else { // continuous comp using gyro
-					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())) );
+					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())));
 				}
 
 				stopGoing();
@@ -1555,24 +1556,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	public void arcmove(final double arclengthmeters, final int angledegrees) {
-//		if degrees per arcmeter are below threshold, go straight
+
+//		if degrees per arcmeter are below threshold, go straight and exit
 		if (arclengthmeters ==0) return;
 		final int degreespermeter = (int) (Math.abs(angledegrees)/arclengthmeters);
 		if (degreespermeter < 6) {
-			Boolean sbtm = state.getBoolean(State.values.stopbetweenmoves);
-			if (sbtm) {
-				state.set(State.values.stopbetweenmoves, false);
-				state.set(State.values.direction, direction.unknown.toString());
-			}
+			Util.log("gostraight", this); // TODO: testing
+
+			if (!state.get(State.values.direction).equals(direction.stop.toString()))
+				state.set(State.values.direction, direction.forward.toString()); // to skip stopbetweenmoves
 
 			movedistance(direction.forward, arclengthmeters);
-
-			if(sbtm) {
-				new Thread(new Runnable() { public void run() {
-					state.block(State.values.direction, direction.forward.toString(), 1000);
-					state.set(State.values.stopbetweenmoves, true);
-				} }).start();
-			}
 
 			return;
 		}
@@ -1582,24 +1576,24 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.set(State.values.moving, true);
 
-		// move forward slowly to start (if not already moving forward)
-		final String dir = state.get(State.values.direction);
-		if (!dir.equals(direction.arcleft.toString()) && !dir.equals(direction.arcright.toString()) &&
-				!dir.equals(direction.forward.toString()) ) {
-			int speed1 = (int) voltsComp((double) speedslow);
-			if (speed1 > 255) { speed1 = 255; }
-			sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
-		}
+//		// move forward slowly to start (if not already moving forward)
+//		final String dir = state.get(State.values.direction);
+//		if (!dir.equals(direction.arcleft.toString()) && !dir.equals(direction.arcright.toString()) &&
+//				!dir.equals(direction.forward.toString()) ) {
+//			int speed1 = (int) voltsComp((double) speedslow);
+//			if (speed1 > 255) { speed1 = 255; }
+//			sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
+//		}
 
 		new Thread(new Runnable() {
 			public void run() {
 
 				// apply accel delay if required
-				if (!dir.equals(direction.arcleft.toString()) && !dir.equals(direction.arcright.toString()) &&
-						!dir.equals(direction.forward.toString()) ) {
-					Util.delay(ACCEL_DELAY);
-					if (currentMoveID != moveID) return;
-				}
+//				if (!dir.equals(direction.arcleft.toString()) && !dir.equals(direction.arcright.toString()) &&
+//						!dir.equals(direction.forward.toString()) ) {
+//					Util.delay(ACCEL_DELAY);
+//					if (currentMoveID != moveID) return;
+//				}
 
 				/* steeringcomp < 0 is left
 				 right turns are weaker
@@ -1615,19 +1609,20 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				try default values 1st, track later
 				 */
 
-				double angleradians = Math.toRadians(angledegrees);
+				double angleradians = Math.toRadians(Math.abs(angledegrees));
 				double radius = arclengthmeters/angleradians;
 
 				final int degreespermetermin = 6; // pwm 100
 				final int degreespermetermax = 70; // pwm 25
+				final int minpwmarc = 20; // non-comped
 
 				int rate = degreespermeter;
 				if (rate > degreespermetermax) rate = degreespermetermax;
-				if (rate < degreespermetermin) rate = degreespermetermin;
-				int pwm = (int) (20 + (degreespermetermax-rate)*1.328); // linear, not that accurate
+				if (rate < degreespermetermin) rate = degreespermetermin; // shouldn't be needed, filtered at top
+				int pwm = (int) (minpwmarc + (degreespermetermax-rate)*1.328); // linear, not that accurate! TODO: bulge bottom end of range
 				pwm = (int) voltsComp(pwm);
 
-				if (angledegrees < 0) { // right, apply comp to left wheel
+				if (angledegrees < 0) { // right, apply comp to left wheel TODO: double check comp direction!!
 					state.set(State.values.direction, direction.arcright.toString());
 					arcodomcomp = arclengthmeters / ((radius-0.13)*angleradians);
 					sendCommand(new byte[] { FORWARD, (byte) (speedfast-Math.abs(steeringcomp)), (byte) pwm});
@@ -1638,13 +1633,26 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) speedfast});
 				}
 
+				// sanity check
+				if (arcodomcomp > 1.3) {
+					Util.log("error, whacky arcodomcomp: "+arcodomcomp, this);
+					arcodomcomp = 1.3;
+				}
+				else if (arcodomcomp < 0.7) {
+					Util.log("error, whacky arcodomcomp: "+arcodomcomp, this);
+					arcodomcomp = 0.7;
+				}
+
+				// TODO: remove
+				Util.log("arcmove "+arclengthmeters+", "+angledegrees, this);
+				Util.log("arcodomcomp: "+arcodomcomp, this); // seen this as 7.5! wreaks havoc
+				Util.log("pwm: "+pwm, this);
+
+
 				Util.delay((long) (arclengthmeters/0.32*1000));
 
 				// end of thread
-				if (currentMoveID == moveID) {
-					stopGoing();
-					state.set(State.values.moving, false);
-				}
+				if (currentMoveID == moveID)  stopGoing();
 
 			}
 		}).start();
@@ -1728,11 +1736,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		sendCommand(STOP);
 		
-		if (!state.getBoolean(State.values.stopbetweenmoves)) { // firmware can call stop when odometry running
+//		if (!state.getBoolean(State.values.stopbetweenmoves)) { // firmware can call stop when odometry running
+		if (!state.getBoolean(State.values.odometry)) { // firmware can call stop when odometry running
 			state.set(State.values.direction, direction.stop.toString());
 		}
 		else {
-//			state.set(State.values.direction, direction.unknown.toString()); // TODO: try omitting
 			new Thread(new Runnable() {public void run() {
 				Util.delay(1000);
 				if (currentMoveID == moveID)  {
