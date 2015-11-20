@@ -47,7 +47,7 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 		
-	public static final long MAX_lOG_MBYTES = 200;  
+	public static final long MAX_lOG_MBYTES = 70;  
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -884,10 +884,11 @@ public class Util {
 		else return 0;
 	}
 	
+	// TODO: hhh
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();
 		sortFiles(files); // prune back by a 3rd 
-        for (int i = (files.length/3); i < files.length; i++){
+        for (int i = (files.length/4); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
 				files[i].delete();
@@ -895,17 +896,21 @@ public class Util {
 		} 
         
         // do it again? 
-        /*
+        /**/
         if(getFrameMBytes() > MAX_lOG_MBYTES){
         	files  = new File(Settings.framefolder).listFiles();
-    		sortFiles(files);
+        	log("truncFrames(): files: " + files.length + " size: " + getFrameMBytes(), null);
+    /*
+        	sortFiles(files);
             for (int i = (files.length/3); i < files.length; i++){
     			if (files[i].isFile()){
     				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
     				files[i].delete();
     	        }
     		} 
-        }*/
+    		*/
+        	
+        }
         
 	}
 
@@ -925,13 +930,15 @@ public class Util {
 	}
 	
 	public static boolean archiveLogs(){
+		
+		if(busyArchiving) return false;
 	
 		final long start = System.currentTimeMillis();
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		
-		log("create archive file: " + path, null);
+		log("archiveLogs(): create archive file: " + path, null);
 		
 		new Thread(new Runnable() { public void run() {
 			try {
@@ -960,7 +967,8 @@ public class Util {
 		}
 		
 		busyArchiving = false;
-		log("log tarball took: " + ((System.currentTimeMillis() - start)/1000) + " seconds", null);
+		log("archiveLogs(): tar operation took: " + ((System.currentTimeMillis() - start)/1000) + " seconds", null);
+		if(new File(path).exists()) log("archiveLogs(): zip file size " +new File(path).length()/(1000*1000) + " mytes", null);
 		return new File(path).exists();
 	}
 
@@ -968,7 +976,7 @@ public class Util {
 
 		// only call once 
 		if(shuttingdown) return;
-		else shuttingdown = true;
+		shuttingdown = true;
 		
 		if(getLogMBytes() > MAX_lOG_MBYTES){
 			log("...manageLogs() .... too big, archivve logs", null);
@@ -983,7 +991,7 @@ public class Util {
 			truncStaleFrames();
 		}	
 		
-		// log("...manageLogs() ............. exit....", null);
+		log("...manageLogs() ............. exit....", null);
 		
 	}
 }

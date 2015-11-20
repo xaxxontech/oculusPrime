@@ -291,12 +291,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		giveWarnings();
 		watchdog = new SystemWatchdog(this);
-		new Thread(new Runnable() {
-			public void run() {
-				Util.delay(10000);  // arduino takes 10 sec to reach full power?
-				comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); // signifies application ready
-			}
-		}).start();
+		// commport does this in initalize now
+		//new Thread(new Runnable() {
+		//	public void run() {
+		//		Util.delay(10000);  // arduino takes 10 sec to reach full power?
+		//		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); // signifies application ready
+		//	}
+		//}).start();
 		Util.debug("application initialize done", this);
 	}
 
@@ -316,7 +317,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			else msg += ", ";
 			msg += " images folder too large";
 			state.set(values.guinotify, msg);
-			Util.truncStaleFrames();
+			// Util.truncStaleFrames();
 		}
 
 		/*
@@ -894,6 +895,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (str.equals("")) str = AutoDock.HIGHRES;
 			new OpenCVUtils(this).jpgStream(str);
 //			opencvutils.jpgStream(str);
+			break;
+			
+		case archive:
+			Util.log("user called archive", this);
+			Util.log("log size: " + Util.getLogMBytes() + " mb", this);
+			Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
+			Util.truncStaleFrames();
+			Util.manageLogs();
+			restart();
 			break;
 
 		}
@@ -1474,13 +1484,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public  void reboot() {
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
-
-		Util.log("log size: " + Util.getLogMBytes() + " mb", this);
-		Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
-		Util.manageLogs();
-
 		powerport.writeStatusToEeprom();
-
+		
+		// Util.log("log size: " + Util.getLogMBytes() + " mb", this);
+		// Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
+		// Util.manageLogs();
+		
 		killGrabber(); // prevents error dialog on chrome startup
 
 		if (navigation != null) {

@@ -5,7 +5,7 @@ public enum PlayerCommands {
     // server
     uptime, restart, quitserver, showlog, writesetting, readsetting, settings, log,
     //undocumented (not typically used by scripts):
-    softwareupdate, 
+    softwareupdate, archive,
     
     // operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu,
