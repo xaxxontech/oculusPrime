@@ -994,4 +994,33 @@ public class Util {
 		log("...manageLogs() ............. exit....", null);
 		
 	}
+ 
+	public static void walk( String path, Vector<File> allfiles ) {
+        File root = new File( path );
+        File[] list = root.listFiles();
+        if(list == null) return;
+
+        for( File f : list ) {
+        	if ( f.isDirectory()) walk( f.getAbsolutePath(), allfiles );
+            else allfiles.add(f);
+        }   
+	 }
+	 
+	public static long countMbytes(final String path){ 
+		Vector<File> f = new Vector<>();
+		walk(path, f);
+		long total = 0;
+		for(int i = 0 ; i < f.size() ; i++) total += f.get(i).length();
+		
+		System.out.println("path:  " + path);
+		System.out.println("files: " + f.size() + " total: " + total / (1000*1000));
+	 
+		return total / (1000*1000);
+	 }
+	
+	public static void main(String[] args){
+
+		 System.out.println("total: " + countMbytes("F:\\brad"));
+	 }
+	 
 }
