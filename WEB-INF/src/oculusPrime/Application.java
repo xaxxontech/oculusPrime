@@ -49,13 +49,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private String authtoken = null;
 	private String salt = null;
 	
-	private Settings settings = null;
-	private State state = null;
-	private BanList banlist = null;
+	private Settings settings = Settings.getReference();
+	private BanList banlist = BanList.getRefrence();
+	private State state = State.getReference();
 	private LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
+	private SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
-	private SystemWatchdog watchdog;
 
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
@@ -77,11 +77,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
-		settings = Settings.getReference();
-		banlist = BanList.getRefrence();
-		state = State.getReference();
-		FrameGrabHTTP.setApp(this);
+		commandServer = new TelnetServer(this);
 		DashboardServlet.setApp(this);
+		FrameGrabHTTP.setApp(this);
 		initialize();
 	}
 
@@ -255,12 +253,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			scanUtils = new developer.depth.ScanUtils();
 		}
 	
-		if ( ! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
-			commandServer = new TelnetServer(this);
-			Util.debug("telnet server started", this);
-		}
+		//if ( ! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
+		//	commandServer = new TelnetServer(this);
+		//	Util.debug("telnet server started", this);
+		//}
 
-		try { // opencv
+		try { 
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -291,81 +289,42 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		giveWarnings();
 		watchdog = new SystemWatchdog(this);
+		
 		// commport does this in initalize now
-		//new Thread(new Runnable() {
 		//	public void run() {
 		//		Util.delay(10000);  // arduino takes 10 sec to reach full power?
 		//		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); // signifies application ready
-		//	}
-		//}).start();
+		
 		Util.debug("application initialize done", this);
 	}
 
 	private void giveWarnings(){
-
-		if(Util.getLogMBytes() > Util.MAX_lOG_MBYTES) {
-			String msg = state.get(values.guinotify);
-			if(msg == null) msg = "";
-			else msg += ", ";
-			msg += " log files too large";
-			state.set(values.guinotify, msg);
-		}
-
-		if(Util.getFrameMBytes() > Util.MAX_lOG_MBYTES) {
-			String msg = state.get(values.guinotify);
-			if(msg == null) msg = "";
-			else msg += ", ";
-			msg += " images folder too large";
-			state.set(values.guinotify, msg);
-			// Util.truncStaleFrames();
-		}
-
-		/*
-			if(Util.testTelnetRouter()) {
-				String msg = state.get(values.guinotify);
-				if(msg == null) msg = "router has telnet port open! ";
-				else msg += msg = "<br> router has telnet port open! ";
-				state.set(values.guinotify, msg);
-				Util.log("application.initalize(): " + msg, null);
-			}
-
-			if( ! Util.testHTTP()) {
-				String msg = state.get(values.guinotify);
-				if(msg == null) msg = "HTTP port blocked ";
-				else msg += msg = "<br> HTTP port blocked ";
-				state.set(values.guinotify, msg);
-				Util.log("application.initalize(): " + msg, null);
-
-			}
-			
 		
-			if( ! Util.testRTMP()) {
-				String msg = state.get(values.guinotify);
-				if(msg == null) msg = " RTMP port blocked "; 
-				else msg += ", RTMP port blocked "; 
-				state.set(values.guinotify, msg);
-				Util.log(msg, this);
-				Util.log("application.initalize(): " + msg, null);
+//		Util.log("disk:       " + Util.diskFullPercent() + "% hdd prime: " + Util.countMbytes(".") + " mb", this);
+//		Util.log("zip size:   " + Util.countMbytes(Settings.archivefolder) + " mb", this);
+//		Util.log("frame size: " + Util.countMbytes(Settings.framefolder) + " mb", this);
+//		Util.log("log size:   " + Util.countMbytes(Settings.logfolder) + " mb", this);
+		
+		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
+			Util.appendUserMessage("log files too large");
 
-			}	
-		*/
-
-
+		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
+			Util.appendUserMessage("images folder too large");
+		
+//		if(Util.testTelnetRouter()) Util.appendUserMessage("telnet Open ON ROUTER");
+//		if( ! Util.testHTTP()) Util.appendUserMessage("HTTP port blocked");
+//		if( ! Util.testRTMP()) Util.appendUserMessage("RTMP port blocked ");
 	}
 	
 	private void grabberInitialize() {
-		if (settings.getBoolean(GUISettings.skipsetup)) {
-			grabber_launch("");
-		} else {
-			initialize_launch();
-		}
+		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");
+		else initialize_launch();
 	}
 
 	public void initialize_launch() {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
-					// stream = null;
 					String address = "127.0.0.1:" + state.get(State.values.httpport);
 
 //					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
@@ -897,13 +856,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 			
-		case archive:
-			Util.log("user called archive", this);
-			Util.log("log size: " + Util.getLogMBytes() + " mb", this);
-			Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
-			Util.truncStaleFrames();
+		case archive: // TODO: ----------------------------------------------------------------------------
+			
+		
+			messageplayer("archive started....", null,null); 
 			Util.manageLogs();
-			restart();
+			Util.appendUserMessage("logs archived, restart required");
 			break;
 
 		}
@@ -1516,10 +1474,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
-
-		Util.log("log size: " + Util.getLogMBytes() + " mb", this);
-		Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
-		Util.manageLogs();
 
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");

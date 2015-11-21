@@ -241,11 +241,12 @@ public class TelnetServer implements Observer {
 
 	/**  register for updates, share state with all threads  */
 	public TelnetServer(oculusPrime.Application a) {
-		
-		if(app == null) app = a;
-		else return;
-		  
+
+		if(settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) return;
+		 
+		app = a;
 		state.addObserver(this);
+		Util.debug("telnet server started", this);
 		
 		/** command connections*/
 		new Thread(new Runnable() {

@@ -18,23 +18,27 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
+	static final String HTTP_REFRESH_DELAY_SECONDS = "15";
+
+	static final String restart = "<a href=\"dashboard?action=restart\">";
+	static final String reboot = "<a href=\"dashboard?action=reboot\">";
+	static final String archive = "<a href=\"dashboard?action=archive\">";
+	
 	static double VERSION = new Updater().getCurrentVersion();
+	static Vector<String> history = new Vector<String>();
+	static Application app = null;
+	static Settings settings = null;
 	static String httpport = null;
-	static Settings settings = null; ;
 	static BanList ban = null;
 	static State state = null;
-	static Vector<String> history;
-	private static Application app = null;
 
 	public static void setApp(Application a) {
-		if(app != null) return;
+		// if(app != null) return;
 		app = a;
 	}
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
-		history = new Vector<String>();
 		state = State.getReference();
 		httpport = state.get(State.values.httpport);
 		settings = Settings.getReference();
@@ -66,20 +70,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
-		if(action != null){
+		if(action != null&& app != null){
 
-			if(action.equalsIgnoreCase("reboot")) {
-				if(app != null) app.driverCallServer(PlayerCommands.reboot, null);
-
-			}
+			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
+			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
+			if(action.equalsIgnoreCase("archive")) app.driverCallServer(PlayerCommands.archive, null);
 			
-			if(action.equalsIgnoreCase("restart")) { 
-				if(app != null) app.driverCallServer(PlayerCommands.restart, null);
-			}
-			
-		//	if(action.equalsIgnoreCase("frames")) Util.truncFrames()
-		//	if(action.equalsIgnoreCase("trunc")) Util.manageLogs();
-
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
 	
@@ -245,59 +241,76 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public String toDashboard(final String url){
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
+		long prime = Util.countMbytes(".");
 		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
-		
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-			
-		str.append("<tr><td><b>lan</b>&nbsp;&nbsp;<td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\" \">" 
-				+ state.get(values.localaddress) + "</a>&nbsp;&nbsp;&nbsp;");
+		str.append("<tr><td><b>lan</b>&nbsp;&nbsp;<td><a href=\"http://"+state.get(values.localaddress) 
+			+"\" target=\"_blank\" \">" + state.get(values.localaddress) + "</a>");
 		
 		String ext = state.get(values.externaladdress);
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
-		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime" +"\" target=\"_blank\" \">" 
-				+ ext + "</a>&nbsp;&nbsp;&nbsp;");
-
-		str.append("<td><b>telnet</b><td>" + state.get(values.telnetusers) + " clients </tr> \n");
+		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport 
+				+ "/oculusPrime" +"\" target=\"_blank\" \">" + ext + "</a>");
+		str.append( "<td><b>disk</b><td>" + Util.diskFullPercent() + " % used" + "</tr> \n"); 
 		
-		String restart = "<a href=\"dashboard?action=restart\">";
-		String reboot = "<a href=\"dashboard?action=reboot\">";
-		
-	//	if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+		String blife = state.get(values.batterylife); String fff = "oo";
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)){
+			if(!blife.contains("_charg")){
+				blife += " docked";
+			}
+			
+			fff = "docked";
+			
 	//		restart = ""; // break links if not docked 
 	//		reboot = "";
-	//	}
+		} else {
+			fff = "undocked";
+		}
 		
-		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>linux</b>&nbsp;&nbsp;<td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
-				+ "<td><b>life</b>&nbsp;&nbsp;<td>" + state.get(values.batterylife) + "</tr> \n");
+		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
+			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
+			- state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
+			+ "<td><b>prime</b>&nbsp;"+Util.countFiles(".")+"<td>" + archive + prime + " mbytes </a></tr> \n");
 				
-		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;&nbsp;&nbsp;"
-				+ "<td><b>java</b>&nbsp;&nbsp;<td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
-				+ "<td><b>volts</b>&nbsp;&nbsp;<td>" + state.get(values.batteryvolts) + "</tr> \n");
+		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;"
+			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
+			+ "<td><b>archive</b>&nbsp;"+ Util.countFiles(Settings.archivefolder)+"&nbsp;<td>" 
+			+ Util.countMbytes(Settings.archivefolder) + " mbytes</tr> \n");
+			
+		str.append("<tr><td><b>battery</b>&nbsp;<td>" + blife
+			+ "<td><b>volts</b><td>" + state.get(values.batteryvolts)
+			+ "<td><b>images</b>&nbsp;"+Util.countFiles(Settings.framefolder)+"&nbsp;<td>" 
+			+ Util.countMbytes(Settings.framefolder) + " mbytes</tr> \n");
 		
-		str.append("<tr><td><b>images&nbsp;&nbsp;</b><td>" + Util.getFrameMBytes() + " mbytes"  
-				+ "<td><b>logs&nbsp;&nbsp;</b><td>" + Util.getLogMBytes() + " mbytes" 
-				+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% &nbsp;&nbsp;" + restart + "</tr> \n");
-	
+		str.append("<tr><td><b>telet</b>&nbsp;<td>" + state.get(values.telnetusers) + " clients"
+			+ "<td><b>cpu</b><td>" + fff	
+			+ "<td><b>logs</b>&nbsp;"+Util.countFiles(Settings.logfolder)+"<td>"
+			+ Util.countMbytes(Settings.logfolder) + " mbytes");
+		
+		str.append("<tr><td><b>testing</b>&nbsp;<td>" + state.get(values.telnetusers) + " clients"
+				+ "<td><b>route</b><td>" + state.get(values.cpu) + "% "	
+				+ "<td><b>ros</b>&nbsp;"+Util.countFiles("/home/brad/Desktop")+"&nbsp;<td>" 
+				+ Util.countMbytes("/home/brad/Desktop") + " mbytes");
+		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
 		
 		str.append(getTail() + "\n");
 		str.append(getHistory() + "\n");
-		return str.toString();
+		return str.toString().toLowerCase();
 	}
 	
 	private String getTail(){
-		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
+		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
 		reply += Util.tailFormated(10) + " \n";
 		reply += ("\n</table>\n");
 		return reply;
 	}
 	
 	private String getHistory(){
-		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"1\" border=\"0\"> \n";
+		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
 		reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
 		for(int i = 0 ; i < history.size() ; i++) {
 			
