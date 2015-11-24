@@ -241,65 +241,55 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public String toDashboard(final String url){
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
-		long prime = Util.countMbytes(".");
-		
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
-		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("<tr><td><b>lan</b>&nbsp;&nbsp;<td><a href=\"http://"+state.get(values.localaddress) 
-			+"\" target=\"_blank\" \">" + state.get(values.localaddress) + "</a>");
+		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
+			+"\" target=\"_blank\">" + state.get(values.localaddress) + "</a>");
 		
 		String ext = state.get(values.externaladdress);
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
-		else str.append("<td><b>wan</b>&nbsp;&nbsp;<td><a href=\"http://"+ ext + ":" + httpport 
-				+ "/oculusPrime" +"\" target=\"_blank\" \">" + ext + "</a>");
-		str.append( "<td><b>disk</b><td>" + Util.diskFullPercent() + " % used" + "</tr> \n"); 
+		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
+				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
+		str.append( "<td><b>linux disk</b><td>" + Util.diskFullPercent() + "% used" + "</tr> \n"); 
 		
-		String blife = state.get(values.batterylife); String fff = "oo";
-		if(state.equals(values.dockstatus, AutoDock.DOCKED)){
-			if(!blife.contains("_charg")){
-				blife += " docked";
-			}
-			
-			fff = "docked";
-			
-	//		restart = ""; // break links if not docked 
-	//		reboot = "";
-		} else {
-			fff = "undocked";
+		String dock = "undocked";
+		if(state.equals(values.dockstatus, AutoDock.DOCKED))dock = "docked";
+		
+		String blife = state.get(values.batterylife); 
+		if(blife!=null) {
+			if(blife.contains("_charging")) dock = "charging";
+			blife = blife.substring(0, blife.indexOf('%')+1);
+			blife += "&nbsp;&nbsp;" + /*Util.formatFloat(*/ state.get(values.batteryvolts)+"v";
 		}
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
 			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
 			- state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
-			+ "<td><b>prime</b>&nbsp;"+Util.countFiles(".")+"<td>" + archive + prime + " mbytes </a></tr> \n");
+			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " mbytes </a></tr> \n");
 				
-		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) + "&nbsp;&nbsp;"
+		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) 
 			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
-			+ "<td><b>archive</b>&nbsp;"+ Util.countFiles(Settings.archivefolder)+"&nbsp;<td>" 
-			+ Util.countMbytes(Settings.archivefolder) + " mbytes</tr> \n");
+			+ "<td><b>archive</b><td>" + Util.countMbytes(Settings.archivefolder) + " mbytes</tr> \n");
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + blife
-			+ "<td><b>volts</b><td>" + state.get(values.batteryvolts)
-			+ "<td><b>images</b>&nbsp;"+Util.countFiles(Settings.framefolder)+"&nbsp;<td>" 
-			+ Util.countMbytes(Settings.framefolder) + " mbytes</tr> \n");
+			+ "<td><b>dock</b><td>" + dock
+			+ "<td><b>images</b><td>"+ Util.countMbytes(Settings.framefolder) + " mbytes</tr> \n");
 		
 		str.append("<tr><td><b>telet</b>&nbsp;<td>" + state.get(values.telnetusers) + " clients"
-			+ "<td><b>cpu</b><td>" + fff	
-			+ "<td><b>logs</b>&nbsp;"+Util.countFiles(Settings.logfolder)+"<td>"
-			+ Util.countMbytes(Settings.logfolder) + " mbytes");
+			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "	
+			+ "<td><b>logs</b><td>" + archive + Util.countMbytes(Settings.logfolder) + " mbytes </a></tr> \n");
 		
 		str.append("<tr><td><b>testing</b>&nbsp;<td>" + state.get(values.telnetusers) + " clients"
-				+ "<td><b>route</b><td>" + state.get(values.cpu) + "% "	
-				+ "<td><b>ros</b>&nbsp;"+Util.countFiles("/home/brad/Desktop")+"&nbsp;<td>" 
-				+ Util.countMbytes("/home/brad/Desktop") + " mbytes");
+				+ "<td><b>red cd </b><td>" + state.get(values.cpu) + "00 "	
+				+ "<td><b>ros</b><td>" + Util.countMbytes(Settings.roslogfolder) + " mbytes </tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
 		
 		str.append(getTail() + "\n");
 		str.append(getHistory() + "\n");
-		return str.toString().toLowerCase();
+		return str.toString();
 	}
 	
 	private String getTail(){

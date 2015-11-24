@@ -856,14 +856,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 			
-		case archive: // TODO: ----------------------------------------------------------------------------
-			
-		
-			messageplayer("archive started....", null,null); 
+		case archive: 
 			Util.manageLogs();
-			Util.appendUserMessage("logs archived, restart required");
 			break;
-
 		}
 	}
 
@@ -1435,7 +1430,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.printError(e);
 			}
 		}
-
+		
+		// java restart not needed
+		// Util.waitForArchive();
 		shutdownApplication();
 	}
 	
@@ -1443,11 +1440,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
-		
-		// Util.log("log size: " + Util.getLogMBytes() + " mb", this);
-		// Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
-		// Util.manageLogs();
-		
 		killGrabber(); // prevents error dialog on chrome startup
 
 		if (navigation != null) {
@@ -1458,6 +1450,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
+		Util.waitForArchive(); // let zip files finish
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 	}
 

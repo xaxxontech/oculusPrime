@@ -14,7 +14,8 @@ public class Settings {
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
 	public final static String archivefolder = redhome+Util.sep+"archive";
 	public final static String logfolder = redhome+Util.sep+"log";
-
+	public final static String roslogfolder = "~/.ros/log/";
+	
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
 	public static final String FALSE = "false";

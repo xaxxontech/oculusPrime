@@ -47,20 +47,17 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 		
-	public static final long MAX_lOG_MBYTES = 70;  
+	public static final long MAX_lOG_MBYTES = 200;  
+	public static final long MIN_lOG_MBYTES = 50;  
+	public static final long MIN_ARCHIVE_COUNT = 20;  
+	public static final long MIN_FRAME_COUNT = 30;  
 	
 	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
+	private static Process archiveProc = null; 
 	static String jettyPID = getJettyPID();
 	static String redPID = getRed5PID();
-
-//	private static boolean shuttingdown = false;
-	
-	private static Process archiveProc = null; 
-	
-//	private static boolean busyArchiving = false;
-//	static long primeSize = countMbytes(".");
 	
 	public static void delay(long delay) {
 		try {
@@ -161,7 +158,7 @@ public class Util {
 			return text;
 		}
 	}
-
+/*
 	public static boolean copyfile(String srFile, String dtFile) {
 		try {
 			
@@ -188,6 +185,7 @@ public class Util {
 		// file copied
 		return true;
 	}
+	*/
 	
 	/**
 	 * Run the given text string as a command on the host computer. 
@@ -804,7 +802,7 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-				// debug("setJettyTelnetPort(): "+line, this);
+				debug("setJettyTelnetPort(): "+line, this);
 				
 			} catch (Exception e) {}
 		} }).start();
@@ -826,7 +824,7 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-				// debug("updateJetty(): " + line, this);
+				debug("updateJetty(): " + line, this);
 				
 			} catch (Exception e) {}
 		} }).start();
@@ -856,49 +854,35 @@ public class Util {
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) files[i].delete();
-	   }
+	       else appendUserMessage("logs folder contains sub folders!");
+	    }
+	    
+	    files = new File(Settings.logfolder).listFiles();
+	    if(files.length != 0){
+	    	log("deleteLogFiles(): failed to delete all files, must be subfolders: " + files.length, null);
+	    	appendUserMessage("logs folder contains sub folders!");
+	    }
 	}
-	
-	/*
-	public static int countFrameGrabs(){
-		File path = new File(Settings.framefolder);
-		if (path.exists()) return path.listFiles().length;
-		else return 0;
-	}
-	*/
 	
 	public static void truncStaleFrames(){
+		final int prune = 2;
 		File[] files  = new File(Settings.framefolder).listFiles();
-		sortFiles(files); // prune back by a 3rd 
-        for (int i = (files.length/3); i < files.length; i++){
+		if(files.length*prune > MIN_FRAME_COUNT) return;
+		sortFiles(files); 
+        for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
 				files[i].delete();
 	        }
 		} 
-        
-        // do it again? 
-        /*
-        if(getFrameMBytes() > MAX_lOG_MBYTES){
-        	files  = new File(Settings.framefolder).listFiles();
-        	log("truncFrames(): files: " + files.length + " size: " + getFrameMBytes(), null);
-        	sortFiles(files);
-            for (int i = (files.length/3); i < files.length; i++){
-    			if (files[i].isFile()){
-    				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
-    				files[i].delete();
-    	        }
-    		} 
-    		*/
-        	
-        
-        
 	}
 	
 	public static void truncStaleArchive(){
+		final int prune = 2;
 		File[] files  = new File(Settings.archivefolder).listFiles();
-		sortFiles(files); // prune back by a 3rd 
-        for (int i = (files.length/3); i < files.length; i++){
+		if(files.length*3 > MIN_ARCHIVE_COUNT) return;
+		sortFiles(files);
+        for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncStaleArchive(): " + files[i].getName() + " *deleted*", null);
 				files[i].delete();
@@ -910,106 +894,157 @@ public class Util {
 		Arrays.sort(files, new Comparator<File>(){
 			public int compare( File f1, File f2){
                 long result = f2.lastModified() - f1.lastModified();
-                if( result > 0 ){
-                    return 1;
-                } else if( result < 0 ){
-                    return -1;
-                } else {
-                    return 0;
-                }
+                if( result > 0 ){ return 1;
+                } else if( result < 0 ){ return -1;
+                } else return 0;
             }
         });	
 	}
 	
-	public /*synchronized*/ static boolean archiveLogs(){
+	public  static void waitForArchive(){
 		
-	//	if(busyArchiving) return false;
+		log("waitForArchive(): called..", null);
+		
+		if(archiveProc == null) return;
+		
+		log("waitForArchive(): starting..", null);
+		
+		try {
+			final long start = System.currentTimeMillis();
+			while(archiveProc != null){				
+				if((System.currentTimeMillis() - start) > TWO_MINUTES){
+					archiveProc.destroy(); 
+					archiveProc = null;
+					log("waitForArchive(): TIMEOUT!", null);
+				} else {
+					log("waitForArchive(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+					delay(500);
+				}
+			}
+			log("waitForArchive(): exit.. ", null);
+		} catch (Exception e){printError(e);}
+	}
 	
-		if(archiveProc != null){
-			log("archiveLogs(): busy... ", null);
-			appendUserMessage("dont be a dick");
-			return false;
-		}
-		
+	public synchronized static boolean archiveLogs(){
+
+		if(archiveProc != null) return false;
+		if(countMbytes(Settings.logfolder) < MIN_lOG_MBYTES) return false;
+	
 		final long start = System.currentTimeMillis();
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
-		
-		log("archiveLogs(): create archive file: " + path, null);
+		log("archiveLogs(): creating archive file: " + path, null);
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				if((System.currentTimeMillis() - start) > ONE_MINUTE) {
-					
-//					busyArchiving = false;
-//					archiveProc.destroyForcibly();
-					
-					archiveProc.destroy();
-					delay(3000);
-					archiveProc = null;
-					log("archiveLogs(): timout, deleting " + path, null);
-					new File(path).delete();
+				delay(200);
+				while(archiveProc != null){				
+					if((System.currentTimeMillis() - start) > FIVE_MINUTES){
+						archiveProc.destroy(); 
+						archiveProc = null;
+						log("archiveLogs(): timout, deleting: " + path, null);
+						if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
+						else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
+						else log("archiveLogs(): could not delete: " + path, null);
+					} else {
+						log("archiveLogs(): working: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+						delay(1000);
+					}
 				}
-			} catch (Exception e) {delay(3000);printError(e);}
+				log("archiveLogs(): watchdog exit.. ", null);
+			} catch (Exception e){printError(e);}
 		} }).start();
 		
-		try {			
-//			busyArchiving = true;
+		try {		
+			String line = null;	
 			archiveProc = Runtime.getRuntime().exec(cmd);
-			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(archiveProc.getInputStream()));					
-			while ((line = procReader.readLine()) != null && archiveProc != null)  	
-				Util.log("manageLogs(): tar: " + line, null);
-			
-			archiveProc.waitFor();
-			delay(3000);
-		} catch (Exception e) {
-			Util.log("manageLogs(): fail: " + e.getCause() + " " + e.getMessage(), null);
-			archiveProc = null;
-			return false;
-		}
+			while ((line = procReader.readLine()) != null && archiveProc != null) Util.log("manageLogs(): adding: " + line, null);	
+			if(archiveProc != null) archiveProc.waitFor();
+		} catch (Exception e){printError(e);}
 		
-//		busyArchiving = false;
-		
-		archiveProc = null;
+		archiveProc = null; // clear busy flag 
 		log("archiveLogs(): tar operation took: " + ((System.currentTimeMillis() - start)/1000) + " seconds", null);
-		if(new File(path).exists()) log("archiveLogs(): zip file size " +new File(path).length()/(1000*1000) + " mbytes", null);
-		
-		delay(3000);
-		archiveProc = null;
+		if(new File(path).exists()) log("archiveLogs(): zip file size " + new File(path).length() + " bytes", null);
 		return new File(path).exists();
 	}
-
-	public static void manageLogs(){
-
-		// only call once 
-		// if(shuttingdown) return;
-		// shuttingdown = true;
+	
+	public synchronized static boolean archiveROSLogs(){
+		
+		if(archiveProc != null) return false;
+		if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
+			
+			return false;
+		}
+	
+		final long start = System.currentTimeMillis();
+		final String path = "./archive" + sep + System.currentTimeMillis() + "_ros.tar.bz2";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + "  " + Settings.roslogfolder};
+		new File(Settings.redhome + sep + "archive").mkdir(); 
+		log("archiveROSLogs(): creating archive file: " + path, null);
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-		
-				//if(countMbytes(Settings.framefolder) > MAX_lOG_MBYTES){
-				log("...manageLogs() .... too big, archivve logs", null);
-				if(archiveLogs()) log("...manageLogs() .... created", null);
-				
-				//deleteLogFiles();
-			
-				//if(countMbytes(Settings.logfolder) > MAX_lOG_MBYTES){
-				log(".....manageLogs() .... too big, delete frames", null);
-				//truncStaleFrames();
-				
-				// if(countMbytes(Settings.archivefolder) > MAX_lOG_MBYTES){
-				log(".....manageLogs() .... archivefolder too big, delete zips", null);
-				//truncStaleArchive();
-				
-				log("...manageLogs() ............. exit....", null);
-						
-			} catch (Exception e) {}
+				delay(200);
+				while(archiveProc != null){				
+					if((System.currentTimeMillis() - start) > FIVE_MINUTES){
+						archiveProc.destroy(); 
+						archiveProc = null;
+						log("archiveROSLogs(): timout, deleting: " + path, null);
+						//if(new File(path).delete()) log("archiveROSLogs(): deleted: " + path, null);
+						//else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
+						//else log("archiveROSLogs(): could not delete: " + path, null);
+					} else {
+						log("archiveROSLogs(): working: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+						delay(1000);
+					}
+				}
+				log("archiveROSLogs(): watchdog exit.. ", null);
+			} catch (Exception e){printError(e);}
 		} }).start();
+	
+		try {		
+			String line = null;	
+			archiveProc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(archiveProc.getInputStream()));					
+			while ((line = procReader.readLine()) != null && archiveProc != null) Util.log("archiveROSLogs(): adding: " + line, null);	
+			if(archiveProc != null) archiveProc.waitFor();
+		} catch (Exception e){printError(e);}
 		
+		archiveProc = null; // clear busy flag 
+		log("archiveROSLogs(): tar operation took: " + ((System.currentTimeMillis() - start)/1000) + " seconds", null);
+		if(new File(path).exists()) log("archiveROSLogs(): zip file size " + new File(path).length() + " bytes", null);
+		return new File(path).exists();
+	}
+	
+	public static void manageLogs(){
 
+		if(archiveProc != null) {
+			log("manageLogs(): busy, skipping..", null);
+			return;
+		}
+	
+		new Thread(new Runnable() { public void run() {
+			try {
+				if(archiveLogs()){
+				
+					//	log("manageLogs(): deleting log files..", null);
+					//	Util.appendUserMessage("restart required");
+					//	truncStaleFrames();
+					truncStaleArchive();
+				
+					//	deleteLogFiles();
+				}
+				
+				if(archiveROSLogs()){
+					
+					//TODO: 
+					log("manageLogs(): deleting ros log files..", null);
+					
+				}
+			} catch (Exception e){archiveProc = null;}
+		} }).start();
 	}
  
 	public static void walk( String path, Vector<File> allfiles ) {
@@ -1051,7 +1086,7 @@ public class Util {
 		for(int i = 0 ; i < f.size() ; i++) total += f.get(i).length();
 		
 //		System.out.println("files: " + f.size() + " total: " + total / (1000*1000));
-		log(path + " files: " + f.size() + " total: " + total / (1000*1000), null);
+//		log(path + " files: " + f.size() + " total: " + total / (1000*1000), null);
 		
 		return total / (1000*1000);
 	 }
