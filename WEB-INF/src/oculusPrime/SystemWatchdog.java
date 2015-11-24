@@ -54,78 +54,8 @@ public class SystemWatchdog implements Observer {
 		}
 	}
 
-		/*	
-	private void midnight(){	
-		
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		String formatted = format.format(calender.getTime());
-		Util.log("midnight file roll over: "+ formatted, this);
-		
-		File power = new File(PowerLogger.powerlog);
-		File power_archive = new File(Settings.logfolder+Util.sep+"power_"+formatted+".log");
-		if(power_archive.exists()) {
-			Util.log("error: existing log file: "+ power_archive.getName(), this);
-			power_archive = new File(Settings.logfolder+Util.sep+"backup_power_"+formatted+"_"+System.currentTimeMillis()+".log");
-		}
-		power.renameTo(power_archive);
-		Util.log("new log file: "+ power_archive.getName(), this);
-	
-		File red5 = new File(Settings.logfolder+Util.sep+"red5.log");
-		File red5_archive = new File(Settings.logfolder+Util.sep+"red5_"+formatted+".log");
-		if(red5_archive.exists()) {
-			Util.log("error: existing log file: "+ red5_archive.getName(), this);
-			power_archive = new File(Settings.logfolder+Util.sep+"backup_red5_"+formatted+"_"+System.currentTimeMillis()+".log");
-		}
-		red5.renameTo(red5_archive);
-		Util.log("new log file: "+ red5_archive.getName(), this);
-		
-		File ros = new File(Settings.logfolder+Util.sep+"ros.log");
-		File ros_archive = new File(Settings.logfolder+Util.sep+"ros_"+formatted+".log");
-		if(ros_archive.exists()) {
-			Util.log("error: existing log file: "+ ros_archive.getName(), this);
-			power_archive = new File(Settings.logfolder+Util.sep+"backup_ros_"+formatted+"_"+System.currentTimeMillis()+".log");
-		}
-		ros.renameTo(ros_archive);
-		Util.log("new log file: "+ ros_archive.getName(), this);
-		
-		File ban = new File(BanList.banlog);
-		File ban_archive = new File(Settings.logfolder+Util.sep+"banlist_"+formatted+".log");
-		if(ban_archive.exists()) {
-			Util.log("error: existing log file: "+ ban_archive.getName(), this);
-			ban_archive = new File(Settings.logfolder+Util.sep+"backup_ban_"+formatted+"_"+System.currentTimeMillis()+".log");
-		}
-		ban.renameTo(ban_archive);
-		Util.log("new log file: "+ ban_archive.getName(), this);
-		
-		File jvm = new File(Settings.stdout);
-		File jvm_archive = new File(Settings.logfolder+Util.sep+"jvm_"+formatted+".log");
-		if(jvm_archive.exists()) {
-			Util.log("error: existing log file: "+ jvm_archive.getName(), this);
-			jvm_archive = new File(Settings.logfolder+Util.sep+"backup_jvm_"+formatted+"_"+System.currentTimeMillis()+".log");
-		}
-		Util.log("new log file: "+ jvm_archive.getName(), this);
-		Util.log("restarting with new log files, size: "+ Util.getLogMBytes(), this);
-		jvm.renameTo(jvm_archive); 
-	
-		
-		// kill old files
-		// Util.truncFrames();
-		// Util.truncLogs();
-	}
-		*/
-	
 	private class Task extends TimerTask {
 		public void run() {
-			
-			// restart logs when docked 
-//			calender.setTimeInMillis(System.currentTimeMillis());
-
-			// only do docked, navigation reasons 
-//			if( midnight && !state.equals(State.values.dockstatus, AutoDock.UNDOCKED) && (state.getUpTime() > Util.TEN_MINUTES)){
-//				this.cancel(); // just once in this minute, kill timer
-//				midnight();    // kills logging, requires java restart..
-//				application.driverCallServer(PlayerCommands.restart, null);
-//			}
 			
 			// found errors when running on vbox without hardware 
 			// also found lots of vbox time drifting 

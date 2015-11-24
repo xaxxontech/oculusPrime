@@ -289,7 +289,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.updateJetty();
 		} else Util.log("application.initalize(): wifi manager is not running!!", this);
 		
-		giveWarnings();
+//		giveWarnings();
 		watchdog = new SystemWatchdog(this);
 		new Thread(new Runnable() {
 			public void run() {
@@ -1477,7 +1477,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		Util.log("log size: " + Util.getLogMBytes() + " mb", this);
 		Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
-		Util.manageLogs();
+//		Util.manageLogs();
 
 		powerport.writeStatusToEeprom();
 
@@ -1510,7 +1510,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		Util.log("log size: " + Util.getLogMBytes() + " mb", this);
 		Util.log("frame size: " + Util.getLogMBytes() + " mb", this);
-		Util.manageLogs();
+//		Util.manageLogs();
 
 		if(commandServer!=null) { 
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
