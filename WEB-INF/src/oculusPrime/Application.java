@@ -1468,7 +1468,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 
-		if(commandServer!=null) { 
+		if(commandServer!=null) {
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
 			commandServer.close();
 		}

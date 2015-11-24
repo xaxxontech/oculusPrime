@@ -54,24 +54,10 @@ public class SystemWatchdog implements Observer {
 		}
 	}
 
-		/*	
-	private void midnight(){	
-		
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		String formatted = format.format(calender.getTime());
-		Util.log("midnight file roll over: "+ formatted, this);
-		
-		File power = new File(PowerLogger.powerlog);
-		File power_archive = new File(Settings.logfolder+Util.sep+"power_"+formatted+".log");
-		if(power_archive.exists()) {
-			Util.log("error: existing log file: "+ power_archive.getName(), this);
-			power_archive = new File(Settings.logfolder+Util.sep+"backup_power_"+formatted+"_"+System.currentTimeMillis()+".log");
-		}
-		*/
-	
+
 	private class Task extends TimerTask {
 		public void run() {
-			
+
 			if(! state.exists(values.localaddress)) Util.updateLocalIPAddress();
 			else if(state.equals(values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
 			if(! state.exists(values.externaladdress)) Util.updateExternalIPAddress();

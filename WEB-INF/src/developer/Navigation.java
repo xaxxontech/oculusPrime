@@ -269,17 +269,17 @@ public class Navigation {
 			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 			// do 180 deg turn
 			app.driverCallServer(PlayerCommands.left, "180");
-			Util.delay(app.comport.fullrotationdelay/2 + 2000);
+			Util.delay(app.comport.fullrotationdelay/2 + 4000);  // tried changing this to 4000, didn't help
 
 			if (!navdockactive) return;
 
-			// TODO: debugging potential intermittent camera problem .. conincides with flash error 1009?
-			state.delete(State.values.lightlevel);
-			app.driverCallServer(PlayerCommands.getlightlevel, null);
-			long timeout = System.currentTimeMillis() + 5000;
-			while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() < timeout)  Util.delay(10);
-			if (state.exists(State.values.lightlevel)) Util.log("lightlevel: "+state.get(State.values.lightlevel), this);
-			else Util.log("error, lightlevel null", this);
+			// TODO: debugging potential intermittent camera problem .. conincides with flash error 1009? checked, no 1009
+//			state.delete(State.values.lightlevel);
+//			app.driverCallServer(PlayerCommands.getlightlevel, null);
+//			long timeout = System.currentTimeMillis() + 5000;
+//			while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() < timeout)  Util.delay(10);
+//			if (state.exists(State.values.lightlevel)) Util.log("lightlevel: "+state.get(State.values.lightlevel), this);
+//			else Util.log("error, lightlevel null", this);
 
 			// make sure dock in view before calling autodock go
 			if (!finddock(AutoDock.LOWRES)) { // something wrong with camera capture, try again?
