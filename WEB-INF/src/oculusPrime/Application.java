@@ -104,7 +104,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 	
-		 // test for user/pass/remember
+		// test for user/pass/remember
 		if (logininfo.length > 1) {
 			String encryptedPassword = (passwordEncryptor.encryptPassword(logininfo[0] + salt + logininfo[1])).trim();
 			if (logintest(logininfo[0], encryptedPassword) != null) {
@@ -241,7 +241,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 
-		comport = new ArduinoPrime(this); // note: blocking
+		comport = new ArduinoPrime(this);   // note: blocking
 		powerport = new ArduinoPower(this); // note: blocking
 
 		state.set(State.values.httpport, settings.readRed5Setting("http.port"));
