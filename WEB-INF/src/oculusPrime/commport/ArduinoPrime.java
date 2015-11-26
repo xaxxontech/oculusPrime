@@ -1475,7 +1475,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				// stereo
 				short[][] cellsBefore = null;
 				short[][] cellsAfter = null;
-				
+
+				String currentdirection = state.get(State.values.direction);
 				
 				switch (dir) {
 					case forward:
@@ -1510,7 +1511,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						break;
 				}
 
-				long moveID = currentMoveID;
+				long moveID = 0;
+				if (currentdirection.equals(direction.forward.toString())) moveID = currentMoveID;
 
 				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
 					double n = onemeterdelay * meters;
@@ -1520,7 +1522,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())));
 				}
 
-				if (currentCamMoveID != moveID) return;
+				if (currentdirection.equals(direction.forward.toString()))
+					if (currentCamMoveID != moveID) return;
 
 				stopGoing();
 				
@@ -1642,7 +1645,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) spd});
 				}
 
-				arcodomcomp *= 1.015;
+//				arcodomcomp *= 1.015;
 
 				// sanity check
 				if (arcodomcomp > 1.3) {
