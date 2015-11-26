@@ -205,8 +205,7 @@ function rosinfo() {
 						var arr = ss[1].split(",");
 						var conv = fromrosmeters([arr[0], arr[1], arr[2]]);
 						mapgoalpose = [conv[0], conv[1], conv[2]];
-						str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;,"
-						str += " &quot;rosgoalcancel true&quot;); goalreachalert=false'>";
+						str = "<a class='blackbg' href='javascript: cancelGoal();'>";
 						str += "<span class='cancelbox'><b>X</b></span> ";
 						str += "CANCEL GOAL</a> "; 
 						str += "<input id='goalcheckbox' type='checkbox' onchange='goalreachalert=this.checked;'> ALERT when goal reached";
@@ -326,6 +325,10 @@ function rosmapimgdrag(ev) {
 	drawmapinfo();
 }
 
+function cancelGoal() {
+	callServer("state", "rosgoalcancel true");
+	goalreachalert=false;
+}
 
 function rosmapzoom(mult) {
 	var increment = 0.1;
@@ -679,7 +682,7 @@ function rosmapsetgoal(pose) {
 //	callServer("state","rossetgoal "+pose[0]+","+pose[1]+","+pose[2]);
 	callServer("gotowaypoint", pose[0]+","+pose[1]+","+pose[2]);
 
-	str = "<a class='blackbg' href='javascript: callServer(&quot;state&quot;, &quot;rosgoalcancel true&quot;); goalreachalert=false;'>";
+	str = "<a class='blackbg' href='javascript: cancelGoal();'>";
 	str += "<span class='cancelbox'><b>X</b></span> ";
 	str += "CANCEL GOAL</a> "; 
 	str += "<input id='goalcheckbox' type='checkbox' onchange='goalreachalert=this.checked;'> ALERT when goal reached";

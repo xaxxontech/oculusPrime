@@ -1645,7 +1645,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) spd});
 				}
 
-//				arcodomcomp *= 1.015;
+				arcodomcomp *= 0.98; // 1.015;
 
 				// sanity check
 				if (arcodomcomp > 1.3) {
