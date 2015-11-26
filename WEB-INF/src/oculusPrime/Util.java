@@ -903,11 +903,11 @@ public class Util {
 	
 	public  static void waitForArchive(){
 		
-		log("waitForArchive(): called..", null);
+		// log("waitForArchive(): called..", null);
 		
 		if(archiveProc == null) return;
 		
-		log("waitForArchive(): starting..", null);
+		// log("waitForArchive(): starting..", null);
 		
 		try {
 			final long start = System.currentTimeMillis();
@@ -973,10 +973,10 @@ public class Util {
 	public synchronized static boolean archiveROSLogs(){
 		
 		if(archiveProc != null) return false;
-		if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
-			
-			return false;
-		}
+		//if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
+		//	log("archiveROSLogs(): skipping zipping", null);
+		//	return false;
+		//}
 	
 		final long start = System.currentTimeMillis();
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_ros.tar.bz2";
@@ -1033,8 +1033,7 @@ public class Util {
 					//	Util.appendUserMessage("restart required");
 					//	truncStaleFrames();
 					truncStaleArchive();
-				
-					//	deleteLogFiles();
+					deleteLogFiles();
 				}
 				
 				if(archiveROSLogs()){

@@ -32,10 +32,7 @@ public class SystemWatchdog implements Observer {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private String ssid = null;
-	// private Calendar calender = Calendar.getInstance();
-	// private boolean midnight = false;
-	       
-	       
+	
 	SystemWatchdog(Application a){ 
 		application = a;
 		state.addObserver(this);
@@ -53,7 +50,6 @@ public class SystemWatchdog implements Observer {
 			Util.updateLocalIPAddress();
 		}
 	}
-
 
 	private class Task extends TimerTask {
 		public void run() {
