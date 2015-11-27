@@ -39,8 +39,7 @@ public class State {
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
-		lastodomreceived, // << undocumented, testing
-		
+
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,

@@ -353,7 +353,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			
 			state.set(State.values.distanceangle, lastodomlinear +" "+lastodomangle); //millimeters, degrees
 			state.set(State.values.odomupdated, true);
-			state.set(State.values.lastodomreceived, System.currentTimeMillis());
+//			state.set(State.values.lastodomreceived, System.currentTimeMillis());
 			
 			// testing only ----------------
 			if (settings.getBoolean(ManualSettings.developer.name())) {
@@ -1511,8 +1511,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						break;
 				}
 
-				long moveID = 0;
-				if (currentdirection.equals(direction.forward.toString())) moveID = currentMoveID;
+//				state.block(State.values.direction, direction.forward.toString(), 1000); // wait for goForward ID to be assigned
+//				long moveID = currentMoveID;
+
+//				long moveID = 0;
+//				if (currentdirection.equals(direction.forward.toString())) moveID = currentMoveID;
 
 				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
 					double n = onemeterdelay * meters;
@@ -1522,8 +1525,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())));
 				}
 
-				if (currentdirection.equals(direction.forward.toString()))
-					if (currentCamMoveID != moveID) return;
+//				if (currentdirection.equals(direction.forward.toString()))
+//					if (currentCamMoveID != moveID) return;
 
 				stopGoing();
 				
@@ -1599,14 +1602,47 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}
 
 		final int degreespermeter = (int) (Math.abs(angledegrees)/arclengthmeters);
+
+//		if (degreespermeter < 6) {
+//			if (!state.get(State.values.direction).equals(direction.stop.toString()))
+//				state.set(State.values.direction, direction.forward.toString()); // to skip stopbetweenmoves and accel
+//			movedistance(direction.forward, arclengthmeters);
+//			return;
+//		}
+
+		state.set(State.values.moving, true);
+
+		// go straight if only slight arc
 		if (degreespermeter < 6) {
-			if (!state.get(State.values.direction).equals(direction.stop.toString()))
-				state.set(State.values.direction, direction.forward.toString()); // to skip stopbetweenmoves and accel
-			movedistance(direction.forward, arclengthmeters);
+
+			if (!state.exists(State.values.odomlinearmpms.toString())) { // assumed no odometry
+				movedistance(direction.forward, arclengthmeters);
+				return;
+			}
+
+			// odometry running
+			int speed = state.getInteger(State.values.odomlinearpwm);
+			tracklinearrate(moveID);
+			speed = (int) voltsComp((double) speed);
+			if (speed > 255) speed = 255;
+			int[] comp = applyComp(speed);
+			int L, R;
+			L = comp[0];
+			R = comp[1];
+			sendCommand(new byte[]{FORWARD, (byte) R, (byte) L});
+			state.set(State.values.direction, direction.forward.toString());
+			Util.log("arcmove straight: "+arclengthmeters, this);
+
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay((long) (arclengthmeters / state.getDouble(State.values.odomlinearmpms.toString())));
+					if (moveID == currentMoveID) stopGoing();
+				}
+			}).start();
+
 			return;
 		}
 
-		state.set(State.values.moving, true);
 
 		new Thread(new Runnable() {
 			public void run() {
@@ -1645,7 +1681,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) spd});
 				}
 
-				arcodomcomp *= 0.98; // 1.015;
+//				arcodomcomp *= 0.98; // 1.015;
 
 				// sanity check
 				if (arcodomcomp > 1.3) {
@@ -1798,7 +1834,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.set(State.values.odomlinearmpms, METERSPERSEC / 1000);
 		state.set(State.values.odomturndpms, DEGPERMS);
 		state.set(State.values.motorspeed, state.get(State.values.odomlinearpwm));
-		state.set(State.values.lastodomreceived, System.currentTimeMillis());
+//		state.set(State.values.lastodomreceived, System.currentTimeMillis());
 
 		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
 			new Thread(new Runnable() {public void run() {

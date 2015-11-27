@@ -252,13 +252,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
 		}
-	
+
 		//if ( ! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
 		//	commandServer = new TelnetServer(this);
 		//	Util.debug("telnet server started", this);
 		//}
 
-		try { 
+		try {
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -269,7 +269,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			navigation = new developer.Navigation(this);
 			navigation.runAnyActiveRoute();
 		}
-		
+
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
@@ -281,20 +281,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
-		
+
 		if(Util.getJettyPID() != null) {
 			Util.setJettyTelnetPort();
 			Util.updateJetty();
 		} else Util.log("application.initalize(): wifi manager is not running!!", this);
-		
+
 		giveWarnings();
 		watchdog = new SystemWatchdog(this);
-		
+
 		// commport does this in initalize now
 		//	public void run() {
 		//		Util.delay(10000);  // arduino takes 10 sec to reach full power?
 		//		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); // signifies application ready
-		
+
 		Util.debug("application initialize done", this);
 	}
 
