@@ -253,11 +253,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			scanUtils = new developer.depth.ScanUtils();
 		}
 	
-		//if ( ! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
-		//	commandServer = new TelnetServer(this);
-		//	Util.debug("telnet server started", this);
-		//}
-
 		try { 
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
@@ -282,19 +277,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
 		
-		if(Util.getJettyPID() != null) {
+		if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
+		else {
 			Util.setJettyTelnetPort();
 			Util.updateJetty();
-		} else Util.log("application.initalize(): wifi manager is not running!!", this);
+		}  
 		
 		giveWarnings();
 		watchdog = new SystemWatchdog(this);
-		
-		// commport does this in initalize now
-		//	public void run() {
-		//		Util.delay(10000);  // arduino takes 10 sec to reach full power?
-		//		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); // signifies application ready
-		
 		Util.debug("application initialize done", this);
 	}
 
@@ -859,6 +849,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case archive: 
 			Util.manageLogs();
 			break;
+		case truncarchive: 
+			Util.truncStaleArchive();
+			break;
+		case truncimages: 
+			Util.truncStaleFrames();
+			break;
+		case truncros: 
+			Util.truncRos();
+			break;
+			
 		}
 	}
 

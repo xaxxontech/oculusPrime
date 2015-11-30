@@ -12,17 +12,22 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sun.deploy.uitoolkit.impl.fx.Utils;
+
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "15";
+	static final String HTTP_REFRESH_DELAY_SECONDS = "10";
 
-	static final String restart = "<a href=\"dashboard?action=restart\">";
-	static final String reboot = "<a href=\"dashboard?action=reboot\">";
+	static String restart = "<a href=\"dashboard?action=restart\">";
+	static String reboot = "<a href=\"dashboard?action=reboot\">";
 	static final String archive = "<a href=\"dashboard?action=archive\">";
+	static final String truncros = "<a href=\"dashboard?action=truncros\">";
+	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
+	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";
 	
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
@@ -32,10 +37,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static BanList ban = null;
 	static State state = null;
 
-	public static void setApp(Application a) {
-		// if(app != null) return;
-		app = a;
-	}
+	public static void setApp(Application a) {app = a;}
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -75,6 +77,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
 			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
 			if(action.equalsIgnoreCase("archive")) app.driverCallServer(PlayerCommands.archive, null);
+			if(action.equalsIgnoreCase("truncarchive")) app.driverCallServer(PlayerCommands.truncarchive, null);
+			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
+			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
 			
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
@@ -257,32 +262,51 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.equals(values.dockstatus, AutoDock.DOCKED))dock = "docked";
 		
 		String blife = state.get(values.batterylife); 
-		if(blife!=null) {
+		if(blife==null) blife = "error"; 
+		else {
 			if(blife.contains("_charging")) dock = "charging";
 			blife = blife.substring(0, blife.indexOf('%')+1);
 			blife += "&nbsp;&nbsp;" + /*Util.formatFloat(*/ state.get(values.batteryvolts)+"v";
 		}
 		
+		// if(state.getUpTime() < Util.TWO_MINUTES) 
+		// if((state.getUpTime()/1000)/60 < 2){ 
+		//	reboot = ""; restart = ""; 
+		//	str.append("<tr><td><b>under two</b><td>");
+		//}
+		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
 			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
-			- state.getLong(values.linuxboot)) / 1000) / 60)+ " mins</a>"
+			- state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins "
 			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " mbytes </a></tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) 
-			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + " mins</a>"
-			+ "<td><b>archive</b><td>" + Util.countMbytes(Settings.archivefolder) + " mbytes</tr> \n");
+			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"
+			+ "<td><b>archive</b><td>" + truncarchive + Util.countMbytes(Settings.archivefolder) 
+			+ "</a> mbytes</tr> \n");
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + blife
 			+ "<td><b>dock</b><td>" + dock
-			+ "<td><b>images</b><td>"+ Util.countMbytes(Settings.framefolder) + " mbytes</tr> \n");
+			+ "<td><b>images</b><td>" + truncimages + Util.countMbytes(Settings.framefolder) + "</a> mbytes</tr> \n");
 		
-		str.append("<tr><td><b>telet</b>&nbsp;<td>" + state.get(values.telnetusers) + " clients"
+		String od = "disabled";
+		str.append("<tr><td><b>odometry&nbsp;</b><td>" + od
 			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "	
-			+ "<td><b>logs</b><td>" + archive + Util.countMbytes(Settings.logfolder) + " mbytes </a></tr> \n");
+			+ "<td><b>logs</b><td>" + archive 
+			+ Util.countMbytes(Settings.logfolder) + "</a> mbytes </tr> \n");
 		
-		str.append("<tr><td><b>testing</b>&nbsp;<td>" + state.get(values.telnetusers) + " clients"
-				+ "<td><b>red cd </b><td>" + state.get(values.cpu) + "00 "	
-				+ "<td><b>ros</b><td>" + Util.countMbytes(Settings.roslogfolder) + " mbytes </tr> \n");
+		String next = "disabled";
+		if(state.exists(values.nextroutetime)) next = /*(state.getDouble(values.nextroutetime)/1000/60) */ "?? min";
+		// (state.get(values.nextroutetime) / 1000)
+		
+		if(state.getBoolean(values.odometry) == true) od = "enabled";
+		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
+				+ "<td><b>next</b><td>" + next 
+				+ "<td><b>ros</b><td>"  + Util.rosLog
+			//  + truncros+ Util.getRosCheck() 
+			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
+			//	+ Util.countFiles(Settings.roslogfolder) 
+				+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");

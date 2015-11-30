@@ -49,15 +49,15 @@ public class Util {
 		
 	public static final long MAX_lOG_MBYTES = 200;  
 	public static final long MIN_lOG_MBYTES = 50;  
-	public static final long MIN_ARCHIVE_COUNT = 20;  
-	public static final long MIN_FRAME_COUNT = 30;  
+	public static final long MIN_FILE_COUNT = 30;  
+	public static final int MAX_HISTORY = 30;
 	
-	static final int MAX_HISTORY = 50;
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
-	
-	private static Process archiveProc = null; 
 	static String jettyPID = getJettyPID();
 	static String redPID = getRed5PID();
+	static String rosLog = getRosCheck();
+
+	static Process archiveProc = null; 
 	
 	public static void delay(long delay) {
 		try {
@@ -802,7 +802,7 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-				debug("setJettyTelnetPort(): "+line, this);
+	//			debug("setJettyTelnetPort(): "+line, this);
 				
 			} catch (Exception e) {}
 		} }).start();
@@ -824,7 +824,7 @@ public class Util {
 				while ((i = in.read()) != -1) line += (char)i;
 				in.close();
 				
-				debug("updateJetty(): " + line, this);
+	//			debug("updateJetty(): " + line, this);
 				
 			} catch (Exception e) {}
 		} }).start();
@@ -865,9 +865,10 @@ public class Util {
 	}
 	
 	public static void truncStaleFrames(){
-		final int prune = 2;
+		final int prune = 3;
 		File[] files  = new File(Settings.framefolder).listFiles();
-		if(files.length*prune > MIN_FRAME_COUNT) return;
+		log("truncFrames(): " + files.length + " *files*", null);
+	//	if(files.length*prune < MIN_FILE_COUNT) return;
 		sortFiles(files); 
         for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
@@ -878,9 +879,10 @@ public class Util {
 	}
 	
 	public static void truncStaleArchive(){
-		final int prune = 2;
+		final int prune = 3;
 		File[] files  = new File(Settings.archivefolder).listFiles();
-		if(files.length*3 > MIN_ARCHIVE_COUNT) return;
+		log("truncStaleArchive(): " + files.length + " *files*", null);
+	//	if(files.length*prune < MIN_FILE_COUNT) return;
 		sortFiles(files);
         for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
@@ -902,12 +904,8 @@ public class Util {
 	}
 	
 	public  static void waitForArchive(){
-		
-		// log("waitForArchive(): called..", null);
-		
+
 		if(archiveProc == null) return;
-		
-		// log("waitForArchive(): starting..", null);
 		
 		try {
 			final long start = System.currentTimeMillis();
@@ -926,12 +924,13 @@ public class Util {
 	}
 	
 	public synchronized static boolean archiveLogs(){
-
+		
 		if(archiveProc != null) return false;
-		if(countMbytes(Settings.logfolder) < MIN_lOG_MBYTES) return false;
-	
+		log("archiveLogs(): folder size: " + countFiles(Settings.logfolder), null);
+//		if(countMbytes(Settings.logfolder) < MIN_lOG_MBYTES) return false;
+		
 		final long start = System.currentTimeMillis();
-		final String path = "./archive" + sep + System.currentTimeMillis() + "_logs.tar.bz2";
+		final String path = "./archive" + sep + System.currentTimeMillis() + "_log.tar.bz2";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		log("archiveLogs(): creating archive file: " + path, null);
@@ -948,7 +947,7 @@ public class Util {
 						else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
 						else log("archiveLogs(): could not delete: " + path, null);
 					} else {
-						log("archiveLogs(): working: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+						log("archiveLogs(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
 						delay(1000);
 					}
 				}
@@ -971,12 +970,12 @@ public class Util {
 	}
 	
 	public synchronized static boolean archiveROSLogs(){
-		
 		if(archiveProc != null) return false;
-		//if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
-		//	log("archiveROSLogs(): skipping zipping", null);
-		//	return false;
-		//}
+		log("archiveROSLogs(): " + countMbytes(Settings.roslogfolder), null);
+	//	if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
+	//		log("archiveROSLogs(): skipping zipping", null);
+	//		return false;
+	//	}
 	
 		final long start = System.currentTimeMillis();
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_ros.tar.bz2";
@@ -992,12 +991,12 @@ public class Util {
 						archiveProc.destroy(); 
 						archiveProc = null;
 						log("archiveROSLogs(): timout, deleting: " + path, null);
-						//if(new File(path).delete()) log("archiveROSLogs(): deleted: " + path, null);
-						//else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
-						//else log("archiveROSLogs(): could not delete: " + path, null);
+						if(new File(path).delete()) log("archiveROSLogs(): deleted: " + path, null);
+						else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
+						else log("archiveROSLogs(): could not delete: " + path, null);
 					} else {
 						log("archiveROSLogs(): working: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
-						delay(1000);
+						delay(5000);
 					}
 				}
 				log("archiveROSLogs(): watchdog exit.. ", null);
@@ -1017,7 +1016,8 @@ public class Util {
 		if(new File(path).exists()) log("archiveROSLogs(): zip file size " + new File(path).length() + " bytes", null);
 		return new File(path).exists();
 	}
-	
+					
+	//TODO: 
 	public static void manageLogs(){
 
 		if(archiveProc != null) {
@@ -1027,26 +1027,28 @@ public class Util {
 	
 		new Thread(new Runnable() { public void run() {
 			try {
-				if(archiveLogs()){
 				
-					//	log("manageLogs(): deleting log files..", null);
-					//	Util.appendUserMessage("restart required");
-					//	truncStaleFrames();
-					truncStaleArchive();
-					deleteLogFiles();
+				debug("manageLogs(): archive log files..");
+				if(archiveLogs()){	
+					if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
+						log("manageLogs(): deleting log files..", null);
+						appendUserMessage("restart required");
+						deleteLogFiles();
+					}
 				}
 				
-				if(archiveROSLogs()){
-					
-					//TODO: 
-					log("manageLogs(): deleting ros log files..", null);
-					
-				}
+				archiveProc = null;
+				delay(1000);
+				
+				if(archiveROSLogs()){ log("manageLogs(): deleting ros log files..", null);}
+				
+				archiveProc = null;
+				
 			} catch (Exception e){archiveProc = null;}
 		} }).start();
 	}
  
-	public static void walk( String path, Vector<File> allfiles ) {
+	public static void walk(String path, Vector<File> allfiles){
         File root = new File( path );
         File[] list = root.listFiles();
         
@@ -1075,7 +1077,7 @@ public class Util {
 				}
 			}
 		} catch (Exception e){}
-		return -1;
+		return Settings.ERROR;
 	}
 
 	public static long countMbytes(final String path){ 
@@ -1104,8 +1106,44 @@ public class Util {
 		else msg += " <br> ";
 		state.set(values.guinotify, msg += message);
 	}
+
+	public static void truncRos() {
+		log("truncRos(): ....................", null);
+		try {			
+			String line = null;
+			String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder };
+			Process proc = Runtime.getRuntime().exec(cmd);
+		
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while((line = procReader.readLine()) != null){ 
+				//line = line.toLowerCase().trim();
+				//if(line.contains("logs")) return line;//.substring(0, line.indexOf("ros"));
+				log("...................truncRos" + line, null);
+				
+			}	
+			proc.wait();
+		} catch (Exception e){}	
+	}
 	
-	
+	public static String getRosCheck(){	
+			/*
+		try {			
+			String line = null;
+			String[] cmd = {"bash", "-ic", "rosclean check" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+		
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while((line = procReader.readLine()) != null){ 
+				//line = line.toLowerCase().trim();
+				//if(line.contains("logs")) return line;//.substring(0, line.indexOf("ros"));
+				log("...................getRosCheck" + line, null);
+				
+			}	
+			proc.wait();
+		} catch (Exception e){}	
+	*/
+		return "errror";
+	}	
 	
 //	public static void main(String[] args){ System.out.println("total: " + countMbytes("F:\\")); }
 	 

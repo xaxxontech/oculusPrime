@@ -14,7 +14,7 @@ public class Settings {
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
 	public final static String archivefolder = redhome+Util.sep+"archive";
 	public final static String logfolder = redhome+Util.sep+"log";
-	public final static String roslogfolder = "~/.ros/log/";
+	public final static String roslogfolder = "~/.ros/";
 	
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
@@ -140,7 +140,7 @@ public class Settings {
 					if ((items[0].toUpperCase()).equals(str.toUpperCase())) {
 						result = items[1];
 					}
-				} // else throw new Exception("can NOT readSetting("+str+")");
+				} 
 			}
 			reader.close();
 			filein.close();
@@ -161,15 +161,14 @@ public class Settings {
 		String result = new String();
 		for (GUISettings factory : GUISettings.values()) {
 			String val = readSetting(factory.toString());
-			if (val != null) // if( ! val.equals("null")) 
-				result += factory.toString() + " " + val + "<br>"; // "\n\r";
+			if (val != null) result += factory.toString() + " " + val + "<br>"; 
 		}
 	
 		for (ManualSettings ops : ManualSettings.values()) {
 			String val = readSetting(ops.toString());
 			if (val != null)  { // never send out plain text passwords 
-				if( ! ops.equals(GUISettings.email_password)) // { val = "***"; }
-					result += ops.toString() + " " + val + "<br>"; // "\n\r";
+				if( ! ops.equals(GUISettings.email_password)) 
+					result += ops.toString() + " " + val + "<br>"; 
 			}
 		}
 		
@@ -511,15 +510,4 @@ public class Settings {
 	public long getLong(ManualSettings setting) {
 		return Long.valueOf(readSetting(setting));
 	}
-
-/*	public void disable(ManualSettings setting) {
-		if(setting == null) return;
-		writeSettings(setting, "false");
-	}
-
-	public void enabl(ManualSettings setting) {
-		if(setting == null) return;
-		writeSettings(setting, "true");
-	}
-	*/
 }

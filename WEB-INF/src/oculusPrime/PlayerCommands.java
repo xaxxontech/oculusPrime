@@ -5,7 +5,7 @@ public enum PlayerCommands {
     // server
     uptime, restart, quitserver, showlog, writesetting, readsetting, settings, log,
     //undocumented (not typically used by scripts):
-    softwareupdate, archive,
+    softwareupdate,
     
     // operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu,
@@ -58,7 +58,7 @@ public enum PlayerCommands {
 	speech, serverbrowser, email, state, rssadd,
     
 	// undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, truncros, truncarchive, archive,
     
     // experimental (undocumented)
     opennisensor, clearmap, error,
