@@ -1,6 +1,9 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
@@ -12,32 +15,36 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.sun.deploy.uitoolkit.impl.fx.Utils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
+import developer.Navigation;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "10";
+	static final String HTTP_REFRESH_DELAY_SECONDS = "7";
 
 	static String restart = "<a href=\"dashboard?action=restart\">";
 	static String reboot = "<a href=\"dashboard?action=reboot\">";
 	static final String archive = "<a href=\"dashboard?action=archive\">";
 	static final String truncros = "<a href=\"dashboard?action=truncros\">";
+	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
 	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";
-	
+	static final String gotodock = "<a href=\"dashboard?action=gotodock\">return to dock</a>&nbsp;&nbsp;";
+
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
+	static String routelinks = "routes:&nbsp;&nbsp;"+gotodock;
 	static Application app = null;
 	static Settings settings = null;
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-
-	public static void setApp(Application a) {app = a;}
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -46,6 +53,33 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		settings = Settings.getReference();
 		ban = BanList.getRefrence();
 		state.addObserver(this);
+		
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		for (int i = 0; i < routes.getLength(); i++) {  
+			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			routelinks += "<a href=\"dashboard?action=runroute&route="+r+"\">" +r+ "</a>&nbsp;&nbsp;";
+		}
+	}
+
+	public static void setApp(Application a) {app = a;}
+	
+	public static String routesLoad() {
+		String result = "";
+		BufferedReader reader;
+		try {
+			reader = new BufferedReader(new FileReader(Navigation.navroutesfile));
+			String line = "";
+			while ((line = reader.readLine()) != null) 	result += line;
+			reader.close();
+	
+		} catch (FileNotFoundException e) {
+			return "<routeslist></routeslist>";
+		} catch (IOException e) {
+			return "<routeslist></routeslist>";
+		}
+
+		return result;
 	}
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -63,11 +97,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String view = null;	
 		String delay = null;	
 		String action = null;
+		String route = null;
 		
 		try {
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
 			action = request.getParameter("action");
+			route = request.getParameter("route");
 		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
@@ -80,6 +116,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("truncarchive")) app.driverCallServer(PlayerCommands.truncarchive, null);
 			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
 			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
+			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
+			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
 			
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
@@ -246,7 +284,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public String toDashboard(final String url){
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"3\" border=\"0\"> \n");
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
@@ -256,36 +294,35 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
 		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
-		str.append( "<td><b>linux disk</b><td>" + Util.diskFullPercent() + "% used" + "</tr> \n"); 
+		str.append( "<td><b>linux</b><td>" + Util.diskFullPercent() + "% used" + "</tr> \n"); 
 		
 		String dock = "undocked";
-		if(state.equals(values.dockstatus, AutoDock.DOCKED))dock = "docked";
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "docked";		
+		String volts = state.get(values.batteryvolts); 
+		if(volts == null) volts = "error";
+		else volts += "v ";
 		
-		String blife = state.get(values.batterylife); 
-		if(blife==null) blife = "error"; 
-		else {
-			if(blife.contains("_charging")) dock = "charging";
-			blife = blife.substring(0, blife.indexOf('%')+1);
-			blife += "&nbsp;&nbsp;" + /*Util.formatFloat(*/ state.get(values.batteryvolts)+"v";
-		}
+		String life =  state.get(values.batterylife);
+		if(life == null) life = "error";
 		
-		// if(state.getUpTime() < Util.TWO_MINUTES) 
-		// if((state.getUpTime()/1000)/60 < 2){ 
-		//	reboot = ""; restart = ""; 
-		//	str.append("<tr><td><b>under two</b><td>");
-		//}
+		// if(volts.contains("_charging")) dock = "charging";
+		if(life.contains("%")) life = life.substring(0, life.indexOf('%')+1); 
+		
+		volts += "&nbsp;&nbsp;" + life;
+		
+		/*Util.formatFloat(*/
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
 			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
 			- state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins "
-			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " mbytes </a></tr> \n");
+			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " _mbytes </a></tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) 
 			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"
 			+ "<td><b>archive</b><td>" + truncarchive + Util.countMbytes(Settings.archivefolder) 
 			+ "</a> mbytes</tr> \n");
 			
-		str.append("<tr><td><b>battery</b>&nbsp;<td>" + blife
+		str.append("<tr><td><b>battery</b>&nbsp;<td>" + volts
 			+ "<td><b>dock</b><td>" + dock
 			+ "<td><b>images</b><td>" + truncimages + Util.countMbytes(Settings.framefolder) + "</a> mbytes</tr> \n");
 		
@@ -299,7 +336,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.exists(values.nextroutetime)) next = /*(state.getDouble(values.nextroutetime)/1000/60) */ "?? min";
 		// (state.get(values.nextroutetime) / 1000)
 		
-		if(state.getBoolean(values.odometry) == true) od = "enabled";
+		if(state.getBoolean(values.odometry)) od = "enabled";
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
 				+ "<td><b>next</b><td>" + next 
 				+ "<td><b>ros</b><td>"  + Util.rosLog
@@ -309,8 +346,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-		str.append("\n</table>\n");
+	//	if(state.getBoolean(values.odometry)){
+			str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
+			str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
+	//	}
 		
+		str.append("\n</table>\n");
 		str.append(getTail() + "\n");
 		str.append(getHistory() + "\n");
 		return str.toString();

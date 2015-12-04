@@ -868,12 +868,12 @@ public class Util {
 		final int prune = 3;
 		File[] files  = new File(Settings.framefolder).listFiles();
 		log("truncFrames(): " + files.length + " *files*", null);
-	//	if(files.length*prune < MIN_FILE_COUNT) return;
+		if(files.length*prune < MIN_FILE_COUNT) return;
 		sortFiles(files); 
         for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
-				files[i].delete();
+				// files[i].delete();
 	        }
 		} 
 	}
@@ -882,12 +882,12 @@ public class Util {
 		final int prune = 3;
 		File[] files  = new File(Settings.archivefolder).listFiles();
 		log("truncStaleArchive(): " + files.length + " *files*", null);
-	//	if(files.length*prune < MIN_FILE_COUNT) return;
+		if(files.length*prune < MIN_FILE_COUNT) return;
 		sortFiles(files);
         for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncStaleArchive(): " + files[i].getName() + " *deleted*", null);
-				files[i].delete();
+				// files[i].delete();
 	        }
 		} 
 	}
@@ -910,13 +910,13 @@ public class Util {
 		try {
 			final long start = System.currentTimeMillis();
 			while(archiveProc != null){				
-				if((System.currentTimeMillis() - start) > TWO_MINUTES){
+				if((System.currentTimeMillis() - start) > FIVE_MINUTES){
 					archiveProc.destroy(); 
 					archiveProc = null;
 					log("waitForArchive(): TIMEOUT!", null);
 				} else {
 					log("waitForArchive(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
-					delay(500);
+					delay(5000);
 				}
 			}
 			log("waitForArchive(): exit.. ", null);
@@ -927,7 +927,7 @@ public class Util {
 		
 		if(archiveProc != null) return false;
 		log("archiveLogs(): folder size: " + countFiles(Settings.logfolder), null);
-//		if(countMbytes(Settings.logfolder) < MIN_lOG_MBYTES) return false;
+		if(countMbytes(Settings.logfolder) < MIN_lOG_MBYTES) return false;
 		
 		final long start = System.currentTimeMillis();
 		final String path = "./archive" + sep + System.currentTimeMillis() + "_log.tar.bz2";
@@ -948,7 +948,7 @@ public class Util {
 						else log("archiveLogs(): could not delete: " + path, null);
 					} else {
 						log("archiveLogs(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
-						delay(1000);
+						delay(5000);
 					}
 				}
 				log("archiveLogs(): watchdog exit.. ", null);
@@ -971,7 +971,7 @@ public class Util {
 	
 	public synchronized static boolean archiveROSLogs(){
 		if(archiveProc != null) return false;
-		log("archiveROSLogs(): " + countMbytes(Settings.roslogfolder), null);
+	//	log("archiveROSLogs(): " + countMbytes(Settings.roslogfolder), null);
 	//	if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
 	//		log("archiveROSLogs(): skipping zipping", null);
 	//		return false;
@@ -1033,7 +1033,7 @@ public class Util {
 					if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
 						log("manageLogs(): deleting log files..", null);
 						appendUserMessage("restart required");
-						deleteLogFiles();
+						// deleteLogFiles();
 					}
 				}
 				

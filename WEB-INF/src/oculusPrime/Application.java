@@ -785,8 +785,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str,
-						navigation.consecutiveroute);
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute);
 				navigation.runRoute(str);
 			}
 			break;
