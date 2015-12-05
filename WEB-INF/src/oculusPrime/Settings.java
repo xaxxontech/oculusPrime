@@ -161,15 +161,15 @@ public class Settings {
 		String result = new String();
 		for (GUISettings factory : GUISettings.values()) {
 			String val = readSetting(factory.toString());
-			if (val != null) result += factory.toString() + " " + val + "<br>"; 
+			if (val != null) { // never send out plain text passwords 
+				if( ! factory.equals(GUISettings.email_password))
+					result += factory.toString() + " " + val + "<br>"; 
+			}
 		}
 	
 		for (ManualSettings ops : ManualSettings.values()) {
 			String val = readSetting(ops.toString());
-			if (val != null)  { // never send out plain text passwords 
-				if( ! ops.equals(GUISettings.email_password)) 
-					result += ops.toString() + " " + val + "<br>"; 
-			}
+			if (val != null) result += ops.toString() + " " + val + "<br>"; 
 		}
 		
 		return result;

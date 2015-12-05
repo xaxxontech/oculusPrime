@@ -35,11 +35,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
 	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";
-	static final String gotodock = "<a href=\"dashboard?action=gotodock\">return to dock</a>&nbsp;&nbsp;";
+	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
-	static String routelinks = "routes:&nbsp;&nbsp;"+gotodock;
+	static String routelinks = "<b>routes:</b>&nbsp;&nbsp;"+gotodock;
 	static Application app = null;
 	static Settings settings = null;
 	static String httpport = null;
@@ -304,18 +304,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String life =  state.get(values.batterylife);
 		if(life == null) life = "error";
-		
-		// if(volts.contains("_charging")) dock = "charging";
-		if(life.contains("%")) life = life.substring(0, life.indexOf('%')+1); 
+		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
 		
 		volts += "&nbsp;&nbsp;" + life;
-		
-		/*Util.formatFloat(*/
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
 			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
 			- state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins "
-			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " _mbytes </a></tr> \n");
+			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " mbytes </a></tr> \n");
 				
 		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) 
 			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"

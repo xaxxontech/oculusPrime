@@ -937,7 +937,7 @@ public class Util {
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				delay(200);
+				delay(2000);
 				while(archiveProc != null){				
 					if((System.currentTimeMillis() - start) > FIVE_MINUTES){
 						archiveProc.destroy(); 
@@ -945,10 +945,10 @@ public class Util {
 						log("archiveLogs(): timout, deleting: " + path, null);
 						if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
 						else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
-						else log("archiveLogs(): could not delete: " + path, null);
+						else log("archiveLogs(): could NOT delete: " + path, null);
 					} else {
-						log("archiveLogs(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
-						delay(5000);
+						debug("archiveLogs(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+						delay(10000);
 					}
 				}
 				log("archiveLogs(): watchdog exit.. ", null);
@@ -1037,10 +1037,9 @@ public class Util {
 					}
 				}
 				
-				archiveProc = null;
-				delay(1000);
-				
-				if(archiveROSLogs()){ log("manageLogs(): deleting ros log files..", null);}
+			//	archiveProc = null;
+			//	delay(1000);
+			//	if(archiveROSLogs()){ log("manageLogs(): deleting ros log files..", null);}
 				
 				archiveProc = null;
 				
