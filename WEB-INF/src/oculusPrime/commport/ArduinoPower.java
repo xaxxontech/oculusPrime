@@ -494,10 +494,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 			    Matcher mat = pat.matcher(extinfo);
 			    while (mat.find()) {
 			    	String battvolts = mat.group().replaceFirst("_lV:", "");
-			    	if ((!state.exists(State.values.batteryvolts.toString()) || 
-							!state.get(State.values.batteryvolts).equals(battvolts))) {
-			    		state.set(State.values.batteryvolts, battvolts);
-			    	}
+			    	if (!state.exists(State.values.batteryvolts.toString()) ) {
+						state.set(State.values.batteryvolts, battvolts);
+						application.comport.setInitialOdomPWM();
+					}
+					else if (!state.get(State.values.batteryvolts).equals(battvolts)) {
+						state.set(State.values.batteryvolts, battvolts);
+					}
+
 			    }
 			    
 			}

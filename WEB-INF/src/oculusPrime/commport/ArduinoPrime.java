@@ -1039,7 +1039,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			final int pwmincr = 5;
 			final int accel = 500;
 			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
-			
+
 			while (currentMoveID == moveID)  {
 
 				if (state.getBoolean(State.values.odomupdated)) {
@@ -1084,10 +1084,23 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 				}
 				Util.delay(1);
-				
+
 			}
+
+			floorFrictionCheck();
+
 		} }).start();
 		
+	}
+
+	private void floorFrictionCheck() {
+		// 	measured carpet = 195pwm (volts comped 0.0857degrees per ms  12.04 battery volts)
+		// no carpet = pwm 110-140
+		int pwmthreshold = 150;
+		boolean rosarcmove = state.getBoolean(State.values.rosarcmove);
+		if (unVoltsComp(state.getInteger(State.values.odomturnpwm)) > pwmthreshold)
+		{ if (rosarcmove) state.set(State.values.rosarcmove, false); }
+		else { if (!rosarcmove) state.set(State.values.rosarcmove, true); }
 	}
 	
 	// example target rate = 3.2m/s = 0.00032 m/ms
@@ -1693,10 +1706,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					arcodomcomp = 0.7;
 				}
 
-//				// TODO: remove
-				String s = "arcmove "+arclengthmeters+", "+angledegrees;
-				s += ", arcodomcomp: "+arcodomcomp+", pwm: "+pwm;
-				Util.log(s, this);
+//				String s = "arcmove "+arclengthmeters+", "+angledegrees;
+//				s += ", arcodomcomp: "+arcodomcomp+", pwm: "+pwm;
+//				Util.log(s, this);
 
 
 				Util.delay((long) (arclengthmeters/0.32*1000));
@@ -1710,7 +1722,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	
 	/**
-	 * compensates timer for drooping system voltage
+	 * compensates timer (or pwm values) for drooping system voltage
 	 * @param n original milliseconds
 	 * @return modified (typically extended) milliseconds
 	 */
@@ -1728,14 +1740,35 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		n = n * Math.pow(nominalvolts/volts, exponent);
 		return n;
 	}
-	
+
+	public double unVoltsComp(double n) {
+		double volts = 12.0;
+		final double nominalvolts = 12.0;
+		final double exponent = 1.6;
+
+		if (state.exists(State.values.batteryvolts.toString())) {
+			if (Math.abs(state.getDouble(State.values.batteryvolts.toString()) - volts) > 2) // sanity check
+				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.batteryvolts), this);
+			else  volts = Double.parseDouble(state.get(State.values.batteryvolts));
+		}
+
+		n = n / Math.pow(nominalvolts/volts, exponent);
+		return n;
+	}
+
+	public void setInitialOdomPWM() {
+		state.set(State.values.odomturnpwm,
+				(int) voltsComp(Double.parseDouble(settings.readSetting(ManualSettings.odomturnpwm.name())) ) );
+		state.set(State.values.odomlinearpwm,
+				(int) voltsComp(Double.parseDouble(settings.readSetting(ManualSettings.odomlinearpwm.name()))));
+	}
+
 	public void delayWithVoltsComp(int n) {
 		int delay = (int) voltsComp((double) n);
 		Util.delay(delay);
 	}
 
 	public void clickSteer(final int x, int y) {
-		
 		clickCam(y);
 		clickNudge(x, false);
 	}

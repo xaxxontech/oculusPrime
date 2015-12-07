@@ -287,7 +287,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.updateJetty();
 		} else Util.log("application.initalize(): wifi manager is not running!!", this);
 
-		giveWarnings();
+//		giveWarnings();
 		watchdog = new SystemWatchdog(this);
 
 		// commport does this in initalize now
@@ -1442,11 +1442,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 
-		if (navigation != null) {
-			if (state.exists(values.odomlinearpwm))
-				settings.writeSettings(ManualSettings.odomlinearpwm, state.get(values.odomlinearpwm));
-			if (state.exists(values.odomturnpwm))
-				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
+		if (navigation != null) { // TODO: << condition required?
+			if (state.exists(values.odomlinearpwm)) {
+				settings.writeSettings(ManualSettings.odomlinearpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			}
+			if (state.exists(values.odomturnpwm)) {
+				settings.writeSettings(ManualSettings.odomturnpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			}
 		}
 
 		Util.delay(1000);
@@ -1479,10 +1483,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (navigation != null) {
 			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
 				navigation.stopNavigation();
-			if (state.exists(values.odomlinearpwm))
-				settings.writeSettings(ManualSettings.odomlinearpwm, state.get(values.odomlinearpwm));
-			if (state.exists(values.odomturnpwm))
-				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
+
+			if (state.exists(values.odomlinearpwm)) {
+				settings.writeSettings(ManualSettings.odomlinearpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			}
+			if (state.exists(values.odomturnpwm)) {
+				settings.writeSettings(ManualSettings.odomturnpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			}
 		}
 
 		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();

@@ -44,7 +44,8 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		
+		rosarcmove, // to be documented
+
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */

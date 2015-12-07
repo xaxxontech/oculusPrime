@@ -26,11 +26,17 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        int i = 10;
-        double d = 1.487;
-//        i = (int) (i*d);
-        i *= d;
-        System.out.println(i);
+        double n = 100;
+        double volts = 11; // result upcomp = 114.9
+        final double nominalvolts = 12.0;
+        final double exponent = 1.6;
+
+        n = n * Math.pow(nominalvolts/volts, exponent);
+
+        System.out.println(n);
+
+        n=n/Math.pow(nominalvolts/volts, exponent);
+        System.out.println(n);
 
 
     }
