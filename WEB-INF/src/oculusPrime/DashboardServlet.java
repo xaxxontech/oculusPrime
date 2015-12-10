@@ -34,7 +34,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String truncros = "<a href=\"dashboard?action=truncros\">";
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
-	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";
+	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";	
 	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 
 	static double VERSION = new Updater().getCurrentVersion();
@@ -119,6 +119,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
 			
+			if(action.equalsIgnoreCase("debugon")) 
+				 app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
+			if(action.equalsIgnoreCase("debugoff")) 
+				 app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
+
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
 	
@@ -305,7 +310,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String life =  state.get(values.batterylife);
 		if(life == null) life = "error";
 		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
-		
 		volts += "&nbsp;&nbsp;" + life;
 		
 		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
@@ -323,29 +327,26 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>images</b><td>" + truncimages + Util.countMbytes(Settings.framefolder) + "</a> mbytes</tr> \n");
 		
 		String od = "disabled";
+		if(state.getBoolean(values.odometry)) od = "enabled";
 		str.append("<tr><td><b>odometry&nbsp;</b><td>" + od
 			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "	
 			+ "<td><b>logs</b><td>" + archive 
 			+ Util.countMbytes(Settings.logfolder) + "</a> mbytes </tr> \n");
 		
-		String next = "disabled";
-		if(state.exists(values.nextroutetime)) next = /*(state.getDouble(values.nextroutetime)/1000/60) */ "?? min";
-		// (state.get(values.nextroutetime) / 1000)
+		String debug = null; 
+		if(settings.getBoolean(ManualSettings.debugenabled)) debug = "on <a href=\"dashboard?action=debugoff\">off</a>";
+		else debug = "<a href=\"dashboard?action=debugon\">on</a> off";
 		
-		if(state.getBoolean(values.odometry)) od = "enabled";
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
-				+ "<td><b>next</b><td>" + next 
-				+ "<td><b>ros</b><td>"  + Util.rosLog
-			//  + truncros+ Util.getRosCheck() 
+				+ "<td><b>debug</b><td>" + debug 
+				+ "<td><b>ros</b><td>" + truncros + Util.getRosCheck() + "</a> mbytes"
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
 			//	+ Util.countFiles(Settings.roslogfolder) 
 				+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-	//	if(state.getBoolean(values.odometry)){
-			str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
-			str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-	//	}
+		str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
+		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		
 		str.append("\n</table>\n");
 		str.append(getTail() + "\n");

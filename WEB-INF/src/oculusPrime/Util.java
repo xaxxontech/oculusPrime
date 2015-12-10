@@ -5,10 +5,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -55,9 +54,9 @@ public class Util {
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static String jettyPID = getJettyPID();
 	static String redPID = getRed5PID();
-	static String rosLog = getRosCheck();
-
-	static Process archiveProc = null; 
+//	static String rosLog = getRosCheck();
+	static private String rosinfor = null;//"fail";
+	static private Process archiveProc = null; 
 	
 	public static void delay(long delay) {
 		try {
@@ -1125,23 +1124,34 @@ public class Util {
 	}
 	
 	public static String getRosCheck(){	
-			/*
-		try {			
-			String line = null;
-			String[] cmd = {"bash", "-ic", "rosclean check" };
-			Process proc = Runtime.getRuntime().exec(cmd);
 		
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while((line = procReader.readLine()) != null){ 
-				//line = line.toLowerCase().trim();
-				//if(line.contains("logs")) return line;//.substring(0, line.indexOf("ros"));
-				log("...................getRosCheck" + line, null);
-				
-			}	
-			proc.wait();
-		} catch (Exception e){}	
-	*/
-		return "errror";
+		if(rosinfor==null){
+			new Thread(new Runnable() { public void run() {
+				try {
+			
+					log("..........getRosCheck, called ros..........", null);
+					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt &" };
+					Process proc = Runtime.getRuntime().exec(cmd);	
+					proc.destroy();
+					log("..........getRosCheck, exit call ros..........", null);
+
+				} catch (Exception e){printError(e);}
+			} }).start();
+		}
+		
+		String line;
+		BufferedReader reader;
+		try {
+			reader = new BufferedReader(new FileReader("rlog.txt"));
+			while ((line = reader.readLine()) != null) 	rosinfor = line;
+			reader.close();		
+		} catch (Exception e) { rosinfor = null; }
+		
+		// if(new File("rlog.txt").exists()) new File("rlog.txt").delete();
+		if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
+			rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
+		
+		return rosinfor;
 	}	
 	
 //	public static void main(String[] args){ System.out.println("total: " + countMbytes("F:\\")); }

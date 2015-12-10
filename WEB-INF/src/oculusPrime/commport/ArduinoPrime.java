@@ -1658,9 +1658,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				}
 
 //				// TODO: remove
-				String s = "arcmove "+arclengthmeters+", "+angledegrees;
-				s += ", arcodomcomp: "+arcodomcomp+", pwm: "+pwm;
-				Util.log(s, this);
+//				String s = "arcmove "+arclengthmeters+", "+angledegrees;
+//				s += ", arcodomcomp: "+arcodomcomp+", pwm: "+pwm;
+//  			Util.log(s, this);
 
 
 				Util.delay((long) (arclengthmeters/0.32*1000));
