@@ -1121,8 +1121,11 @@ public class Util {
 	}
 
 	public static void deleteROS() {
-		log("truncRos(): ......called exec.... sluts.............", null);
+		
+		// log("truncRos(): ......called exec.... sluts.............", null);
+		
 		try {			
+		
 		//	String line = null;
 			String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder };
 		//	Process proc = 
@@ -1135,6 +1138,9 @@ public class Util {
 				//if(line.contains("logs")) return line;//.substring(0, line.indexOf("ros"));
 		//		log("...................truncRos" + line, null);
 		// proc.wait();
+			
+			rosinfor = null; // look it up again
+			
 		} catch (Exception e){printError(e);}	
 	}
 	
@@ -1145,11 +1151,11 @@ public class Util {
 			new Thread(new Runnable() { public void run() {
 				try {
 			
-					log("..........getRosCheck, called ros..........", null);
+		//			log("..........getRosCheck, called ros..........", null);
 					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt &" };
 					Process proc = Runtime.getRuntime().exec(cmd);	
 					proc.destroy();
-					log("..........getRosCheck, exit call ros..........", null);
+		//			log("..........getRosCheck, exit call ros..........", null);
 
 				} catch (Exception e){printError(e);}
 			} }).start();

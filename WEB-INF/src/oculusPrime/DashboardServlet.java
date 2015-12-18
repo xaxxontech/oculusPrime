@@ -58,6 +58,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++) {  
 			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			//if(state.exists(values.navigationroute)) if(r.equals(state.get(values.navigationroute)))
+			//	routelinks += ""
 			routelinks += "<a href=\"dashboard?action=runroute&route="+r+"\">" +r+ "</a>&nbsp;&nbsp;";
 		}
 	}
@@ -289,7 +291,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public String toDashboard(final String url){
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
-		StringBuffer str = new StringBuffer("<table cellspacing=\"3\" border=\"0\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
@@ -345,9 +347,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-		str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
+		if(state.exists(values.navigationroute)){
+			str.append("<tr><td colspan=\"11\">"+ routelinks + "&nbsp;&nbsp;<b>active: </b>" +state.get(values.navigationroute));  
+			if(state.exists(values.roswaypoint)) str.append(" | "+ state.get(values.roswaypoint));
+			str.append("</tr> \n");
+		} else str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
+	
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-		
 		str.append("\n</table>\n");
 		str.append(getTail() + "\n");
 		str.append(getHistory() + "\n");
