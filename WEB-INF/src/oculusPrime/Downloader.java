@@ -18,7 +18,7 @@ public class Downloader {
 	public boolean FileDownload(final String fileAddress,
 			final String localFileName, final String destinationDir) {
 
-		long start = System.currentTimeMillis();
+		// long start = System.currentTimeMillis();
 		String sep = System.getProperty("file.separator");
 		
 		InputStream is = null;
@@ -56,8 +56,8 @@ public class Downloader {
 			}
 
 			Util.log("saved to local file: " + path + " bytes: " + ByteWritten, this);
-			Util.log("download took: "+ (System.currentTimeMillis()-start) + " ms", this);
-			Util.log("downloaded " + ByteWritten + " bytes to: " + path, this);
+			// Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms", this);
+			// Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
 
 		} catch (Exception e) {
 			Util.log(e.getMessage(), this);

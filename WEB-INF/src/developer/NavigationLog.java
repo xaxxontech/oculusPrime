@@ -1,14 +1,15 @@
 package developer;
 
-import oculusPrime.Application;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+
 import oculusPrime.Settings;
-import oculusPrime.State;
 import oculusPrime.Util;
 
-import java.io.*;
-
 /**
- *
  * read file, nuke </body></html>at end, add new stuff, add end back, rewrite file
  *
  * create item for every completed route
@@ -38,7 +39,7 @@ public class NavigationLog {
 
     // completed route
     public void newItem(final String status, final String msg, final long starttime, final String waypoint,
-                        final String routename, final int consecutiveroute) {
+                        final String routename, final int consecutiveroute, final double routedistance) {
 
         new Thread(new Runnable() { public void run() {
 
@@ -78,7 +79,8 @@ public class NavigationLog {
             str += "Consecutive Route: "+consecutiveroute+"<br>\n";
             long st = starttime;
             if (st==0) st = System.currentTimeMillis();
-            str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes<br>\n";
+            str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
+            if(routedistance > 0) str += "Total distance: " + Util.formatFloat(routedistance/(double)1000, 1) + " meters <br>\n";
             str += "</div>\n";
 
             writeFile(str);

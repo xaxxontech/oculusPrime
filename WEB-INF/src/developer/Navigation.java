@@ -17,9 +17,11 @@ import developer.image.OpenCVObjectDetect;
 import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.AutoDock.autodockmodes;
+import oculusPrime.State.values;
 import oculusPrime.FrameGrabHTTP;
 import oculusPrime.GUISettings;
 import oculusPrime.ManualSettings;
+import oculusPrime.Observer;
 import oculusPrime.PlayerCommands;
 import oculusPrime.Settings;
 import oculusPrime.State;
@@ -27,7 +29,8 @@ import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
 import oculusPrime.commport.ArduinoPrime;
 
-public class Navigation {
+public class Navigation implements Observer {
+	
 	protected Application app = null;
 	private static State state = State.getReference();
 	private static final String DOCK = "dock"; // waypoint name
@@ -40,17 +43,29 @@ public class Navigation {
 	public long routestarttime;
 	public NavigationLog navlog;
 	public int consecutiveroute = 1;
+	private double routedistance = 0;
 	public volatile boolean navdockactive = false;
 
 	/** Constructor */
 	public Navigation(Application a){
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
-		app = a;
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		navlog = new NavigationLog();
+		state.addObserver(this);
+		app = a;
 	}	
 	
+	@Override
+	public void updated(String key) {
+		if(key.equals(values.distanceangle.name())){
+			try {
+				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
+				Util.debug("distance : " + routedistance, this);
+			} catch (Exception e) {Util.printError(e);}
+		}
+	}
+
 	public void gotoWaypoint(final String str) {
 		if (state.getBoolean(State.values.autodocking)) {
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
@@ -59,8 +74,7 @@ public class Navigation {
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 				!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  {
-			app.driverCallServer(PlayerCommands.messageclients,
-					"Can't navigate, location unknown");
+			app.driverCallServer(PlayerCommands.messageclients, "Can't navigate, location unknown");
 			return;
 		}
 		
@@ -78,7 +92,6 @@ public class Navigation {
 				app.driverCallServer(PlayerCommands.left, "360");
 				Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
 				Util.delay(1000);
-
 			}
 
 			if (!Ros.setWaypointAsGoal(str))
@@ -286,7 +299,7 @@ public class Navigation {
 				Util.log("error, finddock() needs to try 2nd time", this);
 				Util.delay(20000); // allow cam shutdown, system settle
 				app.killGrabber(); // force chrome restart
-				Util.delay(app.GRABBERRESPAWN + 4000); // allow time for grabber respawn
+				Util.delay(Application.GRABBERRESPAWN + 4000); // allow time for grabber respawn
 				// camera, lights (in case malg had dropped commands)
 				app.driverCallServer(PlayerCommands.spotlight, "0");
 				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
@@ -467,8 +480,7 @@ public class Navigation {
 			// map days to numbers
 			NodeList days = navroute.getElementsByTagName("day");
 			if (days.getLength() == 0) {
-				app.driverCallServer(PlayerCommands.messageclients,
-						"Can't schedule route, no days specified");
+				app.driverCallServer(PlayerCommands.messageclients, "Can't schedule route, no days specified");
 				cancelRoute(id);
 				return;
 			}
@@ -580,7 +592,7 @@ public class Navigation {
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
 					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							null, name, consecutiveroute);
+							null, name, consecutiveroute, 0);
 
 					if (state.getUpTime() > Util.TEN_MINUTES) {
 						app.driverCallServer(PlayerCommands.reboot, null);
@@ -597,7 +609,8 @@ public class Navigation {
 
 				// start!
 				routestarttime = System.currentTimeMillis();
-
+				routedistance = 0l;
+				
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
 					state.set(State.values.motionenabled, true);
@@ -638,7 +651,7 @@ public class Navigation {
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
 						navlog.newItem(NavigationLog.ERRORSTATUS, "unable to set waypoint", routestarttime,
-								wpname, name, consecutiveroute);
+								wpname, name, consecutiveroute, 0);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" unable to set waypoint");
 						wpnum ++;
 						continue;
@@ -670,7 +683,7 @@ public class Navigation {
 					// failed, try next waypoint
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
-								routestarttime, wpname, name, consecutiveroute);
+								routestarttime, wpname, name, consecutiveroute, 0);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
 						continue; 
@@ -703,8 +716,7 @@ public class Navigation {
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					// TODO: send alert?
-					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock",
-							routestarttime, null, name, consecutiveroute);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
 //					cancelRoute(id);
 					// try docking one more time, sending alert if fail
 					Util.log("calling redock()", this);
@@ -716,13 +728,17 @@ public class Navigation {
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
+				
+				//TODO: jjjjjjjjjjjjjjjjjjj
+				Util.log("total distance: " + routedistance, this);
+				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
+		//		navlog.newItem(NavigationLog.COMPLETEDSTATUS, routedistance, null, routestarttime, null, name, consecutiveroute);
 
-				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null,
-						name, consecutiveroute);
 				consecutiveroute ++;
 
 				if (!delayToNextRoute(navroute, name, id)) return;
-
+				
+				
 			}
 		
 		}  }).start();
@@ -939,7 +955,7 @@ public class Navigation {
 				}
 
 				navlog.newItem(NavigationLog.PHOTOSTATUS, navlogmsg, routestarttime, wpname,
-						state.get(State.values.navigationroute), consecutiveroute);
+						state.get(State.values.navigationroute), consecutiveroute, 0);
 
 			}
 
@@ -984,7 +1000,7 @@ public class Navigation {
 				}
 
 				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
-						state.get(State.values.navigationroute), consecutiveroute);
+						state.get(State.values.navigationroute), consecutiveroute, 0);
 
 				// shut down sensing
 				if (state.exists(State.values.motiondetect))
@@ -1028,7 +1044,7 @@ public class Navigation {
 				}
 
 				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
-						state.get(State.values.navigationroute), consecutiveroute);
+						state.get(State.values.navigationroute), consecutiveroute, 0);
 			}
 
 

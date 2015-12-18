@@ -326,23 +326,23 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>dock</b><td>" + dock
 			+ "<td><b>images</b><td>" + truncimages + Util.countMbytes(Settings.framefolder) + "</a> mbytes</tr> \n");
 		
-		String od = "disabled";
+		String od = "disabled"; String debug = null; 
 		if(state.getBoolean(values.odometry)) od = "enabled";
+		if(settings.getBoolean(ManualSettings.debugenabled)) debug = "on&nbsp;|&nbsp;<a href=\"dashboard?action=debugoff\">off</a>";
+		else debug = "off&nbsp;|&nbsp;<a href=\"dashboard?action=debugon\">on</a>";
+		
 		str.append("<tr><td><b>odometry&nbsp;</b><td>" + od
-			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "	
+		    + "<td><b>debug</b><td>" + debug 
 			+ "<td><b>logs</b><td>" + archive 
 			+ Util.countMbytes(Settings.logfolder) + "</a> mbytes </tr> \n");
 		
-		String debug = null; 
-		if(settings.getBoolean(ManualSettings.debugenabled)) debug = "on <a href=\"dashboard?action=debugoff\">off</a>";
-		else debug = "<a href=\"dashboard?action=debugon\">on</a> off";
-		
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
-				+ "<td><b>debug</b><td>" + debug 
-				+ "<td><b>ros</b><td>" + truncros + Util.getRosCheck() + "</a> mbytes"
+			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "	
+			+ "<td><b>ros</b><td>" + truncros + Util.getRosCheck() + "</a> mbytes"
+			// doesn't work on hidden file?? 
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
 			//	+ Util.countFiles(Settings.roslogfolder) 
-				+ "</tr> \n");
+			+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");

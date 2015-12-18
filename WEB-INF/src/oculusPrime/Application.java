@@ -277,15 +277,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
 		
-		if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
-		else {
-			Util.setJettyTelnetPort();
-			Util.updateJetty();
-		}  
+		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
+		//else {
+		Util.setJettyTelnetPort();
+		Util.updateJetty();		 
 		
-		giveWarnings();
+		
 		watchdog = new SystemWatchdog(this);
 		Util.debug("application initialize done", this);
+		giveWarnings();
 	}
 
 	private void giveWarnings(){
@@ -467,7 +467,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute);
+						navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
@@ -785,7 +785,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute);
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
 				navigation.runRoute(str);
 			}
 			break;
@@ -794,7 +794,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null && state.exists(values.navigationroute)) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute);
+						navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			break;
@@ -855,7 +855,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.truncStaleFrames();
 			break;
 		case truncros: 
-			Util.truncRos();
+			Util.deleteROS();
 			break;
 			
 		}

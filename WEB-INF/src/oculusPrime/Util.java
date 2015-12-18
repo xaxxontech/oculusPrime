@@ -52,8 +52,8 @@ public class Util {
 	public static final int MAX_HISTORY = 30;
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
-	static String jettyPID = getJettyPID();
-	static String redPID = getRed5PID();
+//	static String jettyPID = getJettyPID();
+//	static private String redPID = getRed5PID();
 //	static String rosLog = getRosCheck();
 	static private String rosinfor = null;//"fail";
 	static private Process archiveProc = null; 
@@ -536,6 +536,7 @@ public class Util {
 		return true;
 	}
 	
+	/*
 	public static String getJavaStatus(){
 		
 		if(redPID==null) return "jetty not running";
@@ -554,7 +555,8 @@ public class Util {
 		
 		return line;
 	}
-
+*/
+/*	
 	public static String getRed5PID(){	
 		
 		if(redPID!=null) return redPID;
@@ -591,6 +593,7 @@ public class Util {
 
 		return redPID;
 	}	
+	*/
 	
 	public static String pingWIFI(final String addr){
 		
@@ -745,6 +748,7 @@ public class Util {
 		} }).start();
 	}
 
+	/*
 	public static String getJettyPID(){	
 		
 	//	if(jettyPID!=null) return jettyPID;
@@ -782,10 +786,11 @@ public class Util {
 
 		return jettyPID;
 	}	
+	*/
 	
 	public static void setJettyTelnetPort() {
 		
-		if(jettyPID == null) return;
+//		if(jettyPID == null) return;
 		
 		new Thread(new Runnable() { public void run() {
 			Settings settings = Settings.getReference();
@@ -809,7 +814,7 @@ public class Util {
 	
 	public static void updateJetty() {
 		
-		if(jettyPID == null) return;
+//		if(jettyPID == null) return;
 		
 		new Thread(new Runnable() { public void run() {
 			try {
@@ -831,7 +836,7 @@ public class Util {
 
 	public static String getJettyStatus() {
 	
-		if(jettyPID == null) return "no PID";
+//		if(jettyPID == null) return "no PID";
 		
 		try {
 			
@@ -872,7 +877,7 @@ public class Util {
         for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
-				// files[i].delete();
+				files[i].delete();
 	        }
 		} 
 	}
@@ -886,7 +891,7 @@ public class Util {
         for (int i = (files.length/prune); i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncStaleArchive(): " + files[i].getName() + " *deleted*", null);
-				// files[i].delete();
+				files[i].delete();
 	        }
 		} 
 	}
@@ -915,10 +920,12 @@ public class Util {
 					log("waitForArchive(): TIMEOUT!", null);
 				} else {
 					log("waitForArchive(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+					archiveProc = null;
 					delay(5000);
 				}
 			}
 			log("waitForArchive(): exit.. ", null);
+			archiveProc = null;
 		} catch (Exception e){printError(e);}
 	}
 	
@@ -950,7 +957,7 @@ public class Util {
 						delay(10000);
 					}
 				}
-				log("archiveLogs(): watchdog exit.. ", null);
+				debug("archiveLogs(): watchdog exit.. ", null);
 			} catch (Exception e){printError(e);}
 		} }).start();
 		
@@ -998,7 +1005,7 @@ public class Util {
 						delay(5000);
 					}
 				}
-				log("archiveROSLogs(): watchdog exit.. ", null);
+				debug("archiveROSLogs(): watchdog exit.. ", null);
 			} catch (Exception e){printError(e);}
 		} }).start();
 	
@@ -1019,6 +1026,11 @@ public class Util {
 	//TODO: 
 	public static void manageLogs(){
 
+		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)){
+			log("manageLogs(): undocked, skipping..", null);
+			return;
+		}
+		
 		if(archiveProc != null) {
 			log("manageLogs(): busy, skipping..", null);
 			return;
@@ -1029,18 +1041,21 @@ public class Util {
 				
 				debug("manageLogs(): archive log files..");
 				if(archiveLogs()){	
-					if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
-						log("manageLogs(): deleting log files..", null);
-						appendUserMessage("restart required");
-						// deleteLogFiles();
-					}
+					log("manageLogs(): deleting log files..", null);
+					appendUserMessage("restart required");
+					deleteLogFiles();		
+				}
+			
+				waitForArchive();
+				
+				debug("manageLogs(): archive ros files..");
+				if(archiveROSLogs()){
+					
+					log("manageLogs(): deleting ros log files..", null);
+				
 				}
 				
-			//	archiveProc = null;
-			//	delay(1000);
-			//	if(archiveROSLogs()){ log("manageLogs(): deleting ros log files..", null);}
-				
-				archiveProc = null;
+				log("manageLogs(): busy, skipping..", null);
 				
 			} catch (Exception e){archiveProc = null;}
 		} }).start();
@@ -1105,27 +1120,28 @@ public class Util {
 		state.set(values.guinotify, msg += message);
 	}
 
-	public static void truncRos() {
-		log("truncRos(): ....................", null);
+	public static void deleteROS() {
+		log("truncRos(): ......called exec.... sluts.............", null);
 		try {			
-			String line = null;
+		//	String line = null;
 			String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder };
-			Process proc = Runtime.getRuntime().exec(cmd);
+		//	Process proc = 
+			
+			Runtime.getRuntime().exec(cmd);
 		
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while((line = procReader.readLine()) != null){ 
+		//	BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		//	while((line = procReader.readLine()) != null){ 
 				//line = line.toLowerCase().trim();
 				//if(line.contains("logs")) return line;//.substring(0, line.indexOf("ros"));
-				log("...................truncRos" + line, null);
-				
-			}	
-			proc.wait();
-		} catch (Exception e){}	
+		//		log("...................truncRos" + line, null);
+		// proc.wait();
+		} catch (Exception e){printError(e);}	
 	}
 	
 	public static String getRosCheck(){	
 		
 		if(rosinfor==null){
+		// if( ! new File("rlog.txt").exists()){
 			new Thread(new Runnable() { public void run() {
 				try {
 			
@@ -1143,14 +1159,14 @@ public class Util {
 		BufferedReader reader;
 		try {
 			reader = new BufferedReader(new FileReader("rlog.txt"));
-			while ((line = reader.readLine()) != null) 	rosinfor = line;
+			while ((line = reader.readLine()) != null) rosinfor = line;
 			reader.close();		
 		} catch (Exception e) { rosinfor = null; }
 		
-		// if(new File("rlog.txt").exists()) new File("rlog.txt").delete();
 		if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
 			rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
 		
+		// if(new File("rlog.txt").exists()) new File("rlog.txt").delete();
 		return rosinfor;
 	}	
 	
