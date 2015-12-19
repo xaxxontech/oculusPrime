@@ -39,7 +39,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
-	static String routelinks = "<b>routes:</b>&nbsp;&nbsp;"+gotodock;
+	NodeList routes = null;
+	
+//	static Vector<String> routes = new Vector<String>();
+// 	static String routelinks = "<b>routes:</b>&nbsp;&nbsp;"+gotodock;
 	static Application app = null;
 	static Settings settings = null;
 	static String httpport = null;
@@ -55,13 +58,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		state.addObserver(this);
 		
 		Document document = Util.loadXMLFromString(routesLoad());
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		for (int i = 0; i < routes.getLength(); i++) {  
-			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			//if(state.exists(values.navigationroute)) if(r.equals(state.get(values.navigationroute)))
-			//	routelinks += ""
-			routelinks += "<a href=\"dashboard?action=runroute&route="+r+"\">" +r+ "</a>&nbsp;&nbsp;";
-		}
+		routes = document.getDocumentElement().getChildNodes();
 	}
 
 	public static void setApp(Application a) {app = a;}
@@ -347,17 +344,48 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
+		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() +"</tr> \n");
+	
+		/*
 		if(state.exists(values.navigationroute)){
 			str.append("<tr><td colspan=\"11\">"+ routelinks + "&nbsp;&nbsp;<b>active: </b>" +state.get(values.navigationroute));  
-			if(state.exists(values.roswaypoint)) str.append(" | "+ state.get(values.roswaypoint));
+			if(state.exists(values.roswaypoint)) {
+				if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) str.append(" | "+ state.get(values.roswaypoint));
+				else str.append(" | "+ ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000));
+				//else str.append(" | "+ new Date(state.getLong(values.nextroutetime)).toString().toLowerCase());
+			}
 			str.append("</tr> \n");
 		} else str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
-	
+		 */
+		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
 		str.append(getTail() + "\n");
 		str.append(getHistory() + "\n");
 		return str.toString();
+	}
+	
+	private String getRouteLinks(){
+		String link = "<b>routes: </b>";
+		for (int i = 0; i < routes.getLength(); i++) {  
+			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if( ! state.equals(values.navigationroute, r)) 
+				link += "<a href=\"dashboard?action=runroute&route="+r+"\">" +r+ "</a>&nbsp;&nbsp;";
+		}
+		
+		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
+	
+		if(state.exists(values.navigationroute)){ // active route 
+			link += " <b>active: </b>" + state.get(values.navigationroute) + " ";
+		}
+		
+		if(state.exists(values.navigationroute) && state.exists(values.roswaypoint)){
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += " | "+ state.get(values.roswaypoint);
+			else if(state.exists(values.nextroutetime)) 
+				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + " seconds";
+		}
+		
+		return link;
 	}
 	
 	private String getTail(){

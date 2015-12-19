@@ -60,9 +60,12 @@ public class Navigation implements Observer {
 	public void updated(String key) {
 		if(key.equals(values.distanceangle.name())){
 			try {
-				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
-				Util.debug("distance : " + routedistance, this);
-			} catch (Exception e) {Util.printError(e);}
+				double val = Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
+				if(val > 0){
+					routedistance += val;
+					Util.debug("route distance (mm): " + routedistance, this);
+				}
+			} catch (Exception e) {/*Util.printError(e);*/}
 		}
 	}
 
@@ -203,7 +206,6 @@ public class Navigation implements Observer {
 			Util.delay(Ros.ROSSHUTDOWNDELAY);
 			state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		}  }).start();
-
 	}
 
 	public void dock() {
@@ -729,15 +731,12 @@ public class Navigation implements Observer {
 					continue;
 				}
 				
-				//TODO: jjjjjjjjjjjjjjjjjjj
-				Util.log("total distance: " + routedistance, this);
+				// Util.log("total distance: " + routedistance, this);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
-		//		navlog.newItem(NavigationLog.COMPLETEDSTATUS, routedistance, null, routestarttime, null, name, consecutiveroute);
-
 				consecutiveroute ++;
-
-				if (!delayToNextRoute(navroute, name, id)) return;
+				routedistance = 0;
 				
+				if (!delayToNextRoute(navroute, name, id)) return;
 				
 			}
 		
