@@ -285,26 +285,25 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		watchdog = new SystemWatchdog(this);
 		Util.debug("application initialize done", this);
-		giveWarnings();
+//		giveWarnings();
 	}
 
-	private void giveWarnings(){
-		
+//	private void giveWarnings(){	
 //		Util.log("disk:       " + Util.diskFullPercent() + "% hdd prime: " + Util.countMbytes(".") + " mb", this);
 //		Util.log("zip size:   " + Util.countMbytes(Settings.archivefolder) + " mb", this);
 //		Util.log("frame size: " + Util.countMbytes(Settings.framefolder) + " mb", this);
 //		Util.log("log size:   " + Util.countMbytes(Settings.logfolder) + " mb", this);
 		
-		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
-			Util.appendUserMessage("log files too large");
+//		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
+//			Util.appendUserMessage("log files too large");
 
-		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
-			Util.appendUserMessage("images folder too large");
+//		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
+//			Util.appendUserMessage("images folder too large");
 		
 //		if(Util.testTelnetRouter()) Util.appendUserMessage("telnet Open ON ROUTER");
 //		if( ! Util.testHTTP()) Util.appendUserMessage("HTTP port blocked");
 //		if( ! Util.testRTMP()) Util.appendUserMessage("RTMP port blocked ");
-	}
+//	}
 	
 	private void grabberInitialize() {
 		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");

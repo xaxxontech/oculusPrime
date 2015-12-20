@@ -145,9 +145,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.close();
 			}
 			
-			if(view.equalsIgnoreCase("sysout")){
+			if(view.equalsIgnoreCase("stdout")){
 				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
-				out.println(Util.tail(40) + "\n");
+				out.println(Util.tail(50) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -279,7 +279,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "<td><b>navigationrouteid</b><td>" + state.get(values.navigationrouteid) 
 				+ "</tr> \n");
 		
-		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
+	//	str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
 		str.append("<tr><td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) + "</tr> \n");
 		str.append("\n</table>\n");
 		return str.toString();

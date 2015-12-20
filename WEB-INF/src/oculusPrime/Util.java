@@ -31,7 +31,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
-
+import developer.NavigationLog;
 import oculusPrime.State.values;
 
 public class Util {
@@ -46,9 +46,8 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 		
-	public static final long MAX_lOG_MBYTES = 200;  
-	public static final long MIN_lOG_MBYTES = 50;  
-	public static final long MIN_FILE_COUNT = 30;  
+//	public static final long MAX_lOG_MBYTES = 200;  
+	public static final int MIN_FILE_COUNT = 50;  
 	public static final int MAX_HISTORY = 30;
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -800,13 +799,13 @@ public class Util {
 				URLConnection connection = (URLConnection) new URL(url).openConnection();
 				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 				
-				Util.log("url: " + url, this);
-				int i;
-				String line = null;
-				while ((i = in.read()) != -1) line += (char)i;
+//				Util.log("url: " + url, this);
+//				int i;
+//				String line = null;
+				while ((in.read()) != -1); // line += (char)i;
 				in.close();
 				
-	//			debug("setJettyTelnetPort(): "+line, this);
+//				debug("setJettyTelnetPort(): "+line, this);
 				
 			} catch (Exception e) {}
 		} }).start();
@@ -822,13 +821,13 @@ public class Util {
 				URLConnection connection = (URLConnection) new URL(url).openConnection();
 				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 				
-				Util.log("url: " + url, this);
-				int i;
-				String line = null;
-				while ((i = in.read()) != -1) line += (char)i;
+//				Util.log("url: " + url, this);
+//				int i;
+//				String line = null;
+				while ((in.read()) != -1);// line += (char)i;
 				in.close();
 				
-	//			debug("updateJetty(): " + line, this);
+//				debug("updateJetty(): " + line, this);
 				
 			} catch (Exception e) {}
 		} }).start();
@@ -869,12 +868,11 @@ public class Util {
 	}
 	
 	public static void truncStaleFrames(){
-		final int prune = 3;
-		File[] files  = new File(Settings.framefolder).listFiles();
-		log("truncFrames(): " + files.length + " *files*", null);
-		if(files.length*prune < MIN_FILE_COUNT) return;
+		File[] files  = new File(Settings.framefolder).listFiles();	
+		if(files.length < MIN_FILE_COUNT) return;
+		log("truncFrames(): " + files.length + " files in folder", null);
 		sortFiles(files); 
-        for (int i = (files.length/prune); i < files.length; i++){
+        for (int i = MIN_FILE_COUNT; i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncFrames(): " + files[i].getName() + " *deleted*", null);
 				files[i].delete();
@@ -883,12 +881,11 @@ public class Util {
 	}
 	
 	public static void truncStaleArchive(){
-		final int prune = 3;
 		File[] files  = new File(Settings.archivefolder).listFiles();
-		log("truncStaleArchive(): " + files.length + " *files*", null);
-		if(files.length*prune < MIN_FILE_COUNT) return;
+		if(files.length < MIN_FILE_COUNT) return;
+		log("truncStaleArchive(): " + files.length + " files in folder", null);
 		sortFiles(files);
-        for (int i = (files.length/prune); i < files.length; i++){
+        for (int i = MIN_FILE_COUNT; i < files.length; i++){
 			if (files[i].isFile()){
 				log("truncStaleArchive(): " + files[i].getName() + " *deleted*", null);
 				files[i].delete();
@@ -908,43 +905,48 @@ public class Util {
 	}
 	
 	public  static void waitForArchive(){
-
-		if(archiveProc == null) return;
+		
+		// log("waitForArchive(): called.......................... ", null);
+		if(archiveProc == null) {
+		//	log("waitForArchive(): not busy, exit .......................... ", null);
+			return;
+		}
 		
 		try {
 			final long start = System.currentTimeMillis();
 			while(archiveProc != null){				
 				if((System.currentTimeMillis() - start) > FIVE_MINUTES){
-					archiveProc.destroy(); 
+					archiveProc.destroy();
+					log("waitForArchive(): TIMEOUT!", null); 
 					archiveProc = null;
-					log("waitForArchive(): TIMEOUT!", null);
 				} else {
-					log("waitForArchive(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
-					archiveProc = null;
 					delay(5000);
+					log("waitForArchive(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
 				}
 			}
-			log("waitForArchive(): exit.. ", null);
-			archiveProc = null;
-		} catch (Exception e){printError(e);}
+		} catch (Exception e){printError(e);archiveProc = null;}	
+		
+		if(archiveProc != null) archiveProc = null;
+		log("waitForArchive(): exit.............. ", null);
 	}
 	
-	public synchronized static boolean archiveLogs(){
+	public /*synchronized*/ static boolean archiveLogs(){
 		
-		if(archiveProc != null) return false;
-		log("archiveLogs(): folder size: " + countFiles(Settings.logfolder), null);
-		if(countMbytes(Settings.logfolder) < MIN_lOG_MBYTES) return false;
-		
+		if(archiveProc != null){
+			log("archiveLogs(): busy, skipping.. ", null);
+			return false;
+		}
+	
 		final long start = System.currentTimeMillis();
-		final String path = "./archive" + sep + System.currentTimeMillis() + "_log.tar.bz2";
+		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar.bz2";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		log("archiveLogs(): creating archive file: " + path, null);
 		
-		new Thread(new Runnable() { public void run() {
+		new Thread(new Runnable(){ public void run() {
 			try {
-				delay(2000);
-				while(archiveProc != null){				
+				delay(1000);
+				while(archiveProc != null){		
 					if((System.currentTimeMillis() - start) > FIVE_MINUTES){
 						archiveProc.destroy(); 
 						archiveProc = null;
@@ -953,20 +955,20 @@ public class Util {
 						else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
 						else log("archiveLogs(): could NOT delete: " + path, null);
 					} else {
-						debug("archiveLogs(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
-						delay(10000);
+						delay(10000);	
+						debug("archiveLogs(): waiting: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);	
 					}
 				}
 				debug("archiveLogs(): watchdog exit.. ", null);
-			} catch (Exception e){printError(e);}
-		} }).start();
+			} catch (Exception e){printError(e);archiveProc = null;}
+		}}).start();
 		
 		try {		
 			String line = null;	
 			archiveProc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(archiveProc.getInputStream()));					
-			while ((line = procReader.readLine()) != null && archiveProc != null) Util.log("manageLogs(): adding: " + line, null);	
-			if(archiveProc != null) archiveProc.waitFor();
+			while ((line = procReader.readLine()) != null && archiveProc != null) Util.debug("archiveLogs(): adding: " + line, null);	
+			// if(archiveProc != null) archiveProc.waitFor();
 		} catch (Exception e){printError(e);}
 		
 		archiveProc = null; // clear busy flag 
@@ -975,46 +977,45 @@ public class Util {
 		return new File(path).exists();
 	}
 	
-	public synchronized static boolean archiveROSLogs(){
-		if(archiveProc != null) return false;
-	//	log("archiveROSLogs(): " + countMbytes(Settings.roslogfolder), null);
-	//	if(countMbytes(Settings.roslogfolder) < MIN_lOG_MBYTES){
-	//		log("archiveROSLogs(): skipping zipping", null);
-	//		return false;
-	//	}
+	public /*synchronized*/ static boolean archiveROSLogs(){
+
+		if(archiveProc != null) {
+			log("archiveROSLogs(): busy, skipping.. ", null);
+			return false;
+		}
 	
 		final long start = System.currentTimeMillis();
-		final String path = "./archive" + sep + System.currentTimeMillis() + "_ros.tar.bz2";
+		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar.bz2";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + "  " + Settings.roslogfolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		log("archiveROSLogs(): creating archive file: " + path, null);
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				delay(200);
+				delay(1000);
 				while(archiveProc != null){				
 					if((System.currentTimeMillis() - start) > FIVE_MINUTES){
 						archiveProc.destroy(); 
 						archiveProc = null;
 						log("archiveROSLogs(): timout, deleting: " + path, null);
 						if(new File(path).delete()) log("archiveROSLogs(): deleted: " + path, null);
-						else if(new File(path).delete()) log("archiveLogs(): deleted: " + path, null);
+						else if(new File(path).delete()) log("archiveROSLogs(): deleted: " + path, null);
 						else log("archiveROSLogs(): could not delete: " + path, null);
-					} else {
-						log("archiveROSLogs(): working: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
+					} else {					
 						delay(5000);
+						log("archiveROSLogs(): working: " + (System.currentTimeMillis() - start)/1000 + " seconds", null);
 					}
 				}
 				debug("archiveROSLogs(): watchdog exit.. ", null);
-			} catch (Exception e){printError(e);}
+			} catch (Exception e){printError(e);archiveProc = null;}
 		} }).start();
 	
 		try {		
 			String line = null;	
 			archiveProc = Runtime.getRuntime().exec(cmd);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(archiveProc.getInputStream()));					
-			while ((line = procReader.readLine()) != null && archiveProc != null) Util.log("archiveROSLogs(): adding: " + line, null);	
-			if(archiveProc != null) archiveProc.waitFor();
+			while ((line = procReader.readLine()) != null && archiveProc != null) Util.debug("archiveROSLogs(): adding: " + line, null);	
+			// if(archiveProc != null) archiveProc.waitFor();
 		} catch (Exception e){printError(e);}
 		
 		archiveProc = null; // clear busy flag 
@@ -1022,7 +1023,29 @@ public class Util {
 		if(new File(path).exists()) log("archiveROSLogs(): zip file size " + new File(path).length() + " bytes", null);
 		return new File(path).exists();
 	}
-					
+	
+	public /*synchronized*/ static void archiveNavigation(){
+	
+	//	final long start = System.currentTimeMillis();
+		final String path = "./archive" + sep + "nav_"+System.currentTimeMillis() + ".tar.bz2";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + "  " + NavigationLog.navigationlogpath};
+		new File(Settings.redhome + sep + "archive").mkdir(); 
+		log("archiveNavigation(): creating archive file: " + path, null);
+		
+		new Thread(new Runnable() { public void run() {
+			try {		
+				///	String line = null;	
+					//archiveProc = 
+				
+				Runtime.getRuntime().exec(cmd);
+					//BufferedReader procReader = new BufferedReader(new InputStreamReader(archiveProc.getInputStream()));					
+					//while ((line = procReader.readLine()) != null && archiveProc != null) Util.log("archiveROSLogs(): adding: " + line, null);	
+					//if(archiveProc != null) archiveProc.waitFor();
+				
+			} catch (Exception e){printError(e);}
+		} }).start();
+	}
+	
 	//TODO: 
 	public static void manageLogs(){
 
@@ -1039,11 +1062,17 @@ public class Util {
 		new Thread(new Runnable() { public void run() {
 			try {
 				
+				log("..................manageLogs(): start inner thread..", null);
+				
+				archiveNavigation();
+				
+				// new File(NavigationLog.navigationlogpath).renameTo(dest)
+				
 				debug("manageLogs(): archive log files..");
 				if(archiveLogs()){	
 					log("manageLogs(): deleting log files..", null);
 					appendUserMessage("restart required");
-					deleteLogFiles();		
+					// deleteLogFiles();		
 				}
 			
 				waitForArchive();
@@ -1055,7 +1084,7 @@ public class Util {
 				
 				}
 				
-				log("manageLogs(): busy, skipping..", null);
+				log("..................manageLogs(): exit inner thread..", null);
 				
 			} catch (Exception e){archiveProc = null;}
 		} }).start();
@@ -1153,8 +1182,9 @@ public class Util {
 			
 		//			log("..........getRosCheck, called ros..........", null);
 					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt &" };
-					Process proc = Runtime.getRuntime().exec(cmd);	
-					proc.destroy();
+		//			Process proc = 
+					Runtime.getRuntime().exec(cmd);	
+		//			proc.destroy();
 		//			log("..........getRosCheck, exit call ros..........", null);
 
 				} catch (Exception e){printError(e);}
@@ -1169,9 +1199,10 @@ public class Util {
 			reader.close();		
 		} catch (Exception e) { rosinfor = null; }
 		
+		if(rosinfor.contains("K ROS node logs")) rosinfor = "1";
 		if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
 			rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
-		
+		 
 		// if(new File("rlog.txt").exists()) new File("rlog.txt").delete();
 		return rosinfor;
 	}	
