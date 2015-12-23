@@ -27,27 +27,29 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "7";
-
+	
 	static String restart = "<a href=\"dashboard?action=restart\">";
 	static String reboot = "<a href=\"dashboard?action=reboot\">";
+	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String archive = "<a href=\"dashboard?action=archive\">";
 	static final String truncros = "<a href=\"dashboard?action=truncros\">";
-	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
 	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";	
 	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
-	NodeList routes = null;
-	
-//	static Vector<String> routes = new Vector<String>();
-// 	static String routelinks = "<b>routes:</b>&nbsp;&nbsp;"+gotodock;
 	static Application app = null;
+	static NodeList routes = null;
 	static Settings settings = null;
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
+	
+	///private static final int CPU_HISTORY = 5;
+	///private Vector<Double> cpuHistory = new Vector<Double>(CPU_HISTORY);
+	///private double cpuAVG = 0;
+
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -298,32 +300,37 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
 		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
-		str.append( "<td><b>linux</b><td>" + Util.diskFullPercent() + "% used" + "</tr> \n"); 
+		str.append( "<td><b>linux</b><td colspan=\"2\">" + Util.diskFullPercent() + "% used</tr> \n"); 
 		
 		String dock = "undocked";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "docked";		
 		String volts = state.get(values.batteryvolts); 
-		if(volts == null) volts = "error";
+		if(volts == null) volts = "";
 		else volts += "v ";
 		
 		String life =  state.get(values.batterylife);
-		if(life == null) life = "error";
+		if(life == null) life = "";
 		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
-		volts += "&nbsp;&nbsp;" + life;
+		volts += ("&nbsp;&nbsp;" + life).trim();
+		volts = volts.trim();
 		
-		str.append("<tr><td><b>motor</b><td>" + state.get(values.motorport) 
+		String motor = " not connected";
+		if(state.exists(values.motorport)) motor = state.get(values.motorport);
+		str.append("<tr><td><b>motor</b><td>" + motor 
 			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
 			- state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins "
-			+ "<td><b>prime</b><td>" + Util.countMbytes(".") + " mbytes </a></tr> \n");
-				
-		str.append("<tr><td><b>power</b><td>" + state.get(values.powerport) 
+			+ "<td><b>prime</b><td colspan=\"2\">" + Util.countMbytes(".") + " mbytes </a></tr> \n");
+		
+		String power = " not connected";
+		if(state.exists(values.powerport)) power = state.get(values.powerport);
+		str.append("<tr><td><b>power</b><td>" + power
 			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"
-			+ "<td><b>archive</b><td>" + truncarchive + Util.countMbytes(Settings.archivefolder) 
-			+ "</a> mbytes</tr> \n");
+			+ "<td><b>archive</b><td>" + archive + Util.countMbytes(Settings.archivefolder) 
+			+ "</a> mb <td>" + truncarchive + "x</a></tr> \n");
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + volts
 			+ "<td><b>dock</b><td>" + dock
-			+ "<td><b>images</b><td>" + truncimages + Util.countMbytes(Settings.framefolder) + "</a> mbytes</tr> \n");
+			+ "<td><b>images</b><td>" + archive + Util.countMbytes(Settings.framefolder) + "</a> mb <td>" + truncimages + "x</a></tr> \n");
 		
 		String od = "disabled"; String debug = null; 
 		if(state.getBoolean(values.odometry)) od = "enabled";
@@ -333,31 +340,18 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td><b>odometry&nbsp;</b><td>" + od
 		    + "<td><b>debug</b><td>" + debug 
 			+ "<td><b>logs</b><td>" + archive 
-			+ Util.countMbytes(Settings.logfolder) + "</a> mbytes </tr> \n");
+			+ Util.countMbytes(Settings.logfolder) + "</a> mb <td>" + archive + "x</a></tr> \n");
 		
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
-			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "	
-			+ "<td><b>ros</b><td>" + truncros + Util.getRosCheck() + "</a> mbytes"
+			+ "<td><b>cpu</b><td>" + Util.getCPU() + "% "
+			+ "<td><b>ros</b><td>" + Util.getRosCheck() + " mb <td>" + truncros +"x</a></tr> \n");
 			// doesn't work on hidden file?? 
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
 			//	+ Util.countFiles(Settings.roslogfolder) 
-			+ "</tr> \n");
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() +"</tr> \n");
 	
-		/*
-		if(state.exists(values.navigationroute)){
-			str.append("<tr><td colspan=\"11\">"+ routelinks + "&nbsp;&nbsp;<b>active: </b>" +state.get(values.navigationroute));  
-			if(state.exists(values.roswaypoint)) {
-				if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) str.append(" | "+ state.get(values.roswaypoint));
-				else str.append(" | "+ ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000));
-				//else str.append(" | "+ new Date(state.getLong(values.nextroutetime)).toString().toLowerCase());
-			}
-			str.append("</tr> \n");
-		} else str.append("<tr><td colspan=\"11\">"+ routelinks +"</tr> \n");
-		 */
-		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
 		str.append(getTail() + "\n");
@@ -421,7 +415,21 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.framegrabbusy.name())) return;
 		if(key.equals(values.rosglobalpath.name())) return;
 		if(key.equals(values.rosscan.name())) return;
- 		if(key.equals(values.cpu.name())) return;
+ 		if(key.equals(values.cpu.name())) return; 
+ 		
+ 		/* {
+ 			cpuHistory.add(state.getDouble(values.cpu));
+ 			if(cpuHistory.size() > CPU_HISTORY) cpuHistory.remove(0); 
+ 			
+ 			cpuAVG = 0; String j = "";
+ 			for(int i = 0 ; i < cpuHistory.size() ; i++){
+ 				cpuAVG +=  cpuHistory.get(i);
+ 				j +=  Util.formatFloat(cpuHistory.get(i), 0) + ", ";
+ 			}
+ 			cpuAVG = cpuAVG / cpuHistory.size();
+ 			Util.debug(" " + j, this);
+ 			return;
+ 		}*/
 		
 		if(history.size() > 10) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));

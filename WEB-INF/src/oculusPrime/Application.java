@@ -1448,7 +1448,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
-		Util.waitForArchive(); // let zip files finish
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 	}
 
