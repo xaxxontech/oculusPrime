@@ -282,9 +282,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.setJettyTelnetPort();
 		Util.updateJetty();		 
 		
+		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 		
 		watchdog = new SystemWatchdog(this);
 		Util.debug("application initialize done", this);
+		
 //		giveWarnings();
 	}
 

@@ -149,7 +149,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			if(view.equalsIgnoreCase("stdout")){
 				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
-				out.println(Util.tail(50) + "\n");
+				out.println(Util.tail(40) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -326,11 +326,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td><b>power</b><td>" + power
 			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"
 			+ "<td><b>archive</b><td>" + archive + Util.countMbytes(Settings.archivefolder) 
-			+ "</a> mb <td>" + truncarchive + "x</a></tr> \n");
+			+ "</a> mb <td>" + truncarchive + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + volts
 			+ "<td><b>dock</b><td>" + dock
-			+ "<td><b>images</b><td>" + archive + Util.countMbytes(Settings.framefolder) + "</a> mb <td>" + truncimages + "x</a></tr> \n");
+			+ "<td><b>images</b><td>" + archive + Util.countMbytes(Settings.framefolder) + "</a> mb <td>" 
+			+ truncimages + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 		
 		String od = "disabled"; String debug = null; 
 		if(state.getBoolean(values.odometry)) od = "enabled";
@@ -340,11 +341,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td><b>odometry&nbsp;</b><td>" + od
 		    + "<td><b>debug</b><td>" + debug 
 			+ "<td><b>logs</b><td>" + archive 
-			+ Util.countMbytes(Settings.logfolder) + "</a> mb <td>" + archive + "x</a></tr> \n");
+			+ Util.countMbytes(Settings.logfolder) + "</a> mb <td>" + archive + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 		
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
 			+ "<td><b>cpu</b><td>" + Util.getCPU() + "% "
-			+ "<td><b>ros</b><td>" + Util.getRosCheck() + " mb <td>" + truncros +"x</a></tr> \n");
+			+ "<td><b>ros</b><td>" + Util.getRosCheck() + " mb <td>" + truncros +"x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			// doesn't work on hidden file?? 
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
 			//	+ Util.countFiles(Settings.roslogfolder) 
@@ -379,7 +380,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + " seconds";
 		}
 		
-		return link;
+		return link + " &nbsp;&nbsp;&nbsp;&nbsp;<a href=\"navigationlog/index.html\" target=\"_blank\">log</a>";
 	}
 	
 	private String getTail(){

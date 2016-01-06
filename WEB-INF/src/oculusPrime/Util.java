@@ -45,16 +45,11 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
-		
-//	public static final long MAX_lOG_MBYTES = 200;  
-	public static final int MIN_FILE_COUNT = 50;  
+		 
+	public static final int MIN_FILE_COUNT = 10;  
 	public static final int MAX_HISTORY = 30;
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
-//	static String jettyPID = getJettyPID();
-//	static private String redPID = getRed5PID();
-//	static String rosLog = getRosCheck();
-//  static private Process archiveProc = null; 
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
 	
@@ -157,7 +152,8 @@ public class Util {
 			return text;
 		}
 	}
-/*
+
+	/*
 	public static boolean copyfile(String srFile, String dtFile) {
 		try {
 			
@@ -931,26 +927,29 @@ public class Util {
 	}
 	*/
 	
-	public static void archiveLogs(){
-		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + " log"};
+	public static String archiveLogs(){
+		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
-		log("archiveLogs(): creating archive file: " + path, null);
-		new Thread(new Runnable() { public void run() {
-			try {Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-	}
-	
-	public static void archiveROSLogs(){
-		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + "  " + Settings.roslogfolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		log("archiveROSLogs(): creating archive file: " + path, null);
+	//	debug("archiveLogs(): creating archive file: " + path);
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
+		return path;
 	}
 	
+	public static String archiveROSLogs(){
+		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + "  " + Settings.roslogfolder};
+		new File(Settings.redhome + sep + "archive").mkdir(); 
+	//	debug("archiveROSLogs(): creating archive file: " + path);
+		new Thread(new Runnable() { public void run() {
+			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
+		}}).start();
+		return path;
+	}
+	
+	/*
 	public static void archiveNavigation(){
 		final String path = "./archive" + sep + "nav_"+System.currentTimeMillis() + ".tar.bz2";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + "  " + NavigationLog.navigationlogpath};
@@ -960,27 +959,115 @@ public class Util {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
 		}}).start();
 	}
+	 */
+	
+	public static void archiveAll(String[] files){
+		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar.bz2";
+		String args = "  " + NavigationLog.navigationlogpath + " ";
+		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cvjf " + path + args};
+		new File(Settings.redhome + sep + "archive").mkdir(); 
+		log("archiveAll(): creating archive file: " + path, null);
+		new Thread(new Runnable() { public void run() {
+			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
+		}}).start();
+	}
+	
+	public static Vector<String> archivePID(){
+		
+		Process proc = null;
+		Vector<String> pids = new Vector<String>(0);
+		String[] cmd = { "/bin/sh", "-c", "ps -a | grep zip" };
+		
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+		} catch (Exception e) {
+			Util.log("archivePID(): "+ e.getMessage(), null);
+			return null;
+		}  
+		
+		String line = null;
+		String[] tokens = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				tokens = line.split(" ");
+				if( ! pids.contains(tokens[0].trim())) 
+					pids.add(tokens[0].trim());							
+			}
+		} catch (IOException e) {
+			Util.log("archivePID(): ", e.getMessage());
+		}
+
+		return pids;
+	}
+	
 	
 	// TODO: 
 	public static void manageLogs(){
+		if( archivePID().size() > 0){
+			log("manageLogs(): busy, skipping.. ", null);
+			return;
+		}
+		
 		new Thread(new Runnable() { public void run() {
 			try {
 				
-				// log("manageLogs(): start inner thread..", null);
+				log(".....manageLogs(): start .. ", null);
 				
-				archiveNavigation();
-				archiveROSLogs();
-				archiveLogs();
+				waitForArchive();
+				String logs = archiveLogs();
 				
+				//log("manageLogs(): log file: " + logs, null);
+
+				waitForArchive();
+				String ros = archiveROSLogs();
+
+				// log("manageLogs(): log file: " + ros, null);
+				waitForArchive();
+				
+				archiveAll(new String[]{logs, ros, Settings.settingsfile});
+				
+				waitForArchive();
+				log("....manageLogs(): done .. ", null);
+				
+		
 				// appendUserMessage("restart required");
 				// deleteLogFiles();		
 				// deleteROS();
 				// waitForArchive();
-				
+
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
  
+	public static void waitForArchive(){
+		if(archivePID().size() > 0){
+			
+			int i = 0;
+			long start = System.currentTimeMillis();
+			for(; i < 20 ; i++){
+				if(archivePID().size() == 0) break;
+				else {
+					delay(5000);
+					if(archivePID().size() > 0) log("waitForArchive(): " + i + " pids: " + archivePID(), null);
+				}
+			}
+			
+			delay(1000);
+			if(archivePID().size() > 0){
+				
+				log("....... waitForArchive(): error kill these pids: " + archivePID(), null);
+	
+			}
+			
+			log("waitForArchive(): exit: "+ (System.currentTimeMillis() - start)/1000 + " seconds, " + i + " loops", null);
+
+		}
+	}
+	
 	public static Vector<File> walk(String path, Vector<File> allfiles){
         File root = new File( path );
         File[] list = root.listFiles();
