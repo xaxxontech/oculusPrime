@@ -620,7 +620,7 @@ public class Navigation implements Observer {
 
 					SystemWatchdog.waitForCpu();
 
-					app.driverCallServer(PlayerCommands.forward, "0.7");
+					app.driverCallServer(PlayerCommands.forward, "1.3");
 
 					Util.delay(3000);
 
@@ -725,7 +725,10 @@ public class Navigation implements Observer {
 					stopNavigation();
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
-
+					
+					Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
+						+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
+				
 //					return;
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
@@ -735,6 +738,9 @@ public class Navigation implements Observer {
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;
+				
+				Util.archiveFiles("./archive" + Util.sep + state.get(State.values.navigationroute)
+					+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
 				
 				if (!delayToNextRoute(navroute, name, id)) return;
 				

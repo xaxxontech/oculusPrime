@@ -2,7 +2,6 @@ package oculusPrime;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -46,11 +45,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static BanList ban = null;
 	static State state = null;
 	
-	///private static final int CPU_HISTORY = 5;
-	///private Vector<Double> cpuHistory = new Vector<Double>(CPU_HISTORY);
-	///private double cpuAVG = 0;
-
-	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 		state = State.getReference();
@@ -74,9 +68,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			while ((line = reader.readLine()) != null) 	result += line;
 			reader.close();
 	
-		} catch (FileNotFoundException e) {
-			return "<routeslist></routeslist>";
-		} catch (IOException e) {
+		} catch (Exception e) {
 			return "<routeslist></routeslist>";
 		}
 
@@ -111,6 +103,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null&& app != null){
 
+			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
 			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
 			if(action.equalsIgnoreCase("archive")) app.driverCallServer(PlayerCommands.archive, null);
@@ -351,17 +344,20 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			//	+ Util.countFiles(Settings.roslogfolder) 
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
-		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() +"</tr> \n");
-	
+		String msg = state.get(values.guinotify);
+		if(msg == null) msg = "";
+		else msg += "&nbsp;&nbsp;<a href=\"dashboard?action=gui\">(ignore)</a>";
+		if(msg.length() > 1) msg = "<br><b>user message: </b>&nbsp;&nbsp;" + msg;
+		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() + msg + "</tr> \n");
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail() + "\n");
-		str.append(getHistory() + "\n");
+		str.append(getTail(20) + "\n");
+//		str.append(getHistory() + "\n");
 		return str.toString();
 	}
 	
 	private String getRouteLinks(){
-		String link = "<b>routes: </b>";
+		String link = "<b>routes: </b>&nbsp;<a href=\"navigationlog/index.html\" target=\"_blank\">log</a>&nbsp;&nbsp;";
 		for (int i = 0; i < routes.getLength(); i++) {  
 			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if( ! state.equals(values.navigationroute, r)) 
@@ -379,13 +375,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			else if(state.exists(values.nextroutetime)) 
 				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + " seconds";
 		}
-		
-		return link + " &nbsp;&nbsp;&nbsp;&nbsp;<a href=\"navigationlog/index.html\" target=\"_blank\">log</a>";
+		return link; 
 	}
 	
-	private String getTail(){
+	private String getTail(int lines){
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
-		reply += Util.tailFormated(10) + " \n";
+		reply += Util.tailFormated(lines) + " \n";
 		reply += ("\n</table>\n");
 		return reply;
 	}

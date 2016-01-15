@@ -1431,8 +1431,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 		
-		// java restart not needed
-		// Util.waitForArchive();
 		shutdownApplication();
 	}
 	
@@ -1557,7 +1555,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("motion enabled", "motion", "enabled");
 		}
 	}
-
 	
 	private void clickSteer(String str) {
 		
@@ -1578,7 +1575,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		comport.clickSteer(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]));
 	}
 
-	/** */
 	public void messageGrabber(String str, String status) {
 		Util.debug("TO grabber flash: "+str+", "+status, this);  
 
