@@ -30,10 +30,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String restart = "<a href=\"dashboard?action=restart\">";
 	static String reboot = "<a href=\"dashboard?action=reboot\">";
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
-	static final String archive = "<a href=\"dashboard?action=archive\">";
+	static final String managelogs = "<a href=\"dashboard?action=managelogs\">";
+	
 	static final String truncros = "<a href=\"dashboard?action=truncros\">";
 	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
 	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";	
+	
+	static final String archiveros = "<a href=\"dashboard?action=archiveros\">";
+	static final String archiveimages = "<a href=\"dashboard?action=archiveimages\">";
+	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\">";	
+	
 	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 
 	static double VERSION = new Updater().getCurrentVersion();
@@ -66,8 +72,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			reader = new BufferedReader(new FileReader(Navigation.navroutesfile));
 			String line = "";
 			while ((line = reader.readLine()) != null) 	result += line;
-			reader.close();
-	
+			reader.close();	
 		} catch (Exception e) {
 			return "<routeslist></routeslist>";
 		}
@@ -91,7 +96,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String delay = null;	
 		String action = null;
 		String route = null;
-		
+		 
 		try {
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
@@ -106,10 +111,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
 			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
-			if(action.equalsIgnoreCase("archive")) app.driverCallServer(PlayerCommands.archive, null);
+			if(action.equalsIgnoreCase("managelogs")) app.driverCallServer(PlayerCommands.archive, null);
+			
+			if(action.equalsIgnoreCase("archiveros")) app.driverCallServer(PlayerCommands.archiveros, null);
+			if(action.equalsIgnoreCase("archiveimages")) app.driverCallServer(PlayerCommands.archiveimages, null);
+			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
+			
 			if(action.equalsIgnoreCase("truncarchive")) app.driverCallServer(PlayerCommands.truncarchive, null);
 			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
 			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
+			
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
 			
@@ -318,12 +329,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.exists(values.powerport)) power = state.get(values.powerport);
 		str.append("<tr><td><b>power</b><td>" + power
 			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"
-			+ "<td><b>archive</b><td>" + archive + Util.countMbytes(Settings.archivefolder) 
+			+ "<td><b>archive</b><td>" + managelogs + Util.countMbytes(Settings.archivefolder) 
 			+ "</a> mb <td>" + truncarchive + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + volts
 			+ "<td><b>dock</b><td>" + dock
-			+ "<td><b>images</b><td>" + archive + Util.countMbytes(Settings.framefolder) + "</a> mb <td>" 
+			+ "<td><b>images</b><td>" + archiveimages + Util.countMbytes(Settings.framefolder) + "</a> mb <td>" 
 			+ truncimages + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 		
 		String od = "disabled"; String debug = null; 
@@ -333,12 +344,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		str.append("<tr><td><b>odometry&nbsp;</b><td>" + od
 		    + "<td><b>debug</b><td>" + debug 
-			+ "<td><b>logs</b><td>" + archive 
-			+ Util.countMbytes(Settings.logfolder) + "</a> mb <td>" + archive + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
+			+ "<td><b>logs</b><td>" + archivelogs  
+			+ Util.countMbytes(Settings.logfolder) + "</a> mb <td>" + truncarchive
+			+ "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 		
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
 			+ "<td><b>cpu</b><td>" + Util.getCPU() + "% "
-			+ "<td><b>ros</b><td>" + Util.getRosCheck() + " mb <td>" + truncros +"x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
+			+ "<td><b>ros</b><td>" + archiveros + Util.getRosCheck() + "</a> mb<td>" 
+			+ truncros +"x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			// doesn't work on hidden file?? 
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
 			//	+ Util.countFiles(Settings.roslogfolder) 
@@ -352,6 +365,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
 		str.append(getTail(20) + "\n");
+//TODO: toggle view 
 //		str.append(getHistory() + "\n");
 		return str.toString();
 	}
@@ -389,7 +403,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
 		reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
 		for(int i = 0 ; i < history.size() ; i++) {
-			
 			long time = Long.parseLong(history.get(i).substring(0, history.get(i).indexOf(" ")));
 			String mesg = history.get(i).substring(history.get(i).indexOf(" "));
 			String date =  new Date(time).toString();

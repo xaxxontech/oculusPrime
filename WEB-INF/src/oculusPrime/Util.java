@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -39,35 +40,28 @@ public class Util {
 	
 	public final static String sep = System.getProperty("file.separator");
 
-	public static final int PRECISION = 3;	
 	public static final long ONE_DAY = 86400000;
 	public static final long ONE_MINUTE = 60000;
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
-		 
-	public static final int MIN_FILE_COUNT = 10;  
-	public static final int MAX_HISTORY = 30;
+	public static final int PRECISION = 2;		 
+	public static final int MIN_FILE_COUNT = 30;  
+	public static final int MAX_HISTORY = 60;
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
 	
 	public static void delay(long delay) {
-		try {
-			Thread.sleep(delay);
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-		}
+		try { Thread.sleep(delay); } 
+		catch (Exception e){ printError(e); }
 	}
 
 	public static void delay(int delay) {
-		try {
-			Thread.sleep(delay);
-		} catch (Exception e) {
-			printError(e);
-		}
+		try { Thread.sleep(delay); } 
+		catch (Exception e){ printError(e); }
 	}
 
 	public static String getTime() {
@@ -279,7 +273,7 @@ public class Util {
 		int i = 0;
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
+		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br>"); 
 		return str.toString();
 	}
 	
@@ -845,6 +839,26 @@ public class Util {
 		} 
 	}
 	
+	public static void truncState(){
+		File[] files  = new File(Settings.logfolder).listFiles(new stateFilter());	
+		log("truncState(): " + files.length + " files in folder", null);
+		if(files.length < MIN_FILE_COUNT) return;
+		sortFiles(files); 
+        for (int i = MIN_FILE_COUNT; i < files.length; i++){
+			if (files[i].isFile()){
+				log("truncState(): " + files[i].getName() + " was deleted", null);
+				files[i].delete();
+	        }
+		} 
+	}
+	 
+	public static class stateFilter implements FilenameFilter{
+        @Override
+        public boolean accept(File dir, String name) {
+            return name.contains("state");
+        }
+	 }
+	 
 	private static void sortFiles(File[] files) {
 		Arrays.sort(files, new Comparator<File>(){
 			public int compare( File f1, File f2){
@@ -868,7 +882,7 @@ public class Util {
 	
 	public static String archiveImages(){
 		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.framefolder};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.framefolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
@@ -876,9 +890,9 @@ public class Util {
 		return path;
 	}
 	
-	public static String archiveROSLogs(){
+	public static String archiveROS(){
 		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + "  " + Settings.roslogfolder};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
@@ -890,7 +904,7 @@ public class Util {
 		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar.bz2";
 		String args = "  " + NavigationLog.navigationlogpath + " ";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + args};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + args};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
@@ -901,7 +915,7 @@ public class Util {
 	public static void archiveFiles(final String fname, final String[] files){
 		String args = "";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + fname + " " + args};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
 		log("file created: " + fname, null);
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
@@ -927,57 +941,54 @@ public class Util {
 	}
 	
 	public static void manageLogs(){
+		
 		if(archivePID()){ 
 			log("manageLogs(): busy, skipping.. ", null);
 			return;
 		}
 		
 		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
-			log("deleteROS(): reboot required and must be docked, skipping.. ", null);
+			log("manageLogs(): reboot required and must be docked, skipping.. ", null);
 			return;
 		}
 	
 		new Thread(new Runnable() { public void run() {
 			try {
 				
-				waitForArchive();
-				appendUserMessage("log files purged, reboot required");
+				long start = System.currentTimeMillis();
+				appendUserMessage("log files being archived..");
 				
-				String logs = archiveLogs();
-				log("manageLogs(): log file: " + logs, null);
-				if(waitForArchive()) {
-					log("manageLogs(): **corrupt** log file: " + logs, null);
-				};
-				
-				String ros = archiveROSLogs();
+				String ros = archiveROS();
 				log("manageLogs(): log file: " + ros, null);
-				if(waitForArchive()) {
-					log("manageLogs(): **corrupt** log file: " + ros, null);
-				};
+				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + ros, null);
 				
 				String images = archiveImages();
 				log("manageLogs(): log file: " + images, null);	
-				if(waitForArchive()) {
-					log("manageLogs(): **corrupt** log file: " + images, null);
-				};				
+				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + images, null);
 				
-				String all = archiveAll(new String[]{logs, images, Settings.settingsfile});
+				String logs = archiveLogs();
+				log("manageLogs(): log file: " + logs, null);
+				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + logs, null);
+			
+				String all = archiveAll(new String[]{logs, images, ros, Settings.settingsfile});
 				log("manageLogs(): log file: " + all, null);
-				if(waitForArchive()) {
-					log("manageLogs(): **corrupt** log file: " + all, null);
-				};
+				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
+				else { // done, now clean up.. 
+					new File(images).delete();
+					new File(logs).delete();
+					new File(ros).delete();
+					truncState();
+				}
 				
-				log("manageLogs(): .. done .. ", null);
+				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
 				appendUserMessage("restart required");
-				waitForArchive();
-				waitForArchive();
 				
 				// TODO: images to clean out too... 
 				//deleteLogFiles();		
 				//deleteROS();
 				//PowerLogger.append("shutting down application", this);
 				//PowerLogger.close();
-				delay(10000);					
+				//delay(10000);					
 				//systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 				
 			} catch (Exception e){printError(e);}
@@ -989,15 +1000,15 @@ public class Util {
 			long start = System.currentTimeMillis();
 			for(;;){
 				if(archivePID()){
-					delay(10000);
+					delay(5000);
 					debug("waitForArchive(): seconds: " + (System.currentTimeMillis() - start)/1000);
-					if((System.currentTimeMillis() - start) > FIVE_MINUTES){
+					if((System.currentTimeMillis() - start) > TEN_MINUTES){
 						log("waitForArchive(): timout: " + (System.currentTimeMillis() - start)/1000, null);
 						break;
 					}
 				} else break;
 			}
-			debug("waitForArchive(): exit: "+ (System.currentTimeMillis() - start)/1000 + " seconds, ");
+			debug("waitForArchive(): exit: " + (System.currentTimeMillis() - start)/1000 + " seconds");
 		}
 		
 		return archivePID();
@@ -1049,14 +1060,20 @@ public class Util {
 		Vector<File> f = new Vector<>();
 		f = walk(path, f);
 		return f.size();
-	 }
+	}
 	
 	public static void appendUserMessage(String message){
 		State state = State.getReference();
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		if(msg.contains(message)) return;
-		else msg += " <br> ";
+		else msg += ", ";
+		msg = msg.trim();
+		if(msg.startsWith("<br>")) msg = msg.substring(4, msg.length());
+		if(msg.endsWith("<br>")) msg = msg.substring(0, msg.length()-4);
+		if(msg.startsWith(",")) msg = msg.substring(1, msg.length());
+		if(msg.endsWith(",")) msg = msg.substring(0, msg.length()-1);
+		msg = msg.trim();
 		state.set(values.guinotify, msg += message);
 	}
 
@@ -1124,3 +1141,5 @@ public class Util {
 		return rosinfor;
 	}	
 }
+
+

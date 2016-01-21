@@ -58,7 +58,8 @@ public enum PlayerCommands {
 	speech, serverbrowser, email, state, rssadd,
     
 	// undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, truncros, truncarchive, archive,
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, truncros, truncarchive, archive, 
+    archiveros, archiveimages, archivelogs, 
     
     // experimental (undocumented)
     opennisensor, clearmap, error,

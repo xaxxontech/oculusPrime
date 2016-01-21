@@ -683,6 +683,7 @@ public class Navigation implements Observer {
 					}
 					
 					// failed, try next waypoint
+					State.getReference().dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
 								routestarttime, wpname, name, consecutiveroute, 0);
@@ -703,7 +704,7 @@ public class Navigation implements Observer {
 		    	
 		    	if (!state.exists(State.values.navigationroute)) return;
 		    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-		    	
+		    	State.getReference().dumpFile("about to start docking");
 				dock();
 				
 				// wait while autodocking does its thing 
@@ -711,21 +712,24 @@ public class Navigation implements Observer {
 				while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
-							!state.getBoolean(State.values.autodocking)) break; // success
-					Util.delay(100);
+					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && !state.getBoolean(State.values.autodocking)) break; 
+					Util.delay(100); // success
 				}
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+					
 					// TODO: send alert?
+					State.getReference().dumpFile("Unable to dock: "+ routestarttime);
 					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
-//					cancelRoute(id);
+
+					// cancelRoute(id);
 					// try docking one more time, sending alert if fail
 					Util.log("calling redock()", this);
 					stopNavigation();
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
-					
+			
+					// create snapshot 
 					Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
 						+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
 				
@@ -734,20 +738,18 @@ public class Navigation implements Observer {
 					continue;
 				}
 				
-				// Util.log("total distance: " + routedistance, this);
+				State.getReference().dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;
-				
-				Util.archiveFiles("./archive" + Util.sep + state.get(State.values.navigationroute)
-					+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
+			
+//				Util.archiveFiles("./archive" + Util.sep + state.get(State.values.navigationroute)
+//					+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath,
+//						Settings.logfolder, Settings.settingsfile});
 				
 				if (!delayToNextRoute(navroute, name, id)) return;
-				
 			}
-		
 		}  }).start();
-		
 	}
 
 
