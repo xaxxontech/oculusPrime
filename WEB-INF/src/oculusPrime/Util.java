@@ -809,21 +809,35 @@ public class Util {
 	       else appendUserMessage("logs folder contains sub folders!");
 	    }
 	    files = new File(Settings.logfolder).listFiles();
-	    if(files.length != 0) log("deleteLogFiles(): must be subfolders: " + files.length, null);
-	    	
+	    if(files.length != 0) log("deleteLogFiles(): must be subfolders: " + files.length, null);	
 	}
 	
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
-		log("truncFrames(): " + files.length + " files in folder", null);
-		if(files.length < MIN_FILE_COUNT) return;
-		sortFiles(files); 
-        for (int i = MIN_FILE_COUNT; i < files.length; i++){
+        for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
-				log("truncFrames(): " + files[i].getName() + " was deleted", null);
-				files[i].delete();
+				if(!linkedFrame(files[i].getName())){
+					debug(files[i].getName() + " was deleted");
+					files[i].delete();
+				}
 	        }
 		} 
+	}
+	
+	public static boolean linkedFrame(final String fname){ 
+		Process proc = null;
+		String line = null;
+		try { 
+			proc = Runtime.getRuntime().exec( new String[]{ "/bin/sh", "-c", "grep -w \"" + fname + "\" " + NavigationLog.navigationlogpath });
+			proc.waitFor();
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
+			while ((line = procReader.readLine()) != null){
+				Util.debug("linkedFrame(): " + line);
+				return true;
+			}
+		} catch (Exception e){return false;};
+		
+		return false;
 	}
 	
 	public static void truncStaleArchive(){
@@ -941,7 +955,6 @@ public class Util {
 	}
 	
 	public static void manageLogs(){
-		
 		if(archivePID()){ 
 			log("manageLogs(): busy, skipping.. ", null);
 			return;
@@ -1140,6 +1153,54 @@ public class Util {
 		
 		return rosinfor;
 	}	
+	
+	public static void main(String[] args){
+	
+		Vector<File> files = new Vector<File>();
+		files = walk("D:\\films", files);
+		
+		System.out.println("files: " + files.size());
+
+		for(int i = 0 ; i < files.size() ; i++){
+			
+			String name = files.get(i).getName().substring(0, files.get(i).getName().indexOf("."));
+			if(  ! name.endsWith("]")) {
+				System.out.println(i + " files " + files.get(i).getAbsolutePath());
+			}
+			if( name.startsWith("the ")) {
+				System.out.println(i + " the.... " + files.get(i).getAbsolutePath());
+			}
+			
+			/*
+			String folder = files.get(i).getParent();
+			
+			folder = folder.substring(folder.lastIndexOf("\\")+1);
+			
+			folder = folder.replaceAll("-", "");
+			folder = folder.replaceAll(" ", "");
+			name = name.replaceAll(" ", "");
+			name = name.replaceAll("-", "");
+			
+			if( ! folder.contains(name)){
+				System.out.println(i + " ");
+				System.out.println(i + " name   = " + name);
+				System.out.println(i + " folder = " + folder);
+				System.out.println(i + " not folder name " + files.get(i).getAbsolutePath());
+			}
+			*/
+			
+			if(files.get(i).getName().contains("thumbs.db"))files.get(i).delete();
+			
+			String ext = files.get(i).getName().substring(files.get(i).getName().indexOf("."));
+			if( ! (ext.equals(".mp4") || ext.equals(".mp4") || ext.equals(".sub") || ext.equals(".srt") 
+					|| ext.equals(".avi")  || ext.equals(".mkv"))) files.get(i).delete();
+			
+		}
+		
+		System.out.println("files: " + files.size());
+		
+	}
+	
 }
 
 

@@ -40,12 +40,12 @@ public class Navigation implements Observer {
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
 	private final Settings settings = Settings.getReference();
-	public long routestarttime;
-	public NavigationLog navlog;
+	public volatile boolean navdockactive = false;
 	public int consecutiveroute = 1;
 	private double routedistance = 0;
-	public volatile boolean navdockactive = false;
-
+	public long routestarttime;
+	public NavigationLog navlog;
+	
 	/** Constructor */
 	public Navigation(Application a){
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
@@ -363,7 +363,7 @@ public class Navigation implements Observer {
 
 			if (rot == 1) Util.log("error, rotation required", this);
 
-			if (rot == 17) { // failure give up
+			if (rot == 21) { // failure give up
 //					callForHelp(subject, body);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 				app.driverCallServer(PlayerCommands.floodlight, "0");
@@ -478,8 +478,7 @@ public class Navigation implements Observer {
 
 		new Thread(new Runnable() { public void run() {
 
-			// get schedule info
-			// map days to numbers
+			// get schedule info, map days to numbers
 			NodeList days = navroute.getElementsByTagName("day");
 			if (days.getLength() == 0) {
 				app.driverCallServer(PlayerCommands.messageclients, "Can't schedule route, no days specified");
@@ -641,8 +640,7 @@ public class Navigation implements Observer {
 			    	if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-		    		String wpname = 
-	    				((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+		    		String wpname = ((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
 
 					app.comport.checkisConnectedBlocking(); // just in case
 
@@ -663,13 +661,12 @@ public class Navigation implements Observer {
 		    		
 		    		// wait to reach wayypoint
 					long start = System.currentTimeMillis();
-					while (state.exists(State.values.roscurrentgoal) 
-							&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
+					while (state.exists(State.values.roscurrentgoal) && System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
 						Util.delay(100);
 						long t = System.currentTimeMillis();
 						if (state.getLong(State.values.lastodomreceived) - t > 1000) // malg timeout?
 							Util.log("error, lastodomreceived: "+
-									String.valueOf(state.getLong(State.values.lastodomreceived)-t), this);
+								String.valueOf(state.getLong(State.values.lastodomreceived)-t), this);
 					}
 					
 					if (!state.exists(State.values.navigationroute)) return;
@@ -683,7 +680,7 @@ public class Navigation implements Observer {
 					}
 					
 					// failed, try next waypoint
-					State.getReference().dumpFile("# Failed to reach waypoint: "+wpname);
+					state.dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
 								routestarttime, wpname, name, consecutiveroute, 0);
@@ -695,10 +692,8 @@ public class Navigation implements Observer {
 					// send actions and duration delay to processRouteActions()
 					NodeList actions = ((Element) waypoints.item(wpnum)).getElementsByTagName("action");
 					long duration = Long.parseLong(
-							((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
+						((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
 					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name, id);
-		    		
-//					Util.delay(1000);
 					wpnum ++;
 				}
 		    	
@@ -719,7 +714,7 @@ public class Navigation implements Observer {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					
 					// TODO: send alert?
-					State.getReference().dumpFile("Unable to dock: "+ routestarttime);
+					state.dumpFile("Unable to dock: "+ routestarttime);
 					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
 
 					// cancelRoute(id);
@@ -738,7 +733,7 @@ public class Navigation implements Observer {
 					continue;
 				}
 				
-				State.getReference().dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
+				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;

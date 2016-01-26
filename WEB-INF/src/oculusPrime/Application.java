@@ -854,21 +854,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, skipping.. ", this);
 				break;
 			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
 			Util.truncStaleArchive();
+			Util.deleteLogFiles();
+			Util.truncState();
 			break;
 		case truncimages: 
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
 			Util.truncStaleFrames();
 			break;
 		case truncros: 
@@ -876,11 +866,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, skipping.. ", this);
 				break;
 			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
-			Util.archiveROS();
+			Util.deleteROS();
 			break;
 		case archiveimages: 
 			if(Util.archivePID()){ 
@@ -902,17 +888,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
-			Util.truncStaleArchive();
+			Util.archiveROS();
 			break;
 		case archivelogs: 
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);
 				break;
 			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
+			
+			//if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+			//	Util.log("archiving busy, must be docked, skipping.. ", null);
+			//	break;
+			//}
 			Util.archiveLogs();
 			break;
 		}

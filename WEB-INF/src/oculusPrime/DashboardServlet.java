@@ -19,6 +19,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import developer.Navigation;
+import developer.NavigationLog;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
@@ -112,14 +113,27 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
 			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
 			if(action.equalsIgnoreCase("managelogs")) app.driverCallServer(PlayerCommands.archive, null);
-			
 			if(action.equalsIgnoreCase("archiveros")) app.driverCallServer(PlayerCommands.archiveros, null);
 			if(action.equalsIgnoreCase("archiveimages")) app.driverCallServer(PlayerCommands.archiveimages, null);
 			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
-			
 			if(action.equalsIgnoreCase("truncarchive")) app.driverCallServer(PlayerCommands.truncarchive, null);
 			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
 			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
+			if(action.equalsIgnoreCase("cancel")) {
+				state.set(State.values.rosgoalcancel, true);
+				state.delete(State.values.roswaypoint);
+				state.delete(State.values.navigationroute);
+				state.delete(State.values.navigationrouteid);
+			}
+			
+			if(action.equalsIgnoreCase("snapshot")) {
+				
+				// create snapshot 
+				state.dumpFile("snapshot");
+				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
+					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
+		
+			}
 			
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
@@ -294,7 +308,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public String toDashboard(final String url){
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\"> \n");
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
@@ -306,7 +320,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
 		str.append( "<td><b>linux</b><td colspan=\"2\">" + Util.diskFullPercent() + "% used</tr> \n"); 
 		
-		String dock = "undocked";
+		String dock = "<font color=\"red\">undocked</font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "docked";		
 		String volts = state.get(values.batteryvolts); 
 		if(volts == null) volts = "";
@@ -356,22 +370,27 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
 			//	+ Util.countFiles(Settings.roslogfolder) 
 		
-		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
+		str.append("<tr><td colspan=\"11\"><hr></tr> \n");
+		str.append("<tr><td colspan=\"11\">"+ getCommands() + "</tr> \n");
+	
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		else msg += "&nbsp;&nbsp;<a href=\"dashboard?action=gui\">(ignore)</a>";
 		if(msg.length() > 1) msg = "<br><b>user message: </b>&nbsp;&nbsp;" + msg;
 		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() + msg + "</tr> \n");
+//		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
 		str.append(getTail(20) + "\n");
-//TODO: toggle view 
+		
+// TODO: toggle view 
 //		str.append(getHistory() + "\n");
+		
 		return str.toString();
 	}
 	
-	private String getRouteLinks(){
-		String link = "<b>routes: </b>&nbsp;<a href=\"navigationlog/index.html\" target=\"_blank\">log</a>&nbsp;&nbsp;";
+	private String getRouteLinks(){     
+		String link = "<b>routes: </b>&nbsp";//;<a href=\"navigationlog/index.html\" target=\"_blank\">log</a>&nbsp;&nbsp;";
 		for (int i = 0; i < routes.getLength(); i++) {  
 			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if( ! state.equals(values.navigationroute, r)) 
@@ -381,17 +400,30 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
 	
 		if(state.exists(values.navigationroute)){ // active route 
-			link += " <b>active: </b>" + state.get(values.navigationroute) + " ";
+			link += " <b>actice: </b>" + state.get(values.navigationroute) + "&nbsp;"; 
 		}
 		
 		if(state.exists(values.navigationroute) && state.exists(values.roswaypoint)){
-			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += " | "+ state.get(values.roswaypoint);
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += " | "+ state.get(values.roswaypoint) + "&nbsp;";
 			else if(state.exists(values.nextroutetime)) 
-				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + " seconds";
+				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + "&nbsp;seconds&nbsp;"
+						+ "<a href=\"dashboard?action=cancel\">x</a>";
 		}
 		return link; 
 	}
 	
+	private String getCommands(){     
+		String link = 
+				"<b>commands: </b>&nbsp;"+	
+				"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation log</a>&nbsp;"+
+				"<a href=\"dashboard?action=snapshot\">snaphot</a>&nbsp"
+			//	"<a href=\"dashboard?action=viewstate\">state</a> | log | stdot | power&nbsp;"
+			
+			;
+			
+		return link; 
+	}
+	 
 	private String getTail(int lines){
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
 		reply += Util.tailFormated(lines) + " \n";
