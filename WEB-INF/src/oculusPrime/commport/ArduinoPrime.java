@@ -1644,7 +1644,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			R = comp[1];
 			sendCommand(new byte[]{FORWARD, (byte) R, (byte) L});
 			state.set(State.values.direction, direction.forward.toString());
-			Util.log("arcmove straight: "+arclengthmeters, this);
+//			Util.log("arcmove straight: "+arclengthmeters, this);
 
 			new Thread(new Runnable() {
 				public void run() {

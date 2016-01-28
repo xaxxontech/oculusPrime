@@ -371,7 +371,7 @@ public class SystemWatchdog implements Observer {
 			if (cpu < threshold) { // do it again to be sure
 				cpu = Util.getCPU();
 				if (cpu <threshold) {
-					Util.debug("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
+					Util.log("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
 					return;
 				}
 			}

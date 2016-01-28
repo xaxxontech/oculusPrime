@@ -841,7 +841,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// dev tool only
 		case error:
 			try {
-				if(state.exists(values.redockifweakconnection)) Util.log("redockifweakconnection exists", this);
+				state.set(values.roscurrentgoal, "");
+				messageplayer("*"+state.get(values.roscurrentgoal)+"*", null, null);
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 

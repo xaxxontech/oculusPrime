@@ -230,8 +230,10 @@ public class Navigation {
 			}
 
 			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
-				Util.log("error, state rosgoalstatus null, waypoint may have been cancelled", this);
-				return;
+//				Util.log("error, state rosgoalstatus null, waypoint may have been cancelled", this);
+//				return;
+				Util.log("error, rosgoalstatus null, setting to empty string", this); // TODO: testing
+				state.set(State.values.rosgoalstatus, "");
 			}
 
 			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
@@ -281,6 +283,8 @@ public class Navigation {
 //			if (state.exists(State.values.lightlevel)) Util.log("lightlevel: "+state.get(State.values.lightlevel), this);
 //			else Util.log("error, lightlevel null", this);
 
+			SystemWatchdog.waitForCpu(30, 20000); // added stricter 30% check, lots of missed dock grabs here
+
 			// make sure dock in view before calling autodock go
 			if (!finddock(AutoDock.LOWRES)) { // something wrong with camera capture, try again?
 				Util.log("error, finddock() needs to try 2nd time", this);
@@ -326,7 +330,7 @@ public class Navigation {
 		int rot = 0;
 
 		while (navdockactive) {
-			SystemWatchdog.waitForCpu();
+			SystemWatchdog.waitForCpu(); // added stricter 40% check, lots of missed dock grabs here
 
 			app.driverCallServer(PlayerCommands.dockgrab, resolution);
 			long start = System.currentTimeMillis();
@@ -663,8 +667,9 @@ public class Navigation {
 					if (!state.exists(State.values.rosgoalstatus)) { // this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 
 						Util.log("error, state rosgoalstatus null", this);
-						cancelRoute(id);
-						return;
+//						cancelRoute(id);
+//						return;
+						state.set(State.values.rosgoalstatus, "error");
 					}
 					
 					// failed, try next waypoint
