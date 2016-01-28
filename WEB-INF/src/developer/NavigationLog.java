@@ -1,14 +1,15 @@
 package developer;
 
-import oculusPrime.Application;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+
 import oculusPrime.Settings;
-import oculusPrime.State;
 import oculusPrime.Util;
 
-import java.io.*;
-
 /**
- *
  * read file, nuke </body></html>at end, add new stuff, add end back, rewrite file
  *
  * create item for every completed route
@@ -38,7 +39,7 @@ public class NavigationLog {
 
     // completed route
     public void newItem(final String status, final String msg, final long starttime, final String waypoint,
-                        final String routename, final int consecutiveroute) {
+                        final String routename, final int consecutiveroute, final double routedistance) {
 
         new Thread(new Runnable() { public void run() {
 
@@ -57,10 +58,7 @@ public class NavigationLog {
             if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
             else str += "class='"+status.toLowerCase()+"' ";
 
-//            str += "onclick=\"window.open(document.URL.replace(/#.*$/, '')+'#"+id+"', '_self'); loaded();\" ";
-//            str += "onclick=\"location.hash='"+id+"'; loaded();\" ";
             str += "onclick=\"clicked(this.id);\" ";
-
             str += ">"+Util.getTime() + PIPE;
             String rname = routename;
             if (rname == null) rname = "undefined";
@@ -76,9 +74,12 @@ public class NavigationLog {
             if (msg != null) str += msg+"<br>\n";
             if (waypoint != null) str += "Waypoint: "+waypoint+"<br>\n";
             str += "Consecutive Route: "+consecutiveroute+"<br>\n";
-            long st = starttime;
-            if (st==0) st = System.currentTimeMillis();
-            str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes<br>\n";
+            if( !status.equals(NavigationLog.INFOSTATUS.toString()) && !status.equals(NavigationLog.ERRORSTATUS.toString())){
+            	long st = starttime;
+            	if (st==0) st = System.currentTimeMillis();
+            	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
+            }
+            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n";
             str += "</div>\n";
 
             writeFile(str);

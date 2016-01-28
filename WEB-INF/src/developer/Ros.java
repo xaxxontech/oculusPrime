@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
-import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.Settings;
 import oculusPrime.State;

@@ -1,6 +1,8 @@
 package oculusPrime;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -8,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import java.util.Vector;
 
 import developer.Ros.navsystemstate;
@@ -54,10 +57,7 @@ public class State {
 	
 	/** @return true if given command is in the sub-set */
 	public static boolean isNonTelnetBroadCast(final String str) {
-		try { 
-			nonTelnetBroadcast.valueOf(str); 
-		} catch (Exception e) {return false;}
-		
+		try { nonTelnetBroadcast.valueOf(str); } catch (Exception e) {return false;}
 		return true; 
 	}
 	
@@ -120,27 +120,25 @@ public class State {
 		return equals(value.name(), b);
 	}
 	
+	/*
 	@Override
-	public String toString(){	
+	public String tojjString(){	
 		String str = "";
-		Set<String> keys = props.keySet();
-		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
-			String key = i.next();
+		final Set<String> keys = props.keySet();
+		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
+			final String key = i.next();
 			str += (key + " " + props.get(key) + "<br>"); 
 		}
 		return str;
 	}
-
+	*/
+	
 	public boolean equals(values a, navsystemstate b) {
 		return equals(a.name(), b.name());
 	}
 	
 	public String toHTML(){ 
-		StringBuffer str = new StringBuffer("<table>"); // cellspacing=\"3\" border=\"0\">");
-		
-	//	str.append("<tr><td rowspan=\"55\">");
-	//	for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " <br> \n");
-	
+		StringBuffer str = new StringBuffer("<table>"); 
 		Set<String> keys = props.keySet();
 		for(Iterator<String> i = keys.iterator(); i.hasNext();){
 			try {
@@ -190,9 +188,6 @@ public class State {
 					
 			str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"9\"> " + names + " </tr> \r");
 		}
-	
-	//	if(props.containsKey(values.rosglobalpath.name())) 
-		//  	str.append("<tr><td><b>rosglobalpath</b><td colspan=\"9\"> " + props.get(values.rosglobalpath.name()) + " </tr> \r");
 	
 		if(props.containsKey(values.rosamcl.name())) 
 			str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
@@ -423,4 +418,31 @@ public class State {
 		return getDouble(key.name());
 	}
 
+	/*
+	public String dumpFile(){	
+		return dumpFile(" no message ");
+	}
+	*/
+	
+	public String dumpFile(final String msg) {
+		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
+		Util.log("file created: "+dump.getAbsolutePath(), this);
+		
+		try {
+			FileWriter fw = new FileWriter(dump);	
+			fw.append("# "+ new Date().toString() + " " + msg +"\r\n");
+			final Set<String> keys = props.keySet();
+			for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
+				final String key = i.next();
+				fw.append(key + " " + props.get(key) + "\r\n"); 
+			}
+			fw.append("# state history \r\n");
+			Vector<String> snap = Util.history;
+			for(int i = 0; i < snap.size() ; i++) fw.append(snap.get(i)+"\r\n");
+			fw.close();
+
+		} catch (Exception e) { Util.printError(e); }
+	
+		return dump.getAbsolutePath();
+	}
 }

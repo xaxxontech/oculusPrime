@@ -253,12 +253,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			scanUtils = new developer.depth.ScanUtils();
 		}
 
-		//if ( ! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
-		//	commandServer = new TelnetServer(this);
-		//	Util.debug("telnet server started", this);
-		//}
-
-		try {
+		try { 
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -282,39 +277,36 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
 
-		if(Util.getJettyPID() != null) {
-			Util.setJettyTelnetPort();
-			Util.updateJetty();
-		} else Util.log("application.initalize(): wifi manager is not running!!", this);
-
-//		giveWarnings();
+		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
+		//else {
+		Util.setJettyTelnetPort();
+		Util.updateJetty();		 
+		
+		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+		
 		watchdog = new SystemWatchdog(this);
 
-		// commport does this in initalize now
-		//	public void run() {
-		//		Util.delay(10000);  // arduino takes 10 sec to reach full power?
-		//		comport.strobeflash(ArduinoPrime.mode.on.toString(), 200, 30); // signifies application ready
-
 		Util.debug("application initialize done", this);
+		
+//		giveWarnings();
 	}
 
-	private void giveWarnings(){
-		
+//	private void giveWarnings(){	
 //		Util.log("disk:       " + Util.diskFullPercent() + "% hdd prime: " + Util.countMbytes(".") + " mb", this);
 //		Util.log("zip size:   " + Util.countMbytes(Settings.archivefolder) + " mb", this);
 //		Util.log("frame size: " + Util.countMbytes(Settings.framefolder) + " mb", this);
 //		Util.log("log size:   " + Util.countMbytes(Settings.logfolder) + " mb", this);
 		
-		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
-			Util.appendUserMessage("log files too large");
+//		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
+//			Util.appendUserMessage("log files too large");
 
-		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
-			Util.appendUserMessage("images folder too large");
+//		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
+//			Util.appendUserMessage("images folder too large");
 		
 //		if(Util.testTelnetRouter()) Util.appendUserMessage("telnet Open ON ROUTER");
 //		if( ! Util.testHTTP()) Util.appendUserMessage("HTTP port blocked");
 //		if( ! Util.testRTMP()) Util.appendUserMessage("RTMP port blocked ");
-	}
+//	}
 	
 	private void grabberInitialize() {
 		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");
@@ -477,7 +469,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute);
+						navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
@@ -795,8 +787,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str,
-						navigation.consecutiveroute);
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
 				navigation.runRoute(str);
 			}
 			break;
@@ -805,7 +796,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null && state.exists(values.navigationroute)) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute);
+						navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			break;
@@ -859,6 +850,59 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case archive: 
 			Util.manageLogs();
+			break;
+		case truncarchive:
+			if(Util.archivePID()){ 
+				Util.log("archiving busy, skipping.. ", this);
+				break;
+			}
+			Util.truncStaleArchive();
+			Util.deleteLogFiles();
+			Util.truncState();
+			break;
+		case truncimages: 
+			Util.truncStaleFrames();
+			break;
+		case truncros: 
+			if(Util.archivePID()){ 
+				Util.log("archiving busy, skipping.. ", this);
+				break;
+			}
+			Util.deleteROS();
+			break;
+		case archiveimages: 
+			if(Util.archivePID()){ 
+				Util.log("archiving busy, skipping.. ", this);
+				break;
+			}
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			Util.archiveImages();
+			break;
+		case archiveros:
+			if(Util.archivePID()){ 
+				Util.log("archiving busy, skipping.. ", this);
+				break;
+			}
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			Util.archiveROS();
+			break;
+		case archivelogs: 
+			if(Util.archivePID()){ 
+				Util.log("archiving busy, skipping.. ", this);
+				break;
+			}
+			
+			//if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+			//	Util.log("archiving busy, must be docked, skipping.. ", null);
+			//	break;
+			//}
+			Util.archiveLogs();
 			break;
 		}
 	}
@@ -1432,8 +1476,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 		
-		// java restart not needed
-		// Util.waitForArchive();
 		shutdownApplication();
 	}
 	
@@ -1455,7 +1497,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
-		Util.waitForArchive(); // let zip files finish
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 	}
 
@@ -1568,7 +1609,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("motion enabled", "motion", "enabled");
 		}
 	}
-
 	
 	private void clickSteer(String str) {
 		
@@ -1589,7 +1629,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		comport.clickSteer(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]));
 	}
 
-	/** */
 	public void messageGrabber(String str, String status) {
 		Util.debug("TO grabber flash: "+str+", "+status, this);  
 
