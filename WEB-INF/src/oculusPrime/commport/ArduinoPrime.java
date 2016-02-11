@@ -1584,7 +1584,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public void arcmove(final double arclengthmeters, final int angledegrees) {
 
-//		if degrees per arcmeter are below threshold, go straight and exit
 		if (arclengthmeters ==0) return;
 
 		final long moveID = System.nanoTime();
@@ -1660,7 +1659,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		new Thread(new Runnable() {
 			public void run() {
 
-				double angleradians = Math.toRadians(Math.abs(angledegrees));
+				double angleradians = Math.toRadians(Math.abs(angledegrees)) * 1.4; // TODO: comp constant, make settable?
 				double radius = arclengthmeters/angleradians;
 
 				final int degreespermetermin = 6; // pwm 100

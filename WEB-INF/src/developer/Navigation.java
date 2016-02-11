@@ -739,7 +739,7 @@ public class Navigation implements Observer {
 					continue;
 				}
 				
-				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
+//				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;

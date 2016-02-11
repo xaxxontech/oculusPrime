@@ -86,6 +86,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 	@Override
 	public boolean appConnect(IConnection connection, Object[] params) {
 
+		// TODO: testing avconv/ffmpeg stream
+		if ((connection.getRemoteAddress()).equals("127.0.0.1") && params.length==0) {
+			Util.log("localhost netstream connect, no params", this);
+			return true;
+		}
+
 		String logininfo[] = ((String) params[0]).split(" ");
 
 		// always accept local grabber
@@ -193,6 +199,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// currently no username info when passenger disconnects
 	}
 
+	// called by flash
 	public void grabbersignin(String mode) {
 		if (mode.equals("init")) {
 			state.delete(State.values.stream);
@@ -288,26 +295,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		Util.debug("application initialize done", this);
 		
-//		giveWarnings();
 	}
 
-//	private void giveWarnings(){	
-//		Util.log("disk:       " + Util.diskFullPercent() + "% hdd prime: " + Util.countMbytes(".") + " mb", this);
-//		Util.log("zip size:   " + Util.countMbytes(Settings.archivefolder) + " mb", this);
-//		Util.log("frame size: " + Util.countMbytes(Settings.framefolder) + " mb", this);
-//		Util.log("log size:   " + Util.countMbytes(Settings.logfolder) + " mb", this);
-		
-//		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
-//			Util.appendUserMessage("log files too large");
-
-//		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
-//			Util.appendUserMessage("images folder too large");
-		
-//		if(Util.testTelnetRouter()) Util.appendUserMessage("telnet Open ON ROUTER");
-//		if( ! Util.testHTTP()) Util.appendUserMessage("HTTP port blocked");
-//		if( ! Util.testRTMP()) Util.appendUserMessage("RTMP port blocked ");
-//	}
-	
 	private void grabberInitialize() {
 		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");
 		else initialize_launch();
@@ -346,7 +335,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}).start();
 	}
 
-	/** */
+	/**
+	 * called by remote flash
+	 * */
 	public void playersignin() {		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
 		String videosoundmode=VIDEOSOUNDMODELOW;
@@ -904,6 +895,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			//}
 			Util.archiveLogs();
 			break;
+
+		case streammode: // TODO: testing ffmpeg/avconv streaming
+			grabberSetStream(str);
+			break;
+
 		}
 	}
 
@@ -947,7 +943,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 */
 	@SuppressWarnings("incomplete-switch")
 	public void grabberCallServer(final grabberCommands cmd, final String str) {
-		
+
 		switch (cmd) {
 		case streammode:
 			grabberSetStream(str);
@@ -959,7 +955,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			populateSettings();
 			break;
 			case systemcall:
-			Util.systemCall(str);
+				Util.systemCall(str);
 			break;
 		case chat:
 			chat(str);
@@ -972,7 +968,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.autoDock(str);
 			break;
 			case factoryreset:
-			factoryReset();
+				factoryReset();
 				break;
 		case restart:
 			restart();
@@ -980,7 +976,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case shutdown:
 			shutdownApplication();
 			break;
-		case streamactivitydetected:
+			case streamactivitydetected:
 			streamActivityDetected(str);
 			break;
 
