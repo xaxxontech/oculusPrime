@@ -31,6 +31,7 @@ public class State {
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
+		writingframegrabs, // undocumented
 
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
 		powererror, forceundock,
@@ -425,6 +426,8 @@ public class State {
 	*/
 	
 	public String dumpFile(final String msg) {
+		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
+
 		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
 		Util.log("file created: "+dump.getAbsolutePath(), this);
 		

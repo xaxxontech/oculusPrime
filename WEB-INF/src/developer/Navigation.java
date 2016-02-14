@@ -238,8 +238,7 @@ public class Navigation implements Observer {
 
 			// wait to reach waypoint
 			start = System.currentTimeMillis();
-			while (state.exists(State.values.roscurrentgoal)
-					&& System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
+			while (System.currentTimeMillis() - start < WAYPOINTTIMEOUT && state.exists(State.values.roscurrentgoal)) {
 				if (!state.get(State.values.roscurrentgoal).equals(goalcoords)) return; // waypoint changed while waiting
 				Util.delay(10);
 			}
@@ -705,7 +704,7 @@ public class Navigation implements Observer {
 		    	
 		    	if (!state.exists(State.values.navigationroute)) return;
 		    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-		    	State.getReference().dumpFile("about to start docking");
+//		    	State.getReference().dumpFile("about to start docking");
 				dock();
 				
 				// wait while autodocking does its thing 

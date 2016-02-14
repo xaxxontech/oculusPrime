@@ -125,7 +125,7 @@ public class SystemWatchdog implements Observer {
 
 //			 check cpu useage
 			int cpuNow = Util.getCPU();
-			if(cpuNow > 50) Util.log("cpu: "+cpuNow, this);
+			if(cpuNow > 60) Util.log("cpu: "+cpuNow, this);
 			state.set(values.cpu, Util.getCPU());
 
 			// notify driver if any system messages

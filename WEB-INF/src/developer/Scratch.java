@@ -1,6 +1,9 @@
 package developer;
 
 
+import oculusPrime.Util;
+
+import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,18 +29,8 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        double n = 100;
-        double volts = 11; // result upcomp = 114.9
-        final double nominalvolts = 12.0;
-        final double exponent = 1.6;
-
-        n = n * Math.pow(nominalvolts/volts, exponent);
-
-        System.out.println(n);
-
-        n=n/Math.pow(nominalvolts/volts, exponent);
-        System.out.println(n);
-
+        int i=1;
+        System.out.println("ASdf"+(i+2));
 
     }
 }

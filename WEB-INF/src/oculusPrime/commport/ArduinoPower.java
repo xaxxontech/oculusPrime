@@ -545,7 +545,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	 * @param cmd
 	 *            is a byte array of messages to send
 	 */
-	public void sendCommand(byte[] cmd) {
+	private void sendCommand(byte[] cmd) {
 
 		String text = "sendCommand(): " + (char)cmd[0] + " ";
 		for(int i = 1 ; i < cmd.length ; i++) 
