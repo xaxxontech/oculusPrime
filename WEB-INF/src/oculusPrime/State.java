@@ -417,12 +417,6 @@ public class State {
 	public double getDouble(values key) {
 		return getDouble(key.name());
 	}
-
-	/*
-	public String dumpFile(){	
-		return dumpFile(" no message ");
-	}
-	*/
 	
 	public String dumpFile(final String msg) {
 		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
@@ -431,6 +425,7 @@ public class State {
 		try {
 			FileWriter fw = new FileWriter(dump);	
 			fw.append("# "+ new Date().toString() + " " + msg +"\r\n");
+			fw.append("# state values \r\n");
 			final Set<String> keys = props.keySet();
 			for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
 				final String key = i.next();
@@ -439,6 +434,11 @@ public class State {
 			fw.append("# state history \r\n");
 			Vector<String> snap = Util.history;
 			for(int i = 0; i < snap.size() ; i++) fw.append(snap.get(i)+"\r\n");
+			
+			// TODO: ADD 50 LINES FROM ROS 
+			// fw.append("# ros tail \r\n");
+			// fw.append(Util.rosTail());
+		
 			fw.close();
 
 		} catch (Exception e) { Util.printError(e); }

@@ -2,16 +2,21 @@ package developer;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 
+import org.w3c.dom.Attr;
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.TypeInfo;
+import org.w3c.dom.UserDataHandler;
 
 import developer.image.OpenCVObjectDetect;
 import oculusPrime.Application;
@@ -39,10 +44,16 @@ public class Navigation implements Observer {
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
+	
+	private static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
+	private static final String ESTIMATED_TIME_TAG = "estimatedtime";
+	
 	private final Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
 	public int consecutiveroute = 1;
-	private double routedistance = 0;
+	private long estimateddistance = 0;
+	private long estimatedtime = 0;
+	private long routedistance = 0;
 	public long routestarttime;
 	public NavigationLog navlog;
 	
@@ -65,7 +76,7 @@ public class Navigation implements Observer {
 					routedistance += val;
 					Util.debug("route distance (mm): " + routedistance, this);
 				}
-			} catch (Exception e) {/*Util.printError(e);*/}
+			} catch (Exception e){}
 		}
 	}
 
@@ -364,7 +375,9 @@ public class Navigation implements Observer {
 			if (rot == 1) Util.log("error, rotation required", this);
 
 			if (rot == 21) { // failure give up
-//					callForHelp(subject, body);
+				
+//TODO: .......
+//				Util.callForHelp("Robot needs help..", "Navigation.finddock() failed to find dock");
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 				app.driverCallServer(PlayerCommands.floodlight, "0");
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.finddock() failed to find dock");
@@ -390,10 +403,7 @@ public class Navigation implements Observer {
 			String line = "";
 			while ((line = reader.readLine()) != null) 	result += line;
 			reader.close();
-
-		} catch (FileNotFoundException e) {
-			return "<routeslist></routeslist>";
-		} catch (IOException e) {
+		} catch (Exception e) {
 			return "<routeslist></routeslist>";
 		}
 
@@ -422,38 +432,89 @@ public class Navigation implements Observer {
 				break;
 			}
 		}
-
 	}
 
+	public void updateRouteInfo(final String name, final int minutes, final double distance){
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				Util.log("... update xml route:  " + name + " distance:  " + distance + " minutes: " + minutes, this);
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(distance, 0));
+				} catch (Exception e) { // create if not there 
+					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
+					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
+					dist.setTextContent(Double.toString(distance));
+					route.appendChild(dist);
+				}
+			
+				try {
+					//((Element) routes.item(i)).getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(minutes));
+					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(minutes));
+				} catch (Exception e) { // create if not there 
+					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
+					Node time = document.createElement(ESTIMATED_TIME_TAG);
+					time.setTextContent(Integer.toString(minutes));
+					route.appendChild(time);
+				}
+				saveRoute(Util.XMLtoString(document));
+				break;
+			}
+		}
+	}
+
+	private void readEstimates(){
+		
+	}
+	
 	public void runRoute(final String name) {
-		// build error checking into this (ignore duplicate waypoints, etc)
+		
+		// TODO: build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
 
-		if (state.getBoolean(State.values.autodocking)) {
+		if (state.getBoolean(State.values.autodocking)){
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
 			return;
 		}
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
-				!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  {
-			app.driverCallServer(PlayerCommands.messageclients,
-					"Can't start route, location unknown, command dropped");
+				!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())){
+			app.driverCallServer(PlayerCommands.messageclients, "Can't start route, location unknown, command dropped");
 			cancelAllRoutes();
 			return;
 		}
 
-		if (state.exists(State.values.navigationroute))  cancelAllRoutes(); // if another route running
-
+		if (state.exists(State.values.navigationroute)) cancelAllRoutes(); // if another route running
+		
 		// check for route name
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i< routes.getLength(); i++) {
     		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			// unflag any currently active routes. New active route gets flagged just below:
+    		// unflag any currently active routes. New active route gets flagged below..
 			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
 			if (rname.equals(name)) {
     			route = (Element) routes.item(i);
+    			try { // check for an estimated distance tag
+    				estimateddistance = Long.parseLong(route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent());
+    				Util.log("[" +rname + "] estimated distance : " + estimateddistance, this);
+    			} catch (Exception e){
+    				Util.log("no route _distance_ available for: " + rname, this);
+    				estimateddistance = 0;
+    			}
+    			
+    			try { // check for an estimated time tag
+    				estimatedtime = Long.parseLong(route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent());
+    				Util.log("["+ rname + "] estimated time : " + estimatedtime, this);
+    			} catch (Exception e){
+    				Util.log("no route _time_ available for: " + rname, this);
+    				estimatedtime = 0;
+    			}
     			break;
     		}
 		}
@@ -473,9 +534,8 @@ public class Navigation implements Observer {
 		route.getElementsByTagName("active").item(0).setTextContent("true");
 		String xmlstring = Util.XMLtoString(document);
 		saveRoute(xmlstring);
-
+		
 		app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
-
 		new Thread(new Runnable() { public void run() {
 
 			// get schedule info, map days to numbers
@@ -592,8 +652,7 @@ public class Navigation implements Observer {
 					if (!state.exists(State.values.navigationroute)) return;
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							null, name, consecutiveroute, 0);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime, null, name, consecutiveroute, 0);
 
 					if (state.getUpTime() > Util.TEN_MINUTES) {
 						app.driverCallServer(PlayerCommands.reboot, null);
@@ -671,13 +730,15 @@ public class Navigation implements Observer {
 					
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-	
-					if (!state.exists(State.values.rosgoalstatus)) { // this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 
+//TODO: brad ..... removed, testing... 
+				/*	if (!state.exists(State.values.rosgoalstatus)) { 
+						// this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 						Util.log("error, state rosgoalstatus null", this);
 						cancelRoute(id);
 						return;
-					}
+					} */
+			    	
 					
 					// failed, try next waypoint
 					state.dumpFile("# Failed to reach waypoint: "+wpname);
@@ -699,7 +760,7 @@ public class Navigation implements Observer {
 		    	
 		    	if (!state.exists(State.values.navigationroute)) return;
 		    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-		    	State.getReference().dumpFile("about to start docking");
+//		    	State.getReference().dumpFile("about to start docking");
 				dock();
 				
 				// wait while autodocking does its thing 
@@ -724,29 +785,24 @@ public class Navigation implements Observer {
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 			
-					// create snapshot 
-					Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
-						+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
-				
-//					return;
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
 				
-				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
+				int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
+				updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
+				Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(routestarttime - seconds), this);
+				Util.log("estimated: " + estimateddistance + " seconds : " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
+				
+// 				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
-				consecutiveroute ++;
+				consecutiveroute++;
 				routedistance = 0;
 			
-//				Util.archiveFiles("./archive" + Util.sep + state.get(State.values.navigationroute)
-//					+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath,
-//						Settings.logfolder, Settings.settingsfile});
-				
 				if (!delayToNextRoute(navroute, name, id)) return;
 			}
-		}  }).start();
+		}}).start();
 	}
-
 
 	private boolean delayToNextRoute(Element navroute, String name, String id) {
 		// delay to next route
@@ -784,9 +840,6 @@ public class Navigation implements Observer {
 
 	/**
 	 * process actions for single waypoint 
-	 * 
-	 * @param actions
-	 * @param duration
 	 */
 	private void processWayPointActions(NodeList actions, long duration, String wpname, String name, String id) {
 		
@@ -860,18 +913,11 @@ public class Navigation implements Observer {
 
 		// setup camera mode and position
 		if (camera) {
-			if (human)
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
-			else if (motion)
-    			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-			else // photo
-				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
-
-			if (photo)
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
-			else
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
-
+			if (human) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+			else if (motion) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			else app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+			if (photo) app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
+			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
 		}
 
 		// turn on cam and or mic, allow delay for normalize

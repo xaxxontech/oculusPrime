@@ -428,7 +428,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
-	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
@@ -448,6 +447,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			case chat: chat(str) ;return;
 			case beapassenger: beAPassenger(str);return;
 			case assumecontrol: assumeControl(str); return;
+		default:
+			break;
 		}
 		
 		// must be driver/non-passenger for all commands below 
@@ -866,6 +867,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, skipping.. ", this);
 				break;
 			}
+			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.deleteROS();
 			break;
 		case archiveimages: 
@@ -877,6 +879,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
+			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.archiveImages();
 			break;
 		case archiveros:
@@ -888,6 +891,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
+			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.archiveROS();
 			break;
 		case archivelogs: 
@@ -895,11 +899,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, skipping.. ", this);
 				break;
 			}
-			
-			//if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-			//	Util.log("archiving busy, must be docked, skipping.. ", null);
-			//	break;
-			//}
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.archiveLogs();
 			break;
 		}
@@ -916,20 +920,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	/**
-	 * turn string input to command id
-	 * 
-	 * @param fn
-	 *            is the funct ion to call
-	 * @param str
-	 *            is the parameters to pass on to the function.
+	 * turn string input to command 
 	 */
 	public void grabberCallServer(String fn, String str) {
 		grabberCommands cmd = null;
 		try {
 			cmd = grabberCommands.valueOf(fn);
-		} catch (Exception e) {
-			return;
-		}
+		} catch (Exception e) {return;}
 
 		if (cmd == null) return;
 		else grabberCallServer(cmd, str);
@@ -937,13 +934,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	/**
 	 * distribute commands from grabber
-	 * 
-	 * @param cmd
-	 *            is the function to call in xxxxxx.swf ???
-	 * @param str
-	 *            is the parameters to pass on to the function.
 	 */
-	@SuppressWarnings("incomplete-switch")
 	public void grabberCallServer(final grabberCommands cmd, final String str) {
 		
 		switch (cmd) {
@@ -981,7 +972,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case streamactivitydetected:
 			streamActivityDetected(str);
 			break;
-
+		default:
+			break;
 		}
 	}
 

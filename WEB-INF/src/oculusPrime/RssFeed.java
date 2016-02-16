@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -39,8 +38,7 @@ public class RssFeed {
 		if(new File(RSSFILE).exists()) { 
 			items = readItems();  
 			items.add(0, new Item(title, description));
-		}
-		else {
+		} else {
 			items = new ArrayList<Item>();
 			items.add(new Item(title, description));
 		}
@@ -67,7 +65,7 @@ public class RssFeed {
 					String description = str.substring(str.indexOf("<description>")+13, str.indexOf("</description>"));
 					String link = str.substring(str.indexOf("<link>")+6, str.indexOf("</link>"));
 					String pubDate = str.substring(str.indexOf("<pubDate>")+9, str.indexOf("</pubDate>"));
-					String guid = str.substring(str.indexOf("<guid>")+6, str.indexOf("</guid"));
+					String guid = str.substring(str.indexOf("<guid>")+6, str.indexOf("</guid")); // TODO: MISSING CLOSING TAG? 
 					Item item = new Item(title, description);
 					item.link = link;
 					item.pubDate = pubDate;
@@ -103,15 +101,10 @@ public class RssFeed {
 			fw.append("</channel></rss>");
 			fw.close();
 			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
+		} catch (Exception e) { Util.printError(e); }
 	}
 	
 	private class Item {
-
 		public String title = null;
 		public String description = null;
 		public String link = null;
@@ -131,5 +124,4 @@ public class RssFeed {
 			this.guid = this.link;
 		}
 	}
-
 }

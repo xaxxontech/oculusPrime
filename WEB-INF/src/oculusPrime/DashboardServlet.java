@@ -112,37 +112,28 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
 			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
-			if(action.equalsIgnoreCase("managelogs")) app.driverCallServer(PlayerCommands.archive, null);
+			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
+			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
+			if(action.equalsIgnoreCase("managelogs")) app.driverCallServer(PlayerCommands.archive, null);			
+			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
 			if(action.equalsIgnoreCase("archiveros")) app.driverCallServer(PlayerCommands.archiveros, null);
-			if(action.equalsIgnoreCase("archiveimages")) app.driverCallServer(PlayerCommands.archiveimages, null);
+			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
 			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
 			if(action.equalsIgnoreCase("truncarchive")) app.driverCallServer(PlayerCommands.truncarchive, null);
-			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
-			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
-			if(action.equalsIgnoreCase("cancel")) {
-				state.set(State.values.rosgoalcancel, true);
-				state.delete(State.values.roswaypoint);
-				state.delete(State.values.navigationroute);
-				state.delete(State.values.navigationrouteid);
-			}
-			
-			if(action.equalsIgnoreCase("snapshot")) {
-				
-				// create snapshot 
-				state.dumpFile("snapshot");
-				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
-					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
-		
-			}
-			
-			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
+			if(action.equalsIgnoreCase("archiveimages")) app.driverCallServer(PlayerCommands.archiveimages, null);
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
-			
-			if(action.equalsIgnoreCase("debugon")) 
-				 app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
-			if(action.equalsIgnoreCase("debugoff")) 
-				 app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
+			if(action.equalsIgnoreCase("debugon")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
+			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 
+			if(action.equalsIgnoreCase("snapshot")) {	
+				if(Util.archivePID()) {
+					Util.log("busy, skipping..", this);
+					return;
+				}
+				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
+					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, state.dumpFile("dashboard command")});
+			}
+			
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
 	
@@ -320,7 +311,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
 		str.append( "<td><b>linux</b><td colspan=\"2\">" + Util.diskFullPercent() + "% used</tr> \n"); 
 		
-		String dock = "<font color=\"red\">undocked</font>";
+		String dock = "<font color=\"blue\">undocked</font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "docked";		
 		String volts = state.get(values.batteryvolts); 
 		if(volts == null) volts = "";
@@ -400,7 +391,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
 	
 		if(state.exists(values.navigationroute)){ // active route 
-			link += " <b>actice: </b>" + state.get(values.navigationroute) + "&nbsp;"; 
+			link += " <b>active: </b>" + state.get(values.navigationroute) + "&nbsp;"; 
 		}
 		
 		if(state.exists(values.navigationroute) && state.exists(values.roswaypoint)){

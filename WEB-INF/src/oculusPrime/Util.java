@@ -47,8 +47,11 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 	public static final int PRECISION = 2;		 
-	public static final int MIN_FILE_COUNT = 30;  
+	public static final int MIN_FILE_COUNT = 50;  
 	public static final int MAX_HISTORY = 60;
+	
+	public final static String roslogfolder = "~/.ros/";
+	
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
@@ -339,7 +342,7 @@ public class Util {
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-	
+    
 	public static Document loadXMLFromString(String xml){
 		try {
 	    
@@ -770,7 +773,7 @@ public class Util {
 			try {
 				URLConnection connection = (URLConnection) new URL(url).openConnection();
 				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-				while ((in.read()) != -1); // line += (char)i;
+				while ((in.read()) != -1); 
 				in.close();	
 			} catch (Exception e) {}
 		} }).start();
@@ -816,7 +819,7 @@ public class Util {
 		File[] files  = new File(Settings.framefolder).listFiles();	
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
-				if(!linkedFrame(files[i].getName())){
+				if( ! linkedFrame(files[i].getName())){
 					debug(files[i].getName() + " was deleted");
 					files[i].delete();
 				}
@@ -832,7 +835,7 @@ public class Util {
 			proc.waitFor();
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
 			while ((line = procReader.readLine()) != null){
-				Util.debug("linkedFrame(): " + line);
+				Util.debug("linkedFrame(): skipping: " + line);
 				return true;
 			}
 		} catch (Exception e){return false;};
@@ -895,8 +898,8 @@ public class Util {
 	}
 	
 	public static String archiveImages(){
-		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.framefolder};
+		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.framefolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
@@ -906,7 +909,7 @@ public class Util {
 	
 	public static String archiveROS(){
 		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + roslogfolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
@@ -915,10 +918,10 @@ public class Util {
 	}
 	
 	public static String archiveAll(String[] files){
-		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar.bz2";
+		final String path = "./archive" + sep + "archive_"+System.currentTimeMillis() + ".tar";
 		String args = "  " + NavigationLog.navigationlogpath + " ";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + args};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + args};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
@@ -994,15 +997,7 @@ public class Util {
 				}
 				
 				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
-				appendUserMessage("restart required");
-				
-				// TODO: images to clean out too... 
-				//deleteLogFiles();		
-				//deleteROS();
-				//PowerLogger.append("shutting down application", this);
-				//PowerLogger.close();
-				//delay(10000);					
-				//systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+				appendUserMessage("done archiving");
 				
 			} catch (Exception e){printError(e);}
 		} }).start();
@@ -1028,13 +1023,13 @@ public class Util {
 	}
 	
 	public static Vector<File> walk(String path, Vector<File> allfiles){
-        File root = new File( path );
+        File root = new File(path);
         File[] list = root.listFiles();
         
         if(list == null) return allfiles;
 
         for( File f : list ) {
-        	if ( f.isDirectory()) walk( f.getAbsolutePath(), allfiles );
+        	if (f.isDirectory()) walk( f.getAbsolutePath(), allfiles );
             else allfiles.add(f);
         }   
         
@@ -1100,9 +1095,8 @@ public class Util {
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder};
+				String[] cmd = {"bash", "-ic", "rm -rf " + roslogfolder};
 				Runtime.getRuntime().exec(cmd);
-				new File("rlog.txt").delete();
 			} catch (Exception e){printError(e);}
 		} }).start();
 		
@@ -1113,93 +1107,314 @@ public class Util {
 				delay(10000);					
 				systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 			} catch (Exception e){printError(e);}
-		} }).start();
-		
+		}}).start();
 	}
 	
-	public static String getRosCheck(){	
+	/* doesnt really work 
+	public static String rosTail(){
+
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tail " + Settings.logfolder + sep + "ros.log"};
+				
+		StringBuffer buffer = new StringBuffer();
+		Process proc = null;
+		String line = null;
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
+			while ((line = procReader.readLine()) != null) buffer.append(line + "\r\n"); 
+		} catch (Exception e){}
 		
+		return buffer.toString();
+	}*/
+	
+	public static String getRosCheck(){	
+	
 		if(rosinfor!=null) return rosinfor;
 		
 		if(rosattempts++ > 5){
 			log("getRosCheck: "+rosattempts++, null);	
 			return "err";
 		}
-	
-		try {
-			new Thread(new Runnable() { public void run() {
-				try {
-					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt"};
-					Runtime.getRuntime().exec(cmd);		
-				} catch (Exception e){printError(e);}
-			}}).start();
-		} catch (Exception e){printError(e);}
-
+		
 		try{ 
-			String line;
+			
+			String[] cmd = {"bash", "-ic", "rosclean check > ros_temp.txt"};
+			Runtime.getRuntime().exec(cmd);	
+			
 			BufferedReader reader;
-			try {
-				reader = new BufferedReader(new FileReader("rlog.txt"));
-				while ((line = reader.readLine()) != null) rosinfor = line;
-				reader.close();		
-			} catch (Exception e) { rosinfor = null; }
-			
-			if(new File("rlog.txt").exists() && rosinfor==null) rosinfor = "0.00";
-			
+			reader = new BufferedReader(new FileReader("ros_temp.txt"));
+			rosinfor = reader.readLine().trim();
+			reader.close();	
+				
+			if(rosinfor == null) rosinfor = "0.00";
 			if(rosinfor.contains("K ROS node logs")) rosinfor = "1";
 			if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
+			
 		} catch (Exception e){ rosinfor = "0.00"; }
 		
 		return rosinfor;
 	}	
 	
-	public static void main(String[] args){
 	
-		Vector<File> files = new Vector<File>();
-		files = walk("D:\\films", files);
+	// TODO: ............................................................................................
+	public static void callForHelp(String subject, String body) {
 		
-		System.out.println("files: " + files.size());
+	//	application.driverCallServer(PlayerCommands.messageclients, body);
+		log("callForHelp() " + subject + " " + body, null);
 
-		for(int i = 0 ; i < files.size() ; i++){
-			
-			String name = files.get(i).getName().substring(0, files.get(i).getName().indexOf("."));
-			if(  ! name.endsWith("]")) {
-				System.out.println(i + " files " + files.get(i).getAbsolutePath());
-			}
-			if( name.startsWith("the ")) {
-				System.out.println(i + " the.... " + files.get(i).getAbsolutePath());
-			}
-			
-			/*
-			String folder = files.get(i).getParent();
-			
-			folder = folder.substring(folder.lastIndexOf("\\")+1);
-			
-			folder = folder.replaceAll("-", "");
-			folder = folder.replaceAll(" ", "");
-			name = name.replaceAll(" ", "");
-			name = name.replaceAll("-", "");
-			
-			if( ! folder.contains(name)){
-				System.out.println(i + " ");
-				System.out.println(i + " name   = " + name);
-				System.out.println(i + " folder = " + folder);
-				System.out.println(i + " not folder name " + files.get(i).getAbsolutePath());
-			}
-			*/
-			
-			if(files.get(i).getName().contains("thumbs.db"))files.get(i).delete();
-			
-			String ext = files.get(i).getName().substring(files.get(i).getName().indexOf("."));
-			if( ! (ext.equals(".mp4") || ext.equals(".mp4") || ext.equals(".sub") || ext.equals(".srt") 
-					|| ext.equals(".avi")  || ext.equals(".mkv"))) files.get(i).delete();
+		State state = State.getReference();
+		Settings settings = Settings.getReference();
+		
+		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
+
+		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
+				settings.readRed5Setting("http.port")+"/oculusPrime/";
+		String emailto = settings.readSetting(GUISettings.email_to_address);
+		if (!emailto.equals(Settings.DISABLED)){
 			
 		}
-		
-		System.out.println("files: " + files.size());
-		
+			// application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
+			// application.driverCallServer(PlayerCommands.rssadd, "[" + subject + "] " + body);
 	}
+	
+	//--------------------------------------------- brad junk -----------------------------------------------//
+	/*
+	public static void renameFile(File file){
+		
+		if(file.isDirectory()) return;
+		if( ! file.exists()) return;
+		
+		final String name = file.getName();
+		String update = name.toLowerCase();
+		String path = file.getAbsolutePath();
+		path = path.substring(0, path.lastIndexOf("\\"));	
+		
+		try {
+			if( ! name.equals(update)) {
+				path = path + "\\" + update;
+				System.out.println("\n -- upper case --\n" + file + "\n" +path);	
+				if(file.renameTo(new File(path))){
+					System.out.println(new File(path).getAbsolutePath() + " RENAMED");
+					return;
+				} 
+			}
+			
+			if( ! Character.isAlphabetic(update.charAt(0))){
+				String[] s = update.split(" ");
+				update = "";
+				for( int j = 1 ; j < s.length ; j++) update += " " + s[j].trim();
+				update = update.trim();
+				path = file.getAbsolutePath();
+				path = path.substring(0, path.lastIndexOf("\\"));	
+				System.out.println("\n #### \n" + update + "\n" + file.getName() + "\n" + file.getAbsolutePath());
+			}
+			
+			if(update.startsWith("the ")) update = update.substring(3).trim();	
+			update = update.replaceAll("_", " ");
+			update = update.replaceAll("-", " ");
+			update = update.replaceAll(",", " ");
+			update = update.replaceAll(",", " ");
+			update = update.replaceAll("'", " ");
+			update = update.replaceAll("@", " ");
+			update = update.replaceAll("  ", " ");
+			
+			if( ! name.equals(update)) {
+				path = path + "\\" + update;					
+				
+				System.out.println("\n -- rename --\n" + file.getAbsolutePath() + "\n" +path + "\n" + name + "\n" + update);	
+
+				if(file.renameTo(new File(path))){	
+				
+					System.out.println(new File(path).getAbsolutePath() + " RENAMED");
+				
+				} else {
+					if(new File(path).exists()) {
+						System.out.println(" ALREAD EXISTS: "+file.getAbsolutePath());
+						file.delete();
+					}
+				}
+			}	
+		} catch (Exception e1) {
+			System.out.println("rename error: " + file.getAbsolutePath() + " " + e1.getMessage());
+		}
+	}
+
+	public static void renameFolder(File file){
+		
+		if( ! file.exists()) return;
+		if( ! file.isDirectory()) return;
+		if( ! isLeafDirectory(file)) return;
+			
+		final File parent = file.getParentFile();
+		final String name = file.getName();
+		String update = name.toLowerCase();
+		String path = file.getAbsolutePath();
+		path = path.substring(0, path.lastIndexOf("\\"));	
+		
+		try {
+			
+			if(update.startsWith("the ")) update = update.substring(3).trim();	
+			if(name.contains(parent.getName())) update = update.replace(parent.getName(), " ").trim();
+		
+			if( ! name.equals(update)) {
+			
+				path = path + "\\" + update;	
+				
+				System.out.println("\n -- rename folder --\n" + file.getAbsolutePath()  + "\n" + path + "\n" + name + "\n" + update);			
+			
+				if(file.renameTo(new File(path))){	
+					
+					System.out.println(new File(path).getAbsolutePath() + " RENAMED");
+						
+				} else {
+					if(new File(path).exists()) {
+						System.out.println(" ALREAD EXISTS: "+file.getAbsolutePath());
+					}
+				}
+			}
+		} catch (Exception e1) {
+			System.out.println("rename error: " + file.getAbsolutePath() + " " + e1.getMessage());
+		}
+	}
+	
+	public static boolean isLeafDirectory(File dir){
+		if( ! dir.isDirectory()) return false;
+		 File[] files = dir.listFiles();
+	        for (File file : files) 
+	            if (file.isDirectory()) 
+	            	return false;
+	        
+		return true;
+	}
+	
+	public static void checkDupNames(File file){
+		Vector<File> names = new Vector<File>();
+		File[] files = file.listFiles();
+		for (File f : files) if( ! f.isDirectory()) names.add(f);
+		if(names.size() > 0) {
+			for(int j = 0 ; j < names.size() ; j++){
+				
+				File f = names.get(j);
+				String path = f.getAbsolutePath();
+				String name = f.getName();
+		    	path = path.substring(0, path.lastIndexOf("\\"));
+				name = name.substring(0, name.lastIndexOf("."));
+			
+				if(new File(path + "\\" + name + ".m4a").exists()){
+					if(new File(path + "\\" + name + ".mp3").exists()){
+						System.out.println("checkDupNames: deleting: " + path + "\\" + name);
+						new File(path + "\\" + name + ".m4a").delete();
+					}	
+				}
+			}
+		}
+	}
+
+	public static void renameFolders(File dir) {
+	    try {
+	        File[] files = dir.listFiles();
+	        for (File file : files) {
+            	if(isLeafDirectory(file)){
+            		// System.out.println("leaf: " + file);
+            		renameFolder(file);		
+            	}
+     
+            	checkDupNames(file);
+            	renameFolders(file);
+	        }
+	    } catch (Exception e){} //System.out.println("renameFolders error: " + dir.getAbsolutePath() + " " + e.getMessage());}
+	}
+	
+	public static void removeEmptyFolders(File dir) {
+	    try {
+	        File[] files = dir.listFiles();
+	        for (File file : files) {
+	            if (file.isDirectory()) {
+	            	if(file.listFiles().length == 0) {
+	            		System.out.println("empty folder" + file.getAbsolutePath());
+	            		file.deleteOnExit();
+	            	}
+	            	removeEmptyFolders(file);
+	            } 
+	        }
+	    } catch (Exception e) { e.printStackTrace(); }
+	}
+	
+	public static boolean exists( final Vector<File> list, final String fname ){
+		for(int i = 0 ; i < list.size() ; i++){
+			if(list.get(i).getName().equals(fname)){
+				System.out.println("exists: " + list.get(i).getAbsolutePath() + "\nname: " + fname);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static void main(String[] args){
+	
+		final boolean delete = true;
+		final String dir = "D:\\music";
+		
+		final long before = countFiles(dir); 
+		Vector<File> files = new Vector<File>();
+		files = walk(dir, files);
+	
+		for(int i = 0 ; i < files.size() ; i++){
+			
+			if(files.get(i).getAbsolutePath().toLowerCase().contains("recycle")) continue;
+			
+			if(files.get(i).isHidden()) {
+				System.out.println("hidden file deleted: " + files.get(i).getAbsolutePath());
+				if(delete) files.get(i).deleteOnExit();
+				continue;
+			}
+			
+			if(files.get(i).getName().startsWith(".")){
+				System.out.println("temp file deleted: " + files.get(i).getAbsolutePath());
+				if(delete) files.get(i).deleteOnExit();
+				continue;
+			 }
+			
+			if(files.get(i).getName().contains("thumbs.db") || files.get(i).getName().contains(".DS_Store")){
+				System.out.println("temp file deleted: " + files.get(i).getAbsolutePath());
+				if(delete) files.get(i).deleteOnExit();
+				continue;
+			}
+			
+			try {
+				String ext = files.get(i).getName().substring(files.get(i).getName().lastIndexOf(".")).toLowerCase();
+				if( !     (ext.equals(".mp4") || ext.equals(".mp3") || ext.equals(".mp3") || ext.equals(".m4a") 
+						|| ext.equals(".sub") || ext.equals(".srt") || ext.equals(".m4v") // || ext.equals(".!qb")
+						|| ext.equals(".wmv") || ext.equals(".rar") || ext.equals(".mkv") || ext.equals(".tar")
+						|| ext.equals(".txt") || ext.equals(".pdf") || ext.equals(".zip") || ext.equals(".avi")
+						|| ext.equals(".flv") || ext.equals(".bz2") || ext.equals(".jpeg")
+						|| ext.equals(".mpg") || ext.equals(".mov") || ext.equals(".flac")
+						|| ext.equals(".gif") || ext.equals(".jpg") || ext.equals(".png"))){
+					System.out.println("\nbad file type: " + files.get(i).getAbsolutePath() + "\n" + files.get(i).getName() + "\n" + ext);
+					if(delete) files.get(i).deleteOnExit();
+					continue;
+				}
+			} catch (Exception e) {
+				System.out.println("error: " + files.get(i).getAbsolutePath() + " \n" + e.getMessage());
+				if(delete) files.get(i).deleteOnExit();
+				continue;
+			}
+		
+			renameFile(files.get(i));
+		}
+		
+		removeEmptyFolders(new File(dir));
+		renameFolders(new File(dir));
+		
+		System.out.println("before      : " + before);
+		System.out.println("after       : " + countFiles(dir));
+		System.out.println("difference  : " + (before - countFiles(dir)));
+			
+	}
+	
+	*/
+	
 	
 }
 
