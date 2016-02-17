@@ -248,7 +248,9 @@ public class Util {
 
 	public static void setSystemVolume(int percent, Application app){
 //		Util.systemCall("amixer set Master "+percent+"%"); // doesn't work in xubuntu 14.04 fresh install
-		Util.systemCall("pactl -- set-sink-volume 0 "+percent+"%"); 		// pactl -- set-sink-volume 0 80%
+//		Util.systemCall("pactl -- set-sink-volume 0 "+percent+"%"); 		// pactl -- set-sink-volume 0 80%
+		try { Runtime.getRuntime().exec("pactl -- set-sink-volume 0 "+percent+"%");
+		} catch (Exception e) { log("Util.setSystemVolume; error setting volume with pulse audio pactl command", null ); }
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 

@@ -73,12 +73,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		Util.log("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
-		PowerLogger.append("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch")  + "===============", this);
+		PowerLogger.append("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
-		commandServer = new TelnetServer(this);
 		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
@@ -256,6 +255,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
 
+		if (!settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED.toString()))
+			commandServer = new TelnetServer(this);
+
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
@@ -264,7 +266,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		try {
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		} catch (UnsatisfiedLinkError e) {
-			Util.log("opencv native lib not availabe", this);
+			Util.log("opencv native lib not available", this);
 		}
 
 		if (settings.getBoolean(GUISettings.navigation)) {
@@ -1530,7 +1532,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 
-		if(! settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) {
+		if(commandServer!=null) {
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
 			commandServer.close();
 		}
