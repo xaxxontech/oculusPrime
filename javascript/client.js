@@ -266,6 +266,7 @@ function callServer(fn, str) {
 function play(str) { // called by javascript only?
 	streammode = str;
 	var num = 1;
+	if (str.split("_")[1]=="2") num = 2; // TODO: testing separate audio stream with avconv
 	if (streammode == "stop") { num =0 ; } 
 	oculusPrimeplayerSWF.flashplay(num, videoscale);
 }

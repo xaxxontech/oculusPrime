@@ -12,7 +12,8 @@ public class Video {
     private Application app = null;
     private String host = "127.0.0.1";
     private String port = "1935";
-    private int devicenum = 0;
+    private int devicenum = 0;  // should match lifecam cam
+    private int adevicenum = 1; // should match lifecam mic
     private int quality = 5;
     private int fps = 8;
     private int width=640;
@@ -51,6 +52,21 @@ public class Video {
                             " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
                     // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1
+                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
+                    break;
+                case mic:
+                    Util.systemCall("avconv -f alsa -ac 1 -ar 22050 " +
+                            "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
+                            port + "/oculusPrime/stream1");
+                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
+                    break;
+                case camandmic:
+                    Util.systemCall("avconv -f video4linux2 -s " + width + "x" + height + " -r " + fps +
+                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
+                            port + "/oculusPrime/stream1");
+                    Util.systemCall("avconv -f alsa -ac 1 -ar 22050 " +
+                            "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
+                            port + "/oculusPrime/stream2");
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case stop:

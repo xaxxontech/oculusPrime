@@ -1005,8 +1005,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 * @param str
 	 */
 	private void grabberSetStream(String str) {
-		final String stream = str;
 		state.set(State.values.stream, str);
+		if (!settings.getBoolean(ManualSettings.useflash) && str.equals(streamstate.camandmic.toString()))
+			str = str+"_2";
+		final String stream = str;
 
 		messageGrabber("streaming " + stream, "stream " + stream);
 		Util.log("streaming " + stream, this);
