@@ -431,17 +431,17 @@ public class Navigation implements Observer {
 		}
 	}
 	
-	public void updateRouteInfo(final String name, final int minutes, final double distance){
+	public void updateRouteInfo(final String name, final int seconds, final long distance){
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-				Util.log("... update xml route:  " + name + " distance:  " + distance + " minutes: " + minutes, this);
+				Util.log("... update xml route:  " + name + " distance:  " + distance + " seconds: " + seconds, this);
 				route = (Element) routes.item(i);				
 				try {
-					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(distance, 0));
+					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Long.toString(distance));
 				} catch (Exception e) { // create if not there 
 					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
@@ -449,11 +449,11 @@ public class Navigation implements Observer {
 					route.appendChild(dist);
 				}
 				try {
-					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(minutes));
+					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
 					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
 					Node time = document.createElement(ESTIMATED_TIME_TAG);
-					time.setTextContent(Integer.toString(minutes));
+					time.setTextContent(Integer.toString(seconds));
 					route.appendChild(time);
 				}
 				saveRoute(Util.XMLtoString(document));
@@ -717,7 +717,7 @@ public class Navigation implements Observer {
 					long start = System.currentTimeMillis();
 					while (state.exists(State.values.roscurrentgoal) && System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
 						Util.delay(100);
-						long t = System.currentTimeMillis();
+//						long t = System.currentTimeMillis();
 //						if (state.getLong(State.values.lastodomreceived) - t > 1000) // malg timeout?
 //							Util.log("error, lastodomreceived: "+
 //									String.valueOf(state.getLong(State.values.lastodomreceived)-t), this);
@@ -792,15 +792,12 @@ public class Navigation implements Observer {
 				int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
 				updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
 				Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
-				Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(routestarttime - seconds), this);
-	
+				Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
+	////////
+	/////			lll
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;
-			
-//				Util.archiveFiles("./archive" + Util.sep + state.get(State.values.navigationroute)
-//					+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath,
-//						Settings.logfolder, Settings.settingsfile});
 				
 				if (!delayToNextRoute(navroute, name, id)) return;
 			}
