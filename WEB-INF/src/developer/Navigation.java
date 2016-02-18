@@ -2,7 +2,6 @@ package developer;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,6 +11,7 @@ import java.util.Date;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
 
 import developer.image.OpenCVObjectDetect;
 import oculusPrime.Application;
@@ -39,10 +39,21 @@ public class Navigation implements Observer {
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
+
+	private static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
+	private static final String ESTIMATED_TIME_TAG = "estimatedtime";
+	
 	private final Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
 	public int consecutiveroute = 1;
-	private double routedistance = 0;
+	private long estimateddistance = 0;
+	private long estimatedtime = 0;
+	private long routedistance = 0;
+	
+//	private final Settings settings = Settings.getReference();
+//	public volatile boolean navdockactive = false;
+//	public int consecutiveroute = 1;
+//	private double routedistance = 0;
 	public long routestarttime;
 	public NavigationLog navlog;
 	
@@ -386,20 +397,15 @@ public class Navigation implements Observer {
 
 	public static String routesLoad() {
 		String result = "";
-
 		BufferedReader reader;
 		try {
 			reader = new BufferedReader(new FileReader(navroutesfile));
 			String line = "";
 			while ((line = reader.readLine()) != null) 	result += line;
 			reader.close();
-
-		} catch (FileNotFoundException e) {
-			return "<routeslist></routeslist>";
-		} catch (IOException e) {
+		} catch (Exception e) {
 			return "<routeslist></routeslist>";
 		}
-
 		return result;
 	}
 
@@ -408,9 +414,7 @@ public class Navigation implements Observer {
 			FileWriter fw = new FileWriter(navroutesfile);
 			fw.append(str);
 			fw.close();
-		} catch (IOException e) {
-			Util.printError(e);
-		}
+		} catch (Exception e){ Util.printError(e); }
 	}
 
 	public void runAnyActiveRoute() {
@@ -425,9 +429,39 @@ public class Navigation implements Observer {
 				break;
 			}
 		}
-
 	}
-
+	
+	public void updateRouteInfo(final String name, final int minutes, final double distance){
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				Util.log("... update xml route:  " + name + " distance:  " + distance + " minutes: " + minutes, this);
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(distance, 0));
+				} catch (Exception e) { // create if not there 
+					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
+					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
+					dist.setTextContent(Double.toString(distance));
+					route.appendChild(dist);
+				}
+				try {
+					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(minutes));
+				} catch (Exception e) { // create if not there 
+					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
+					Node time = document.createElement(ESTIMATED_TIME_TAG);
+					time.setTextContent(Integer.toString(minutes));
+					route.appendChild(time);
+				}
+				saveRoute(Util.XMLtoString(document));
+				break;
+			}
+		}
+	}
+	
 	public void runRoute(final String name) {
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
@@ -453,10 +487,24 @@ public class Navigation implements Observer {
 		Element route = null;
 		for (int i = 0; i< routes.getLength(); i++) {
     		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			// unflag any currently active routes. New active route gets flagged just below:
-			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
+			// unflag any currently active routes. New active route gets flagged below..
+    		((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
 			if (rname.equals(name)) {
     			route = (Element) routes.item(i);
+    			try { // check for an estimated distance tag
+    				estimateddistance = Long.parseLong(route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent());
+    				Util.log("[" +rname + "] estimated distance : " + estimateddistance, this);
+    			} catch (Exception e){
+    				Util.log("no route _distance_ available for: " + rname, this);
+    				estimateddistance = 0;
+    			}
+    			try { // check for an estimated time tag
+    				estimatedtime = Long.parseLong(route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent());
+    				Util.log("["+ rname + "] estimated time : " + estimatedtime, this);
+    			} catch (Exception e){
+    				Util.log("no route _time_ available for: " + rname, this);
+    				estimatedtime = 0;
+    			}
     			break;
     		}
 		}
@@ -545,7 +593,10 @@ public class Navigation implements Observer {
 						else if (daynow > daynums[i]) nextdayindex = i+1;
 					}
 
-					if (startroute) break;
+					if (startroute) {
+						Util.log(name + " .. not sheduled, can't start.", this);
+						break;
+					}
 
 					// determine seconds to next route
 					if (!state.exists(State.values.nextroutetime)) { // only set once
@@ -738,7 +789,11 @@ public class Navigation implements Observer {
 					continue;
 				}
 				
-//				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
+				int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
+				updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
+				Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
+				Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(routestarttime - seconds), this);
+	
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;
