@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -49,11 +48,6 @@ public class Navigation implements Observer {
 	private long estimateddistance = 0;
 	private long estimatedtime = 0;
 	private long routedistance = 0;
-	
-//	private final Settings settings = Settings.getReference();
-//	public volatile boolean navdockactive = false;
-//	public int consecutiveroute = 1;
-//	private double routedistance = 0;
 	public long routestarttime;
 	public NavigationLog navlog;
 	
@@ -389,7 +383,6 @@ public class Navigation implements Observer {
 		return true;
 	}
 
-
 	public static void goalCancel() {
 		state.set(State.values.rosgoalcancel, true); // pass info to ros node
 		state.delete(State.values.roswaypoint);
@@ -431,6 +424,88 @@ public class Navigation implements Observer {
 		}
 	}
 	
+	private boolean updateTimeToNextRoute(final Element navroute, final String id){ 
+		
+		// get schedule info, map days to numbers
+		NodeList days = navroute.getElementsByTagName("day");
+		if (days.getLength() == 0) {
+			app.driverCallServer(PlayerCommands.messageclients, "Can't schedule route, no days specified");
+			cancelRoute(id);
+			return true;
+		}
+		
+		int[] daynums = new int[days.getLength()];
+		String[] availabledays = new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+		for (int d=0; d<days.getLength(); d++) {
+			for (int ad = 0; ad<availabledays.length; ad++) {
+				if (days.item(d).getTextContent().equalsIgnoreCase(availabledays[ad]))   daynums[d]=ad+1;
+			}
+		}
+		// more schedule info
+		int starthour = Integer.parseInt(navroute.getElementsByTagName("starthour").item(0).getTextContent());
+		int startmin = Integer.parseInt(navroute.getElementsByTagName("startmin").item(0).getTextContent());
+		int routedurationhours = Integer.parseInt(navroute.getElementsByTagName("routeduration").item(0).getTextContent());
+		
+		Calendar calendarnow = Calendar.getInstance();
+		calendarnow.setTime(new Date());
+		int daynow = calendarnow.get(Calendar.DAY_OF_WEEK); // 1-7 (friday is 6)
+		boolean startroute = false;
+		int nextdayindex = 99;
+		for (int i=0; i<daynums.length; i++) {
+			// check if need to start run right away
+			if (daynums[i] == daynow -1 || daynums[i] == daynow || (daynums[i]==7 && daynow == 1)) { // yesterday or today
+				Calendar testday = Calendar.getInstance();
+				if (daynums[i] == daynow -1 || (daynums[i]==7 && daynow == 1)) { // yesterday
+					testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+							calendarnow.get(Calendar.DATE) - 1, starthour, startmin);
+				}
+				else { // today
+					testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+							calendarnow.get(Calendar.DATE), starthour, startmin);
+				}
+				if (calendarnow.getTimeInMillis() >= testday.getTimeInMillis() && calendarnow.getTimeInMillis() <
+						testday.getTimeInMillis() + (routedurationhours * 60 * 60 * 1000)) {
+					startroute = true;
+					break;
+				}
+			}
+
+			if (daynow == daynums[i]) nextdayindex = i;
+			else if (daynow > daynums[i]) nextdayindex = i+1;
+		}
+
+		// determine seconds to next route
+		if (!state.exists(State.values.nextroutetime)) { // only set once
+
+			int adddays = 0;
+			if (nextdayindex >= daynums.length ) { //wrap around
+				nextdayindex = 0;
+				adddays = 7-daynow + daynums[0];
+			}
+			else adddays = daynums[nextdayindex] - daynow;
+
+			Calendar testday = Calendar.getInstance();
+			testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+					calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
+
+			if (testday.getTimeInMillis() < System.currentTimeMillis()) { // same day, past route
+				nextdayindex ++;
+				if (nextdayindex >= daynums.length ) { //wrap around
+					adddays = 7-daynow + daynums[0];
+				}
+				else  adddays = daynums[nextdayindex] - daynow;
+				testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
+						calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
+			}
+			else if (testday.getTimeInMillis() - System.currentTimeMillis() > Util.ONE_DAY*7) //wrap
+				testday.setTimeInMillis(testday.getTimeInMillis()-Util.ONE_DAY*7);
+
+			state.set(State.values.nextroutetime, testday.getTimeInMillis());	
+		}
+		
+		return startroute;
+	}
+	
 	public void updateRouteInfo(final String name, final int seconds, final long distance){
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
@@ -438,7 +513,7 @@ public class Navigation implements Observer {
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-				Util.log("... update xml route:  " + name + " distance:  " + distance + " seconds: " + seconds, this);
+				// Util.log("... update xml route:  " + name + " distance:  " + distance + " seconds: " + seconds, this);
 				route = (Element) routes.item(i);				
 				try {
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Long.toString(distance));
@@ -479,9 +554,9 @@ public class Navigation implements Observer {
 			return;
 		}
 
-		if (state.exists(State.values.navigationroute))  cancelAllRoutes(); // if another route running
+		if (state.exists(State.values.navigationroute)) cancelAllRoutes(); // if another route running
 
-		// check for route name
+		// check for route name and info.. 
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -516,8 +591,8 @@ public class Navigation implements Observer {
 
 		// start route
 		final Element navroute = route;
-		state.set(State.values.navigationroute, name);
 		final String id = String.valueOf(System.nanoTime());
+		state.set(State.values.navigationroute, name);
 		state.set(State.values.navigationrouteid, id);
 
 		// flag route active, save to xml file
@@ -525,28 +600,9 @@ public class Navigation implements Observer {
 		String xmlstring = Util.XMLtoString(document);
 		saveRoute(xmlstring);
 
-		app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
-
 		new Thread(new Runnable() { public void run() {
-
-			// get schedule info, map days to numbers
-			NodeList days = navroute.getElementsByTagName("day");
-			if (days.getLength() == 0) {
-				app.driverCallServer(PlayerCommands.messageclients, "Can't schedule route, no days specified");
-				cancelRoute(id);
-				return;
-			}
-			int[] daynums = new int[days.getLength()];
-			String[] availabledays = new String[]{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-			for (int d=0; d<days.getLength(); d++) {
-				for (int ad = 0; ad<availabledays.length; ad++) {
-					if (days.item(d).getTextContent().equalsIgnoreCase(availabledays[ad]))   daynums[d]=ad+1;
-				}
-			}
-			// more schedule info
-			int starthour = Integer.parseInt(navroute.getElementsByTagName("starthour").item(0).getTextContent());
-			int startmin = Integer.parseInt(navroute.getElementsByTagName("startmin").item(0).getTextContent());
-			int routedurationhours = Integer.parseInt(navroute.getElementsByTagName("routeduration").item(0).getTextContent());
+			
+			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
 
 			// repeat route schedule forever until cancelled
 			while (true) {
@@ -556,75 +612,9 @@ public class Navigation implements Observer {
 				// determine next scheduled route time, wait if necessary
 				while (state.exists(State.values.navigationroute)) {
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
-
-					// add xml: starthour, startmin, routeduration, day
-					Calendar calendarnow = Calendar.getInstance();
-					calendarnow.setTime(new Date());
-					int daynow = calendarnow.get(Calendar.DAY_OF_WEEK); // 1-7 (friday is 6)
-
-					// parse new xml: starthour, startmin, routeduration (hours), day (1-7)
-					// determine if now is within day + range, if not determine time to next range and wait
-
-					boolean startroute = false;
-					int nextdayindex = 99;
-
-					for (int i=0; i<daynums.length; i++) {
-
-						// check if need to start run right away
-						if (daynums[i] == daynow -1 || daynums[i] == daynow || (daynums[i]==7 && daynow == 1)) { // yesterday or today
-							Calendar testday = Calendar.getInstance();
-							if (daynums[i] == daynow -1 || (daynums[i]==7 && daynow == 1)) { // yesterday
-								testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
-										calendarnow.get(Calendar.DATE) - 1, starthour, startmin);
-							}
-							else { // today
-								testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
-										calendarnow.get(Calendar.DATE), starthour, startmin);
-							}
-							if (calendarnow.getTimeInMillis() >= testday.getTimeInMillis() && calendarnow.getTimeInMillis() <
-									testday.getTimeInMillis() + (routedurationhours * 60 * 60 * 1000)) {
-								startroute = true;
-								break;
-							}
-
-						}
-
-						if (daynow == daynums[i]) nextdayindex = i;
-						else if (daynow > daynums[i]) nextdayindex = i+1;
-					}
-
-					if (startroute) {
-						Util.log(name + " .. not sheduled, can't start.", this);
+					if (updateTimeToNextRoute(navroute, id)){ // moved to private method, de-clutter 
+						Util.log(name + "...not sheduled, can't start??", this);
 						break;
-					}
-
-					// determine seconds to next route
-					if (!state.exists(State.values.nextroutetime)) { // only set once
-
-						int adddays = 0;
-						if (nextdayindex >= daynums.length ) { //wrap around
-							nextdayindex = 0;
-							adddays = 7-daynow + daynums[0];
-						}
-						else adddays = daynums[nextdayindex] - daynow;
-
-						Calendar testday = Calendar.getInstance();
-						testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
-								calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
-
-						if (testday.getTimeInMillis() < System.currentTimeMillis()) { // same day, past route
-							nextdayindex ++;
-							if (nextdayindex >= daynums.length ) { //wrap around
-								adddays = 7-daynow + daynums[0];
-							}
-							else  adddays = daynums[nextdayindex] - daynow;
-							testday.set(calendarnow.get(Calendar.YEAR), calendarnow.get(Calendar.MONTH),
-									calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
-						}
-						else if (testday.getTimeInMillis() - System.currentTimeMillis() > Util.ONE_DAY*7) //wrap
-							testday.setTimeInMillis(testday.getTimeInMillis()-Util.ONE_DAY*7);
-
-						state.set(State.values.nextroutetime, testday.getTimeInMillis());
 					}
 
 					Util.delay(1000);
@@ -646,8 +636,7 @@ public class Navigation implements Observer {
 					if (!state.exists(State.values.navigationroute)) return;
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							null, name, consecutiveroute, 0);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime, null, name, consecutiveroute, 0);
 
 					if (state.getUpTime() > Util.TEN_MINUTES) {
 						app.driverCallServer(PlayerCommands.reboot, null);
@@ -672,9 +661,7 @@ public class Navigation implements Observer {
 					app.comport.checkisConnectedBlocking(); // just in case
 
 					SystemWatchdog.waitForCpu();
-
 					app.driverCallServer(PlayerCommands.forward, "1.3");
-
 					Util.delay(3000);
 
 					// rotate to localize
@@ -698,10 +685,9 @@ public class Navigation implements Observer {
 
 					app.comport.checkisConnectedBlocking(); // just in case
 
-		    		if (wpname.equals(DOCK))  break;
+		    		if (wpname.equals(DOCK)) break;
 
 					SystemWatchdog.waitForCpu();
-
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
 						navlog.newItem(NavigationLog.ERRORSTATUS, "unable to set waypoint", routestarttime,
@@ -715,23 +701,14 @@ public class Navigation implements Observer {
 		    		
 		    		// wait to reach wayypoint
 					long start = System.currentTimeMillis();
-					while (state.exists(State.values.roscurrentgoal) && System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
-						Util.delay(100);
-//						long t = System.currentTimeMillis();
-//						if (state.getLong(State.values.lastodomreceived) - t > 1000) // malg timeout?
-//							Util.log("error, lastodomreceived: "+
-//									String.valueOf(state.getLong(State.values.lastodomreceived)-t), this);
-
-					}
+					while (state.exists(State.values.roscurrentgoal) && System.currentTimeMillis() - start < WAYPOINTTIMEOUT)Util.delay(100);
 					
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 	
-					if (!state.exists(State.values.rosgoalstatus)) { // this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
-
+					if (!state.exists(State.values.rosgoalstatus)){ 
+						// this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 						Util.log("error, state rosgoalstatus null", this);
-//						cancelRoute(id);
-//						return;
 						state.set(State.values.rosgoalstatus, "error");
 					}
 					
@@ -755,7 +732,6 @@ public class Navigation implements Observer {
 		    	
 		    	if (!state.exists(State.values.navigationroute)) return;
 		    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-//		    	State.getReference().dumpFile("about to start docking");
 				dock();
 				
 				// wait while autodocking does its thing 
@@ -784,7 +760,6 @@ public class Navigation implements Observer {
 					Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
 						+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
 				
-//					return;
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
@@ -793,8 +768,7 @@ public class Navigation implements Observer {
 				updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
 				Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
 				Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
-	////////
-	/////			lll
+	
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;
@@ -806,8 +780,6 @@ public class Navigation implements Observer {
 
 
 	private boolean delayToNextRoute(Element navroute, String name, String id) {
-		// delay to next route
-
 		String msg = " min until next route: "+name+", run #"+consecutiveroute;
 		if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) {
 			msg = " min until reboot, max consecutive routes: "+RESTARTAFTERCONSECUTIVEROUTES+ " reached";
@@ -1196,8 +1168,5 @@ public class Navigation implements Observer {
 		new Thread(new Runnable() { public void run() {
 			if (Ros.saveMap())  app.message("map saved to "+Ros.getMapFilePath(), null, null);
 		}  }).start();
-
 	}
-
-
 }
