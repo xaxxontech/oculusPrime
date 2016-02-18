@@ -6,7 +6,10 @@ public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm, checkaddresses,
-	soundthreshold, motionthreshold, redockifweakconnection;
+	soundthreshold, motionthreshold, redockifweakconnection,
+
+	useflash, // undocumented
+	;
 	
 	/** get basic settings */
 	public static Properties createDeaults(){
@@ -24,6 +27,7 @@ public enum ManualSettings {
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "150");
 		config.setProperty(redockifweakconnection.name(), Settings.TRUE);
+		config.setProperty(useflash.name(), Settings.TRUE);
 		return config;
 	}
 	

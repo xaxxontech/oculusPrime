@@ -9,7 +9,7 @@ import java.util.Vector;
  */
 public class TelnetServer implements Observer {
 	
-	public static enum Commands {chat, exit, bye, quit}; 
+	public static enum Commands {chat, exit, bye, quit, state};
 	
 	public static final boolean ADMIN_ONLY = true;
 	public static final String MSGPLAYERTAG = "<messageclient>";
@@ -178,16 +178,36 @@ public class TelnetServer implements Observer {
 		
 		switch (telnet) {
 		
-		case chat: // overrides playercommands chat
-			String args = new String(); 		
-			for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
-			if(args.length()>1) app.playerCallServer(PlayerCommands.chat, args);
-			return true;
-		
-		case bye:
-		case quit:
-		case exit: shutDown("user left", out, in, clientSocket); 
-			return true;
+			case chat: // overrides playercommands chat
+				String args = new String();
+				for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
+				if(args.length()>1) app.playerCallServer(PlayerCommands.chat, args);
+				return true;
+
+			case bye:
+			case quit:
+			case exit: shutDown("user left", out, in, clientSocket);
+				return true;
+
+			case state:
+				if (cmd.length == 3) { // two args
+					if (cmd[1].equals("delete")) state.delete(cmd[2]);
+					else state.set(cmd[1], cmd[2]);
+				}
+				else if (cmd.length > 3) { // 2nd arg has spaces
+					String stateval = "";
+					for (int i=2; i<cmd.length; i++) stateval += cmd[i]+" ";
+					state.set(cmd[1], stateval.trim());
+				}
+				else if (cmd.length == 2) {
+					sendToSocket("<state> " + cmd[1] + " " + state.get(cmd[1]), out);
+				}
+				else {  // no args
+					sendToSocket("<state> " + state.toString(), out);
+				}
+
+				return true;
+
 		}
 		
 		// command was not managed 
@@ -196,7 +216,11 @@ public class TelnetServer implements Observer {
 	
 	private void sendToSocket(String str, PrintWriter out) {
 		Boolean multiline = false;
-		if (str.matches(".*<br>.*")) { 
+//		if (str.matches(".*<br>.*")) {
+//			multiline = true;
+//			str = (str.replaceAll("<br>", "\r\n")).trim();
+//		}
+		if (str.contains("<br>")) {
 			multiline = true;
 			str = (str.replaceAll("<br>", "\r\n")).trim();
 		}
@@ -241,9 +265,6 @@ public class TelnetServer implements Observer {
 
 	/**  register for updates, share state with all threads  */
 	public TelnetServer(oculusPrime.Application a) {
-
-		if(settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED)) return;
-		 
 		app = a;
 		state.addObserver(this);
 		Util.debug("telnet server started", this);
@@ -252,7 +273,8 @@ public class TelnetServer implements Observer {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				while(true) startCommandListener();
+				while(!settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED.toString()))
+					startCommandListener();
 			}
 		}).start();
 	}

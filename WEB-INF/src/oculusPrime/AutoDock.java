@@ -36,7 +36,7 @@ public class AutoDock {
 	private Application app = null;
 	private OculusImage oculusImage = new OculusImage();
 	private int rescomp; // (multiplier - javascript sends clicksteer based on 640x480, autodock uses 320x240 images)
-	private final int allowforClickSteer = 500;
+	private int allowforClickSteer = 500;
 	private int dockattempts = 0;
 	private static final int maxdockattempts = 5;
 	private int imgwidth;
@@ -52,6 +52,7 @@ public class AutoDock {
 		this.comport = com;
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
+		if (!settings.getBoolean(ManualSettings.useflash)) allowforClickSteer = 750;
 	}
 
 	public void autoDock(String str){
@@ -657,32 +658,30 @@ public class AutoDock {
 
 	public void getLightLevel() {
 
-		if (state.getBoolean(State.values.framegrabbusy.name())
-				|| !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) || state
-						.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-			app.message("framegrab busy or stream unavailable", null, null);
-			return;
-		}
+//		if (state.getBoolean(State.values.framegrabbusy.name())
+//				|| !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) || state
+//						.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
+//			app.message("framegrab busy or stream unavailable", null, null);
+//			return;
+//		}
+//
+//		if (app.grabber instanceof IServiceCapableConnection) {
+//			Application.framegrabimg = null;
+//			Application.processedImage = null;
+//			state.set(State.values.framegrabbusy.name(), true);
+//			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
+//			sc.invoke("framegrabMedium", new Object[] {});
+//			app.message("getlightlevel command received", null, null);
+//		}
 
-		if (app.grabber instanceof IServiceCapableConnection) {
-			Application.framegrabimg = null;
-			Application.processedImage = null;
-			state.set(State.values.framegrabbusy.name(), true);
-			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
-			sc.invoke("framegrabMedium", new Object[] {});
-			app.message("getlightlevel command received", null, null);
-		}
+		if (!app.frameGrab(LOWRES)) return;
 
 		new Thread(new Runnable() {
 			public void run() {
 				try {
 					int n = 0;
 					while (state.getBoolean(State.values.framegrabbusy)) {
-						try {
-							Thread.sleep(5);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
+						Util.delay(5);
 						n++;
 						if (n > 2000) { // give up after 10 seconds
 							state.set(State.values.framegrabbusy, false);
@@ -742,12 +741,12 @@ public class AutoDock {
 		state.delete(oculusPrime.State.values.dockfound);
 		state.delete(oculusPrime.State.values.dockmetrics);
 
-		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
-				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-			app.message("stream unavailable", null, null);
-			Util.log("error, stream unavailable", this);
-			return;
-		}
+//		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
+//				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
+//			app.message("stream unavailable", null, null);
+//			Util.log("error, stream unavailable", this);
+//			return;
+//		}
 
 		if (state.getBoolean(State.values.framegrabbusy)) {
 			app.message("framegrab busy", null, null);
@@ -758,17 +757,22 @@ public class AutoDock {
 
 		state.set(oculusPrime.State.values.dockgrabbusy, true);
 
-		if (app.grabber instanceof IServiceCapableConnection) {
-			state.set(State.values.framegrabbusy.name(), true);
-			Application.framegrabimg = null;
-			Application.processedImage = null;
-			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
-			String resolution;
-			if (lowres) { resolution = "framegrabMedium"; }
-			else { resolution = "framegrab"; }
+		String res=HIGHRES;
+		if (lowres) res=LOWRES;
 
-			sc.invoke(resolution, new Object[] {});
-		}
+		if (!app.frameGrab(res)) return; // performs stream availability check
+
+//		if (app.grabber instanceof IServiceCapableConnection) {
+//			state.set(State.values.framegrabbusy.name(), true);
+//			Application.framegrabimg = null;
+//			Application.processedImage = null;
+//			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
+//			String resolution;
+//			if (lowres) { resolution = "framegrabMedium"; }
+//			else { resolution = "framegrab"; }
+//
+//			sc.invoke(resolution, new Object[] {});
+//		}
 
 		new Thread(new Runnable() {
 			public void run() {

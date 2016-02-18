@@ -149,29 +149,24 @@ public class FrameGrabHTTP extends HttpServlet {
 			
 			int n = 0;
 			while (state.getBoolean(State.values.framegrabbusy)) {
-//				while (img == null) {
-				try {
-					Thread.sleep(5);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				} 
+				Util.delay(5);
 				n++;
 				if (n> 2000) {  // give up after 10 seconds 
 					state.set(State.values.framegrabbusy, false);
 					break;
 				}
 			}
-			
-			
-			if (Application.framegrabimg != null) {
+
+			if (Application.framegrabimg != null) { // TODO: unused?
 				for (int i=0; i<Application.framegrabimg.length; i++) {
 					out.write(Application.framegrabimg[i]);
 				}
 			}
-			
-			else if (Application.processedImage != null) {
-				
-				ImageIO.write(Application.processedImage, "JPG", out);
+
+			else {
+				if (Application.processedImage != null) {
+					ImageIO.write(Application.processedImage, "JPG", out);
+				}
 			}
 			
 		    out.close();

@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.945;
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.947;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -494,10 +494,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 			    Matcher mat = pat.matcher(extinfo);
 			    while (mat.find()) {
 			    	String battvolts = mat.group().replaceFirst("_lV:", "");
-			    	if ((!state.exists(State.values.batteryvolts.toString()) || 
-							!state.get(State.values.batteryvolts).equals(battvolts))) {
-			    		state.set(State.values.batteryvolts, battvolts);
-			    	}
+			    	if (!state.exists(State.values.batteryvolts.toString()) ) {
+						state.set(State.values.batteryvolts, battvolts);
+						application.comport.setInitialOdomPWM();
+					}
+					else if (!state.get(State.values.batteryvolts).equals(battvolts)) {
+						state.set(State.values.batteryvolts, battvolts);
+					}
+
 			    }
 			    
 			}
@@ -541,7 +545,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	 * @param cmd
 	 *            is a byte array of messages to send
 	 */
-	public void sendCommand(byte[] cmd) {
+	private void sendCommand(byte[] cmd) {
 
 		String text = "sendCommand(): " + (char)cmd[0] + " ";
 		for(int i = 1 ; i < cmd.length ; i++) 

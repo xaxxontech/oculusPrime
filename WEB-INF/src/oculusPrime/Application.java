@@ -56,6 +56,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private IConnection pendingplayer = null;
 	private SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
+	private Video video = null;
 
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
@@ -71,13 +72,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start Ach:" + System.getProperty("sun.arch.data.model") + "===============", this);
-		PowerLogger.append("\n==============Oculus Prime Java Start Ach:" + System.getProperty("sun.arch.data.model") + "===============", this);
+		Util.log("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
+		PowerLogger.append("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
-		commandServer = new TelnetServer(this);
 		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
@@ -85,6 +85,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	@Override
 	public boolean appConnect(IConnection connection, Object[] params) {
+
+		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
+		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
+			Util.log("localhost/LAN/known netstream connect, no params", this);
+			return true;
+		}
 
 		String logininfo[] = ((String) params[0]).split(" ");
 
@@ -193,6 +199,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// currently no username info when passenger disconnects
 	}
 
+	// called by flash
 	public void grabbersignin(String mode) {
 		if (mode.equals("init")) {
 			state.delete(State.values.stream);
@@ -233,7 +240,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void killGrabber() {
-		Util.systemCall("pkill chrome");    // TODO: use PID
+		if (settings.getBoolean(ManualSettings.useflash)) Util.systemCall("pkill chrome");    // TODO: use PID
 	}
  
 	/** */
@@ -248,23 +255,25 @@ public class Application extends MultiThreadedApplicationAdapter {
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
 
+		if (!settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED.toString()))
+			commandServer = new TelnetServer(this);
+
 		if (settings.getBoolean(ManualSettings.developer.name())) {
 			openNIRead = new developer.depth.OpenNIRead();
 			scanUtils = new developer.depth.ScanUtils();
 		}
-	
-		try { 
+
+		try {
 			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
-		} catch (Exception e) {
-			e.printStackTrace();
-			Util.log("opencv native lib not availabe", this);
+		} catch (UnsatisfiedLinkError e) {
+			Util.log("opencv native lib not available", this);
 		}
 
 		if (settings.getBoolean(GUISettings.navigation)) {
 			navigation = new developer.Navigation(this);
 			navigation.runAnyActiveRoute();
 		}
-		
+
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
@@ -276,7 +285,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
-		
+
 		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
 		//else {
 		Util.setJettyTelnetPort();
@@ -285,29 +294,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 		
 		watchdog = new SystemWatchdog(this);
+
 		Util.debug("application initialize done", this);
 		
-//		giveWarnings();
 	}
 
-//	private void giveWarnings(){	
-//		Util.log("disk:       " + Util.diskFullPercent() + "% hdd prime: " + Util.countMbytes(".") + " mb", this);
-//		Util.log("zip size:   " + Util.countMbytes(Settings.archivefolder) + " mb", this);
-//		Util.log("frame size: " + Util.countMbytes(Settings.framefolder) + " mb", this);
-//		Util.log("log size:   " + Util.countMbytes(Settings.logfolder) + " mb", this);
-		
-//		if(Util.countMbytes(Settings.logfolder) > Util.MAX_lOG_MBYTES) 	
-//			Util.appendUserMessage("log files too large");
-
-//		if(Util.countMbytes(Settings.framefolder) > Util.MAX_lOG_MBYTES) 
-//			Util.appendUserMessage("images folder too large");
-		
-//		if(Util.testTelnetRouter()) Util.appendUserMessage("telnet Open ON ROUTER");
-//		if( ! Util.testHTTP()) Util.appendUserMessage("HTTP port blocked");
-//		if( ! Util.testRTMP()) Util.appendUserMessage("RTMP port blocked ");
-//	}
-	
 	private void grabberInitialize() {
+
+		// non flash, no gui
+		if (!settings.getBoolean(ManualSettings.useflash)) {
+			video = new Video(this);
+			if (!settings.getBoolean(GUISettings.skipsetup)) {
+				if (settings.readSetting("user0") == null) {
+					String p = "oculus" + salt + "robot"; // default
+					String encryptedPassword = passwordEncryptor.encryptPassword(p);
+					settings.newSetting("user0", "oculus");
+					settings.newSetting("pass0", encryptedPassword);
+				}
+			}
+			return;
+		}
+
 		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");
 		else initialize_launch();
 	}
@@ -345,7 +352,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}).start();
 	}
 
-	/** */
+	/**
+	 * called by remote flash
+	 * */
 	public void playersignin() {		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
 		String videosoundmode=VIDEOSOUNDMODELOW;
@@ -832,7 +841,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// dev tool only
 		case error:
 			try {
-				if(state.exists(values.redockifweakconnection)) Util.log("redockifweakconnection exists", this);
+				state.set(values.roscurrentgoal, "");
+				messageplayer("*"+state.get(values.roscurrentgoal)+"*", null, null);
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 
@@ -906,6 +916,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.archiveLogs();
 			break;
+
+		case streammode: // TODO: testing ffmpeg/avconv streaming
+			grabberSetStream(str);
+			break;
+
 		}
 	}
 
@@ -936,47 +951,51 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 * distribute commands from grabber
 	 */
 	public void grabberCallServer(final grabberCommands cmd, final String str) {
-		
+
 		switch (cmd) {
-		case streammode:
-			grabberSetStream(str);
-			break;
-		case saveandlaunch:
-			saveAndLaunch(str);
-			break;
-		case populatesettings:
-			populateSettings();
-			break;
-			case systemcall:
-			Util.systemCall(str);
-			break;
-		case chat:
-			chat(str);
-			break;
-		case dockgrabbed:
-			docker.autoDock("dockgrabbed " + str);
-			state.set(State.values.dockgrabbusy.name(), false);
-			break;
-			case autodock:
-			docker.autoDock(str);
-			break;
-			case factoryreset:
-			factoryReset();
+			case streammode:
+				grabberSetStream(str);
 				break;
-		case restart:
-			restart();
-			break;
-		case shutdown:
-			shutdownApplication();
-			break;
-		case streamactivitydetected:
-			streamActivityDetected(str);
-			break;
-		default:
-			break;
+			case saveandlaunch:
+				saveAndLaunch(str);
+				break;
+			case populatesettings:
+				populateSettings();
+				break;
+			case systemcall:
+				Util.systemCall(str);
+				break;
+			case chat:
+				chat(str);
+				break;
+			case dockgrabbed:
+				docker.autoDock("dockgrabbed " + str);
+				state.set(State.values.dockgrabbusy.name(), false);
+				break;
+			case autodock:
+				docker.autoDock(str);
+				break;
+			case factoryreset:
+				factoryReset();
+				break;
+			case restart:
+				restart();
+				break;
+			case shutdown:
+				shutdownApplication();
+				break;
+			case streamactivitydetected:
+				streamActivityDetected(str);
+				break;
+			default:
+				break;
 		}
 	}
 
+	/**
+	 * set state and message all connected clients with stream status
+	 * @param str
+	 */
 	private void grabberSetStream(String str) {
 		final String stream = str;
 		state.set(State.values.stream, str);
@@ -994,7 +1013,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 							if (con instanceof IServiceCapableConnection
 									&& con != grabber
 									&& !(con == pendingplayer && !pendingplayerisnull)) {
-								IServiceCapableConnection n = (IServiceCapableConnection) con;
+								IServiceCapableConnection n = (IServiceCapableConnection) con; // all CLIENTS
 								n.invoke("message", new Object[] { "streaming " + stream, "green", "stream", stream });
 								Util.debug("message all players: streaming " + stream +" stream " +stream,this);
 							}
@@ -1008,6 +1027,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void setGrabberVideoSoundMode(String str) {
+
+		if (!settings.getBoolean(ManualSettings.useflash)) return;
 		
 		if (state.getBoolean(State.values.autodocking.name())) {
 			messageplayer("command dropped, autodocking", null, null);
@@ -1042,6 +1063,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 
+		ArduinoPrime.checkIfInverted();
+
+		String current = settings.readSetting(GUISettings.vset);
+		String vals[] = (settings.readSetting(current)).split("_");
+		int width = Integer.parseInt(vals[0]);
+		int height = Integer.parseInt(vals[1]);
+		int fps = Integer.parseInt(vals[2]);
+		int quality = Integer.parseInt(vals[3]);
+
+		if (!settings.getBoolean(ManualSettings.useflash)) {
+			video.publish(mode, width, height, fps);
+			return;
+		}
+
+		// flash
 		try {
 			// commands: camandmic camera mic stop
 
@@ -1049,14 +1085,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
 			if (!(grabber instanceof IServiceCapableConnection))
 				Util.log("publish() error grabber reload timeout", this);
-
 			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			String current = settings.readSetting("vset");
-			String vals[] = (settings.readSetting(current)).split("_");
-			int width = Integer.parseInt(vals[0]);
-			int height = Integer.parseInt(vals[1]);
-			int fps = Integer.parseInt(vals[2]);
-			int quality = Integer.parseInt(vals[3]);
 			sc.invoke("publish", new Object[] { mode.toString(), width, height, fps, quality });
 			messageplayer("command received: publish " + mode.toString(), null, null);
 			Util.log("publish: " + mode.toString(), this);
@@ -1066,7 +1095,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.printError(e);
 		}
 
-		ArduinoPrime.checkIfInverted();
+
 	}
 
 	public void muteROVMic() {
@@ -1103,44 +1132,35 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		}
 //	}
 
-	/**  */
 	public boolean frameGrab() {
+		return frameGrab("");
+	}
+
+	/**  */
+	public boolean frameGrab(String res) {
 
 		 if(state.getBoolean(State.values.framegrabbusy.name()) || 
 				 !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
 						 state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-			 messageplayer("stream unavailable or framegrab busy, command dropped", null, null);
+			 messageplayer("stream unavailable or framegrab busy", null, null);
 			 return false;
 		 }
 
-		if (grabber instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("framegrab", new Object[] {});
-			state.set(State.values.framegrabbusy.name(), true);
+		if (settings.getBoolean(ManualSettings.useflash)) {
+			if (grabber instanceof IServiceCapableConnection) {
+				IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
+				if (res.equals(AutoDock.LOWRES)) sc.invoke("framegrabMedium", new Object[]{});
+				else sc.invoke("framegrab", new Object[]{});
+				state.set(State.values.framegrabbusy.name(), true);
+			}
 		}
+		else video.framegrab(res);
 
 //		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
 
-	/** called by Flash oculusPrime_grabber.swf 
-	 * is NOT blocking for some reason ?
-	 * */
-//	public void frameGrabbed(ByteArray _RAWBitmapImage) {
-//
-//		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
-//		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
-//													// into a standard Java
-//													// array of bytes
-//		byte c[] = new byte[BWholeSize];
-//		_RAWBitmapImage.readBytes(c);
-//		if (BCurrentlyAvailable > 0) {
-//			state.set(State.values.framegrabbusy.name(), false);
-//			framegrabimg = c;
-//		}
-//	}
-	
-	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
+	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file
 	 * linux only for now
 	 **/
 	public void frameGrabbed(int width, int height) {
@@ -1475,11 +1495,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 
-		if (navigation != null) {
-			if (state.exists(values.odomlinearpwm))
-				settings.writeSettings(ManualSettings.odomlinearpwm, state.get(values.odomlinearpwm));
-			if (state.exists(values.odomturnpwm))
-				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
+		if (navigation != null) { // TODO: << condition required?
+			if (state.exists(values.odomlinearpwm)) {
+				settings.writeSettings(ManualSettings.odomlinearpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			}
+			if (state.exists(values.odomturnpwm)) {
+				settings.writeSettings(ManualSettings.odomturnpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			}
 		}
 
 		Util.delay(1000);
@@ -1505,16 +1529,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 			commandServer.close();
 		}
 		
-		powerport.writeStatusToEeprom();
+		if (powerport.isConnected()) powerport.writeStatusToEeprom();
 		PowerLogger.close();
 		
 		if (navigation != null) {
 			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
 				navigation.stopNavigation();
-			if (state.exists(values.odomlinearpwm))
-				settings.writeSettings(ManualSettings.odomlinearpwm, state.get(values.odomlinearpwm));
-			if (state.exists(values.odomturnpwm))
-				settings.writeSettings(ManualSettings.odomturnpwm, state.get(values.odomturnpwm));
+
+			if (state.exists(values.odomlinearpwm)) {
+				settings.writeSettings(ManualSettings.odomlinearpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			}
+			if (state.exists(values.odomturnpwm)) {
+				settings.writeSettings(ManualSettings.odomturnpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			}
 		}
 
 		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();

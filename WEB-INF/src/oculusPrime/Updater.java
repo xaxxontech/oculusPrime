@@ -126,17 +126,12 @@ public class Updater {
 		}
 
 		// run avrdude
-//		String cmd= Application.RED5_HOME+Util.sep+folder+Util.sep+"avrdude";
 		String cmd= "./avrdude";
 		String args = "-v -p atmega328p -c arduino -P "+port+
 				" -b 57600 -C avrdude.conf -D -U flash:w:"+filename+":i";
 		Util.log("Updater.updateFirmware(): "+cmd+" "+args, null);
-//		ProcessBuilder pb = new ProcessBuilder(cmd, arg);
-//		pb.directory(new File(Application.RED5_HOME + Util.sep + folder)); // working dir
 
 		try {
-//			Process process= pb.start();
-//			process.waitFor();
 
 			Process proc = Runtime.getRuntime().exec( Settings.redhome+Util.sep+folder+Util.sep+"run "+cmd+" "+args);
 			proc.waitFor();

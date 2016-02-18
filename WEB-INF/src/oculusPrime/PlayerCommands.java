@@ -62,7 +62,7 @@ public enum PlayerCommands {
     archiveros, archiveimages, archivelogs, 
     
     // experimental (undocumented)
-    opennisensor, clearmap, error,
+    opennisensor, clearmap, error, streammode,
 
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness;

@@ -1,6 +1,9 @@
 package developer;
 
 
+import oculusPrime.Util;
+
+import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,12 +29,8 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        int i = 10;
-        double d = 1.487;
-//        i = (int) (i*d);
-        i *= d;
-        System.out.println(i);
-
+        int i=1;
+        System.out.println("ASdf"+(i+2));
 
     }
 }

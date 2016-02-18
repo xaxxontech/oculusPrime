@@ -353,7 +353,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			
 			state.set(State.values.distanceangle, lastodomlinear +" "+lastodomangle); //millimeters, degrees
 			state.set(State.values.odomupdated, true);
-			state.set(State.values.lastodomreceived, System.currentTimeMillis());
+//			state.set(State.values.lastodomreceived, System.currentTimeMillis());
 			
 			// testing only ----------------
 			if (settings.getBoolean(ManualSettings.developer.name())) {
@@ -1041,7 +1041,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			final int pwmincr = 5;
 			final int accel = 500;
 			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
-			
+
 			while (currentMoveID == moveID)  {
 
 				if (state.getBoolean(State.values.odomupdated)) {
@@ -1086,10 +1086,23 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 				}
 				Util.delay(1);
-				
+
 			}
+
+			floorFrictionCheck();
+
 		} }).start();
 		
+	}
+
+	private void floorFrictionCheck() {
+		// 	measured carpet = 195pwm (volts comped 0.0857degrees per ms  12.04 battery volts)
+		// no carpet = pwm 110-140
+		int pwmthreshold = 150;
+		boolean rosarcmove = state.getBoolean(State.values.rosarcmove);
+		if (unVoltsComp(state.getInteger(State.values.odomturnpwm)) > pwmthreshold)
+		{ if (rosarcmove) state.set(State.values.rosarcmove, false); }
+		else { if (!rosarcmove) state.set(State.values.rosarcmove, true); }
 	}
 	
 	// example target rate = 3.2m/s = 0.00032 m/ms
@@ -1513,8 +1526,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						break;
 				}
 
-				long moveID = 0;
-				if (currentdirection.equals(direction.forward.toString())) moveID = currentMoveID;
+//				state.block(State.values.direction, direction.forward.toString(), 1000); // wait for goForward ID to be assigned
+//				long moveID = currentMoveID;
+
+//				long moveID = 0;
+//				if (currentdirection.equals(direction.forward.toString())) moveID = currentMoveID;
 
 				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
 					double n = onemeterdelay * meters;
@@ -1524,8 +1540,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())));
 				}
 
-				if (currentdirection.equals(direction.forward.toString()))
-					if (currentCamMoveID != moveID) return;
+//				if (currentdirection.equals(direction.forward.toString()))
+//					if (currentCamMoveID != moveID) return;
 
 				stopGoing();
 				
@@ -1570,7 +1586,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public void arcmove(final double arclengthmeters, final int angledegrees) {
 
-//		if degrees per arcmeter are below threshold, go straight and exit
 		if (arclengthmeters ==0) return;
 
 		final long moveID = System.nanoTime();
@@ -1601,19 +1616,52 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}
 
 		final int degreespermeter = (int) (Math.abs(angledegrees)/arclengthmeters);
+
+//		if (degreespermeter < 6) {
+//			if (!state.get(State.values.direction).equals(direction.stop.toString()))
+//				state.set(State.values.direction, direction.forward.toString()); // to skip stopbetweenmoves and accel
+//			movedistance(direction.forward, arclengthmeters);
+//			return;
+//		}
+
+		state.set(State.values.moving, true);
+
+		// go straight if only slight arc
 		if (degreespermeter < 6) {
-			if (!state.get(State.values.direction).equals(direction.stop.toString()))
-				state.set(State.values.direction, direction.forward.toString()); // to skip stopbetweenmoves and accel
-			movedistance(direction.forward, arclengthmeters);
+
+			if (!state.exists(State.values.odomlinearmpms.toString())) { // assumed no odometry
+				movedistance(direction.forward, arclengthmeters);
+				return;
+			}
+
+			// odometry running
+			int speed = state.getInteger(State.values.odomlinearpwm);
+			tracklinearrate(moveID);
+			speed = (int) voltsComp((double) speed);
+			if (speed > 255) speed = 255;
+			int[] comp = applyComp(speed);
+			int L, R;
+			L = comp[0];
+			R = comp[1];
+			sendCommand(new byte[]{FORWARD, (byte) R, (byte) L});
+			state.set(State.values.direction, direction.forward.toString());
+//			Util.log("arcmove straight: "+arclengthmeters, this);
+
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay((long) (arclengthmeters / state.getDouble(State.values.odomlinearmpms.toString())));
+					if (moveID == currentMoveID) stopGoing();
+				}
+			}).start();
+
 			return;
 		}
 
-		state.set(State.values.moving, true);
 
 		new Thread(new Runnable() {
 			public void run() {
 
-				double angleradians = Math.toRadians(Math.abs(angledegrees));
+				double angleradians = Math.toRadians(Math.abs(angledegrees)) * 1.4; // TODO: comp constant, make settable?
 				double radius = arclengthmeters/angleradians;
 
 				final int degreespermetermin = 6; // pwm 100
@@ -1647,7 +1695,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) spd});
 				}
 
-				arcodomcomp *= 0.98; // 1.015;
+//				arcodomcomp *= 0.98; // 1.015;
 
 				// sanity check
 				if (arcodomcomp > 1.3) {
@@ -1658,12 +1706,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.log("error, whacky arcodomcomp: "+arcodomcomp, this);
 					arcodomcomp = 0.7;
 				}
-
-//				// TODO: remove
-//				String s = "arcmove "+arclengthmeters+", "+angledegrees;
-//				s += ", arcodomcomp: "+arcodomcomp+", pwm: "+pwm;
-//  			Util.log(s, this);
-
 
 				Util.delay((long) (arclengthmeters/0.32*1000));
 
@@ -1676,7 +1718,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	
 	/**
-	 * compensates timer for drooping system voltage
+	 * compensates timer (or pwm values) for drooping system voltage
 	 * @param n original milliseconds
 	 * @return modified (typically extended) milliseconds
 	 */
@@ -1694,14 +1736,35 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		n = n * Math.pow(nominalvolts/volts, exponent);
 		return n;
 	}
-	
+
+	public double unVoltsComp(double n) {
+		double volts = 12.0;
+		final double nominalvolts = 12.0;
+		final double exponent = 1.6;
+
+		if (state.exists(State.values.batteryvolts.toString())) {
+			if (Math.abs(state.getDouble(State.values.batteryvolts.toString()) - volts) > 2) // sanity check
+				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.batteryvolts), this);
+			else  volts = Double.parseDouble(state.get(State.values.batteryvolts));
+		}
+
+		n = n / Math.pow(nominalvolts/volts, exponent);
+		return n;
+	}
+
+	public void setInitialOdomPWM() {
+		state.set(State.values.odomturnpwm,
+				(int) voltsComp(Double.parseDouble(settings.readSetting(ManualSettings.odomturnpwm.name())) ) );
+		state.set(State.values.odomlinearpwm,
+				(int) voltsComp(Double.parseDouble(settings.readSetting(ManualSettings.odomlinearpwm.name()))));
+	}
+
 	public void delayWithVoltsComp(int n) {
 		int delay = (int) voltsComp((double) n);
 		Util.delay(delay);
 	}
 
 	public void clickSteer(final int x, int y) {
-		
 		clickCam(y);
 		clickNudge(x, false);
 	}
@@ -1800,7 +1863,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		state.set(State.values.odomlinearmpms, METERSPERSEC / 1000);
 		state.set(State.values.odomturndpms, DEGPERMS);
 		state.set(State.values.motorspeed, state.get(State.values.odomlinearpwm));
-		state.set(State.values.lastodomreceived, System.currentTimeMillis());
+//		state.set(State.values.lastodomreceived, System.currentTimeMillis());
 
 		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
 			new Thread(new Runnable() {public void run() {

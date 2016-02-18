@@ -31,6 +31,7 @@ public class State {
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
+		writingframegrabs, // undocumented
 
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
 		powererror, forceundock,
@@ -42,13 +43,13 @@ public class State {
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
-		lastodomreceived, // << undocumented, testing
-		
+
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		
+		rosarcmove, // to be documented
+
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
@@ -419,6 +420,8 @@ public class State {
 	}
 	
 	public String dumpFile(final String msg) {
+		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
+
 		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
 		Util.log("file created: "+dump.getAbsolutePath(), this);
 		

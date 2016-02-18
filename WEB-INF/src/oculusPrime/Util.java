@@ -188,20 +188,20 @@ public class Util {
 	 */
 	public static void systemCallBlocking(final String args) {
 		try {	
-			
-			long start = System.currentTimeMillis();
-			Process proc = Runtime.getRuntime().exec(args);
-			BufferedReader procReader = new BufferedReader(
-					new InputStreamReader(proc.getInputStream()));
 
-			String line = null;
-			System.out.println(proc.hashCode() + "OCULUS: exec():  " + args);
-			while ((line = procReader.readLine()) != null)
-				System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
+			Process proc = Runtime.getRuntime().exec(args);
+
+//			long start = System.currentTimeMillis();
+//			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+//			String line = null;
+//			System.out.println(proc.hashCode() + "OCULUS: exec():  " + args);
+//			while ((line = procReader.readLine()) != null)
+//				System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
 			
 			proc.waitFor(); // required for linux else throws process hasn't terminated error
-			System.out.println("OCULUS: process exit value = " + proc.exitValue());
-			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
+
+//			System.out.println("OCULUS: process exit value = " + proc.exitValue());
+//			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -251,7 +251,9 @@ public class Util {
 
 	public static void setSystemVolume(int percent, Application app){
 //		Util.systemCall("amixer set Master "+percent+"%"); // doesn't work in xubuntu 14.04 fresh install
-		Util.systemCall("pactl -- set-sink-volume 0 "+percent+"%"); 		// pactl -- set-sink-volume 0 80%
+//		Util.systemCall("pactl -- set-sink-volume 0 "+percent+"%"); 		// pactl -- set-sink-volume 0 80%
+		try { Runtime.getRuntime().exec("pactl -- set-sink-volume 0 "+percent+"%");
+		} catch (Exception e) { log("Util.setSystemVolume; error setting volume with pulse audio pactl command", null ); }
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
@@ -637,11 +639,11 @@ public class Util {
 					addr = addr.substring(0, addr.indexOf(" ")).trim();
 									
 					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
-					else Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
+					else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
 				}
 			}
 		} catch (Exception e) {
-			Util.log("updateLocalIPAddress(): failed to lookup wifi device", null);
+			Util.debug("updateLocalIPAddress(): failed to lookup wifi device", null);
 			state.delete(values.localaddress);
 			updateEthernetAddress();
 		}
@@ -662,7 +664,7 @@ public class Util {
 					addr = addr.substring(0, addr.indexOf(" ")).trim();
 									
 					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
-					else Util.log("updateLocalIPAddress(): bad address ["+ addr + "]", null);
+					else Util.debug("Util.updateEthernetAddress(): bad address ["+ addr + "]", null);
 				}
 			}
 		} catch (Exception e) {
