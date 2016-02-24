@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.947;
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.948;
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -56,7 +56,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int WARNING_ONLY_BELOW = 40;
 	public static final int RESET_REQUIRED_ABOVE= 19;
 	public static final int FORCE_UNDOCK_ABOVE = 79;
-	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4);  // log only, suppress gui warnings:
+	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4,3,7);  // log only, suppress gui warnings:
 
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
@@ -79,9 +79,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 		temp.put("ERROR_WALL_BRICK_LOW_VOLTAGE", 					4);
 		temp.put("ERROR_OVER_DISCHARGED_PACK",						5);
 		temp.put("ERROR_PACK_DRAINED_TO_ZERO_PERCENT",				6); // (MOVED, was 22)
+		temp.put("ERROR_NO_HOST_DETECTED", 	   						7); // (MOVED, was 23)
 		//ERROR CODES, WARNING SAFE CHARGE (20-39):
-		temp.put("ERROR_NO_HOST_DETECTED", 	   						23);
-		//ERROR CODES, FATAL NO CHARGE (40-59):		
+				// nothing here at this revision level
+		//ERROR CODES, FATAL NO CHARGE (40-59):
 		temp.put("ERROR_SEVERELY_UNBALANCED_PACK",					41); 
 		temp.put("ERROR_MAX_PWM_BUT_LOW_CURRENT", 					42);
 		temp.put("ERROR_OVERCHARGED_CELL", 							43); 
@@ -285,6 +286,15 @@ public class ArduinoPower implements SerialPortEventListener  {
 			return;
 		}
 		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+
+			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
+				String msg = "current power firmware: "+firmwareversion+
+						" out-of-date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+				state.set(State.values.guinotify, msg);
+				Util.log(msg, this);
+				return;
+			}
+
 			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
 			String port = state.get(State.values.powerport); // disconnect() nukes this state value
 			disconnect();

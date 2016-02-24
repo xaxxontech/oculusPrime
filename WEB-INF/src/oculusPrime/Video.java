@@ -55,19 +55,24 @@ public class Video {
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case mic:
-                    Util.systemCall("avconv -f alsa -ac 1 -ar 22050 " +
+                    Util.systemCall("avconv -re -f alsa -ac 1 -ar 22050 " +
                             "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case camandmic:
-                    Util.systemCall("avconv -f video4linux2 -s " + width + "x" + height + " -r " + fps +
-                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
-                            port + "/oculusPrime/stream1");
-                    Util.systemCall("avconv -f alsa -ac 1 -ar 22050 " +
+                    Util.systemCall("avconv -re -f alsa -ac 1 -ar 22050 " +
                             "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
                             port + "/oculusPrime/stream2");
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
+
+                    Util.systemCall("avconv -f video4linux2 -s " + width + "x" + height + " -r " + fps +
+                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
+                            port + "/oculusPrime/stream1");
+
+//                    if (state.get(State.values.osarch).equals(Application.ARM))
+//                        Util.delay(Application.STREAM_CONNECT_DELAY);
+
                     break;
                 case stop:
                     state.set(State.values.writingframegrabs, false);

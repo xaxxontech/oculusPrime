@@ -40,6 +40,7 @@ public class State {
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 		localaddress, externaladdress, ssid, guinotify,
+		osarch,
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
@@ -120,10 +121,9 @@ public class State {
 	public boolean equals(State.values value, String b) {
 		return equals(value.name(), b);
 	}
-	
-	/*
+
 	@Override
-	public String tojjString(){	
+	public String toString(){
 		String str = "";
 		final Set<String> keys = props.keySet();
 		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
@@ -132,7 +132,6 @@ public class State {
 		}
 		return str;
 	}
-	*/
 	
 	public boolean equals(values a, navsystemstate b) {
 		return equals(a.name(), b.name());

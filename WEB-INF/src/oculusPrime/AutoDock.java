@@ -52,7 +52,8 @@ public class AutoDock {
 		this.comport = com;
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
-		if (!settings.getBoolean(ManualSettings.useflash)) allowforClickSteer = 750;
+		if (!settings.getBoolean(ManualSettings.useflash)) allowforClickSteer = 1000; // may need to be higher for rpi... about 1000
+//		if (state.get(State.values.osarch).equals(Application.ARM)) allowforClickSteer = 1000; // raspberry pi, other low power boards
 	}
 
 	public void autoDock(String str){

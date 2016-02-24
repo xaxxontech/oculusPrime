@@ -40,6 +40,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
+	public static final String ARM = "arm";
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
@@ -72,8 +73,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
-		PowerLogger.append("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
+		state.set(values.osarch, System.getProperty("os.arch"));
+		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+"===============", this);
+		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -274,10 +276,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			navigation.runAnyActiveRoute();
 		}
 
-		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
+		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
+		if (state.get(values.osarch).equals(ARM))
+			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
@@ -664,7 +668,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case setsystemvolume:
-			Util.setSystemVolume(Integer.parseInt(str), this);
+			Util.setSystemVolume(Integer.parseInt(str));
 			messageplayer("ROV volume set to "+str+"%", null, null); 
 			state.set(State.values.volume, str);
 			break;		
@@ -1119,6 +1123,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
+	// TODO: unused
 	public void unmuteROVMic() {
 		String stream = state.get(State.values.stream);
 		if (grabber == null) return;
@@ -1517,7 +1522,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
-		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+		if (!state.get(values.osarch).equals(ARM))
+			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
 	}
 
 	public void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
@@ -1526,7 +1533,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
-		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+		if (!state.get(values.osarch).equals(ARM))
+			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
 	}
 
 	public void shutdownApplication() {

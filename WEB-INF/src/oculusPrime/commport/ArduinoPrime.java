@@ -239,6 +239,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			return;
 		}
 		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
+				String msg = "current power firmware: "+firmwareversion+
+						" out-of-date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+				state.set(State.values.guinotify, msg);
+				Util.log(msg, this);
+				return;
+			}
+
 			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
 			String port = state.get(State.values.motorport); // disconnect() nukes this state value
 			disconnect();
@@ -1094,6 +1102,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	private void floorFrictionCheck() {
+		if (!settings.getBoolean(ManualSettings.usearcmoves))  return;
 		// 	measured carpet = 195pwm (volts comped 0.0857degrees per ms  12.04 battery volts)
 		// no carpet = pwm 110-140
 		int pwmthreshold = 150;
@@ -1654,12 +1663,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 			return;
 		}
-
-
+			
 		new Thread(new Runnable() {
 			public void run() {
 
-				double angleradians = Math.toRadians(Math.abs(angledegrees)) * 1.4; // TODO: comp constant, make settable?
+				double angleradians = Math.toRadians(Math.abs(angledegrees));
 				double radius = arclengthmeters/angleradians;
 
 				final int degreespermetermin = 6; // pwm 100
@@ -1676,7 +1684,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					pwm = (int) (41 + (41-rate)*1.928);
 
 //				Util.log("prevoltscomp: "+pwm,this);
-				pwm = (int) voltsComp(pwm);
+				// TODO: make arcmovecomp auto-adjusting
+				pwm = (int) (voltsComp(pwm) * settings.getDouble(ManualSettings.arcmovecomp.toString()));
 
 				if (angledegrees < 0) { // right, apply comp to left wheel TODO: double check comp direction!!
 					state.set(State.values.direction, direction.arcright.toString());

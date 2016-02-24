@@ -507,7 +507,8 @@ public class Settings {
 		return getDouble(setting.name());
 	}
 
-	public long getLong(ManualSettings setting) {
-		return Long.valueOf(readSetting(setting));
-	}
+	public long getLong(ManualSettings setting) { return Long.valueOf(readSetting(setting)); }
+
+	public long getLong(GUISettings setting) { return Long.valueOf(readSetting(setting)); }
+
 }

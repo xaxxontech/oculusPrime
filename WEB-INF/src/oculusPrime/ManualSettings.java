@@ -8,10 +8,10 @@ public enum ManualSettings {
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm, checkaddresses,
 	soundthreshold, motionthreshold, redockifweakconnection,
 
-	useflash, // undocumented
+	useflash, arcmovecomp, usearcmoves, // undocumented
 	;
 	
-	/** get basic settings */
+	/** get basic settings, set defaults for all */
 	public static Properties createDeaults(){
 		Properties config = new Properties();
 		config.setProperty(developer.name(), Settings.FALSE);
@@ -28,6 +28,8 @@ public enum ManualSettings {
 		config.setProperty(odomturnpwm.name(), "150");
 		config.setProperty(redockifweakconnection.name(), Settings.TRUE);
 		config.setProperty(useflash.name(), Settings.TRUE);
+		config.setProperty(arcmovecomp.name(), "0.8");
+		config.setProperty(usearcmoves.name(), Settings.TRUE);
 		return config;
 	}
 	
