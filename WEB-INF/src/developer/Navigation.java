@@ -48,6 +48,7 @@ public class Navigation implements Observer {
 	private long estimateddistance = 0;
 	private long estimatedtime = 0;
 	private long routedistance = 0;
+	boolean overdue = false;
 	public long routestarttime;
 	public NavigationLog navlog;
 	
@@ -599,7 +600,35 @@ public class Navigation implements Observer {
 		route.getElementsByTagName("active").item(0).setTextContent("true");
 		String xmlstring = Util.XMLtoString(document);
 		saveRoute(xmlstring);
-
+		
+		// watch dog
+		overdue = false;
+		if(estimatedtime > 60){
+			new Thread(new Runnable() { public void run() {
+		
+				Util.delay(estimatedtime*1000 + 10000); // seconds 
+				
+				if( ! (state.getBoolean(State.values.autodocking) || 
+				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
+				
+					// over due, cancel route, drive to dock.. 
+					overdue = true;
+					Util.log("--- robot over due, find dock ---", this);
+					
+					int s = (int) ((System.currentTimeMillis()/1000) + estimatedtime);
+					Util.log("*---* estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
+					Util.log("*---* estimated: " + estimatedtime     + " seconds : " + s       + " diff: " + Math.abs(estimatedtime - s), this);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "over due, called back to dock after " + estimatedtime + " seconds",
+							routestarttime, null, name, consecutiveroute, routedistance);
+					
+					dock();
+					
+				}
+			}}).start();
+		} else {
+			Util.log("... no watch dog set.", this);
+		}
+		
 		new Thread(new Runnable() { public void run() {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
@@ -607,17 +636,14 @@ public class Navigation implements Observer {
 			// repeat route schedule forever until cancelled
 			while (true) {
 
-				state.delete(State.values.nextroutetime);
-
 				// determine next scheduled route time, wait if necessary
-				while (state.exists(State.values.navigationroute)) {
+				state.delete(State.values.nextroutetime);
+				while (state.exists(State.values.navigationroute)){
+					Util.delay(1000);
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
-					if (updateTimeToNextRoute(navroute, id)){ // moved to private method, de-clutter 
-						Util.log(name + "...not sheduled, can't start??", this);
+						if (updateTimeToNextRoute(navroute, id)){ 
 						break;
 					}
-
-					Util.delay(1000);
 				}
 
 				// check if cancelled while waiting
@@ -763,19 +789,24 @@ public class Navigation implements Observer {
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
+			
+				if( ! overdue) {
+					
+					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
+					updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
 				
-				int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
-				updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
-				Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
-				Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
+					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
+					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
 	
+				}
+				
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
 				consecutiveroute ++;
 				routedistance = 0;
 				
 				if (!delayToNextRoute(navroute, name, id)) return;
 			}
-		}  }).start();
+		}}).start();
 	}
 
 

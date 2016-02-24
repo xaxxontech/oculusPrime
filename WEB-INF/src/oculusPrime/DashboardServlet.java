@@ -109,9 +109,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null&& app != null){
 
-			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
-			if(action.equalsIgnoreCase("reboot")) app.driverCallServer(PlayerCommands.reboot, null);
-			if(action.equalsIgnoreCase("restart")) app.driverCallServer(PlayerCommands.restart, null);
 			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(action.equalsIgnoreCase("managelogs")) app.driverCallServer(PlayerCommands.archive, null);			
@@ -124,7 +121,22 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
 			if(action.equalsIgnoreCase("debugon")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
-
+			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
+			
+			if(action.equalsIgnoreCase("reboot")){
+				new Thread(new Runnable() { public void run() {
+					Util.delay(2000); // redirect before calling.. 
+					app.driverCallServer(PlayerCommands.reboot, null);
+				}}).start();
+			}
+			
+			if(action.equalsIgnoreCase("restart")){
+				new Thread(new Runnable() { public void run() {
+					Util.delay(2000); // redirect before calling.. 
+					app.driverCallServer(PlayerCommands.restart, null);
+				}}).start();
+			}
+			
 			if(action.equalsIgnoreCase("snapshot")) {	
 				if(Util.archivePID()) {
 					Util.log("busy, skipping..", this);

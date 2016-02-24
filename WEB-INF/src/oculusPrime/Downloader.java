@@ -42,7 +42,7 @@ public class Downloader {
 
 		try {
 
-			int ByteRead, ByteWritten = 0;
+			int ByteRead /*, ByteWritten */ = 0;
 			os = new BufferedOutputStream(new FileOutputStream(path));
 
 			URLConn = new URL(fileAddress).openConnection();
@@ -52,10 +52,10 @@ public class Downloader {
 			// pull in the bytes
 			while ((ByteRead = is.read(buf)) != -1) {
 				os.write(buf, 0, ByteRead);
-				ByteWritten += ByteRead;
+				// ByteWritten += ByteRead;
 			}
 
-			Util.log("saved to local file: " + path + " bytes: " + ByteWritten, this);
+			Util.debug("saved file: " + path /*+ " bytes: " + ByteWritten*/, this);
 			// Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms", this);
 			// Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
 

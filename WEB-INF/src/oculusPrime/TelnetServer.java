@@ -65,7 +65,7 @@ public class TelnetServer implements Observer {
 			sendToSocket("Welcome to Oculus Prime v" + new Updater().getCurrentVersion(), out); 
 			String ip_address = clientSocket.getInetAddress().toString().substring(1);
 			sendToSocket(ip_address + " connected via socket", out);
-			Util.log(ip_address+" connected via socket", this);
+			Util.debug(ip_address+" connected via socket", this);
 			this.start();
 		}
 		

@@ -88,7 +88,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
 		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
-			Util.log("localhost/LAN/known netstream connect, no params", this);
+			Util.debug("localhost/LAN/known netstream connect, no params", this);
 			return true;
 		}
 
