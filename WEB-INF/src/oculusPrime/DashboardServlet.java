@@ -225,41 +225,36 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		response.setContentType("text");
 		PrintWriter out = response.getWriter();
 		out.println("\n-- " + new Date() + " --\n");
-		out.println(Util.tail(20).replaceAll("<br>", ""));
+		out.println(Util.tail(50).replaceAll("<br>", ""));
 		out.println("\n -- state -- \n");
-		out.println(state + "\n");
+		out.println(state.toString().replaceAll("<br>", ""));
 		out.println("\n -- state history --\n");
 		out.println(getHistory() + "\n");
+		out.println("\n -- settings --\n");
+		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
 		out.close();	
 	}
 	
 	public String toTableHTML(){
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"2\"> \n");
-		
 		str.append("<tr>" 
 				+ "<td><b>distanceangle</b><td>" + state.get(values.distanceangle)
 				+ "<td><b>direction</b><td>" + state.get(values.direction)
 				+ "<td><b>odometry</b><td>" + state.get(values.odometry) 
 				+ "</tr> \n");
-		
 		str.append("<tr>" 
 				+ "<td><b>distanceanglettl</b><td>" + state.get(values.distanceanglettl) 
 				+ "<td><b>stopbetweenmoves</b><td>" + state.get(values.stopbetweenmoves) 
 				+ "<td><b>odometrybroadcast</b><td>" + state.get(values.odometrybroadcast) 
 				+ "<td><b>odomturndpms</b><td>" + state.get(values.odomturndpms) 
 				+ "</tr> \n");
-		
 		str.append("<tr>" 
 				+ "<td><b>odomturnpwm</b><td>" + state.get(values.odomturnpwm) 
 				+ "<td><b>odomupdated</b><td>" + state.get(values.odomupdated) 
 				+ "<td><b>odomlinearmpms</b><td>" + state.get(values.odomlinearmpms) 
 				+ "<td><b>odomlinearpwm</b><td>" + state.get(values.odomlinearpwm) 
 				+ "</tr> \n");
-		
-		str.append("<tr>"
-				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + state.get(values.rosmapinfo) 
-				+ "</tr> \n");
-			
+		str.append("<tr><td><b>rosmapinfo</b><td colspan=\"7\">" + state.get(values.rosmapinfo) +"</tr> \n");
 		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
 				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
 				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
