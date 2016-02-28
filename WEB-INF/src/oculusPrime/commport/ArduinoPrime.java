@@ -381,8 +381,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			if (state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
 			Util.log("**FIRMWARE STOP DETECT FAIL", this);
 			state.dumpFile("collision");
-//			stopGoing();
-//			nudge(direction.backward);
+			
+			
+			
+			
+			// TODO: create an event for this... 
 		}
 	}
 
@@ -398,8 +401,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        if (portNames.length == 0) return;
 	        
 	        String otherdevice = "";
-	        if (state.exists(State.values.powerport)) 
-	        	otherdevice = state.get(State.values.powerport);
+	        if (state.exists(State.values.powerport)) otherdevice = state.get(State.values.powerport);
 	        
 	        for (int i=0; i<portNames.length; i++) {
         		if (portNames[i].matches("/dev/tty(USB|ACM).+") && !portNames[i].equals(otherdevice)) {

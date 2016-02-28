@@ -121,19 +121,18 @@ public class State {
 		return equals(value.name(), b);
 	}
 	
-	/*
+	/*	*/
 	@Override
-	public String tojjString(){	
+	public String toString(){	
 		String str = "";
 		final Set<String> keys = props.keySet();
 		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			final String key = i.next();
-			str += (key + " " + props.get(key) + "<br>"); 
+			str += (key + " " + props.get(key) + "<br>\n"); 
 		}
 		return str;
 	}
-	*/
-	
+
 	public boolean equals(values a, navsystemstate b) {
 		return equals(a.name(), b.name());
 	}

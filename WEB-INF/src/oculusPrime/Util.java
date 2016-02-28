@@ -1156,8 +1156,7 @@ public class Util {
 		} catch (Exception e){ rosinfor = "0.00"; }
 		
 		return rosinfor;
-	}	
-	
+	}		
 }
 
 

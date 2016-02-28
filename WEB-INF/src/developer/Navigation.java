@@ -48,6 +48,7 @@ public class Navigation implements Observer {
 	private long estimateddistance = 0;
 	private long estimatedtime = 0;
 	private long routedistance = 0;
+	boolean failed = false;
 	boolean overdue = false;
 	public long routestarttime;
 	public NavigationLog navlog;
@@ -258,6 +259,7 @@ public class Navigation implements Observer {
 
 			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach dock");
+				failed = true;
 				return;
 			}
 
@@ -519,7 +521,7 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Long.toString(distance));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
+					Util.log("xml error missing tag: " + e.getMessage(), this);
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
 					dist.setTextContent(Double.toString(distance));
 					route.appendChild(dist);
@@ -527,7 +529,7 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml dom error, missing tag: " + e.getMessage(), this);
+					Util.log("xml error missing tag: " + e.getMessage(), this);
 					Node time = document.createElement(ESTIMATED_TIME_TAG);
 					time.setTextContent(Integer.toString(seconds));
 					route.appendChild(time);
@@ -539,6 +541,8 @@ public class Navigation implements Observer {
 	}
 	
 	public void runRoute(final String name) {
+		
+		// TODO: 
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
 
@@ -549,8 +553,7 @@ public class Navigation implements Observer {
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 				!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  {
-			app.driverCallServer(PlayerCommands.messageclients,
-					"Can't start route, location unknown, command dropped");
+			app.driverCallServer(PlayerCommands.messageclients, "Can't start route, location unknown, command dropped");
 			cancelAllRoutes();
 			return;
 		}
@@ -602,32 +605,28 @@ public class Navigation implements Observer {
 		saveRoute(xmlstring);
 		
 		// watch dog
-		overdue = false;
+		overdue = false; failed = false;
 		if(estimatedtime > 60){
 			new Thread(new Runnable() { public void run() {
 		
-				Util.delay(estimatedtime*1000 + 10000); // seconds 
+				Util.delay(estimatedtime*1000 + 30000); // seconds 
 				
 				if( ! (state.getBoolean(State.values.autodocking) || 
 				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
 				
 					// over due, cancel route, drive to dock.. 
 					overdue = true;
-					Util.log("--- robot over due, find dock ---", this);
-					
 					int s = (int) ((System.currentTimeMillis()/1000) + estimatedtime);
-					Util.log("*---* estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
-					Util.log("*---* estimated: " + estimatedtime     + " seconds : " + s       + " diff: " + Math.abs(estimatedtime - s), this);
-					navlog.newItem(NavigationLog.ERRORSTATUS, "over due, called back to dock after " + estimatedtime + " seconds",
-							routestarttime, null, name, consecutiveroute, routedistance);
+					Util.log("** overdue ** estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
+					Util.log("** overdue ** estimated: " + estimatedtime     + " seconds : " + s       + " diff: " + Math.abs(estimatedtime - s), this);
 					
 					dock();
-					
+					navlog.newItem(NavigationLog.ERRORSTATUS, "over due, called back to dock after " + estimatedtime + " seconds"
+							+ " etimated time is " +estimatedtime+ "seconds",
+							routestarttime, null, name, consecutiveroute, routedistance);
 				}
 			}}).start();
-		} else {
-			Util.log("... no watch dog set.", this);
-		}
+		} 
 		
 		new Thread(new Runnable() { public void run() {
 			
@@ -745,6 +744,7 @@ public class Navigation implements Observer {
 								routestarttime, wpname, name, consecutiveroute, 0);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
+						failed = true;
 						continue; 
 					}
 
@@ -790,7 +790,7 @@ public class Navigation implements Observer {
 					continue;
 				}
 			
-				if( ! overdue) {
+				if( ! (overdue || failed)){
 					
 					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
 					updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);

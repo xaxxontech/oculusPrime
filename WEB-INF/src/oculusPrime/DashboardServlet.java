@@ -28,23 +28,31 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	static final String HTTP_REFRESH_DELAY_SECONDS = "7";
 	
-	static String restart = "<a href=\"dashboard?action=restart\">";
-	static String reboot = "<a href=\"dashboard?action=reboot\">";
+	static final String restart = "<a href=\"dashboard?action=restart\">";
+	static final String reboot = "<a href=\"dashboard?action=reboot\">";
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String managelogs = "<a href=\"dashboard?action=managelogs\">";
-	
 	static final String truncros = "<a href=\"dashboard?action=truncros\">";
 	static final String truncimages = "<a href=\"dashboard?action=truncimages\">";
 	static final String truncarchive = "<a href=\"dashboard?action=truncarchive\">";	
-	
 	static final String archiveros = "<a href=\"dashboard?action=archiveros\">";
-	static final String archiveimages = "<a href=\"dashboard?action=archiveimages\">";
 	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\">";	
-	
+	static final String archiveimages = "<a href=\"dashboard?action=archiveimages\">";
 	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
+	static final String link = "<b>views: </b>&nbsp;"+	
+			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp;"+
+			"<a href=\"dashboard?view=ban\">ban</a>&nbsp" +
+			"<a href=\"dashboard?view=power\">power</a>&nbsp&nbsp" +
+			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp&nbsp" +
+			"<a href=\"dashboard?view=ros\">ros</a>&nbsp&nbsp" +
+			"<a href=\"dashboard?view=log\">log</a>&nbsp&nbsp" +
+			"<a href=\"dashboard?view=state\">state</a>&nbsp&nbsp&nbsp" +
+			"<a href=\"dashboard?action=snapshot\">snap</a>&nbsp&nbsp";
+	
 
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
+	
 	static Application app = null;
 	static NodeList routes = null;
 	static Settings settings = null;
@@ -58,6 +66,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		httpport = state.get(State.values.httpport);
 		settings = Settings.getReference();
 		ban = BanList.getRefrence();
+		
 		state.addObserver(this);
 		
 		Document document = Util.loadXMLFromString(routesLoad());
@@ -108,11 +117,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
 		if(action != null&& app != null){
-
+	
+			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
+			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
 			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(action.equalsIgnoreCase("managelogs")) app.driverCallServer(PlayerCommands.archive, null);			
-			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
 			if(action.equalsIgnoreCase("archiveros")) app.driverCallServer(PlayerCommands.archiveros, null);
 			if(action.equalsIgnoreCase("truncimages")) app.driverCallServer(PlayerCommands.truncimages, null);
 			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
@@ -121,18 +131,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
 			if(action.equalsIgnoreCase("debugon")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
-			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
-			
+		
 			if(action.equalsIgnoreCase("reboot")){
 				new Thread(new Runnable() { public void run() {
-					Util.delay(2000); // redirect before calling.. 
+					Util.log("reboot called, going down..", this);
+					Util.delay(3000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.reboot, null);
 				}}).start();
 			}
 			
 			if(action.equalsIgnoreCase("restart")){
 				new Thread(new Runnable() { public void run() {
-					Util.delay(2000); // redirect before calling.. 
+					Util.log("restart called, going down..", this);
+					Util.delay(3000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.restart, null);
 				}}).start();
 			}
@@ -144,6 +155,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				}
 				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
 					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, state.dumpFile("dashboard command")});
+				sendSnap(request, response);
+				return;
 			}
 			
 			response.sendRedirect("/oculusPrime/dashboard"); 
@@ -169,14 +182,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("stdout")){
-				out.println(new File(Settings.stdout).getAbsolutePath() + "<br />\n");
+				out.println(new File(Settings.stdout).getAbsolutePath()  +
+						"&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
 				out.println(Util.tail(40) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("power")){	
-				out.println(new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
+				out.println(new File(PowerLogger.powerlog).getAbsolutePath() +
+						"&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
 				out.println(PowerLogger.tail(40) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
@@ -203,6 +218,18 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// default view 
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html> \n");
+		out.close();	
+	}
+	
+	public void sendSnap(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		response.setContentType("text");
+		PrintWriter out = response.getWriter();
+		out.println("\n-- " + new Date() + " --\n");
+		out.println(Util.tail(20).replaceAll("<br>", ""));
+		out.println("\n -- state -- \n");
+		out.println(state + "\n");
+		out.println("\n -- state history --\n");
+		out.println(getHistory() + "\n");
 		out.close();	
 	}
 	
@@ -302,7 +329,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "<td><b>navigationrouteid</b><td>" + state.get(values.navigationrouteid) 
 				+ "</tr> \n");
 		
-	//	str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
 		str.append("<tr><td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) + "</tr> \n");
 		str.append("\n</table>\n");
 		return str.toString();
@@ -374,26 +400,21 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			//	+ Util.countFiles(Settings.roslogfolder) 
 		
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");
-		str.append("<tr><td colspan=\"11\">"+ getCommands() + "</tr> \n");
+		str.append("<tr><td colspan=\"11\">"+ link + "</tr> \n");
 	
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		else msg += "&nbsp;&nbsp;<a href=\"dashboard?action=gui\">(ignore)</a>";
 		if(msg.length() > 1) msg = "<br><b>user message: </b>&nbsp;&nbsp;" + msg;
 		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() + msg + "</tr> \n");
-//		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(20) + "\n");
-		
-// TODO: toggle view 
-//		str.append(getHistory() + "\n");
-		
+		str.append(getTail(15) + "\n");
 		return str.toString();
 	}
 	
 	private String getRouteLinks(){     
-		String link = "<b>routes: </b>&nbsp";//;<a href=\"navigationlog/index.html\" target=\"_blank\">log</a>&nbsp;&nbsp;";
+		String link = "<b>routes: </b>&nbsp";
 		for (int i = 0; i < routes.getLength(); i++) {  
 			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if( ! state.equals(values.navigationroute, r)) 
@@ -402,39 +423,27 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
 	
-		if(state.exists(values.navigationroute)){ // active route 
+		if(state.exists(values.navigationroute)) // active route 
 			link += " <b>active: </b>" + state.get(values.navigationroute) + "&nbsp;"; 
-		}
 		
 		if(state.exists(values.navigationroute) && state.exists(values.roswaypoint)){
 			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += " | "+ state.get(values.roswaypoint) + "&nbsp;";
 			else if(state.exists(values.nextroutetime)) 
 				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + "&nbsp;seconds&nbsp;"
-						+ "<a href=\"dashboard?action=cancel\">x</a>";
+					+ "<a href=\"dashboard?action=cancel\">x</a>";
 		}
 		return link; 
 	}
 	
-	private String getCommands(){     
-		String link = 
-				"<b>commands: </b>&nbsp;"+	
-				"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation log</a>&nbsp;"+
-				"<a href=\"dashboard?action=snapshot\">snaphot</a>&nbsp"
-			//	"<a href=\"dashboard?action=viewstate\">state</a> | log | stdot | power&nbsp;"
-			
-			;
-			
-		return link; 
-	}
-	 
 	private String getTail(int lines){
-		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
+		String reply = "\n\n<table cellspacing=\"2\" border=\"0\"> \n";
 		reply += Util.tailFormated(lines) + " \n";
 		reply += ("\n</table>\n");
 		return reply;
 	}
-	
-	private String getHistory(){
+
+	/*
+	private String getHistoryHTML(){
 		String reply = "\n\n<table style=\"max-width:640px;\" cellspacing=\"2\" border=\"0\"> \n";
 		reply += "\n<tr><td colspan=\"11\"><hr></tr> \n";	
 		for(int i = 0 ; i < history.size() ; i++) {
@@ -450,32 +459,33 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		return reply + "\n</table>\n";
 	}
-
+	*/
+	
+	private String getHistory(){
+		String reply = "";
+		for(int i = 0 ; i < history.size() ; i++) {
+			long time = Long.parseLong(history.get(i).substring(0, history.get(i).indexOf(" ")));
+			String mesg = history.get(i).substring(history.get(i).indexOf(" "));
+			String date =  new Date(time).toString();
+			date = date.substring(10, date.length()-8).trim();
+			double delta = (double)(System.currentTimeMillis() - time) / (double) 1000;
+			String unit = " sec ";
+			if(delta > 60) { delta = delta / 60; unit = " min "; }
+			reply += " " + Util.formatFloat(delta, 1) + "  " + unit + " " + mesg + "\n"; 
+		}
+		return reply;
+	}
+	
 	@Override
 	public void updated(String key) {
 		if(key.equals(values.batteryinfo.name())) return;
-		if(key.equals(values.batterylife.name())) return;
+//		if(key.equals(values.batterylife.name())) return;
 		if(key.equals(values.batteryvolts.name())) return;
-		if(key.equals(values.framegrabbusy.name())) return;
-		if(key.equals(values.rosglobalpath.name())) return;
-		if(key.equals(values.rosscan.name())) return;
- 		if(key.equals(values.cpu.name())) return; 
- 		
- 		/* {
- 			cpuHistory.add(state.getDouble(values.cpu));
- 			if(cpuHistory.size() > CPU_HISTORY) cpuHistory.remove(0); 
- 			
- 			cpuAVG = 0; String j = "";
- 			for(int i = 0 ; i < cpuHistory.size() ; i++){
- 				cpuAVG +=  cpuHistory.get(i);
- 				j +=  Util.formatFloat(cpuHistory.get(i), 0) + ", ";
- 			}
- 			cpuAVG = cpuAVG / cpuHistory.size();
- 			Util.debug(" " + j, this);
- 			return;
- 		}*/
-		
-		if(history.size() > 10) history.remove(0);
+//		if(key.equals(values.framegrabbusy.name())) return;
+//		if(key.equals(values.rosglobalpath.name())) return;
+//		if(key.equals(values.rosscan.name())) return;
+// 		if(key.equals(values.cpu.name())) return; 
+		if(history.size() > 100) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
 	}
 }
