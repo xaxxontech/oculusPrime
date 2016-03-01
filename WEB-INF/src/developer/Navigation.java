@@ -770,7 +770,8 @@ public class Navigation implements Observer {
 					
 					// TODO: send alert?
 					state.dumpFile("Unable to dock: "+ routestarttime);
-					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0, 0);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0, 
+							state.getInteger(State.values.recoveryrotations));
 
 					// cancelRoute(id);
 					// try docking one more time, sending alert if fail
@@ -787,7 +788,8 @@ public class Navigation implements Observer {
 					continue;
 				}
 			
-				if( ! (overdue || failed)){
+				// flawless route 
+				if( !(overdue || failed) && state.getInteger(State.values.recoveryrotations) == 0){
 					
 					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
 					updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
@@ -796,10 +798,8 @@ public class Navigation implements Observer {
 					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
 	
 				}
-				
-				// Util.log("...................recoveryrotations = " + state.get(State.values.recoveryrotations), this);
-				
-				navlog.newItem(NavigationLog.COMPLETEDSTATUS, "recovery " + state.get(State.values.recoveryrotations), 
+			
+				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null,
 						routestarttime, null, name, consecutiveroute, routedistance, state.getInteger(State.values.recoveryrotations));
 				consecutiveroute ++;
 				routedistance = 0;
