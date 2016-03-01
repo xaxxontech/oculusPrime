@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.InputStreamReader;
 
 import oculusPrime.Settings;
+import oculusPrime.State;
 import oculusPrime.Util;
 
 /**
@@ -22,9 +23,6 @@ public class NavigationLog {
     public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
             "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
 
-    // testing:
-//    public static final String navigationlogpath = System.getenv("HOME")+Util.sep+"temp"+Util.sep+"navroutelog/index.html";
-
     public static final String ALERTSTATUS = "ALERT";
     public static final String ERRORSTATUS = "ERROR";
     public static final String COMPLETEDSTATUS = "Completed";
@@ -39,8 +37,7 @@ public class NavigationLog {
 
     // completed route
     public void newItem(final String status, final String msg, final long starttime, final String waypoint,
-                        final String routename, final int consecutiveroute, final double routedistance) {
-
+                        final String routename, final int consecutiveroute, final double routedistance, final int rotations) {
         new Thread(new Runnable() { public void run() {
 
             long timeout = System.currentTimeMillis() + 5000;
@@ -79,7 +76,8 @@ public class NavigationLog {
             	if (st==0) st = System.currentTimeMillis();
             	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
             }
-            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n";
+            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n" 
+            		+ "Recovery Rotations: " + rotations + "\n";
             str += "</div>\n";
 
             writeFile(str);

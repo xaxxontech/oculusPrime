@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 import java.util.Vector;
 
 import developer.Ros.navsystemstate;
@@ -34,8 +33,8 @@ public class State {
 		writingframegrabs, // undocumented
 
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
-		powererror, forceundock,
-		redockifweakconnection, // undocumented
+		powererror, forceundock, 
+		recoveryrotations, redockifweakconnection, // undocumented
 
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
@@ -251,7 +250,7 @@ public class State {
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());
 	}
 	
-	synchronized String get(final String key) {
+	public synchronized String get(final String key) {
 
 		String ans = null;
 		try {
@@ -398,6 +397,12 @@ public class State {
 	
 	public void delete(PlayerCommands cmd) {
 		delete(cmd.name());
+	}
+
+	public void increment(String key) {
+		Util.log("increment: " + key, this);
+		if(exists(key)) set(key, getInteger(key)+1);
+		else set(key, 1);
 	}
 	
 	public double getDouble(String key) {

@@ -26,7 +26,8 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "7";
+	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
+	private static final int MAX_STATE_HISTORY = 200;
 	
 	static final String restart = "<a href=\"dashboard?action=restart\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\">";
@@ -40,8 +41,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String archiveimages = "<a href=\"dashboard?action=archiveimages\">";
 	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 	static final String link = "<b>views: </b>&nbsp;"+	
-			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp;"+
-			"<a href=\"dashboard?view=ban\">ban</a>&nbsp" +
+			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
+			"<a href=\"dashboard?view=ban\">ban</a>&nbsp&nbsp" +
 			"<a href=\"dashboard?view=power\">power</a>&nbsp&nbsp" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp&nbsp" +
 			"<a href=\"dashboard?view=ros\">ros</a>&nbsp&nbsp" +
@@ -66,14 +67,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		httpport = state.get(State.values.httpport);
 		settings = Settings.getReference();
 		ban = BanList.getRefrence();
-		
 		state.addObserver(this);
-		
 		Document document = Util.loadXMLFromString(routesLoad());
 		routes = document.getDocumentElement().getChildNodes();
 	}
 
-	public static void setApp(Application a) {app = a;}
+	public static void setApp(Application a){app = a;}
 	
 	public static String routesLoad() {
 		String result = "";
@@ -86,7 +85,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} catch (Exception e) {
 			return "<routeslist></routeslist>";
 		}
-
 		return result;
 	}
 
@@ -167,8 +165,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 	
 		if(view != null){
-		
-			if(view.equalsIgnoreCase("ban")){
+			if(view.equalsIgnoreCase("ban")){	
+				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
 				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
 				out.println("\n</body></html> \n");
@@ -176,6 +174,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
+				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
 				out.println(state.toHTML() + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
@@ -480,7 +479,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 //		if(key.equals(values.rosglobalpath.name())) return;
 //		if(key.equals(values.rosscan.name())) return;
 // 		if(key.equals(values.cpu.name())) return; 
-		if(history.size() > 100) history.remove(0);
+		
+		// trim size
+		if(history.size() > MAX_STATE_HISTORY) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
 	}
 }
