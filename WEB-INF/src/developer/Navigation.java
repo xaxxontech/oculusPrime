@@ -781,8 +781,8 @@ public class Navigation implements Observer {
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 			
 					// create snapshot 
-					Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
-						+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
+					//Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
+					//	+"_"+System.currentTimeMillis() + ".tar", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
 				
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;

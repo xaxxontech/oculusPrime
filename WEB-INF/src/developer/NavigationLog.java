@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.InputStreamReader;
 
 import oculusPrime.Settings;
-import oculusPrime.State;
 import oculusPrime.Util;
 
 /**

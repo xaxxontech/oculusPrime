@@ -257,6 +257,7 @@ public class Util {
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
+	/*
 	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
         BufferedInputStream in = null;
         FileOutputStream fout = null;
@@ -273,6 +274,7 @@ public class Util {
             if (fout != null) fout.close();
         }
     }
+	*/
 	
 	public static String tail(int lines){
 		int i = 0;
@@ -299,7 +301,7 @@ public class Util {
 			String unit = " sec ";
 			String d = formatFloat(delta, 0);
 			if(delta > 60) { delta = delta / 60; unit = " min "; d =  formatFloat(delta, 1); }
-			str.append("\n<tr><td colspan=\"11\">" + d + "<td>" + unit + "<td>&nbsp;&nbsp;" + line + "</tr> \n"); 
+			str.append("\n<tr><td colspan=\"11\">" + d + "<td>" + unit + "<td>&nbsp;&nbsp;" + line.trim() + "</tr> \n"); 
 		}
 		return str.toString();
 	}
@@ -910,8 +912,8 @@ public class Util {
 	}
 	
 	public static String archiveROS(){
-		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + roslogfolder};
+		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + "  " + roslogfolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
@@ -934,7 +936,7 @@ public class Util {
 	public static void archiveFiles(final String fname, final String[] files){
 		String args = "";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + fname + " " + args};
 		log("file created: " + fname, null);
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}

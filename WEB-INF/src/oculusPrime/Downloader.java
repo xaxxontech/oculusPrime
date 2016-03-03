@@ -3,6 +3,8 @@ package oculusPrime;
 import java.io.*;
 import java.net.*;
 
+import org.python.core.util.ByteSwapper;
+
 public class Downloader {
 	
 	/**
@@ -15,16 +17,11 @@ public class Downloader {
 	 * @return true if the file is down loaded, false on any error. 
 	 * 
 	 */
-	public boolean FileDownload(final String fileAddress,
-			final String localFileName, final String destinationDir) {
+	public boolean FileDownload(final String fileAddress, final String localFileName, final String destinationDir) {
 
 		// long start = System.currentTimeMillis();
 		String sep = System.getProperty("file.separator");
 		
-		InputStream is = null;
-		OutputStream os = null;
-		URLConnection URLConn = null;
-
 		// create path to local file
 		final String path = System.getenv("RED5_HOME")+ sep + destinationDir + sep + localFileName;
 
@@ -39,25 +36,27 @@ public class Downloader {
 			Util.log("can't delete existing file: " + path, this);
 			return false;
 		}
-
+		
+		InputStream is = null;
+		OutputStream os = null;
+		URLConnection URLConn = null;
+		int read, written = 0;
+		
 		try {
-
-			int ByteRead /*, ByteWritten */ = 0;
 			os = new BufferedOutputStream(new FileOutputStream(path));
-
 			URLConn = new URL(fileAddress).openConnection();
 			is = URLConn.getInputStream();
 			byte[] buf = new byte[1024];
 
 			// pull in the bytes
-			while ((ByteRead = is.read(buf)) != -1) {
-				os.write(buf, 0, ByteRead);
-				// ByteWritten += ByteRead;
+			while ((read = is.read(buf)) != -1) {
+				os.write(buf, 0, read);
+				written += read;
 			}
 
-			Util.debug("saved file: " + path /*+ " bytes: " + ByteWritten*/, this);
-			// Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms", this);
-			// Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
+			Util.log("saved file: " + path + " bytes: " + written, this);
+			//Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms", this);
+			//Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
 
 		} catch (Exception e) {
 			Util.log(e.getMessage(), this);
@@ -66,12 +65,17 @@ public class Downloader {
 			try {
 				is.close();
 				os.close();
-			} catch (IOException e) {
+			} catch(Exception e) {
 				Util.log(e.getMessage(), this);
 				return false;
 			}
 		}
 
+		if(written == 0){ // || (ByteWritten != ByteRead)){
+			Util.log("file downloading error: " + path, this);
+			return false; 
+		}
+		
 		// all good
 		return true;
 	}

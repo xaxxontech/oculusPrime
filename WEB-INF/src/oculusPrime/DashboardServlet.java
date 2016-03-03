@@ -19,15 +19,14 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import developer.Navigation;
-import developer.NavigationLog;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	static final String HTTP_REFRESH_DELAY_SECONDS = "5";
 	private static final int MAX_STATE_HISTORY = 200;
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "5";
 	
 	static final String restart = "<a href=\"dashboard?action=restart\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\">";
@@ -47,7 +46,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp&nbsp" +
 			"<a href=\"dashboard?view=ros\">ros</a>&nbsp&nbsp" +
 			"<a href=\"dashboard?view=log\">log</a>&nbsp&nbsp" +
-			"<a href=\"dashboard?view=state\">state</a>&nbsp&nbsp&nbsp" +
+			"<a href=\"dashboard?view=state\">state</a>&nbsp&nbsp&nbsp" + 
+			"<a href=\"dashboard?action=save\">save</a>&nbsp&nbsp&nbsp" +
 			"<a href=\"dashboard?action=snapshot\">snap</a>&nbsp&nbsp";
 	
 
@@ -146,13 +146,21 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				}}).start();
 			}
 			
+			if(action.equalsIgnoreCase("save")) {	
+				new Thread(new Runnable() { public void run() {
+					if( ! new Downloader().FileDownload("http://" + state.get(values.localaddress)  
+						+ ":" + httpport + "/oculusPrime/dashboard?action=snapshot", "snapshot_"+ System.currentTimeMillis() +".txt", "log"))
+							Util.log("snapshot save failed", this);
+				}}).start();
+			}
+			
 			if(action.equalsIgnoreCase("snapshot")) {	
 				if(Util.archivePID()) {
 					Util.log("busy, skipping..", this);
 					return;
 				}
-				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
-					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, state.dumpFile("dashboard command")});
+//				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
+//					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, state.dumpFile("dashboard command")});
 				sendSnap(request, response);
 				return;
 			}
@@ -223,13 +231,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void sendSnap(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text");
 		PrintWriter out = response.getWriter();
-		out.println("\n-- " + new Date() + " --\n");
+		out.println("\n\r-- " + new Date() + " --\n\r");
 		out.println(Util.tail(50).replaceAll("<br>", ""));
-		out.println("\n -- state -- \n");
+		out.println("\n\r -- state -- \n\r");
 		out.println(state.toString().replaceAll("<br>", ""));
-		out.println("\n -- state history --\n");
-		out.println(getHistory() + "\n");
-		out.println("\n -- settings --\n");
+		out.println("\n\r -- state history --\n\r");
+		out.println(getHistory() + "\n\r");
+		out.println("\n\r -- settings --\n\r");
 		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
 		out.close();	
 	}
