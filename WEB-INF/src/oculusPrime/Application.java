@@ -478,7 +478,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+						navigation.consecutiveroute, 0, navigation.rotations);
 				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
@@ -553,7 +553,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
 		case nudge: nudge(str); break;
 		
-		/*
 		case state: // TODO: duplicate function in telnet 
 			
 			String s[] = str.split(" ");
@@ -573,9 +572,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
 			}
-		
-			Util.log("not used...", this);
-			break;	*/
+			break;
 	
 		case writesetting:
 			if (settings.readSetting(cmd[0]) == null) {
@@ -800,7 +797,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0, navigation.rotations);
 				navigation.runRoute(str);
 			}
 			break;
@@ -809,7 +806,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null && state.exists(values.navigationroute)) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+						navigation.consecutiveroute, 0, navigation.rotations);
 				navigation.cancelAllRoutes();
 			}
 			break;

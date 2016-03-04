@@ -30,28 +30,30 @@ import oculusPrime.commport.ArduinoPrime;
 
 public class Navigation implements Observer {
 	
-	protected Application app = null;
+	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
+	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
+	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
+	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
+	
+	private Application app = null;
 	private static State state = State.getReference();
 	private static final String DOCK = "dock"; // waypoint name
 	private static final String redhome = System.getenv("RED5_HOME");
 	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
-	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
-	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
-
-	private static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
-	private static final String ESTIMATED_TIME_TAG = "estimatedtime";
 	
 	private final Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
 	public int consecutiveroute = 1;
+	public long routestarttime;
+	public int rotations = 0;
+	public NavigationLog navlog;
+	
 	private long estimateddistance = 0;
 	private long estimatedtime = 0;
 	private long routedistance = 0;
-	boolean failed = false;
-	boolean overdue = false;
-	public long routestarttime;
-	public NavigationLog navlog;
+	private boolean failed = false;
+	private boolean overdue = false;
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -68,11 +70,14 @@ public class Navigation implements Observer {
 		if(key.equals(values.distanceangle.name())){
 			try {
 				double val = Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
-				if(val > 0){
-					routedistance += val;
-					// Util.debug("route distance (mm): " + routedistance, this);
-				}
+				if(val > 0) routedistance += val;
 			} catch (Exception e){}
+		}
+		if(key.equals(values.recoveryrotation.name())){
+			if(state.getBoolean(values.recoveryrotation)) {
+				rotations++; // count it, eat it.. 
+				state.delete(values.recoveryrotation);
+			}
 		}
 	}
 
@@ -133,7 +138,6 @@ public class Navigation implements Observer {
 		return true;
 	}
 
-
 	public void startMapping() {
 		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
 			app.driverCallServer(PlayerCommands.messageclients, "Navigation.startMapping(): unable to start mapping, system already running");
@@ -143,14 +147,11 @@ public class Navigation implements Observer {
 		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
 		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
-
 		Ros.launch(Ros.MAKE_MAP);
-
 	}
 
 	public void startNavigation() {
 		if (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) return;
-
 		new Thread(new Runnable() { public void run() {
 			app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
 			state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
@@ -197,7 +198,6 @@ public class Navigation implements Observer {
 //				Util.delay(5000);
 //				Util.systemCall("pkill roscore");  // full reset
 			}
-
 		}  }).start();
 	}
 
@@ -205,14 +205,13 @@ public class Navigation implements Observer {
 		Util.log("stopping navigation", this);
 		Util.systemCall("pkill roslaunch");
 
-		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-			return;
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) return;
 
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopping.toString());
 		new Thread(new Runnable() { public void run() {
 			Util.delay(Ros.ROSSHUTDOWNDELAY);
 			state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
-		}  }).start();
+		}}).start();
 	}
 
 	public void dock() {
@@ -340,9 +339,7 @@ public class Navigation implements Observer {
 				Util.delay(2000);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 			} else  Util.log("dock() - unable to dock", this);
-
-
-		}  }).start();
+		}}).start();
 
 		navdockactive = false;
 	}
@@ -350,7 +347,6 @@ public class Navigation implements Observer {
 	// dock detect, rotate if necessary
 	private boolean finddock(String resolution) {
 		int rot = 0;
-
 		while (navdockactive) {
 			SystemWatchdog.waitForCpu(); // added stricter 40% check, lots of missed dock grabs here
 
@@ -609,7 +605,7 @@ public class Navigation implements Observer {
 		if(estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 		
-				Util.delay(estimatedtime*1000 + 20000); // seconds 
+				Util.delay(estimatedtime*1000 + 20000); // TODO: make a setting? in seconds 
 				
 				if( ! (state.getBoolean(State.values.autodocking) || 
 				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
@@ -617,7 +613,7 @@ public class Navigation implements Observer {
 					Util.log("** overdue ** estimated: " + estimatedtime     + " seconds : ", this);
 					dock(); // set new target 
 					navlog.newItem(NavigationLog.ERRORSTATUS, "** overdue ** called back to dock after " + estimatedtime + " seconds",
-							routestarttime, null, name, consecutiveroute, routedistance, state.getInteger(State.values.recoveryrotations));
+							routestarttime, null, name, consecutiveroute, routedistance, rotations);
 				}
 			}}).start();
 		} 
@@ -630,7 +626,8 @@ public class Navigation implements Observer {
 			while (true) {
 
 				// clear counter 
-				state.set(State.values.recoveryrotations, 0);
+				state.set(State.values.recoveryrotation, 0);
+				rotations = 0;
 				
 				// determine next scheduled route time, wait if necessary
 				state.delete(State.values.nextroutetime);
@@ -713,7 +710,7 @@ public class Navigation implements Observer {
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
 						navlog.newItem(NavigationLog.ERRORSTATUS, "unable to set waypoint", routestarttime,
-								wpname, name, consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+								wpname, name, consecutiveroute, 0, rotations);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" unable to set waypoint");
 						wpnum ++;
 						continue;
@@ -738,7 +735,7 @@ public class Navigation implements Observer {
 					// TODO: state.dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
-								routestarttime, wpname, name, consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+								routestarttime, wpname, name, consecutiveroute, 0, rotations);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
 						failed = true;
@@ -770,8 +767,7 @@ public class Navigation implements Observer {
 					
 					// TODO: send alert?
 					// state.dumpFile("Unable to dock: "+ routestarttime);
-					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0, 
-							state.getInteger(State.values.recoveryrotations));
+					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0, rotations);
 
 					// cancelRoute(id);
 					// try docking one more time, sending alert if fail
@@ -789,18 +785,16 @@ public class Navigation implements Observer {
 				}
 			
 				// flawless route 
-				if( !(overdue || failed) && state.getInteger(State.values.recoveryrotations) == 0){
+				if( !(overdue || failed) && rotations == 0){
 					
 					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
 					updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
 				
 					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
 					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
-	
 				}
 			
-				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null,
-						routestarttime, null, name, consecutiveroute, routedistance, state.getInteger(State.values.recoveryrotations));
+				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance, rotations);
 				consecutiveroute ++;
 				routedistance = 0;
 				
@@ -808,7 +802,6 @@ public class Navigation implements Observer {
 			}
 		}}).start();
 	}
-
 
 	private boolean delayToNextRoute(Element navroute, String name, String id) {
 		String msg = " min until next route: "+name+", run #"+consecutiveroute;
@@ -1008,7 +1001,7 @@ public class Navigation implements Observer {
 				}
 
 				navlog.newItem(NavigationLog.PHOTOSTATUS, navlogmsg, routestarttime, wpname,
-						state.get(State.values.navigationroute), consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+						state.get(State.values.navigationroute), consecutiveroute, 0, rotations);
 
 			}
 
@@ -1053,7 +1046,7 @@ public class Navigation implements Observer {
 				}
 
 				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
-						state.get(State.values.navigationroute), consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+						state.get(State.values.navigationroute), consecutiveroute, 0, rotations);
 
 				// shut down sensing
 				if (state.exists(State.values.motiondetect))
@@ -1097,7 +1090,7 @@ public class Navigation implements Observer {
 				}
 
 				navlog.newItem(NavigationLog.ALERTSTATUS, navlogmsg, routestarttime, wpname,
-						state.get(State.values.navigationroute), consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
+						state.get(State.values.navigationroute), consecutiveroute, 0, rotations);
 			}
 
 
