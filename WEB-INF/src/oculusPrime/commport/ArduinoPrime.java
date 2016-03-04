@@ -380,11 +380,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		else if (s[0].equals("stopdetectfail")){
 			if (state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
 			Util.log("**FIRMWARE STOP DETECT FAIL", this);
-			state.dumpFile("collision");
-			
-			
-			
-			
+			// state.dumpFile("collision");
 			// TODO: create an event for this... 
 		}
 	}
@@ -394,7 +390,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 */
 	private void connect() {
 		isconnected = false;
-		
 		try {
 
 	    	String[] portNames = SerialPortList.getPortNames();

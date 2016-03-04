@@ -191,7 +191,7 @@ public class TelnetServer implements Observer {
 
 			case state:
 				if (cmd.length == 3) { // two args
-					if (cmd[1].equals("increment")) state.increment(cmd[2]);
+					// if (cmd[1].equals("increment")) state.increment(cmd[2]);
 					if (cmd[1].equals("delete")) state.delete(cmd[2]);
 					else state.set(cmd[1], cmd[2]);
 				}

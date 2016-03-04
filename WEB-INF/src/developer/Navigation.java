@@ -735,7 +735,7 @@ public class Navigation implements Observer {
 					}
 					
 					// failed, try next waypoint
-					state.dumpFile("# Failed to reach waypoint: "+wpname);
+					// TODO: state.dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
 								routestarttime, wpname, name, consecutiveroute, 0, state.getInteger(State.values.recoveryrotations));
@@ -769,7 +769,7 @@ public class Navigation implements Observer {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					
 					// TODO: send alert?
-					state.dumpFile("Unable to dock: "+ routestarttime);
+					// state.dumpFile("Unable to dock: "+ routestarttime);
 					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0, 
 							state.getInteger(State.values.recoveryrotations));
 

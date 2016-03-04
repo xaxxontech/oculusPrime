@@ -1,8 +1,6 @@
 package oculusPrime;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -32,17 +30,16 @@ public class State {
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 		writingframegrabs, // undocumented
 
-		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
-		powererror, forceundock, 
-		recoveryrotations, redockifweakconnection, // undocumented
-
+		wallpower, batterylife, powerport, batteryinfo, batteryvolts, powererror, forceundock,  // power
+		redockifweakconnection, // undocumented
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 		localaddress, externaladdress, ssid, guinotify,
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
-
+		recoveryrotations, // undocumented
+		
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
@@ -290,15 +287,12 @@ public class State {
 	}
 
 	public int getInteger(final String key) {
-
 		String ans = null;
 		int value = ERROR;
 
 		try {
-
 			ans = get(key);
 			value = Integer.parseInt(ans);
-
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -312,10 +306,8 @@ public class State {
 		long value = ERROR;
 
 		try {
-
 			ans = get(key);
 			value = Long.parseLong(ans);
-
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -346,24 +338,17 @@ public class State {
 		return props.containsKey(key.trim());
 	}
 	
-	synchronized void delete(String key) {
-		
-		// Util.log("delete: " + key, this);
-		
-		if( ! props.containsKey(key)) return;
-		
+	synchronized void delete(String key) {	
+		if( ! props.containsKey(key)) return;	
 		props.remove(key);
-		for(int i = 0 ; i < observers.size() ; i++)
-			observers.get(i).updated(key);	
+		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);	
 	}
 	
 	public void delete(values key) {
-		// Util.log("delete: " + key, this);
-		if(exists(key)) delete(key.name());
+		delete(key.name());
 	}
 	
-	public void set(values key, values value) {
-		
+	public void set(values key, values value) {	
 		set(key.name(), value.name());
 	}
 	
@@ -399,11 +384,13 @@ public class State {
 		delete(cmd.name());
 	}
 
+	/*
 	public void increment(String key) {
 		Util.log("increment: " + key, this);
 		if(exists(key)) set(key, getInteger(key)+1);
 		else set(key, 1);
 	}
+	*/
 	
 	public double getDouble(String key) {
 		double value = ERROR;
@@ -423,6 +410,7 @@ public class State {
 		return getDouble(key.name());
 	}
 	
+	/*
 	public String dumpFile(final String msg) {
 		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
 
@@ -452,4 +440,6 @@ public class State {
 	
 		return dump.getAbsolutePath();
 	}
+	*/
+	
 }

@@ -55,7 +55,7 @@ public enum PlayerCommands {
 	objectdetectstream, motiondetectstream,
 
 	// un-categorized
-	speech, serverbrowser, email, state, rssadd,
+	speech, serverbrowser, email, /*state done in telnet */ rssadd,
     
 	// undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, truncros, truncarchive, archive, 

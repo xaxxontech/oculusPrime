@@ -553,7 +553,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
 		case nudge: nudge(str); break;
 		
-		case state: 
+		/*
+		case state: // TODO: duplicate function in telnet 
+			
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
 				if (s[0].equals("delete")) state.delete(s[1]); 
@@ -571,7 +573,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 					messageplayer("<state> "+state.toString(), null, null);
 				} 
 			}
-			break;
+		
+			Util.log("not used...", this);
+			break;	*/
 	
 		case writesetting:
 			if (settings.readSetting(cmd[0]) == null) {
@@ -2170,14 +2174,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			double newver = updater.versionNum(fileurl);
 			if (newver > currver) {
 				String message = "New version available: v." + newver + "\n";
-				if (currver == -1) {
-					message += "Current software version unknown\n";
-				} else {
-					message += "Current software is v." + currver + "\n";
-				}
+				if (currver == -1) message += "Current software version unknown\n";
+				else message += "Current software is v." + currver + "\n";
+				
 				message += "Do you want to download and install?";
-				messageplayer("new version available", "softwareupdate",
-						message);
+				messageplayer("new version available", "softwareupdate", message);
 			} else {
 				messageplayer("no new version available", null, null);
 			}
@@ -2191,13 +2192,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 					Util.log("downloading url: " + fileurl,this);
 					Downloader dl = new Downloader();
 					if (dl.FileDownload(fileurl, "update.zip", "download")) {
-						messageplayer("update download complete, unzipping...",
-								null, null);
-
+						messageplayer("update download complete, unzipping...", null, null);
 						// this is a blocking call
 						if (dl.unzipFolder("download"+Util.sep+"update.zip", "webapps"))
-							messageplayer("done.", "softwareupdate",
-									"downloadcomplete");
+							messageplayer("done.", "softwareupdate", "downloadcomplete");
 
 						// not needed now is unpacked
 						dl.deleteDir(new File(Settings.redhome+Util.sep+"download"));
