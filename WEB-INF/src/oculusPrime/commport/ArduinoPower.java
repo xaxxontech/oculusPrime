@@ -221,10 +221,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				}
 				
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
-					state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
-					application.message("power PCB timeout", "battery", "timeout");
-					Util.log("power PCB timeout", this);
-					PowerLogger.append("power PCB timeout", this);
+					timeoutlogmessages();
 					reset();
 				}
 				
@@ -256,6 +253,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 			}		
 		}
 	}
+
+	private void timeoutlogmessages() {
+		state.set(oculusPrime.State.values.batterylife, "TIMEOUT");
+		application.message("power PCB timeout", "battery", "timeout");
+		Util.log("power PCB timeout", this);
+		PowerLogger.append("power PCB timeout", this);
+	}
+
 
 	public void reset() {
 			new Thread(new Runnable() {
@@ -289,7 +294,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
 				String msg = "current power firmware: "+firmwareversion+
-						" out-of-date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
 				state.set(State.values.guinotify, msg);
 				Util.log(msg, this);
 				return;
@@ -532,21 +537,45 @@ public class ArduinoPower implements SerialPortEventListener  {
 		return isconnected;
 	}
 
-	/** utility for macros requiring movement
+	/** check if alive
 	 *  BLOCKING
 	 * 	return true if connected, if not, wait for up to 10 seconds
 	 * @return   boolean isconnected
 	 */
 	public boolean checkisConnectedBlocking() {
-		if (isconnected) return true;
-		Util.log("power pcb not connected, waiting for reset", this);
 		long start = System.currentTimeMillis();
-		while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
-			Util.delay(50);
-		if (isconnected) return true;
-		Util.log("power pcb not connected", this);
-		PowerLogger.append("power pcb not connected", this);
-		return false;
+		if (!isconnected) {
+			while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+				Util.delay(50);
+		}
+		if (!isconnected) { // still not connected after waiting for rest
+			Util.log("power pcb not connected", this);
+			PowerLogger.append("power pcb not connected", this);
+			return false;
+		}
+
+		// isconnected true, but could be in the midst of timing out... send ping
+		start = System.currentTimeMillis();
+		lastRead = start; // set to now so not fighting with watchdog's 15 sec timeout
+		sendCommand(GET_PRODUCT); // response expected immediately
+		while (lastRead == start && System.currentTimeMillis() - start < 1000) Util.delay(1);
+
+		if (lastRead == start) { // no response to ping, try reset once
+			timeoutlogmessages();
+			isconnected = false;
+			reset();
+			start = System.currentTimeMillis();
+			while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+				Util.delay(10);
+
+			if (!isconnected) { // still not connected after waiting for rest
+				Util.log("power pcb not connected", this);
+				PowerLogger.append("power pcb not connected", this);
+				return false;
+			}
+		}
+
+		return true;
 	}
 	
 	/**

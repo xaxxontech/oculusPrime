@@ -241,7 +241,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
 			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
 				String msg = "current power firmware: "+firmwareversion+
-						" out-of-date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
 				state.set(State.values.guinotify, msg);
 				Util.log(msg, this);
 				return;

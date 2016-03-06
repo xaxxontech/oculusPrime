@@ -30,7 +30,7 @@ public enum PlayerCommands {
     streamsettingscustom, playerbroadcast, videosoundmode, publish,
     streamsettingsset, framegrabtofile,
 	// experimental (undocumented):
-	jpgstream,
+	jpgstream, streammode,
     
     // malg board 
     motorsreset, getdrivingsettings, drivingsettingsupdate, malgcommand,
@@ -62,7 +62,7 @@ public enum PlayerCommands {
     archiveros, archiveimages, archivelogs, 
     
     // experimental (undocumented)
-    opennisensor, clearmap, error, streammode,
+    opennisensor, clearmap, error,
 
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness;

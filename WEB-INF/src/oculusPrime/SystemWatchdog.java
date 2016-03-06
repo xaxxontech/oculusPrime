@@ -31,6 +31,7 @@ public class SystemWatchdog implements Observer {
 	public boolean powererrorwarningonly = true;
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
+	private long lowbattredockstart = 0;
 	private String ssid = null;
 	
 	SystemWatchdog(Application a){ 
@@ -72,12 +73,10 @@ public class SystemWatchdog implements Observer {
 				application.driverCallServer(PlayerCommands.reboot, null);
 			}
 			
-			// show AP mode enabled, no driver and.. if not busy cpu
+			// show AP mode enabled, if no driver
 			if(state.equals(values.ssid, AP)){ 
-				if(state.getInteger(values.cpu) < 50){
-			    	if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) { 
-			    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-			    	}
+				if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) {
+					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
 				}
 			}
 
@@ -111,15 +110,24 @@ public class SystemWatchdog implements Observer {
 			// deal with abandonded, undocked, low battery, not redocking, not already attempted redock
 			if ( ! state.exists(State.values.driver) &&
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
-					redocking == false && lowbattredock == false &&
+					redocking == false &&
 					Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 35 && // was 10%
 					state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 					settings.getBoolean(GUISettings.redock)
-					){
-				lowbattredock = true;
-				Util.log("abandonded, undocked, low battery, not redocking", this);
-				PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
-				redock(null);
+					) {
+				if (!lowbattredock) {
+					lowbattredock = true;
+					lowbattredockstart = System.currentTimeMillis();
+					Util.log("abandonded, undocked, low battery, not redocking", this);
+					PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
+					redock(NOFORWARD);
+				}
+				else { // power down if redock failed, helps with battery death by parasitics
+					if (System.currentTimeMillis() - lowbattredockstart > AUTODOCKTIMEOUT) {
+						Util.log("abandonded, undocked, low battery, redock failed", this);
+						application.driverCallServer(PlayerCommands.powershutdown, null);
+					}
+				}
 			}
 			else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 
@@ -206,6 +214,7 @@ public class SystemWatchdog implements Observer {
 
 		if (str == null) str = "";
 
+		// TODO: force nav shutdown?
 		if (settings.getBoolean(GUISettings.navigation) && !str.equals(NOFORWARD) ) {
 			if ( !state.get(values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) &&
 					!state.get(values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
@@ -371,12 +380,12 @@ public class SystemWatchdog implements Observer {
 			if (cpu < threshold) { // do it again to be sure
 				cpu = Util.getCPU();
 				if (cpu <threshold) {
-					Util.log("Util.waitForCpu() cleared, cpu @ " + cpu+"% after "+(System.currentTimeMillis()-start)+"ms", null);
+					Util.debug("SystemWatchdog.waitForCpu() cleared, cpu @ " + cpu + "% after " + (System.currentTimeMillis() - start) + "ms", null);
 					return;
 				}
 			}
 			Util.delay(1000);
 		}
-		Util.log("Util.waitForCpu() warning, timed out " + cpu + "% after " + timeout + "ms", null);
+		Util.log("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + "ms", null);
 	}
 }

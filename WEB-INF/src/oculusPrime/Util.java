@@ -728,7 +728,7 @@ public class Util {
 				else state.delete(values.externaladdress);
 
 			} catch (Exception e) {
-				Util.log("updateExternalIPAddress():"+ e.getMessage(), null);
+				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
 				state.delete(values.externaladdress);
 			}
 		} }).start();
