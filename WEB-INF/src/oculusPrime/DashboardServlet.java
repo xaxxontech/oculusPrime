@@ -25,8 +25,8 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	private static final int MAX_STATE_HISTORY = 200;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "5";
+	private static final int MAX_STATE_HISTORY = 100;
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "9";
 	
 	static final String restart = "<a href=\"dashboard?action=restart\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\">";
@@ -41,14 +41,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 	static final String link = "<b>views: </b>&nbsp;"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
-			"<a href=\"dashboard?view=ban\">ban</a>&nbsp&nbsp" +
-			"<a href=\"dashboard?view=power\">power</a>&nbsp&nbsp" +
-			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp&nbsp" +
-			"<a href=\"dashboard?view=ros\">ros</a>&nbsp&nbsp" +
-			"<a href=\"dashboard?view=log\">log</a>&nbsp&nbsp" +
-			"<a href=\"dashboard?view=state\">state</a>&nbsp&nbsp&nbsp" + 
-			"<a href=\"dashboard?action=save\">save</a>&nbsp&nbsp&nbsp" +
-			"<a href=\"dashboard?action=snapshot\">snap</a>&nbsp&nbsp";
+			"<a href=\"dashboard?view=ban\">ban</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?view=power\">power</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?view=ros\">ros</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?view=log\">log</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;" + 
+			"<a href=\"dashboard?action=save\">save</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?action=snapshot\">snap</a>&nbsp;&nbsp;";
 	
 
 	static double VERSION = new Updater().getCurrentVersion();
@@ -117,6 +117,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(action != null&& app != null){
 	
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
+			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
 			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
 			if(action.equalsIgnoreCase("truncros")) app.driverCallServer(PlayerCommands.truncros, null);
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
@@ -352,7 +353,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append( "<td><b>linux</b><td colspan=\"2\">" + Util.diskFullPercent() + "% used</tr> \n"); 
 		
 		String dock = "<font color=\"blue\">undocked</font>";
-		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "docked";		
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "<a href=\"dashboard?action=redock\">docked</a>";		
 		String volts = state.get(values.batteryvolts); 
 		if(volts == null) volts = "";
 		else volts += "v ";

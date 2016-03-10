@@ -663,8 +663,7 @@ public class Util {
 				if(line.contains("eth")) {
 					line = procReader.readLine();
 					String addr = line.substring(line.indexOf(":")+1); 
-					addr = addr.substring(0, addr.indexOf(" ")).trim();
-									
+					addr = addr.substring(0, addr.indexOf(" ")).trim();								
 					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
 					else Util.debug("Util.updateEthernetAddress(): bad address ["+ addr + "]", null);
 				}
