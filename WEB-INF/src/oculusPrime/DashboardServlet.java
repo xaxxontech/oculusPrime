@@ -38,7 +38,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String archiveros = "<a href=\"dashboard?action=archiveros\">";
 	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\">";	
 	static final String archiveimages = "<a href=\"dashboard?action=archiveimages\">";
-	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
+//	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 	static final String link = "<b>views: </b>&nbsp;"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
 			"<a href=\"dashboard?view=ban\">ban</a>&nbsp;&nbsp;" +
@@ -48,7 +48,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?view=log\">log</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;" + 
 			"<a href=\"dashboard?action=save\">save</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?action=snapshot\">snap</a>&nbsp;&nbsp;";
+			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;";
 	
 
 	static double VERSION = new Updater().getCurrentVersion();
@@ -352,7 +352,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
 		str.append( "<td><b>linux</b><td colspan=\"2\">" + Util.diskFullPercent() + "% used</tr> \n"); 
 		
-		String dock = "<font color=\"blue\">undocked</font>";
+		String dock = "<font color=\"blue\"><a href=\"dashboard?action=gotodock\">undocked</a></font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "<a href=\"dashboard?action=redock\">docked</a>";		
 		String volts = state.get(values.batteryvolts); 
 		if(volts == null) volts = "";
@@ -424,7 +424,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				link += "<a href=\"dashboard?action=runroute&route="+r+"\">" +r+ "</a>&nbsp;&nbsp;";
 		}
 		
-		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
+//		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
 	
 		if(state.exists(values.navigationroute)) // active route 
 			link += " <b>active: </b>" + state.get(values.navigationroute) + "&nbsp;"; 
