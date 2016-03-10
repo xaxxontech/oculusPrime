@@ -52,7 +52,7 @@ public class Util {
 	
 	public final static String roslogfolder = "~/.ros/";
 	
-	
+	static State state = State.getReference();
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
@@ -431,9 +431,14 @@ public class Util {
 		long totproc2nd = procStat[0];
 		long totidle2nd = procStat[1];
 		int percent = (int) ((double) ((totproc2nd-totproc1st) - (totidle2nd - totidle1st))/ (double) (totproc2nd-totproc1st) * 100);
-		State.getReference().set(values.cpu, percent);
+		state.set(values.cpu, percent);
 		return percent;
 	}
+	
+//	public static int getCPU(boolean refresh){
+//		if(refresh) return getCPU();
+//		return state.getInteger(values.cpu);
+//	}
 
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
@@ -624,7 +629,7 @@ public class Util {
 	}
 
 	public static void updateLocalIPAddress(){	
-		State state = State.getReference();
+		// State state = State.getReference();
 		String wdev = lookupWIFIDevice();
 		
 		try {			
@@ -652,7 +657,7 @@ public class Util {
 	}
 	
 	public static void updateEthernetAddress(){	
-		State state = State.getReference();
+		// State state = State.getReference();
 		try {			
 			String[] cmd = new String[]{"/bin/sh", "-c", "ifconfig"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -664,7 +669,7 @@ public class Util {
 					line = procReader.readLine();
 					String addr = line.substring(line.indexOf(":")+1); 
 					addr = addr.substring(0, addr.indexOf(" ")).trim();								
-					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
+					if(validIP(addr)) state.set(values.localaddress, addr);
 					else Util.debug("Util.updateEthernetAddress(): bad address ["+ addr + "]", null);
 				}
 			}
@@ -698,7 +703,7 @@ public class Util {
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 
-			State state = State.getReference();
+//			State state = State.getReference();
 
 //  --- changed: updated only called on ssid change from non null
 //			if(state.exists(values.externaladdress)) {
@@ -966,7 +971,7 @@ public class Util {
 			return;
 		}
 		
-		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
+		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			log("manageLogs(): reboot required and must be docked, skipping.. ", null);
 			return;
 		}
@@ -1074,7 +1079,7 @@ public class Util {
 	}
 	
 	public static void appendUserMessage(String message){
-		State state = State.getReference();
+	// 	State state = State.getReference();
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		if(msg.contains(message)) return;
@@ -1131,6 +1136,12 @@ public class Util {
 	}*/
 	
 	public static String getRosCheck(){	
+		return getRosCheck(false);
+	}
+	
+	public static String getRosCheck(boolean lookup){	
+		
+		if(lookup) new File("ros_temp.txt").delete();
 	
 		if(rosinfor!=null) return rosinfor;
 		

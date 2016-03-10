@@ -25,8 +25,9 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	private static final int MAX_STATE_HISTORY = 100;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "9";
+	
+	private static final int MAX_STATE_HISTORY = 500; // in development keep high number 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "5"; // keep low in development 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\">";
@@ -46,9 +47,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=ros\">ros</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=log\">log</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;" + 
-			"<a href=\"dashboard?action=save\">save</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;";
+			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;"  +
+			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;"+ 
+			"<a href=\"dashboard?action=save\">save</a>&nbsp;&nbsp;";
 	
 
 	static double VERSION = new Updater().getCurrentVersion();
@@ -60,6 +61,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
+	
+	int counter = 0;
+	
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -232,14 +236,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void sendSnap(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text");
 		PrintWriter out = response.getWriter();
-		out.println("\n\r-- " + new Date() + " --\n\r");
-		out.println(Util.tail(50).replaceAll("<br>", ""));
-		out.println("\n\r -- state -- \n\r");
-		out.println(state.toString().replaceAll("<br>", ""));
+		
 		out.println("\n\r -- state history --\n\r");
 		out.println(getHistory() + "\n\r");
-		out.println("\n\r -- settings --\n\r");
-		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
+
+//		out.println("\n\r -- state values -- \n\r");
+//		out.println(state.toString().replaceAll("<br>", ""));	
+		
+		out.println("\n\r-- " + new Date() + " --\n\r");
+		out.println(Util.tail(100).replaceAll("<br>", ""));
+	
+//		out.println("\n\r -- settings --\n\r");
+//		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
+	
 		out.close();	
 	}
 	
@@ -354,6 +363,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String dock = "<font color=\"blue\"><a href=\"dashboard?action=gotodock\">undocked</a></font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "<a href=\"dashboard?action=redock\">docked</a>";		
+		if( !state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)) 
+			dock = "<font color=\"blue\"><a href=\"dashboard?action=redock\">redock</a></font>";
+		
 		String volts = state.get(values.batteryvolts); 
 		if(volts == null) volts = "";
 		else volts += "v ";
@@ -394,9 +406,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ Util.countMbytes(Settings.logfolder) + "</a> mb <td>" + truncarchive
 			+ "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 		
+// 		boolean refresh = (counter++ % 5 == 0);
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
-			+ "<td><b>cpu</b><td>" + Util.getCPU() + "% "
-			+ "<td><b>ros</b><td>" + archiveros + Util.getRosCheck() + "</a> mb<td>" 
+			+ "<td><b>cpu</b><td>" + state.get(values.cpu) /*Util.getCPU(false)*/ + "% "
+			
+			+ "<td><b>ros</b><td>" + archiveros + Util.getRosCheck(false) + "</a> mb<td>" 
 			+ truncros +"x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			// doesn't work on hidden file?? 
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
@@ -483,7 +497,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void updated(String key) {
 		if(key.equals(values.batteryinfo.name())) return;
 //		if(key.equals(values.batterylife.name())) return;
-		if(key.equals(values.batteryvolts.name())) return;
+// 		if(key.equals(values.batteryvolts.name())) return;
 //		if(key.equals(values.framegrabbusy.name())) return;
 //		if(key.equals(values.rosglobalpath.name())) return;
 //		if(key.equals(values.rosscan.name())) return;

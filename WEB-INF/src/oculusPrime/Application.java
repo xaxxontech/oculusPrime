@@ -834,9 +834,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case log: Util.log("log: "+str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
 		
-		case cpu: 
-			String cpu = String.valueOf(Util.getCPU());
-			if(cpu != null) state.set(values.cpu, cpu);
+		case cpu:
+			Util.getCPU(); // calling it updates state 
+			// String cpu = String.valueOf(Util.getCPU());
+			// if(cpu != null) state.set(values.cpu, cpu);
 			break;
 
 		// dev tool only

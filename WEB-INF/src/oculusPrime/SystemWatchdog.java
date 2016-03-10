@@ -72,13 +72,12 @@ public class SystemWatchdog implements Observer {
 				application.driverCallServer(PlayerCommands.reboot, null);
 			}
 			
-			// show AP mode enabled, no driver and.. if not busy cpu
+			// show AP mode enabled, no driver 
 			if(state.equals(values.ssid, AP)){ 
-				if(state.getInteger(values.cpu) < 50){
-			    	if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) { 
-			    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
-			    	}
-				}
+				//if(state.getInteger(values.cpu) < 50){
+		    	if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) { 
+		    		application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+		    	}
 			}
 
 			// notify clients of power errors
@@ -126,8 +125,10 @@ public class SystemWatchdog implements Observer {
 //			 check cpu useage
 			int cpuNow = Util.getCPU();
 			if(cpuNow > 60) Util.log("cpu: "+cpuNow, this);
-			state.set(values.cpu, Util.getCPU());
-
+			// redundant calls 
+			// state.set(values.cpu, Util.getCPU());
+			// Util.getCPU();
+			
 			// notify driver if any system messages
 			if (state.exists(values.guinotify)) {
 				if (state.exists(State.values.driver.toString())) {
@@ -363,7 +364,6 @@ public class SystemWatchdog implements Observer {
 	public static void waitForCpu(long timeout) { waitForCpu(60, timeout); }
 
 	public static void waitForCpu(int threshold, long timeout) {
-
 		long start = System.currentTimeMillis();
 		int cpu = 0;
 		while (System.currentTimeMillis() - start < timeout) {
