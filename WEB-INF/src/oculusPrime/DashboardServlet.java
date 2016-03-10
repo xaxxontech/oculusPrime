@@ -39,7 +39,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String archiveros = "<a href=\"dashboard?action=archiveros\">";
 	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\">";	
 	static final String archiveimages = "<a href=\"dashboard?action=archiveimages\">";
-//	static final String gotodock = "<a href=\"dashboard?action=gotodock\">dock</a>&nbsp;&nbsp;";
 	static final String link = "<b>views: </b>&nbsp;"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
 			"<a href=\"dashboard?view=ban\">ban</a>&nbsp;&nbsp;" +
@@ -61,9 +60,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-	
-	int counter = 0;
-	
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -237,17 +233,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		response.setContentType("text");
 		PrintWriter out = response.getWriter();
 		
+		out.println("\n\r-- " + new Date() + " --\n\r");
+		out.println(Util.tail(100).replaceAll("<br>", ""));
+
 		out.println("\n\r -- state history --\n\r");
 		out.println(getHistory() + "\n\r");
 
-//		out.println("\n\r -- state values -- \n\r");
-//		out.println(state.toString().replaceAll("<br>", ""));	
+		out.println("\n\r -- state values -- \n\r");
+		out.println(state.toString().replaceAll("<br>", ""));	
 		
-		out.println("\n\r-- " + new Date() + " --\n\r");
-		out.println(Util.tail(100).replaceAll("<br>", ""));
-	
-//		out.println("\n\r -- settings --\n\r");
-//		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
+		out.println("\n\r -- settings --\n\r");
+		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
 	
 		out.close();	
 	}
@@ -351,7 +347,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\"> \n");
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
+		str.append("\n<tr><td colspan=\"11\">--------------------------------------------------------------------------------------------------------");
+		//str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
 			+"\" target=\"_blank\">" + state.get(values.localaddress) + "</a>");
 		
@@ -361,10 +358,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>");
 		str.append( "<td><b>linux</b><td colspan=\"2\">" + Util.diskFullPercent() + "% used</tr> \n"); 
 		
-		String dock = "<font color=\"blue\"><a href=\"dashboard?action=gotodock\">undocked</a></font>";
-		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "<a href=\"dashboard?action=redock\">docked</a>";		
+		String dock = "<font color=\"blue\">undocked</font>";
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "docked&nbsp;&nbsp;<a href=\"dashboard?action=redock\">x</a>";		
 		if( !state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)) 
-			dock = "<font color=\"blue\"><a href=\"dashboard?action=redock\">redock</a></font>";
+			dock = "<font color=\"blue\">undocked&nbsp;&nbsp;</font><a href=\"dashboard?action=redock\">x</a>";
+		
+		if(state.equals(values.docking, AutoDock.DOCKING)) dock = "<font color=\"blue\">docking</font>";
+		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
 		
 		String volts = state.get(values.batteryvolts); 
 		if(volts == null) volts = "";
@@ -379,14 +379,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String motor = " not connected";
 		if(state.exists(values.motorport)) motor = state.get(values.motorport);
 		str.append("<tr><td><b>motor</b><td>" + motor 
-			+ "<td><b>linux</b><td>" + reboot + (((System.currentTimeMillis() 
-			- state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins "
+			+ "<td><b>linux</b><td>" + (((System.currentTimeMillis() 
+			- state.getLong(values.linuxboot)) / 1000) / 60)+ "m " + reboot + "reboot</a>"  
 			+ "<td><b>prime</b><td colspan=\"2\">" + Util.countMbytes(".") + " mbytes </a></tr> \n");
 		
 		String power = " not connected";
 		if(state.exists(values.powerport)) power = state.get(values.powerport);
 		str.append("<tr><td><b>power</b><td>" + power
-			+ "<td><b>java</b><td>" + restart + (state.getUpTime()/1000)/60  + "</a> mins"
+			+ "<td><b>java</b><td>" + (state.getUpTime()/1000)/60 + "m " + restart + "restart</a>"
 			+ "<td><b>archive</b><td>" + managelogs + Util.countMbytes(Settings.archivefolder) 
 			+ "</a> mb <td>" + truncarchive + "x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			
@@ -410,7 +410,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td><b>telet</b><td>" + state.get(values.telnetusers) + " clients"
 			+ "<td><b>cpu</b><td>" + state.get(values.cpu) /*Util.getCPU(false)*/ + "% "
 			
-			+ "<td><b>ros</b><td>" + archiveros + Util.getRosCheck(false) + "</a> mb<td>" 
+			+ "<td><b>ros</b><td>" + archiveros + Util.getRosCheck() + "</a> mb<td>" 
 			+ truncros +"x</a>&nbsp;&nbsp;&nbsp;&nbsp;</tr> \n");
 			// doesn't work on hidden file?? 
 			//	+ Util.countMbytes(Settings.roslogfolder) + "</a> mbytes (" 
@@ -422,7 +422,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		else msg += "&nbsp;&nbsp;<a href=\"dashboard?action=gui\">(ignore)</a>";
-		if(msg.length() > 1) msg = "<br><b>user message: </b>&nbsp;&nbsp;" + msg;
+		if(msg.length() > 1) msg = "<tr><td colspan=\"11\"><b>user message: </b>&nbsp;&nbsp;" + msg;
 		str.append("<tr><td colspan=\"11\">"+ getRouteLinks() + msg + "</tr> \n");
 		str.append("<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
@@ -441,13 +441,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 //		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += gotodock;
 	
 		if(state.exists(values.navigationroute)) // active route 
-			link += " <b>active: </b>" + state.get(values.navigationroute) + "&nbsp;"; 
+			link += " <b>active: </b>" + state.get(values.navigationroute); 
 		
 		if(state.exists(values.navigationroute) && state.exists(values.roswaypoint)){
-			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) link += " | "+ state.get(values.roswaypoint) + "&nbsp;";
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) 
+				link += " | "+ state.get(values.roswaypoint) + "&nbsp;<a href=\"dashboard?action=gotodock\">x</a>";
 			else if(state.exists(values.nextroutetime)) 
-				link += ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) + "&nbsp;seconds&nbsp;"
-					+ "<a href=\"dashboard?action=cancel\">x</a>";
+				link += "&nbsp;|&nbsp;" +((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000) 
+				+ "&nbsp;seconds&nbsp;<a href=\"dashboard?action=cancel\">x</a>";
 		}
 		return link; 
 	}

@@ -4,14 +4,12 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -864,23 +862,23 @@ public class Util {
 		} 
 	}
 	
-	public static void truncState(){
-		File[] files  = new File(Settings.logfolder).listFiles(new stateFilter());	
-		log("truncState(): " + files.length + " files in folder", null);
+	public static void truncSnapshot(){
+		File[] files  = new File(Settings.logfolder).listFiles(new snapshotFilter());	
+		log("truncSnapshot(): " + files.length + " files in folder", null);
 		if(files.length < MIN_FILE_COUNT) return;
 		sortFiles(files); 
         for (int i = MIN_FILE_COUNT; i < files.length; i++){
 			if (files[i].isFile()){
-				log("truncState(): " + files[i].getName() + " was deleted", null);
+				log("truncSnapshot(): " + files[i].getName() + " was deleted", null);
 				files[i].delete();
 	        }
 		} 
 	}
 	 
-	public static class stateFilter implements FilenameFilter{
+	public static class snapshotFilter implements FilenameFilter{
         @Override
         public boolean accept(File dir, String name) {
-            return name.contains("state");
+            return name.contains("snapshot");
         }
 	 }
 	 
@@ -978,7 +976,7 @@ public class Util {
 	
 		new Thread(new Runnable() { public void run() {
 			try {
-				
+				/*
 				long start = System.currentTimeMillis();
 				appendUserMessage("log files being archived..");
 				
@@ -996,15 +994,17 @@ public class Util {
 			
 				String all = archiveAll(new String[]{logs, images, ros, Settings.settingsfile});
 				log("manageLogs(): log file: " + all, null);
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
-				else { // done, now clean up.. 
-					new File(images).delete();
-					new File(logs).delete();
-					new File(ros).delete();
-					truncState();
-				}
+				*/
 				
-				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
+				//if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
+				//else { // done, now clean up.. 
+				//	new File(images).delete();
+				//	new File(logs).delete();
+				//	new File(ros).delete();
+					truncSnapshot();
+				//}
+				
+				// log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
 				appendUserMessage("done archiving");
 				
 			} catch (Exception e){printError(e);}
@@ -1026,7 +1026,6 @@ public class Util {
 			}
 			debug("waitForArchive(): exit: " + (System.currentTimeMillis() - start)/1000 + " seconds");
 		}
-		
 		return archivePID();
 	}
 	
@@ -1135,13 +1134,12 @@ public class Util {
 		return buffer.toString();
 	}*/
 	
-	public static String getRosCheck(){	
-		return getRosCheck(false);
-	}
+//	public static String getRosCheck(){	
+//		return getRosCheck(false);
 	
-	public static String getRosCheck(boolean lookup){	
+	public static String getRosCheck(){ // boolean lookup){	
 		
-		if(lookup) new File("ros_temp.txt").delete();
+	//	if(lookup) new File("ros_temp.txt").delete();
 	
 		if(rosinfor!=null) return rosinfor;
 		
@@ -1154,7 +1152,7 @@ public class Util {
 			
 			String[] cmd = {"bash", "-ic", "rosclean check > ros_temp.txt"};
 			Runtime.getRuntime().exec(cmd);	
-			
+			delay(3000);
 			BufferedReader reader;
 			reader = new BufferedReader(new FileReader("ros_temp.txt"));
 			rosinfor = reader.readLine().trim();
@@ -1166,6 +1164,9 @@ public class Util {
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
 			
 		} catch (Exception e){ rosinfor = "0.00"; }
+		
+		
+		
 		
 		return rosinfor;
 	}		

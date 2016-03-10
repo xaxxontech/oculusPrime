@@ -869,7 +869,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			Util.truncStaleArchive();
 			Util.deleteLogFiles();
-			Util.truncState();
+			Util.truncSnapshot();
 			break;
 		case truncimages: 
 			Util.truncStaleFrames();

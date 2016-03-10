@@ -50,10 +50,11 @@ public class Navigation implements Observer {
 	public NavigationLog navlog;
 	
 	private long estimateddistance = 0;
-	private long estimatedtime = 0;
+	private int estimatedtime = 0;
 	private long routedistance = 0;
-	private boolean failed = false;
-	private boolean overdue = false;
+
+	//private boolean failed = false;
+	//private boolean overdue = false;
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -258,7 +259,7 @@ public class Navigation implements Observer {
 
 			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach dock");
-				failed = true;
+				// failed = true;
 				return;
 			}
 
@@ -574,7 +575,7 @@ public class Navigation implements Observer {
     				estimateddistance = 0;
     			}
     			try { // check for an estimated time tag
-    				estimatedtime = Long.parseLong(route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent());
+    				estimatedtime = Integer.parseInt(route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent());
     				Util.log("["+ rname + "] estimated time : " + estimatedtime, this);
     			} catch (Exception e){
     				Util.log("no route _time_ available for: " + rname, this);
@@ -601,7 +602,7 @@ public class Navigation implements Observer {
 		saveRoute(xmlstring);
 		
 		// watch dog
-		overdue = false; failed = false;
+		//overdue = false; failed = false;
 		if(estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 		
@@ -609,7 +610,7 @@ public class Navigation implements Observer {
 				
 				if( ! (state.getBoolean(State.values.autodocking) || 
 				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
-					overdue = true; // over due, cancel route, drive to dock.. 
+					//overdue = true; // over due, cancel route, drive to dock.. 
 					Util.log("** overdue ** estimated: " + estimatedtime     + " seconds : ", this);
 					dock(); // set new target 
 					navlog.newItem(NavigationLog.ERRORSTATUS, "** overdue ** called back to dock after " + estimatedtime + " seconds",
@@ -680,7 +681,7 @@ public class Navigation implements Observer {
 					app.comport.checkisConnectedBlocking(); // just in case
 
 					SystemWatchdog.waitForCpu();
-					app.driverCallServer(PlayerCommands.forward, "1.3");
+					app.driverCallServer(PlayerCommands.forward, "1.1"); // TODO: MAKE SETTING ?
 					Util.delay(3000);
 
 					// rotate to localize
@@ -738,7 +739,7 @@ public class Navigation implements Observer {
 								routestarttime, wpname, name, consecutiveroute, 0, rotations);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
-						failed = true;
+						//failed = true;
 						continue; 
 					}
 
@@ -785,10 +786,10 @@ public class Navigation implements Observer {
 				}
 			
 				// flawless route 
-				if( !(overdue || failed) && rotations == 0){
+				if( /*!(overdue || failed) &&*/ rotations == 0){
 					
 					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
-					updateRouteInfo(state.get(State.values.navigationroute), seconds, routedistance);
+					updateRouteInfo(state.get(State.values.navigationroute), ((estimatedtime + seconds)/2), ((estimateddistance + routedistance)/2));
 				
 					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
 					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
