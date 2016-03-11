@@ -92,6 +92,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	private volatile double lastodomangle = 0; // degrees
 	private volatile int lastodomlinear = 0; // mm
 	private volatile double arcodomcomp = 1;
+	private volatile Boolean odometryBroadCasting = false; // thread alive flag
 
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
@@ -820,8 +821,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
 			
-			if ( !state.get(State.values.direction).equals(direction.stop.toString())  ) {
-			
+			if ( !state.get(State.values.direction).equals(direction.stop.toString()) &&
+					!state.get(State.values.direction).equals(direction.backward.toString())) {
+
 				stopGoing();
 				currentMoveID = moveID;
 				
@@ -1814,7 +1816,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		state.set(State.values.moving, false);
 		state.set(State.values.movingforward, false);
-//		if (settings.getBoolean(GUISettings.muteonrovmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
 
 		// needs deaccel!
 //		if (state.getBoolean(State.values.stopbetweenmoves)) sendCommand(HARD_STOP);
@@ -1863,35 +1864,37 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 	
 	public void odometryStart() {
+		state.set(State.values.odometry, true);
 		sendCommand(ODOMETRY_START);
 		state.delete(State.values.distanceangle);
-		state.set(State.values.odometry, true);
 		state.set(State.values.stopbetweenmoves, true);
 		state.set(State.values.odomlinearmpms, METERSPERSEC / 1000);
 		state.set(State.values.odomturndpms, DEGPERMS);
 		state.set(State.values.motorspeed, state.get(State.values.odomlinearpwm));
-//		state.set(State.values.lastodomreceived, System.currentTimeMillis());
 
-		if (state.exists(State.values.odometrybroadcast.toString())) { // broadcast
+		if (state.exists(State.values.odometrybroadcast.toString()) && !odometryBroadCasting) {
 			new Thread(new Runnable() {public void run() {
-				
-				while (state.exists(State.values.odometrybroadcast.toString()) && 
-							state.exists(State.values.odometry.toString())) {
-					if (state.getBoolean(State.values.odometry) && 
+
+				odometryBroadCasting = true;
+
+				while (state.exists(State.values.odometrybroadcast.toString()) &&
+						state.exists(State.values.odometry.toString())) {
+					if (state.getBoolean(State.values.odometry) &&
 							state.getLong(State.values.odometrybroadcast) > 0 ) {
 						Util.delay(state.getLong(State.values.odometrybroadcast));
 						odometryReport();
 					}
 					else  break;
 				}
-				
+
+				odometryBroadCasting = false;
 			} }).start();
 		}
 	}
-	
+
 	public void odometryStop() {
-		sendCommand(ODOMETRY_STOP_AND_REPORT);
 		state.set(State.values.odometry, false);
+		sendCommand(ODOMETRY_STOP_AND_REPORT);
 		state.set(State.values.stopbetweenmoves, false);
 		state.delete(State.values.odomturndpms);
 		state.delete(State.values.odomlinearmpms);

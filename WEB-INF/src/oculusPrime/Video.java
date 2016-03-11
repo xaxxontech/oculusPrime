@@ -15,26 +15,38 @@ public class Video {
     private int devicenum = 0;  // should match lifecam cam
     private int adevicenum = 1; // should match lifecam mic
     private int quality = 5;
-    private int fps = 8;
-    private int width=640;
-    private int height=480;
+    private static final int defaultwidth=640;
+    private static final int defaultheight=480;
     private static final String PATH="/dev/shm/avconvframes/";
     private static final String EXT=".bmp";
     private volatile long lastframegrab = 0;
+    private int lastwidth=0;
+    private int lastheight=0;
+    private int lastfps=0;
+    private Application.streamstate lastmode = Application.streamstate.stop;
+    private long publishid = 0;
+    static final long STREAM_RESTART = Util.ONE_MINUTE*7;
 
     public Video(Application a) {
         app = a;
         state.set(State.values.stream, Application.streamstate.stop.toString());
     }
 
-    // TODO: (minor?) blocking
-    public void publish (final Application.streamstate mode, int w, int h, int rate) {
+    public void publish (final Application.streamstate mode, final int w, final int h, final int fps) {
         // todo: determine video device (in constructor)
         // todo: disallow unsafe custom values (device can be corrupted?)
 
-        fps=rate;
-        height = h;
-        width = w;
+        if (w==lastwidth && h==lastheight && fps==lastfps && mode.equals(lastmode)) {
+            Util.log("identical stream already running, dropped", this);
+            return;
+        }
+
+        lastwidth = w;
+        lastheight = h;
+        lastfps = fps;
+        lastmode = mode;
+        final long id = System.currentTimeMillis();
+        publishid = id;
 
         new Thread(new Runnable() { public void run() {
 
@@ -43,12 +55,12 @@ public class Video {
                     !mode.equals(Application.streamstate.stop.toString())) {
                 state.set(State.values.writingframegrabs, false);
                 Util.systemCallBlocking("pkill avconv");
-                Util.delay(2000);
+                Util.delay(Application.STREAM_CONNECT_DELAY);
             }
 
             switch (mode) {
                 case camera:
-                    Util.systemCall("avconv -f video4linux2 -s " + width + "x" + height + " -r " + fps +
+                    Util.systemCall("avconv -f video4linux2 -s " + w + "x" + h + " -r " + fps +
                             " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
                     // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1
@@ -66,7 +78,7 @@ public class Video {
                             port + "/oculusPrime/stream2");
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
 
-                    Util.systemCall("avconv -f video4linux2 -s " + width + "x" + height + " -r " + fps +
+                    Util.systemCall("avconv -f video4linux2 -s " + w + "x" + h + " -r " + fps +
                             " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
 
@@ -82,6 +94,26 @@ public class Video {
             }
 
         } }).start();
+
+        if (mode.equals(Application.streamstate.stop) ) return;
+
+        // stream restart timer
+        new Thread(new Runnable() { public void run() {
+            long start = System.currentTimeMillis();
+            while ( (id == publishid && System.currentTimeMillis() < start + STREAM_RESTART) ||
+                    state.getBoolean(State.values.writingframegrabs))
+                Util.delay(50);
+
+            if (id == publishid) { // restart stream
+                Util.systemCall("pkill avconv");
+                lastmode = Application.streamstate.stop;
+                Util.delay(Application.STREAM_CONNECT_DELAY);
+                publish(mode, w,h,fps);
+//                app.driverCallServer(PlayerCommands.messageclients, "stream restart after "+(System.currentTimeMillis()-start+"ms"));
+            }
+
+        } }).start();
+
     }
 
     public void framegrab(final String res) {
@@ -139,20 +171,14 @@ public class Video {
         dir.mkdirs();
         for(File file: dir.listFiles()) file.delete(); // nuke any existing files
 
+        int width = defaultwidth;
+        int height = defaultheight;
+
         // set resolution
         if (res.equals(AutoDock.LOWRES)) {
             width=320;
             height=240;
         }
-
-        // launch avconv frame writer
-        // avconv -analyzeduration 1 -i 'rtmp://127.0.0.1:1935/oculusPrime/stream1 live=1' -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
-
-//        String cmd = "avconv -analyzeduration 1 -i 'rtmp://" + host+":"+port+"/oculusPrime/stream1 live=1' -s "+
-//                width+"x"+height+" -r "+fps+" -q "+quality+" "+PATH+"%d"+EXT;
-//
-//        Util.systemCall(cmd);
-//        Util.log(cmd, this);
 
 
         try {

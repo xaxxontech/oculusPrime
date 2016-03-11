@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import developer.Ros;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -74,8 +75,8 @@ public class AutoDock {
 				return;
 			}
 			if (state.getBoolean(State.values.odometry)) {
-				app.message("unable to dock, odometry running", "autodockcancelled", null);
-				return;
+				app.message("odometry running, disabling", null, null);
+				app.driverCallServer(PlayerCommands.odometrystop, null);
 			}
 
 			lowres=true;
