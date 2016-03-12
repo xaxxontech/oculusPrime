@@ -862,18 +862,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case archive: 
 			Util.manageLogs();
 			break;
+		
 		case truncarchive:
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);
 				break;
 			}
 			Util.truncStaleArchive();
-			Util.deleteLogFiles();
+	//		Util.deleteLogFiles();
 			Util.truncSnapshot();
 			break;
+		
 		case truncimages: 
 			Util.truncStaleFrames();
 			break;
+		
 		case truncros: 
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);
@@ -882,6 +885,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.deleteROS();
 			break;
+		
 		case archiveimages: 
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);
@@ -894,6 +898,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.archiveImages();
 			break;
+			
 		case archiveros:
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);
@@ -906,6 +911,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			driverCallServer(PlayerCommands.cancelroute, null);
 			Util.archiveROS();
 			break;
+			
 		case archivelogs: 
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);

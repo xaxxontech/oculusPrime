@@ -44,7 +44,7 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		rosarcmove, // to be documented
+		rosarcmove, routeoverdue, // to be documented
 
 	}
 

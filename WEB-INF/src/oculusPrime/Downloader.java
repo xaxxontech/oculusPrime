@@ -18,8 +18,7 @@ public class Downloader {
 	 * 
 	 */
 	public boolean FileDownload(final String fileAddress, final String localFileName, final String destinationDir) {
-
-		// long start = System.currentTimeMillis();
+		long start = System.currentTimeMillis();
 		String sep = System.getProperty("file.separator");
 		
 		// create path to local file
@@ -53,11 +52,9 @@ public class Downloader {
 				os.write(buf, 0, read);
 				written += read;
 			}
-
-			Util.log("saved file: " + path + " bytes: " + written, this);
-			//Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms", this);
-			//Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
-
+			
+			Util.log(path, this);
+			Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms " + written + " bytes", this);
 		} catch (Exception e) {
 			Util.log(e.getMessage(), this);
 			return false;

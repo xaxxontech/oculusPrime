@@ -49,12 +49,9 @@ public class Navigation implements Observer {
 	public int rotations = 0;
 	public NavigationLog navlog;
 	
-	private long estimateddistance = 0;
-	private int estimatedtime = 0;
+	private long estimateddistance = 0;	
 	private long routedistance = 0;
-
-	//private boolean failed = false;
-	//private boolean overdue = false;
+	private int estimatedtime = 0;
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -70,8 +67,7 @@ public class Navigation implements Observer {
 	public void updated(String key) {
 		if(key.equals(values.distanceangle.name())){
 			try {
-				double val = Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
-				if(val > 0) routedistance += val;
+				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
 			} catch (Exception e){}
 		}
 		if(key.equals(values.recoveryrotation.name())){
@@ -602,15 +598,16 @@ public class Navigation implements Observer {
 		saveRoute(xmlstring);
 		
 		// watch dog
-		//overdue = false; failed = false;
+		state.delete(values.routeoverdue);
 		if(estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 		
-				Util.delay(estimatedtime*1000 + 20000); // TODO: make a setting? in seconds 
+				Util.delay(estimatedtime*1000);// + 20000); // TODO: make a setting? in seconds 
 				
 				if( ! (state.getBoolean(State.values.autodocking) || 
 				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
-					//overdue = true; // over due, cancel route, drive to dock.. 
+					// over due, cancel route, drive to dock.. 
+					state.set(values.routeoverdue, true);
 					Util.log("** overdue ** estimated: " + estimatedtime     + " seconds : ", this);
 					dock(); // set new target 
 					navlog.newItem(NavigationLog.ERRORSTATUS, "** overdue ** called back to dock after " + estimatedtime + " seconds",
@@ -796,6 +793,7 @@ public class Navigation implements Observer {
 				}
 			
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance, rotations);
+				state.delete(values.routeoverdue);
 				consecutiveroute ++;
 				routedistance = 0;
 				

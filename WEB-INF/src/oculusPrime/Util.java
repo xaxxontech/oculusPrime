@@ -38,6 +38,8 @@ public class Util {
 	
 	public final static String sep = System.getProperty("file.separator");
 
+	public final static String roslogfolder = "~/.ros/";
+	
 	public static final long ONE_DAY = 86400000;
 	public static final long ONE_MINUTE = 60000;
 	public static final long TWO_MINUTES = 120000;
@@ -45,10 +47,8 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 	public static final int PRECISION = 2;		 
-	public static final int MIN_FILE_COUNT = 50;  
-	public static final int MAX_HISTORY = 60;
-	
-	public final static String roslogfolder = "~/.ros/";
+	public static final int MIN_FILE_COUNT = 10;  
+	public static final int MAX_HISTORY = 100;
 	
 	static State state = State.getReference();
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -347,17 +347,12 @@ public class Util {
     
 	public static Document loadXMLFromString(String xml){
 		try {
-	    
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder;
-		
 			builder = factory.newDocumentBuilder();
 			InputSource is = new InputSource(new StringReader(xml));
 			return builder.parse(is);
-		
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		} catch (Exception e){ printError(e); }
 		return null;
 	}
 
@@ -700,20 +695,7 @@ public class Util {
 
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
-
-//			State state = State.getReference();
-
-//  --- changed: updated only called on ssid change from non null
-//			if(state.exists(values.externaladdress)) {
-//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
-//					return;
-//				}
-//			}
-
 			try {
-
 				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
 				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 
@@ -721,7 +703,6 @@ public class Util {
 				String address = "";
 				while ((i = in.read()) != -1) address += (char)i;
 				in.close();
-
 				if(Util.validIP(address)) state.set(values.externaladdress, address);
 				else state.delete(values.externaladdress);
 
@@ -894,8 +875,8 @@ public class Util {
 	}
 
 	public static String archiveLogs(){
-		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar.bz2";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " log"};
+		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
@@ -976,7 +957,7 @@ public class Util {
 	
 		new Thread(new Runnable() { public void run() {
 			try {
-				/*
+				
 				long start = System.currentTimeMillis();
 				appendUserMessage("log files being archived..");
 				
@@ -994,17 +975,20 @@ public class Util {
 			
 				String all = archiveAll(new String[]{logs, images, ros, Settings.settingsfile});
 				log("manageLogs(): log file: " + all, null);
-				*/
+			
+				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
 				
-				//if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
-				//else { // done, now clean up.. 
+				//else { 
+				
+				// done, now clean up.. 
 				//	new File(images).delete();
 				//	new File(logs).delete();
 				//	new File(ros).delete();
-					truncSnapshot();
+				//	truncSnapshot();
+				
 				//}
 				
-				// log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
+				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
 				appendUserMessage("done archiving");
 				
 			} catch (Exception e){printError(e);}
