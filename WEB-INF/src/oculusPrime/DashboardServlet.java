@@ -26,7 +26,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 500; // in development keep high number 
+	private static final int MAX_STATE_HISTORY = 50; // in development keep high number 
 	private static final String HTTP_REFRESH_DELAY_SECONDS = "5"; // keep low in development 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
@@ -446,7 +446,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(msg == null) msg = "";
 		else msg += "&nbsp;&nbsp;<a href=\"dashboard?action=gui\">(ignore)</a>";
 		if(msg.length() > 1) {
-			msg = "<tr><td colspan=\"11\"><b>message:</b>" + msg + "</tr> \n";
+			msg = "<tr><td><b>message</b><td colspan=\"11\">" + msg + "</tr> \n";
 			str.append(msg);
 		}
 		

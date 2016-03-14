@@ -957,7 +957,7 @@ public class Util {
 	
 		new Thread(new Runnable() { public void run() {
 			try {
-				
+				if(waitForArchive()) log("manageLogs(): **", null);
 				long start = System.currentTimeMillis();
 				appendUserMessage("log files being archived..");
 				
@@ -977,18 +977,15 @@ public class Util {
 				log("manageLogs(): log file: " + all, null);
 			
 				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
-				
-				//else { 
-				
+			
 				// done, now clean up.. 
 				//	new File(images).delete();
 				//	new File(logs).delete();
 				//	new File(ros).delete();
 				//	truncSnapshot();
 				
-				//}
-				
 				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
+				if(state.get(values.guinotify).contains("log files being archived")) state.delete(values.guinotify); 
 				appendUserMessage("done archiving");
 				
 			} catch (Exception e){printError(e);}
