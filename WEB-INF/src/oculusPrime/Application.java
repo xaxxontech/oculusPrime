@@ -858,60 +858,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 			new OpenCVUtils(this).jpgStream(str);
 //			opencvutils.jpgStream(str);
 			break;
-			
-		case archive: 
-			Util.manageLogs();
-			break;
-		
-		case truncarchive:
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			Util.truncStaleArchive();
-	//		Util.deleteLogFiles();
-			Util.truncSnapshot();
-			break;
-		
-		case truncimages: 
-			Util.truncStaleFrames();
-			break;
-		
-		case truncros: 
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			driverCallServer(PlayerCommands.cancelroute, null);
-			Util.deleteROS();
-			break;
-		
-		case archiveimages: 
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
+	
+		case deletelogs:
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
 			driverCallServer(PlayerCommands.cancelroute, null);
-			Util.archiveImages();
+			Util.deleteLogFiles();
 			break;
-			
-		case archiveros:
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
-			driverCallServer(PlayerCommands.cancelroute, null);
-			Util.archiveROS();
-			break;
-			
+		
 		case archivelogs: 
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);

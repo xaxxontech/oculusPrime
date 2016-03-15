@@ -47,8 +47,8 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 	public static final int PRECISION = 2;		 
-	public static final int MIN_FILE_COUNT = 10;  
-	public static final int MAX_HISTORY = 100;
+	public static final int MIN_FILE_COUNT = 30;  
+	public static final int MAX_HISTORY = 50;
 	
 	static State state = State.getReference();
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -800,9 +800,14 @@ public class Util {
 	    }
 	    files = new File(Settings.logfolder).listFiles();
 	    if(files.length != 0) log("deleteLogFiles(): must be subfolders: " + files.length, null);	
+	    
+	    truncSnapshot();
+	    truncStaleArchive();
+	    truncStaleFrames();
+	    deleteROS(); // causes rebootv 
 	}
 	
-	public static void truncStaleFrames(){
+	private static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
@@ -814,7 +819,7 @@ public class Util {
 		} 
 	}
 	
-	public static boolean linkedFrame(final String fname){ 
+	private static boolean linkedFrame(final String fname){ 
 		Process proc = null;
 		String line = null;
 		try { 
@@ -830,7 +835,7 @@ public class Util {
 		return false;
 	}
 	
-	public static void truncStaleArchive(){
+	private static void truncStaleArchive(){
 		File[] files  = new File(Settings.archivefolder).listFiles();
 		log("truncStaleArchive(): " + files.length + " files in folder", null);
 		if(files.length < MIN_FILE_COUNT) return;
@@ -843,7 +848,8 @@ public class Util {
 		} 
 	}
 	
-	public static void truncSnapshot(){
+
+	private static void truncSnapshot(){
 		File[] files  = new File(Settings.logfolder).listFiles(new snapshotFilter());	
 		log("truncSnapshot(): " + files.length + " files in folder", null);
 		if(files.length < MIN_FILE_COUNT) return;
@@ -856,7 +862,7 @@ public class Util {
 		} 
 	}
 	 
-	public static class snapshotFilter implements FilenameFilter{
+	private static class snapshotFilter implements FilenameFilter{
         @Override
         public boolean accept(File dir, String name) {
             return name.contains("snapshot");
@@ -874,7 +880,7 @@ public class Util {
         });	
 	}
 
-	public static String archiveLogs(){
+	private static String archiveLogFolder(){
 		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " log"};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
@@ -884,7 +890,7 @@ public class Util {
 		return path;
 	}
 	
-	public static String archiveImages(){
+	private static String archiveImages(){
 		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.framefolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
@@ -894,7 +900,7 @@ public class Util {
 		return path;
 	}
 	
-	public static String archiveROS(){
+	private static String archiveROS(){
 		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + "  " + roslogfolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
@@ -940,58 +946,43 @@ public class Util {
 				}
 			}
 		} catch (Exception e){return false;};
-		
 		return false;
 	}
 	
-	public static void manageLogs(){
+	public static void archiveLogs(){
 		if(archivePID()){ 
 			log("manageLogs(): busy, skipping.. ", null);
 			return;
 		}
-		
 		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			log("manageLogs(): reboot required and must be docked, skipping.. ", null);
 			return;
 		}
-	
 		new Thread(new Runnable() { public void run() {
 			try {
-				if(waitForArchive()) log("manageLogs(): **", null);
-				long start = System.currentTimeMillis();
+				
+				truncStaleArchive();
+				truncSnapshot();
+				truncStaleFrames();
+				
 				appendUserMessage("log files being archived..");
 				
-				String ros = archiveROS();
-				log("manageLogs(): log file: " + ros, null);
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + ros, null);
+				log("manageLogs(): " + archiveROS(), null);
+				log("manageLogs(): " + archiveImages(), null);	
+				log("manageLogs(): " + archiveLogFolder(), null);
 				
-				String images = archiveImages();
-				log("manageLogs(): log file: " + images, null);	
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + images, null);
-				
-				String logs = archiveLogs();
-				log("manageLogs(): log file: " + logs, null);
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + logs, null);
-			
-				String all = archiveAll(new String[]{logs, images, ros, Settings.settingsfile});
-				log("manageLogs(): log file: " + all, null);
-			
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
-			
-				// done, now clean up.. 
-				//	new File(images).delete();
-				//	new File(logs).delete();
-				//	new File(ros).delete();
-				//	truncSnapshot();
-				
-				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
 				if(state.get(values.guinotify).contains("log files being archived")) state.delete(values.guinotify); 
 				appendUserMessage("done archiving");
+				Settings.getReference().writeSettings(ManualSettings.debugenabled, "false");
 				
+//				if(waitForArchive()) log("manageLogs(): exit.. ", null);
+//				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
+			
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
  
+	/*
 	public static boolean waitForArchive(){
 		if(archivePID()){ 
 			long start = System.currentTimeMillis();
@@ -1006,9 +997,11 @@ public class Util {
 				} else break;
 			}
 			debug("waitForArchive(): exit: " + (System.currentTimeMillis() - start)/1000 + " seconds");
+			if(archivePID()) log("waitForArchive(): pid failed to clear..", null);
 		}
 		return archivePID();
 	}
+	*/
 	
 	public static Vector<File> walk(String path, Vector<File> allfiles){
         File root = new File(path);
@@ -1059,7 +1052,6 @@ public class Util {
 	}
 	
 	public static void appendUserMessage(String message){
-	// 	State state = State.getReference();
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		if(msg.contains(message)) return;
@@ -1078,9 +1070,7 @@ public class Util {
 			log("deleteROS(): reboot required and must be docked, skipping.. ", null);
 			return;
 		}
-		
-		appendUserMessage("ros purge, reboot required");
-		
+	
 		new Thread(new Runnable() { public void run() {
 			try {
 				String[] cmd = {"bash", "-ic", "rm -rf " + roslogfolder};
@@ -1090,6 +1080,7 @@ public class Util {
 		
 		new Thread(new Runnable() { public void run() {
 			try {
+				appendUserMessage("ros purge, reboot required");
 				PowerLogger.append("shutting down application", this);
 				PowerLogger.close();
 				delay(10000);					
@@ -1115,22 +1106,14 @@ public class Util {
 		return buffer.toString();
 	}*/
 	
-//	public static String getRosCheck(){	
-//		return getRosCheck(false);
-	
-	public static String getRosCheck(){ // boolean lookup){	
-		
-	//	if(lookup) new File("ros_temp.txt").delete();
-	
+	public static String getRosCheck(){ 	
 		if(rosinfor!=null) return rosinfor;
-		
 		if(rosattempts++ > 5){
 			log("getRosCheck: "+rosattempts++, null);	
 			return "err";
 		}
 		
-		try{ 
-			
+		try{		
 			String[] cmd = {"bash", "-ic", "rosclean check > ros_temp.txt"};
 			Runtime.getRuntime().exec(cmd);	
 			delay(3000);
@@ -1145,10 +1128,6 @@ public class Util {
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
 			
 		} catch (Exception e){ rosinfor = "0.00"; }
-		
-		
-		
-		
 		return rosinfor;
 	}		
 }
