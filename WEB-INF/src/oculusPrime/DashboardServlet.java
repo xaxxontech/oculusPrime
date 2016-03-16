@@ -375,6 +375,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
 			routedistance = 0;
 		}
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
+			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
+		}
 		
 		if(state.equals(values.dockstatus, AutoDock.DOCKING)) dock = "<font color=\"blue\">docking</font>";
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
@@ -406,13 +409,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
 			+ "<td><b>images</b><td>" + Util.countMbytes(Settings.framefolder) + " mb<td></tr> \n" );
 		
-		String od = "<a href=\"dashboard?action=startnav\" title=\"start ROS navigation \">on</a>&nbsp;&nbsp;|&nbsp;&nbsp;off"; 
+		String od = "<a href=\"dashboard?action=startnav\" title=\"start ROS navigation \">on</a></font>&nbsp;&nbsp;|&nbsp;&nbsp;off"; 
 		 if(state.getBoolean(values.odometry)) 
-			 od = "on&nbsp;&nbsp;|&nbsp;&nbsp;<a href=\"dashboard?action=stopnav\" title=\"stop ROS navigation \">off</a>";
+			 od = "<font color=\"blue\"><b>on</b></font>&nbsp;&nbsp;|&nbsp;&nbsp;<a href=\"dashboard?action=stopnav\" title=\"stop ROS navigation \">off</a>";
 		
 		String debug = "<a href=\"dashboard?action=debugon\">on</a>&nbsp;&nbsp;|&nbsp;&nbsp;off";
 		if(settings.getBoolean(ManualSettings.debugenabled)) 
-			debug = "on&nbsp;&nbsp;|&nbsp;&nbsp;<a href=\"dashboard?action=debugoff\">off</a>";
+			debug = "<font color=\"blue\"><b>on</b></font>&nbsp;&nbsp;|&nbsp;&nbsp;<a href=\"dashboard?action=debugoff\">off</a>";
 		
 		str.append("<tr><td><b>nav</b><td>" + od
 		    + "<td><b>telet</b><td>" + state.get(values.telnetusers) + " clients" 

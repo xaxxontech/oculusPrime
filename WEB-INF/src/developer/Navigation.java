@@ -35,6 +35,8 @@ public class Navigation implements Observer {
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
 	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
+	public static final String ROUTE_COUNT_TAG = "routecount";
+	public static final String ROUTE_FAIL_TAG = "routefail";
 	
 	private Application app = null;
 	private static State state = State.getReference();
@@ -52,6 +54,8 @@ public class Navigation implements Observer {
 	private long estimateddistance = 0;	
 	private long routedistance = 0;
 	private int estimatedtime = 0;
+	private int routecount = 0;
+	private int routefails = 0;
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -533,6 +537,40 @@ public class Navigation implements Observer {
 		}
 	}
 	
+	public void updateRouteStats(final String name, final int routecount, final int routefails){
+		Document document = Util.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				
+				Util.log("... update xml route:  " + name + " count:  " + routecount + " fails: " + routefails, this);
+				
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).setTextContent(Integer.toString(routecount));
+				} catch (Exception e) { // create if not there 
+					Util.log("xml error missing tag: " + e.getMessage(), this);
+					Node count = document.createElement(ROUTE_COUNT_TAG);
+					count.setTextContent(Double.toString(routecount));
+					route.appendChild(count);
+				}
+				
+				try {
+					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
+				} catch (Exception e) { // create if not there 
+					Util.log("xml error missing tag: " + e.getMessage(), this);
+					Node fail = document.createElement(ROUTE_FAIL_TAG);
+					fail.setTextContent(Integer.toString(routefails));
+					route.appendChild(fail);
+				}
+				saveRoute(Util.XMLtoString(document));
+				break;
+			}
+		}
+	}
+	
 	public void runRoute(final String name) {
 		
 		// TODO: 
@@ -577,6 +615,23 @@ public class Navigation implements Observer {
     				Util.log("no route _time_ available for: " + rname, this);
     				estimatedtime = 0;
     			}
+    			
+    			try { 
+    				routecount = Integer.parseInt(route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent());
+    				Util.log("["+ rname + "] routecount: " + routecount, this);
+    			} catch (Exception e){
+    				Util.log("no _routecount_ available for: " + rname, this);
+    				routecount = 0;
+    			}
+    			
+    			try { 
+    				routefails = Integer.parseInt(route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent());
+    				Util.log("["+ rname + "] routefails: " + routefails, this);
+    			} catch (Exception e){
+    				Util.log("no _routefails_ available for: " + rname, this);
+    				routefails = 0;
+    			}
+    			
     			break;
     		}
 		}
@@ -602,7 +657,7 @@ public class Navigation implements Observer {
 		if(estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 		
-				Util.delay(estimatedtime*1000);// + 20000); // TODO: make a setting? in seconds 
+				Util.delay(estimatedtime*1000 + 30000); // TODO: make a setting? in seconds 
 				
 				if( ! (state.getBoolean(State.values.autodocking) || 
 				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
@@ -736,7 +791,7 @@ public class Navigation implements Observer {
 								routestarttime, wpname, name, consecutiveroute, 0, rotations);
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
-						//failed = true;
+						routefails++;
 						continue; 
 					}
 
@@ -774,10 +829,6 @@ public class Navigation implements Observer {
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 			
-					// create snapshot 
-					//Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
-					//	+"_"+System.currentTimeMillis() + ".tar", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
-				
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
@@ -790,11 +841,13 @@ public class Navigation implements Observer {
 				
 					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
 					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
+					
 				}
 			
+				updateRouteStats(state.get(State.values.navigationroute), routecount+1, routefails);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance, rotations);
 				state.delete(values.routeoverdue);
-				consecutiveroute ++;
+				consecutiveroute++;
 				routedistance = 0;
 				
 				if (!delayToNextRoute(navroute, name, id)) return;

@@ -47,7 +47,7 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000;
 	public static final int PRECISION = 2;		 
-	public static final int MIN_FILE_COUNT = 30;  
+	public static final int MIN_FILE_COUNT = 50;  
 	public static final int MAX_HISTORY = 50;
 	
 	static State state = State.getReference();
@@ -847,7 +847,6 @@ public class Util {
 	        }
 		} 
 	}
-	
 
 	private static void truncSnapshot(){
 		File[] files  = new File(Settings.logfolder).listFiles(new snapshotFilter());	
@@ -965,16 +964,15 @@ public class Util {
 				truncSnapshot();
 				truncStaleFrames();
 				
-				appendUserMessage("log files being archived..");
+//				appendUserMessage("log files being archived..");
 				
 				log("manageLogs(): " + archiveROS(), null);
 				log("manageLogs(): " + archiveImages(), null);	
 				log("manageLogs(): " + archiveLogFolder(), null);
 				
-				if(state.get(values.guinotify).contains("log files being archived")) state.delete(values.guinotify); 
-				appendUserMessage("done archiving");
-				Settings.getReference().writeSettings(ManualSettings.debugenabled, "false");
-				
+//				if(state.get(values.guinotify).contains("log files being archived")) state.delete(values.guinotify); 
+//				appendUserMessage("done archiving");
+//				Settings.getReference().writeSettings(ManualSettings.debugenabled, "false");			
 //				if(waitForArchive()) log("manageLogs(): exit.. ", null);
 //				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
 			
