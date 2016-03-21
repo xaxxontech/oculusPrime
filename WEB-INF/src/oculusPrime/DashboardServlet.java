@@ -6,6 +6,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.Vector;
 
 import javax.servlet.ServletConfig;
@@ -26,8 +29,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 50; // in development keep high number 
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "5"; // keep low in development 
+	private static final int MAX_STATE_HISTORY = 100; // in development keep high number 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "10"; // keep low in development 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -40,7 +43,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?view=ban\">ban</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=power\">power</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=ros\">ros</a>&nbsp;&nbsp;" +
+		//	"<a href=\"dashboard?view=ros\">ros</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;"+ 
@@ -103,17 +106,27 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String delay = null;	
 		String action = null;
 		String route = null;
-		 
+		String member = null;
+		
 		try {
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
 			action = request.getParameter("action");
 			route = request.getParameter("route");
+			member = request.getParameter("member");
 		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
-		if(action != null&& app != null){
+		if(action != null && app != null && member != null){
+			if(action.equals("delete")){
+				Util.log("doGet: .. detete state member: " + member, this);
+				state.delete(member);
+				action = null;
+			}
+		}
+		
+		if(action != null && app != null){
 	
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
@@ -170,6 +183,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
+		
 	
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -185,7 +199,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
-				out.println(state.toHTML() + "\n");
+				out.println(toHTML() + "\n");
 				out.println("<br />&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
 				out.println("\n</body></html> \n");
 				out.close();
@@ -207,24 +221,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.close();
 			}
 			
-			if(view.equalsIgnoreCase("ros")){
-				out.println(rosDashboard() + "\n");
-				out.println("\n</body></html> \n");
-				out.close();
-			}
-
-			/*
-			if(view.equalsIgnoreCase("log")){
-				out.println("\nsystem output: <hr>\n");
-				out.println(Util.tail(20) + "\n");
-				out.println("\n<br />power log: <hr>\n");
-				out.println("\n" + PowerLogger.tail(5) + "\n");
-				out.println("\n<br />" +  ban + "<hr>\n");
-				out.println("\n" + ban.tail(7) + "\n");
-				out.println("\n</body></html> \n");
-				out.close();
-			}*/
-			
 			if(view.equalsIgnoreCase("history")){
 				out.println("<a href=\"dashboard\">dashboard</a> state history: "+ new Date().toString() +"<br />\n");
 				out.println(getHistory().replaceAll("\n", "<br>\n"));
@@ -237,6 +233,63 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html> \n");
 		out.close();	
+	}
+	
+	public String toHTML(){ 
+		StringBuffer str = new StringBuffer("<table>"); 
+		HashMap<String, String> props = state.getState();
+		Set<String> keys = props.keySet();
+		for(Iterator<String> i = keys.iterator(); i.hasNext();){
+			try {
+				if( !i.hasNext()) break;
+				
+				String key = i.next();
+				if(key.equals(values.rosamcl.name())) key = i.next();
+				if(key.equals(values.rosglobalpath.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
+				if(key.equals(values.rosscan.name())) key = i.next();
+				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+				if(key.equals(values.batteryinfo.name())) key = i.next();
+				str.append("<tr><td><b>" + key + "</b><td><a href=\"dashboard?view=state&action=delete&member=" 
+						+ key + "\">" + props.get(key) + "</a>");
+	
+				if( !i.hasNext()) break;
+				
+				key = i.next();
+				if(key.equals(values.rosamcl.name())) key = i.next();
+				if(key.equals(values.rosglobalpath.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
+				if(key.equals(values.rosscan.name())) key = i.next();
+				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+				if(key.equals(values.batteryinfo.name())) key = i.next();
+				str.append("<td><b>" + key + "</b><td><a href=\"dashboard?view=state&action=delete&member=" 
+						+ key + "\">" + props.get(key) + "</a>");
+				
+				if( !i.hasNext()) break;
+				
+				key = i.next();
+				if(key.equals(values.rosamcl.name())) key = i.next();
+				if(key.equals(values.rosglobalpath.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
+				if(key.equals(values.rosscan.name())) key = i.next();
+				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
+				if(key.equals(values.batteryinfo.name())) key = i.next();
+				str.append("<td><b>" + key + "</b><td><a href=\"dashboard?view=state&action=delete&member=" 
+						+ key + "\">" + props.get(key) + "</a>");
+				
+			} catch (Exception e) { break; }
+		}
+	
+	//	if(props.containsKey(values.rosamcl.name())) 
+	//		str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
+	
+	//	if(props.containsKey(values.batteryinfo.name())) 
+	//		str.append("<tr><td colspan=\"9\"><br><hr><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
+		
+		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>NULL:</b>");
+		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
+		str.append("</table>\n");
+		return str.toString();
 	}
 	
 	public void sendSnap(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -258,6 +311,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.close();	
 	}
 	
+	/*
 	public String toTableHTML(){
 		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"2\"> \n");
 		str.append("<tr>" 
@@ -300,7 +354,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n</table>\n");
 		return str.toString();
 	}
+	*/
 	
+	/*
 	public String rosDashboard(){	
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\"> \n");
 		
@@ -349,6 +405,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n</table>\n");
 		return str.toString();
 	}
+	*/
 	
 	public String toDashboard(final String url){
 		
@@ -489,7 +546,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(routedistance > 0) link += "&nbsp;|&nbsp;distance " + Util.formatFloat((double)routedistance/(double)1000) + " meters";
 		
 		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">**overdue**</font>";
-		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">**recovet rotation**</font>";
+		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">**recovery rotation**</font>";
 	
 		link = link.trim();
 		if(link.startsWith("|")) link = link.substring(1, link.length());

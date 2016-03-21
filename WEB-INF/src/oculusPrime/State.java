@@ -102,6 +102,11 @@ public class State {
 		observers.add(obs);
 	}
 	
+	@SuppressWarnings("unchecked")
+	public HashMap<String, String> getState(){
+		return (HashMap<String, String>) props.clone();
+	}
+	
 	/** test for string equality. any nulls will return false */ 
 	private boolean equals(final String a, final String b){
 		String aa = get(a);
@@ -132,7 +137,8 @@ public class State {
 	public boolean equals(values a, navsystemstate b) {
 		return equals(a.name(), b.name());
 	}
-	
+
+	/*
 	public String toHTML(){ 
 		StringBuffer str = new StringBuffer("<table>"); 
 		Set<String> keys = props.keySet();
@@ -196,6 +202,7 @@ public class State {
 		str.append("</table>\n");
 		return str.toString();
 	}
+	*/
 	
 	/**
 	 * block until timeout or until member == target

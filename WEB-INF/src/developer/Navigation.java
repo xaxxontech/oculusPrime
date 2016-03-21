@@ -76,9 +76,12 @@ public class Navigation implements Observer {
 		}
 		if(key.equals(values.recoveryrotation.name())){
 			if(state.getBoolean(values.recoveryrotation)) {
-				rotations++; // count it, eat it.. 
-				state.delete(values.recoveryrotation);
-			}
+				rotations++; 
+				
+				// if( ! state.getBoolean(values.recoveryrotation))
+				// count it, eat it.. 
+				// state.delete(values.recoveryrotation);
+			} else Util.log(".. done recovery rotation", this);
 		}
 	}
 
@@ -402,7 +405,7 @@ public class Navigation implements Observer {
 		return result;
 	}
 
-	public void saveRoute(String str) {
+	public static void saveRoute(String str) {
 		try {
 			FileWriter fw = new FileWriter(navroutesfile);
 			fw.append(str);
@@ -537,7 +540,7 @@ public class Navigation implements Observer {
 		}
 	}
 	
-	public void updateRouteStats(final String name, final int routecount, final int routefails){
+	public static void updateRouteStats(final String name, final int routecount, final int routefails){
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -545,13 +548,13 @@ public class Navigation implements Observer {
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				
-				Util.log("... update xml route:  " + name + " count:  " + routecount + " fails: " + routefails, this);
+				Util.log("... update xml route:  " + name + " count:  " + routecount + " fails: " + routefails, null);
 				
 				route = (Element) routes.item(i);				
 				try {
 					route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).setTextContent(Integer.toString(routecount));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), this);
+					Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node count = document.createElement(ROUTE_COUNT_TAG);
 					count.setTextContent(Double.toString(routecount));
 					route.appendChild(count);
@@ -560,7 +563,7 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), this);
+					Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node fail = document.createElement(ROUTE_FAIL_TAG);
 					fail.setTextContent(Integer.toString(routefails));
 					route.appendChild(fail);
@@ -625,7 +628,7 @@ public class Navigation implements Observer {
     			}
     			
     			try { 
-    				routefails = Integer.parseInt(route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent());
+    				routefails = Integer.parseInt(route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent());
     				Util.log("["+ rname + "] routefails: " + routefails, this);
     			} catch (Exception e){
     				Util.log("no _routefails_ available for: " + rname, this);
@@ -654,7 +657,7 @@ public class Navigation implements Observer {
 		
 		// watch dog
 		state.delete(values.routeoverdue);
-		if(estimatedtime > 0){
+		if(estimatedtime > Util.ONE_MINUTE){
 			new Thread(new Runnable() { public void run() {
 		
 				Util.delay(estimatedtime*1000 + 30000); // TODO: make a setting? in seconds 
@@ -679,7 +682,7 @@ public class Navigation implements Observer {
 			while (true) {
 
 				// clear counter 
-				state.set(State.values.recoveryrotation, 0);
+				state.delete(State.values.recoveryrotation);
 				rotations = 0;
 				
 				// determine next scheduled route time, wait if necessary
@@ -733,8 +736,8 @@ public class Navigation implements Observer {
 					app.comport.checkisConnectedBlocking(); // just in case
 
 					SystemWatchdog.waitForCpu();
-					app.driverCallServer(PlayerCommands.forward, "1.1"); // TODO: MAKE SETTING ?
-					Util.delay(3000);
+					app.driverCallServer(PlayerCommands.forward, "1.2"); // TODO: MAKE SETTING ?
+					Util.delay(5000);
 
 					// rotate to localize
 					app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
@@ -842,9 +845,13 @@ public class Navigation implements Observer {
 					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance), this);
 					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds), this);
 					
+				} else {
+					
+					Util.log("runRoute: was recovery rotations: " + rotations, this);
+					
 				}
 			
-				updateRouteStats(state.get(State.values.navigationroute), routecount+1, routefails);
+				updateRouteStats(state.get(State.values.navigationroute), ++routecount, routefails);
 				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance, rotations);
 				state.delete(values.routeoverdue);
 				consecutiveroute++;
@@ -878,9 +885,8 @@ public class Navigation implements Observer {
 			Util.delay(1000);
 		}
 
-		if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES &&
-				state.getUpTime() > Util.TEN_MINUTES)  { // prevent runaway reboots
-			Util.log("rebooting, max consecutive routes reached", this);
+		if (consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES && state.getUpTime() > Util.TEN_MINUTES){ 
+			Util.log("rebooting, max consecutive routes reached", this); // prevent runaway reboots
 			app.driverCallServer(PlayerCommands.reboot, null);
 			return false;
 		}
