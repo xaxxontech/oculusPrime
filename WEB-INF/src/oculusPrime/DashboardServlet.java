@@ -38,7 +38,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String deletelogs = "<a href=\"dashboard?action=deletelogs\" title=\"delete all log files, causes reboot.\">";
 	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\" title=\"archive all files in log folders\">";	
 
-	static final String link = "<tr><td><b>views:</b><td colspan=\"11\">"+	
+	static final String link = "<tr><td><b>views</b><td colspan=\"11\">"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
 			"<a href=\"dashboard?view=ban\">ban</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=power\">power</a>&nbsp;&nbsp;" +
@@ -60,7 +60,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-	
 	static long routedistance = 0;
 	
 	public void init(ServletConfig config) throws ServletException {
@@ -84,9 +83,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			String line = "";
 			while ((line = reader.readLine()) != null) result += line;
 			reader.close();	
-		} catch (Exception e) {
-			return "<routeslist></routeslist>";
-		}
+		} catch (Exception e){return "<routeslist></routeslist>";}
 		return result;
 	}
 
@@ -145,7 +142,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				app.driverCallServer(PlayerCommands.email, settings.readSetting(GUISettings.email_to_address) 
 						+ " [oculus shapshot] " + getHistory() + "\n\n" + Util.tail(100));	
 			}
-
+			
+			if(action.equalsIgnoreCase("resetstats") && route!=null){
+				Navigation.updateRouteStats(route, 0, 0);
+			}
+			
 			if(action.equalsIgnoreCase("reboot")){
 				new Thread(new Runnable() { public void run() {
 					Util.log("reboot called, going down..", this);
@@ -286,7 +287,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	//	if(props.containsKey(values.batteryinfo.name())) 
 	//		str.append("<tr><td colspan=\"9\"><br><hr><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
 		
-		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>NULL:</b>");
+		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>null's</b>");
 		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
 		str.append("</table>\n");
 		return str.toString();
@@ -487,10 +488,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<tr><td colspan=\"11\">"+ link + "</tr> \n");
 	
 		String r = getRouteLinks();
-		if(r != null) str.append("<tr><td><b>routes:</b>"+r+ "</tr> \n");
+		if(r != null) str.append("<tr><td><b>routes</b>"+r+ "</tr> \n");
 		
 		String act = getActiveRoute();
-		if(act != null) str.append("<tr><td><b>active:</b>"+ getActiveRoute() + "</tr> \n");
+		if(act != null) str.append("<tr><td><b>active</b>"+ getActiveRoute() + "</tr> \n");
 
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
@@ -530,9 +531,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String link = "<td colspan=\"11\">";
 		
-		if(state.exists(values.navigationroute)) link += state.get(values.navigationroute); 
+		if(state.exists(values.navigationroute)) link += state.get(values.navigationroute) 
+				+ " <a href=\"dashboard?action=resetstats&route="+ state.get(values.navigationroute) +"\">"
+				+ " " + Navigation.getRouteCount(state.get(values.navigationroute))
+				+ " " + Navigation.getRouteFails(state.get(values.navigationroute)); 
+		
 
-			if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
+			
+		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)) {
 				return link + " | starting in "
 				+((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000)+ "&nbsp;seconds&nbsp;&nbsp;" 
@@ -546,7 +552,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(routedistance > 0) link += "&nbsp;|&nbsp;distance " + Util.formatFloat((double)routedistance/(double)1000) + " meters";
 		
 		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">**overdue**</font>";
-		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">**recovery rotation**</font>";
+		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">**recovery**</font>";
 	
 		link = link.trim();
 		if(link.startsWith("|")) link = link.substring(1, link.length());

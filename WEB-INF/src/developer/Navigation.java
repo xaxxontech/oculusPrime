@@ -334,8 +334,7 @@ public class Navigation implements Observer {
 			// wait while autodocking does its thing
 			start = System.currentTimeMillis();
 			while (state.getBoolean(State.values.autodocking) &&
-					System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT)
-				Util.delay(100);
+					System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT) Util.delay(100);
 
 			if (!navdockactive) return;
 
@@ -509,7 +508,7 @@ public class Navigation implements Observer {
 		return startroute;
 	}
 	
-	public void updateRouteInfo(final String name, final int seconds, final long distance){
+	public static void updateRouteInfo(final String name, final int seconds, final long distance){
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -521,7 +520,7 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Long.toString(distance));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), this);
+					Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
 					dist.setTextContent(Double.toString(distance));
 					route.appendChild(dist);
@@ -529,7 +528,7 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), this);
+					Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node time = document.createElement(ESTIMATED_TIME_TAG);
 					time.setTextContent(Integer.toString(seconds));
 					route.appendChild(time);
@@ -538,6 +537,36 @@ public class Navigation implements Observer {
 				break;
 			}
 		}
+	}
+	
+	public static String getRouteFails(final String name){
+		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		String result = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				try {
+					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
+				} catch (Exception e){return "0";}
+				break;
+			}
+		}
+		return result;
+	}
+	
+	public static String getRouteCount(final String name){
+		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		String result = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				try {
+					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
+				} catch (Exception e){return "0";}
+				break;
+			}
+		}
+		return result;
 	}
 	
 	public static void updateRouteStats(final String name, final int routecount, final int routefails){
