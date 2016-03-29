@@ -54,8 +54,8 @@ public class Navigation implements Observer {
 	private long estimateddistance = 0;	
 	private long routedistance = 0;
 	private int estimatedtime = 0;
-	private int routecount = 0;
-	private int routefails = 0;
+	static private int routecount = 0;
+	static private int routefails = 0;
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -504,7 +504,6 @@ public class Navigation implements Observer {
 
 			state.set(State.values.nextroutetime, testday.getTimeInMillis());	
 		}
-		
 		return startroute;
 	}
 	
@@ -515,7 +514,7 @@ public class Navigation implements Observer {
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-				// Util.log("... update xml route:  " + name + " distance:  " + distance + " seconds: " + seconds, this);
+				Util.debug("update xml route:  " + name + " distance:  " + distance + " seconds: " + seconds, null);
 				route = (Element) routes.item(i);				
 				try {
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Long.toString(distance));
@@ -547,10 +546,11 @@ public class Navigation implements Observer {
 			if (rname.equals(name)){
 				try {
 					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
-				} catch (Exception e){return "0";}
+				} catch (Exception e){result = "0";}
 				break;
 			}
 		}
+		routefails = Integer.parseInt(result);
 		return result;
 	}
 	
@@ -562,10 +562,11 @@ public class Navigation implements Observer {
 			if (rname.equals(name)){
 				try {
 					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
-				} catch (Exception e){return "0";}
+				} catch (Exception e){result = "0";}
 				break;
 			}
 		}
+		routecount = Integer.parseInt(result);
 		return result;
 	}
 	

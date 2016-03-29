@@ -41,14 +41,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String link = "<tr><td><b>views</b><td colspan=\"11\">"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
 			"<a href=\"dashboard?view=ban\">ban</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=power\">power</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
-		//	"<a href=\"dashboard?view=ros\">ros</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;"+ 
 			"<a href=\"dashboard?action=save\">save</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?action=email\">email</a>&nbsp;&nbsp;";
+			"<a href=\"dashboard?action=email\">email</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 	
 
 	static double VERSION = new Updater().getCurrentVersion();
@@ -413,8 +411,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
-		str.append("\n<tr><td colspan=\"11\">---------------------------------------------------------------------------------------------------------\n");
-		//str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");
+		//str.append("\n<tr><td colspan=\"11\">---------------------------------------------------------------------------------------------------------\n");
+		str.append("\n<tr><td colspan=\"11\"></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
 			+"\" target=\"_blank\" title=\"go to network control panel\">" + state.get(values.localaddress) + "</a>");
 		
@@ -437,18 +435,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
 		}
 		
+		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">un-docked</a>";	
 		if(state.equals(values.dockstatus, AutoDock.DOCKING)) dock = "<font color=\"blue\">docking</font>";
+		if(state.equals(values.dockstatus, AutoDock.UNKNOWN)) dock = "<font color=\"blue\">UNKNOWN</font>";
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
 		
-		String volts = state.get(values.batteryvolts); 
-		if(volts == null) volts = "";
-		else volts += "v ";
-		
-		String life =  state.get(values.batterylife);
+		//	batterylife	95%_charging	
+		String life = state.get(values.batterylife);
 		if(life == null) life = "";
 		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
-		volts += ("&nbsp;&nbsp;" + life).trim();
-		volts = volts.trim();
+		if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889;";
+		life = "<a href=\"dashboard?view=power\">"+life;
 		
 		String motor = " not connected";
 		if(state.exists(values.motorport)) motor = state.get(values.motorport);
@@ -463,8 +460,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>java</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins " 
 			+ "<td><b>archive</b><td>"+ archivelogs + Util.countMbytes(Settings.archivefolder) + "</a> mb<td></tr> \n" );
 			
-		str.append("<tr><td><b>battery</b>&nbsp;<td>" + volts
-			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
+		str.append("<tr><td><b>battery</b>&nbsp;<td>" + life
+				+ "<td><b>dock</b><td>" + dock
+				//+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
 			+ "<td><b>images</b><td>" + Util.countMbytes(Settings.framefolder) + " mb<td></tr> \n" );
 		
 		String od = "<a href=\"dashboard?action=startnav\" title=\"start ROS navigation \">on</a></font>&nbsp;&nbsp;|&nbsp;&nbsp;off"; 
@@ -480,11 +478,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>logs</b><td>" + Util.countMbytes(Settings.logfolder) + " mb<td></tr> \n" );
 		
 		str.append("<tr><td><b>debug</b><td>" + debug  
-			+ "<td><b>dock</b><td>" + dock
+			+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
 			+ "<td><b>ros</b><td>" + Util.getRosCheck() + "</a> mb</tr> \n" );
 			// doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
 		
-	//	str.append("\n<tr><td colspan=\"11\">---------------------------------------------------------------------------------------------------------\n");
 		str.append("<tr><td colspan=\"11\">"+ link + "</tr> \n");
 	
 		String r = getRouteLinks();
@@ -501,7 +498,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			str.append(msg);
 		}
 		
-		str.append("\n<tr><td colspan=\"11\">---------------------------------------------------------------------------------------------------------\n");
 		str.append("\n</table>\n");
 		str.append(getTail(15) + "\n");
 		return str.toString();
@@ -509,10 +505,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getRouteLinks(){   
 	
-		if( state.getBoolean(values.autodocking) 
-		//		|| state.equals(values.dockstatus, AutoDock.DOCKING)
-		//		|| ! state.exists(values.navigationroute)
-				) return null;
+		if( state.getBoolean(values.autodocking)) return null;
 	
 		String link = "<td colspan=\"11\">";
 		for (int i = 0; i < routes.getLength(); i++) {  
@@ -531,13 +524,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String link = "<td colspan=\"11\">";
 		
-		if(state.exists(values.navigationroute)) link += state.get(values.navigationroute) 
-				+ " <a href=\"dashboard?action=resetstats&route="+ state.get(values.navigationroute) +"\">"
-				+ " " + Navigation.getRouteCount(state.get(values.navigationroute))
-				+ " " + Navigation.getRouteFails(state.get(values.navigationroute)); 
+		double cnt = Double.parseDouble(Navigation.getRouteCount(state.get(values.navigationroute)));
+		double fl = Double.parseDouble(Navigation.getRouteFails(state.get(values.navigationroute)));
 		
-
-			
+		link += state.get(values.navigationroute); 
+		// if(fl==0) link += " 100% "; 
+		if(fl > 0) link += " <a href=\"dashboard?action=resetstats&route="+ state.get(values.navigationroute) +"\">"
+				+ Util.formatFloat((fl/cnt)*100, 0) + "%</a>&nbsp;&nbsp;"; 
+		
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)) {
 				return link + " | starting in "
@@ -546,8 +540,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 		} 
 		
-		//if(state.equals(values.dockstatus, AutoDock.DOCKED) || !state.getBoolean(values.odometry)){
-	
 		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp;waypoint " + state.get(values.roswaypoint);			
 		if(routedistance > 0) link += "&nbsp;|&nbsp;distance " + Util.formatFloat((double)routedistance/(double)1000) + " meters";
 		
