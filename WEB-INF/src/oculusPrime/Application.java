@@ -1522,8 +1522,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
-		if (!state.get(values.osarch).equals(ARM))
+		if (!state.get(values.osarch).equals(ARM)) {
 			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+		}
 		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
 	}
 
@@ -1533,8 +1534,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
-		if (!state.get(values.osarch).equals(ARM))
+		if (!state.get(values.osarch).equals(ARM)) {
 			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+		}
 		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
 	}
 

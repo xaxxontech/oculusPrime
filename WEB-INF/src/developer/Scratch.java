@@ -29,9 +29,7 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        double a = 0.123;
-        double b = 1.24;
-        System.out.println(a+"asdf"+b);
+        System.out.println("card 0123123".substring(5,6));
 
     }
 }

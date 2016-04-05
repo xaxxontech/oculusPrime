@@ -2,9 +2,11 @@ package oculusPrime;
 
 
 import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
 
 public class Video {
 
@@ -30,7 +32,28 @@ public class Video {
     public Video(Application a) {
         app = a;
         state.set(State.values.stream, Application.streamstate.stop.toString());
+        setAudioDevice();
     }
+
+    private void setAudioDevice() {
+        try {
+            String cmd[] = new String[]{"arecord", "--list-devices"};
+            Process proc = Runtime.getRuntime().exec(cmd);
+            proc.waitFor();
+            proc.waitFor();
+
+            String line = null;
+            BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            while ((line = procReader.readLine()) != null) {
+                if(line.startsWith("card") && line.contains("LifeCam")) {
+                    adevicenum = Integer.parseInt(line.substring(5,6));      // "card 0"
+                    Util.debug(line, this);
+                }
+            }
+
+        } catch (Exception e) { Util.printError(e);}
+    }
+
 
     public void publish (final Application.streamstate mode, final int w, final int h, final int fps) {
         // todo: determine video device (in constructor)
