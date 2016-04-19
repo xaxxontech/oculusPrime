@@ -473,7 +473,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 		else if (s[0].equals("high_current")) {
 			application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
-			Util.log("error, high current warning, stopping motors", this);
+			if (state.getBoolean(State.values.motionenabled))
+				application.driverCallServer(PlayerCommands.motionenabletoggle, null);
+			application.message("high current detected", null, null);
+			Util.log("error, high current warning, stopping motors, disabling motion", this);
 		}
 		
 		if (s.length>2) {

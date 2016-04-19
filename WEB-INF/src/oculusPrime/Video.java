@@ -28,11 +28,16 @@ public class Video {
     private Application.streamstate lastmode = Application.streamstate.stop;
     private long publishid = 0;
     static final long STREAM_RESTART = Util.ONE_MINUTE*7;
+    static final String FFMPEG = "ffmpeg";
+    static final String AVCONV = "avconv";
+    private String avprog = AVCONV;
 
     public Video(Application a) {
         app = a;
         state.set(State.values.stream, Application.streamstate.stop.toString());
         setAudioDevice();
+        if (state.get(State.values.osarch).equals(Application.ARM))
+            avprog = AVCONV;
     }
 
     private void setAudioDevice() {
@@ -77,41 +82,64 @@ public class Video {
             if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
                     !mode.equals(Application.streamstate.stop.toString())) {
                 state.set(State.values.writingframegrabs, false);
-                Util.systemCallBlocking("pkill avconv");
+                Util.systemCallBlocking("pkill "+avprog);
                 Util.delay(Application.STREAM_CONNECT_DELAY);
             }
 
             switch (mode) {
                 case camera:
-                    Util.systemCall("avconv -f video4linux2 -s " + w + "x" + h + " -r " + fps +
+                    Util.systemCall(avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
                             " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
                     // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case mic:
-                    Util.systemCall("avconv -re -f alsa -ac 1 -ar 22050 " +
+                    Util.systemCall(avprog+" -re -f alsa -ac 1 -ar 22050 " +
                             "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
+                    // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream1
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case camandmic:
-                    Util.systemCall("avconv -re -f alsa -ac 1 -ar 22050 " +
+                    Util.systemCall(avprog+" -re -f alsa -ac 1 -ar 22050 " +
                             "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
                             port + "/oculusPrime/stream2");
-                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
+                    // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream2
 
-                    Util.systemCall("avconv -f video4linux2 -s " + w + "x" + h + " -r " + fps +
+                    Util.systemCall(avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
                             " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
 
+
+
+//                    String cmd = "bash -c '"+ avprog+" -re -f alsa -ac 1 -ar 22050 " +
+//                            "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
+//                            port + "/oculusPrime/stream2";
+//                    // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream2
+//
+//                    cmd += "</dev/null >/dev/null 2>/dev/null & ";
+//
+//                    if (avprog.equals(FFMPEG))
+//                        cmd += "sleep 1; v4l2-ctl --set-input "+devicenum+" ; ";
+//
+//                    cmd += avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
+//                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
+//                            port + "/oculusPrime/stream1";
+//
+//                    cmd += " '";
+//
+//                    Util.log(cmd, this); // TODO: nuke
+//                    Util.systemCall(cmd);
+
+                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
 //                    if (state.get(State.values.osarch).equals(Application.ARM))
 //                        Util.delay(Application.STREAM_CONNECT_DELAY);
 
                     break;
                 case stop:
                     state.set(State.values.writingframegrabs, false);
-                    Util.systemCall("pkill avconv");
+                    Util.systemCall("pkill "+avprog);
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
             }
@@ -124,11 +152,12 @@ public class Video {
         new Thread(new Runnable() { public void run() {
             long start = System.currentTimeMillis();
             while ( (id == publishid && System.currentTimeMillis() < start + STREAM_RESTART) ||
-                    state.getBoolean(State.values.writingframegrabs))
+                    state.getBoolean(State.values.writingframegrabs) ||
+                    state.getBoolean(State.values.autodocking) )
                 Util.delay(50);
 
             if (id == publishid) { // restart stream
-                Util.systemCall("pkill avconv");
+                Util.systemCall("pkill "+avprog);
                 lastmode = Application.streamstate.stop;
                 Util.delay(Application.STREAM_CONNECT_DELAY);
                 publish(mode, w,h,fps);
@@ -167,10 +196,8 @@ public class Video {
                 }
                 Util.delay(1);
             }
-            if (imgfile == null) { Util.log("avconv frame unavailable", this); }
+            if (imgfile == null) { Util.log(avprog+" frame unavailable", this); }
             else {
-//            app.processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-//                Util.log(imgfile.getName(), this); // TODO: nuke
                 try {
                     app.processedImage = ImageIO.read(imgfile);
                 } catch (IOException e) {
@@ -205,7 +232,7 @@ public class Video {
 
 
         try {
-            Runtime.getRuntime().exec(new String[]{"avconv", "-analyzeduration", "0", "-i",
+            Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
                     "rtmp://" + host + ":" + port + "/oculusPrime/stream1 live=1", "-s", width+"x"+height,
                     "-r", Integer.toString(15), "-q", Integer.toString(quality), PATH+"%d"+EXT  });
         }catch (Exception e) { Util.printError(e); }
@@ -227,7 +254,7 @@ public class Video {
             }
 
             state.set(State.values.writingframegrabs, false);
-            Util.systemCall("pkill -n avconv"); // kills newest only
+            Util.systemCall("pkill -n "+avprog); // kills newest only
             Util.log("dumpframegrabs thread exit", this);  // TODO: nuke
 
         } }).start();
