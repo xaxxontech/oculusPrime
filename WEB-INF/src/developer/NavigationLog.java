@@ -55,8 +55,9 @@ public class NavigationLog {
             String id=String.valueOf(System.nanoTime());
             String str="<div id='"+id+"' ";
 
-            if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
-            else str += "class='"+status.toLowerCase()+"' ";
+//            if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
+//            else
+                str += "class='"+status.toLowerCase()+"' ";
 
             str += "onclick=\"clicked(this.id);\" ";
             str += ">"+Util.getTime() + PIPE;
@@ -157,6 +158,11 @@ public class NavigationLog {
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
         str += "."+ERRORSTATUS.toLowerCase()+"expand {background-color: #FC7E7E; padding-bottom: 3px}\n";
+        str += "."+PHOTOSTATUS.toLowerCase()+" {background-color: #CC00CC; cursor: pointer; " +
+                "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
+                "border-top: 1px solid #ffffff; }\n";
+        str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #770077; padding-bottom: 3px}\n";
+
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";
         str += "var scrollpos = 0;\n" +

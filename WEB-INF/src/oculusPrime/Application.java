@@ -549,7 +549,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.lowres = true;
 			break;
 		case dockgrabtest:
-			if (str.equals("highres")) docker.lowres = false; // ?
+			if (str.equals(AutoDock.HIGHRES)) docker.lowres = false; // ?
 			docker.dockGrab(AutoDock.dockgrabmodes.test, 0, 0);
 			docker.lowres = true; // ?
 			break;
@@ -1174,6 +1174,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
+
+	/**
+	 * for compatibility with legacy grabber swfs
+	 */
+//	public void frameGrabbed() {
+//		String current = settings.readSetting(GUISettings.vset);
+//		String vals[] = (settings.readSetting(current)).split("_");
+//		int width = Integer.parseInt(vals[0]);
+//		int height = Integer.parseInt(vals[1]);
+//		frameGrabbed(width, height);
+//	}
 
 	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file
 	 * linux only for now
