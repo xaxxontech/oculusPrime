@@ -315,7 +315,7 @@ public class AutoDock {
 //						app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_HORIZ));
 						app.driverCallServer(PlayerCommands.floodlight, "0");
 						app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
-						state.set(State.values.redockifweakconnection, true);
+//						state.set(State.values.redockifweakconnection, true); // TODO: testing, moved to ArduinoPower.execute()
 					}
 					
 					app.message("docked successfully", "multiple", str);

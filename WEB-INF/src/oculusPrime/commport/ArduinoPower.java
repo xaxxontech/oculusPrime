@@ -411,6 +411,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (state.getBoolean(State.values.autodocking) && !state.getBoolean(State.values.docking))
 					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
 			}
+
+			state.set(State.values.redockifweakconnection, true); // TODO: testing
 		}
 		
 		else if (s[0].equals("undocked")) {
