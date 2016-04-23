@@ -22,6 +22,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import developer.Navigation;
+import developer.NavigationLog;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
@@ -46,8 +47,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;"+ 
 			"<a href=\"dashboard?action=save\">save</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?action=email\">email</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-	
+			"<a href=\"dashboard?action=email\">email</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
 	static double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
@@ -136,10 +136,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 
 			if(action.equalsIgnoreCase("email")){
-				Util.log("sending email...", this);
-				app.driverCallServer(PlayerCommands.email, settings.readSetting(GUISettings.email_to_address) 
-						+ " [oculus shapshot] " + getHistory() + "\n\n" + Util.tail(100));	
-			}
+	            new SendMail("oculus prime log files", "dashboard requested.. \n" + getTail(100), 
+	            		new String[]{ NavigationLog.navigationlogpath, Settings.stdout, Settings.settingsfile });
+			}  
 			
 			if(action.equalsIgnoreCase("resetstats") && route!=null){
 				Navigation.updateRouteStats(route, 0, 0);
@@ -421,7 +420,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
 				+ "/oculusPrime/" +"\" target=\"_blank\" title=\"go to user interface on external address\">" + ext + "</a>");
 		str.append( "<td><b>linux</b><td>" + Util.diskFullPercent() + "%</a> used</tr> \n"); 
-		
+	
+		//==
 		String dock = "<font color=\"blue\">undocked</font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
@@ -439,6 +439,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.equals(values.dockstatus, AutoDock.DOCKING)) dock = "<font color=\"blue\">docking</font>";
 		if(state.equals(values.dockstatus, AutoDock.UNKNOWN)) dock = "<font color=\"blue\">UNKNOWN</font>";
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
+		//---
 		
 		//	batterylife	95%_charging	
 		String life = state.get(values.batterylife);
@@ -553,7 +554,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	}
 	
 	private String getTail(int lines){
-		String reply = "\n\n<table cellspacing=\"2\" border=\"0\"> \n";
+		String reply = "\n\n<table cellspacing=\"5\" border=\"0\"> \n";
 		reply += Util.tailFormated(lines) + " \n";
 		reply += ("\n</table>\n");
 		return reply;

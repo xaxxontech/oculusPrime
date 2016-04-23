@@ -1,10 +1,6 @@
 package oculusPrime;
 
 import java.util.*;
-
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.*;
 
@@ -19,24 +15,21 @@ public class SendMail {
 	private final String host = settings.readSetting(GUISettings.email_smtp_server.toString());
 	private final int port = Integer.parseInt(settings.readSetting(GUISettings.email_smtp_port.toString()));
 	private final String from = settings.readSetting(GUISettings.email_from_address.toString());
-	
+	private String recipient = settings.readSetting(GUISettings.email_from_address.toString());
+	private Application application = null;
 	private String subject = null;
 	private String body = null;
-	private String fileName = null;
-	private String recipient = null;
 	
-	private Application application = null;
-
 	/** */
-	public SendMail(final String sub, final String text, final String file) {
-		
+	public SendMail(final String sub, final String text, final String[] files) {
+
 		subject = sub;
 		body = text;
-		fileName = file;
 
 		new Thread(new Runnable() {
 			public void run() {
-				sendAttachment();
+				SendMail.sendEmailWithAttachments(host, settings.readSetting(GUISettings.email_smtp_port.toString()), 
+						username, text, recipient, sub, text, files);
 			}
 		}).start();
 	}
@@ -54,37 +47,21 @@ public class SendMail {
 		}).start();
 	}
 
-
-	/** send messages to user */
-	public SendMail(final String sub, final String text, final String file, Application app) {
-		
-		subject = sub;
-		body = text;
-		fileName = file;
-		application = app;
-		
-		new Thread(new Runnable() {
-			public void run() {
-				sendAttachment();
-			}
-		}).start();
-	}
-
-	/** send messages to user */
+	/** */
 	public SendMail(final String sub, final String text, Application app) {
-		
+
 		subject = sub;
 		body = text;
 		application = app;
-		
+
 		new Thread(new Runnable() {
 			public void run() {
 				sendMessage();
 			}
 		}).start();
 	}
-	
-	/** send messages to user */
+
+	/** */
 	public SendMail(final String str, Application app) {
 		// valid email = /^([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})$/i
 		recipient = str.substring(0, str.indexOf(" "));
@@ -93,60 +70,18 @@ public class SendMail {
 			return;
 		}
 
-		subject = str.substring(str.indexOf("[")+1, str.indexOf("]"));
-		body = str.substring(str.indexOf("]")+2);
+		subject = str.substring(str.indexOf("[") + 1, str.indexOf("]"));
+		body = str.substring(str.indexOf("]") + 2);
 		application = app;
-		
+
 		new Thread(new Runnable() {
 			public void run() {
 				sendMessage();
 			}
 		}).start();
 	}
-	
-//	/** gmail */
-//	private void sendMessage() {
-//	
-//	int SMTP_HOST_PORT = 587;
-//	String SMTP_HOST_NAME = "smtp.gmail.com";
-//
-//
-//		if (user == null || pass == null) {
-//			System.out.println("no email and password found in settings");
-//			return;
-//		}
-//		
-//		try {
-//
-//			Properties props = new Properties();
-//			props.put("mail.smtps.host", SMTP_HOST_NAME);
-//			props.put("mail.smtps.auth", "true");
-//			props.put("mail.smtp.starttls.enable", "true");
-//
-//			Session mailSession = Session.getDefaultInstance(props);
-//			Transport transport = mailSession.getTransport("smtp");
-//
-//			// if (debug) mailSession.setDebug(true);
-//
-//			MimeMessage message = new MimeMessage(mailSession);
-//			message.setSubject(subject);
-//			message.setContent(body, "text/plain");
-//			message.addRecipient(Message.RecipientType.TO, new InternetAddress(user));
-//
-//			transport.connect(SMTP_HOST_NAME, SMTP_HOST_PORT, user, pass);
-//			transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO));
-//			transport.close();
-//
-//			// if (debug) System.out.println("... email sent");
-//			
-//			if(application!=null) application.message("email has been sent", null, null);
-//
-//		} catch (Exception e) {
-//			//log.error(e.getMessage() + "error sending email, check settings");
-//			if(application!=null) application.message("error sending email", null, null);
-//		}
-//	}
 
+	/** */
 	private void sendMessage() {
 		Properties props = new Properties();
 		props.put("mail.smtp.host", host);
@@ -154,11 +89,9 @@ public class SendMail {
 		props.put("mail.password", password);
 		props.put("mail.smtp.port", port);
 		props.put("mail.smtp.starttls.enable", "true");
-
 		Session mailSession = Session.getDefaultInstance(props);
 
 		try {
-			
 
 			MimeMessage message = new MimeMessage(mailSession);
 			message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient));
@@ -170,68 +103,68 @@ public class SendMail {
 			transport.connect(host, port, username, password);
 			transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO));
 			transport.close();
-//			Transport.send(message);
 
-			if(application!=null) application.message("email has been sent", null, null);
+			if (application != null)
+				application.message("email has been sent", null, null);
 			Util.log("email has been sent", this);
 
 		} catch (MessagingException e) {
-			//log.error(e.getMessage() + "error sending email, check settings");
-			if(application!=null) application.message("error sending email", null, null);
-			e.printStackTrace();
+			Util.log(e.getMessage() + "error sending email, check settings", this);
+			if (application != null)
+				application.message("error sending email", null, null);
 		}
 	}
-	
+
 	/** */
-	private void sendAttachment() {
+	public static void sendEmailWithAttachments(String host, String port, final String userName, final String password,
+			String toAddress, String subject, String message, String[] attachFiles) {
 
-//		if (user == null || pass == null) {
-//			// log.error("no email and password found in settings");
-//			System.out.println("OCULUS: no email and password found in settings");
-//			return;
-//		}
-		
+		Properties properties = new Properties();
+		properties.put("mail.smtp.host", host);
+		properties.put("mail.smtp.port", port);
+		properties.put("mail.smtp.auth", "true");
+		properties.put("mail.smtp.starttls.enable", "true");
+		properties.put("mail.user", userName);
+		properties.put("mail.password", password);
+
+		Authenticator auth = new Authenticator() {
+			public PasswordAuthentication getPasswordAuthentication() {
+				return new PasswordAuthentication(userName, password);
+			}
+		};
+
+		Session session = Session.getInstance(properties, auth);
+		Message msg = new MimeMessage(session);
+
 		try {
+			msg.setFrom(new InternetAddress(userName));
+			InternetAddress[] toAddresses = { new InternetAddress(toAddress) };
+			msg.setRecipients(Message.RecipientType.TO, toAddresses);
+			msg.setSubject(subject);
+			msg.setSentDate(new Date());
 
-			// if (debug) System.out.println("sending email..");
-			
-			Properties props = new Properties();
-			props.put("mail.smtps.host", host);
-			props.put("mail.smtps.auth", "true");
-			props.put("mail.smtp.starttls.enable", "true");
+			MimeBodyPart messageBodyPart = new MimeBodyPart();
+			messageBodyPart.setContent(message, "text/html");
 
-			Session mailSession = Session.getDefaultInstance(props);
-			Transport transport = mailSession.getTransport("smtp");
-
-			// if (debug) mailSession.setDebug(true);
-
-			MimeMessage message = new MimeMessage(mailSession);
-			message.setSubject(subject);
-			message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipient));
-
-			BodyPart messageBodyPart = new MimeBodyPart();
-			messageBodyPart.setText(body);
 			Multipart multipart = new MimeMultipart();
 			multipart.addBodyPart(messageBodyPart);
 
-			messageBodyPart = new MimeBodyPart();
-			DataSource source = new FileDataSource(fileName);
-			messageBodyPart.setDataHandler(new DataHandler(source));
-			messageBodyPart.setFileName(fileName);
-			multipart.addBodyPart(messageBodyPart);
-			message.setContent(multipart);
-
-			transport.connect(host, port, username, password);
-			transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO));
-			transport.close();
-
-			//if (debug) System.out.println("... email sent");
-			
-			if(application!=null) application.message("email has been sent", null, null);
+			if (attachFiles != null && attachFiles.length > 0) {
+				for (String filePath : attachFiles) {
+					MimeBodyPart attachPart = new MimeBodyPart();
+					try {
+						attachPart.attachFile(filePath);
+					} catch (Exception ex) {
+						Util.log("sendEmailWithAttachments: " + ex.getMessage(), null);
+					}
+					multipart.addBodyPart(attachPart);
+				}
+			}
+			msg.setContent(multipart);
+			Transport.send(msg);
 
 		} catch (Exception e) {
-			System.out.println("error sending email, check settings");
-			if(application!=null) application.message("error sending email", null, null);
+			Util.log("sendEmailWithAttachments: " + e.getMessage(), null);
 		}
 	}
 }

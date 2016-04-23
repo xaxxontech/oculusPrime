@@ -22,20 +22,31 @@ public class NavigationLog {
     public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
             "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
 
+    // testing:
+//    public static final String navigationlogpath = System.getenv("HOME")+Util.sep+"temp"+Util.sep+"navroutelog/index.html";
+
     public static final String ALERTSTATUS = "ALERT";
     public static final String ERRORSTATUS = "ERROR";
     public static final String COMPLETEDSTATUS = "Completed";
     public static final String INFOSTATUS = "Info";
     public static final String PHOTOSTATUS = "Photo";
+//    private static final String PIPE = " <span style='color: #999999'>|</span> ";
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
     private static final String FILEEND = "</body></html>";
     private static final int maxitems = 300;
     private volatile boolean newItemBusy = false;
 
-    // completed route
     public synchronized void newItem(final String status, final String msg, final long starttime, final String waypoint,
-                        final String routename, final int consecutiveroute, final double routedistance, final int rotations) {
+            final String routename, final int consecutiveroute, final double routedistance, final int rotations){
+    	newItem(status, msg, starttime, waypoint, routename, consecutiveroute, routedistance, 0);
+    	
+    }
+    
+    // completed route
+    public void newItem(final String status, final String msg, final long starttime, final String waypoint,
+                        final String routename, final int consecutiveroute, final double routedistance) {
+
         new Thread(new Runnable() { public void run() {
 
             long timeout = System.currentTimeMillis() + 5000;
@@ -50,8 +61,9 @@ public class NavigationLog {
             String id=String.valueOf(System.nanoTime());
             String str="<div id='"+id+"' ";
 
-            if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
-            else str += "class='"+status.toLowerCase()+"' ";
+//            if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
+//            else
+                str += "class='"+status.toLowerCase()+"' ";
 
             str += "onclick=\"clicked(this.id);\" ";
             str += ">"+Util.getTime() + PIPE;
@@ -74,13 +86,13 @@ public class NavigationLog {
             	if (st==0) st = System.currentTimeMillis();
             	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
             }
-            
-            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n"; 
-            if(rotations > 0) str +=  "Recovery Rotations: " + rotations + "\n";
-            
+            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n";
             str += "</div>\n";
+
             writeFile(str);
+
             newItemBusy = false;
+
         } }).start();
     }
 
@@ -152,6 +164,11 @@ public class NavigationLog {
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
         str += "."+ERRORSTATUS.toLowerCase()+"expand {background-color: #FC7E7E; padding-bottom: 3px}\n";
+        str += "."+PHOTOSTATUS.toLowerCase()+" {background-color: #CC00CC; cursor: pointer; " +
+                "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
+                "border-top: 1px solid #ffffff; }\n";
+        str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #770077; padding-bottom: 3px}\n";
+
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";
         str += "var scrollpos = 0;\n" +

@@ -30,27 +30,28 @@ public class State {
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 		writingframegrabs, // undocumented
 
-		wallpower, batterylife, powerport, batteryinfo, batteryvolts, powererror, forceundock,  // power
+		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
+		powererror, forceundock,
 		redockifweakconnection, // undocumented
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 		localaddress, externaladdress, ssid, guinotify,
+		osarch,
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
-		recoveryrotation, // undocumented
-		
+
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		rosarcmove, routeoverdue, // to be documented
+		rosarcmove, routeoverdue, recoveryrotation, // to be documented
 
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived}
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived, }
 	
 	/** @return true if given command is in the sub-set */
 	public static boolean isNonTelnetBroadCast(final String str) {
@@ -78,7 +79,12 @@ public class State {
 		props.put(values.telnetusers.name(), "0");
 		getLinuxUptime();
 	}
-
+	
+	@SuppressWarnings("unchecked")
+	public HashMap<String, String> getState(){
+		return (HashMap<String, String>) props.clone();
+	}
+	
 	public void getLinuxUptime(){
 		new Thread(new Runnable() {
 			@Override
@@ -102,11 +108,6 @@ public class State {
 		observers.add(obs);
 	}
 	
-	@SuppressWarnings("unchecked")
-	public HashMap<String, String> getState(){
-		return (HashMap<String, String>) props.clone();
-	}
-	
 	/** test for string equality. any nulls will return false */ 
 	private boolean equals(final String a, final String b){
 		String aa = get(a);
@@ -121,24 +122,22 @@ public class State {
 	public boolean equals(State.values value, String b) {
 		return equals(value.name(), b);
 	}
-	
-	/*	*/
+
 	@Override
-	public String toString(){	
+	public String toString(){
 		String str = "";
 		final Set<String> keys = props.keySet();
 		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			final String key = i.next();
-			str += (key + " " + props.get(key) + "<br>\n"); 
+			str += (key + " " + props.get(key) + "<br>"); 
 		}
 		return str;
 	}
-
+	
 	public boolean equals(values a, navsystemstate b) {
 		return equals(a.name(), b.name());
 	}
-
-	/*
+	
 	public String toHTML(){ 
 		StringBuffer str = new StringBuffer("<table>"); 
 		Set<String> keys = props.keySet();
@@ -202,7 +201,6 @@ public class State {
 		str.append("</table>\n");
 		return str.toString();
 	}
-	*/
 	
 	/**
 	 * block until timeout or until member == target
@@ -254,7 +252,7 @@ public class State {
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());
 	}
 	
-	public synchronized String get(final String key) {
+	synchronized String get(final String key) {
 
 		String ans = null;
 		try {
@@ -294,12 +292,15 @@ public class State {
 	}
 
 	public int getInteger(final String key) {
+
 		String ans = null;
 		int value = ERROR;
 
 		try {
+
 			ans = get(key);
 			value = Integer.parseInt(ans);
+
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -313,8 +314,10 @@ public class State {
 		long value = ERROR;
 
 		try {
+
 			ans = get(key);
 			value = Long.parseLong(ans);
+
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -345,17 +348,24 @@ public class State {
 		return props.containsKey(key.trim());
 	}
 	
-	synchronized void delete(String key) {	
-		if( ! props.containsKey(key)) return;	
+	synchronized void delete(String key) {
+		
+		// Util.log("delete: " + key, this);
+		
+		if( ! props.containsKey(key)) return;
+		
 		props.remove(key);
-		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);	
+		for(int i = 0 ; i < observers.size() ; i++)
+			observers.get(i).updated(key);	
 	}
 	
 	public void delete(values key) {
-		delete(key.name());
+		// Util.log("delete: " + key, this);
+		if(exists(key)) delete(key.name());
 	}
 	
-	public void set(values key, values value) {	
+	public void set(values key, values value) {
+		
 		set(key.name(), value.name());
 	}
 	
@@ -390,14 +400,6 @@ public class State {
 	public void delete(PlayerCommands cmd) {
 		delete(cmd.name());
 	}
-
-	/*
-	public void increment(String key) {
-		Util.log("increment: " + key, this);
-		if(exists(key)) set(key, getInteger(key)+1);
-		else set(key, 1);
-	}
-	*/
 	
 	public double getDouble(String key) {
 		double value = ERROR;
@@ -416,8 +418,12 @@ public class State {
 	public double getDouble(values key) {
 		return getDouble(key.name());
 	}
-	
+
 	/*
+	public String dumpFile(){	
+		return dumpFile(" no message ");
+	}
+	
 	public String dumpFile(final String msg) {
 		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
 
@@ -427,7 +433,6 @@ public class State {
 		try {
 			FileWriter fw = new FileWriter(dump);	
 			fw.append("# "+ new Date().toString() + " " + msg +"\r\n");
-			fw.append("# state values \r\n");
 			final Set<String> keys = props.keySet();
 			for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
 				final String key = i.next();
@@ -436,17 +441,11 @@ public class State {
 			fw.append("# state history \r\n");
 			Vector<String> snap = Util.history;
 			for(int i = 0; i < snap.size() ; i++) fw.append(snap.get(i)+"\r\n");
-			
-			// TODO: ADD 50 LINES FROM ROS 
-			// fw.append("# ros tail \r\n");
-			// fw.append(Util.rosTail());
-		
 			fw.close();
 
 		} catch (Exception e) { Util.printError(e); }
 	
 		return dump.getAbsolutePath();
-	}
-	*/
+	}*/
 	
 }

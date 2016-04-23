@@ -40,6 +40,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final int STREAM_CONNECT_DELAY = 2000;
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
+	public static final String ARM = "arm";
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	private boolean initialstatuscalled = false; 
@@ -72,8 +73,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public Application() {
 		super();
-		Util.log("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
-		PowerLogger.append("\n==============Oculus Prime Java Start Arch:" + System.getProperty("os.arch") + "===============", this);
+		state.set(values.osarch, System.getProperty("os.arch"));
+		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+"===============", this);
+		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -88,7 +90,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
 		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
-			Util.debug("localhost/LAN/known netstream connect, no params", this);
+			Util.log("localhost/LAN/known netstream connect, no params", this);
 			return true;
 		}
 
@@ -274,10 +276,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			navigation.runAnyActiveRoute();
 		}
 
-		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
+		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 		state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
+		if (state.get(values.osarch).equals(ARM))
+			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
@@ -437,6 +441,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
+	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
@@ -456,8 +461,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			case chat: chat(str) ;return;
 			case beapassenger: beAPassenger(str);return;
 			case assumecontrol: assumeControl(str); return;
-		default:
-			break;
 		}
 		
 		// must be driver/non-passenger for all commands below 
@@ -478,7 +481,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0, navigation.rotations);
+						navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
@@ -546,15 +549,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.lowres = true;
 			break;
 		case dockgrabtest:
-			if (str.equals("highres")) docker.lowres = false; // ?
+			if (str.equals(AutoDock.HIGHRES)) docker.lowres = false; // ?
 			docker.dockGrab(AutoDock.dockgrabmodes.test, 0, 0);
 			docker.lowres = true; // ?
 			break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
 		case nudge: nudge(str); break;
 		
-		case state: // TODO: duplicate function in telnet 
-			
+		case state: 
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
 				if (s[0].equals("delete")) state.delete(s[1]); 
@@ -666,7 +668,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case setsystemvolume:
-			Util.setSystemVolume(Integer.parseInt(str), this);
+			Util.setSystemVolume(Integer.parseInt(str));
 			messageplayer("ROV volume set to "+str+"%", null, null); 
 			state.set(State.values.volume, str);
 			break;		
@@ -797,7 +799,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0, navigation.rotations);
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
 				navigation.runRoute(str);
 			}
 			break;
@@ -806,7 +808,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null && state.exists(values.navigationroute)) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0, navigation.rotations);
+						navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			break;
@@ -834,10 +836,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case log: Util.log("log: "+str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
 		
-		case cpu:
-			Util.getCPU(); // calling it updates state 
-			// String cpu = String.valueOf(Util.getCPU());
-			// if(cpu != null) state.set(values.cpu, cpu);
+		case cpu: 
+			String cpu = String.valueOf(Util.getCPU());
+			if(cpu != null) state.set(values.cpu, cpu);
 			break;
 
 		// dev tool only
@@ -858,29 +859,37 @@ public class Application extends MultiThreadedApplicationAdapter {
 			new OpenCVUtils(this).jpgStream(str);
 //			opencvutils.jpgStream(str);
 			break;
-	
-		case deletelogs:
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
-			driverCallServer(PlayerCommands.cancelroute, null);
-			Util.deleteLogFiles();
+			
+/*		case archive: 
+			Util.manageLogs();
 			break;
-		
-		case archivelogs: 
+		case truncarchive:
 			if(Util.archivePID()){ 
 				Util.log("archiving busy, skipping.. ", this);
 				break;
-			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
+*/				
+			case deletelogs:
+				if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+					Util.log("archiving skipped, must be docked, skipping.. ", null);
+					break;
+				}
+				driverCallServer(PlayerCommands.cancelroute, null);
+				Util.deleteLogFiles();
 				break;
-			}
-			driverCallServer(PlayerCommands.cancelroute, null);
-			Util.archiveLogs();
-			break;
-
+			
+			case archivelogs: 
+				if(Util.archivePID()){ 
+					Util.log("archiving skipped, skipping.. ", this);
+					break;
+				}
+				if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+					Util.log("archiving busy, must be docked, skipping.. ", null);
+					break;
+				}
+				driverCallServer(PlayerCommands.cancelroute, null);
+				Util.archiveLogs();
+				break;
+				
 		case streammode: // TODO: testing ffmpeg/avconv streaming
 			grabberSetStream(str);
 			break;
@@ -899,13 +908,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	/**
-	 * turn string input to command 
+	 * turn string input to command id
+	 * 
+	 * @param fn
+	 *            is the funct ion to call
+	 * @param str
+	 *            is the parameters to pass on to the function.
 	 */
 	public void grabberCallServer(String fn, String str) {
 		grabberCommands cmd = null;
 		try {
 			cmd = grabberCommands.valueOf(fn);
-		} catch (Exception e) {return;}
+		} catch (Exception e) {
+			return;
+		}
 
 		if (cmd == null) return;
 		else grabberCallServer(cmd, str);
@@ -913,7 +929,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	/**
 	 * distribute commands from grabber
+	 * 
+	 * @param cmd
+	 *            is the function to call in xxxxxx.swf ???
+	 * @param str
+	 *            is the parameters to pass on to the function.
 	 */
+	@SuppressWarnings("incomplete-switch")
 	public void grabberCallServer(final grabberCommands cmd, final String str) {
 
 		switch (cmd) {
@@ -951,8 +973,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			case streamactivitydetected:
 				streamActivityDetected(str);
 				break;
-			default:
-				break;
+
 		}
 	}
 
@@ -961,8 +982,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	 * @param str
 	 */
 	private void grabberSetStream(String str) {
-		final String stream = str;
 		state.set(State.values.stream, str);
+		if (!settings.getBoolean(ManualSettings.useflash) && str.equals(streamstate.camandmic.toString()))
+			str = str+"_2";
+		final String stream = str;
 
 		messageGrabber("streaming " + stream, "stream " + stream);
 		Util.log("streaming " + stream, this);
@@ -1073,6 +1096,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
+	// TODO: unused
 	public void unmuteROVMic() {
 		String stream = state.get(State.values.stream);
 		if (grabber == null) return;
@@ -1123,6 +1147,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
+
+	/**
+	 * for compatibility with legacy grabber swfs
+	 */
+//	public void frameGrabbed() {
+//		String current = settings.readSetting(GUISettings.vset);
+//		String vals[] = (settings.readSetting(current)).split("_");
+//		int width = Integer.parseInt(vals[0]);
+//		int height = Integer.parseInt(vals[1]);
+//		frameGrabbed(width, height);
+//	}
 
 	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file
 	 * linux only for now
@@ -1471,7 +1506,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
-		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+		if (!state.get(values.osarch).equals(ARM)) {
+			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+		}
+		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
 	}
 
 	public void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
@@ -1480,7 +1518,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
-		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+		if (!state.get(values.osarch).equals(ARM)) {
+			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+		}
+		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
 	}
 
 	public void shutdownApplication() {
@@ -2134,11 +2175,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			double newver = updater.versionNum(fileurl);
 			if (newver > currver) {
 				String message = "New version available: v." + newver + "\n";
-				if (currver == -1) message += "Current software version unknown\n";
-				else message += "Current software is v." + currver + "\n";
-				
+				if (currver == -1) {
+					message += "Current software version unknown\n";
+				} else {
+					message += "Current software is v." + currver + "\n";
+				}
 				message += "Do you want to download and install?";
-				messageplayer("new version available", "softwareupdate", message);
+				messageplayer("new version available", "softwareupdate",
+						message);
 			} else {
 				messageplayer("no new version available", null, null);
 			}
@@ -2152,10 +2196,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 					Util.log("downloading url: " + fileurl,this);
 					Downloader dl = new Downloader();
 					if (dl.FileDownload(fileurl, "update.zip", "download")) {
-						messageplayer("update download complete, unzipping...", null, null);
+						messageplayer("update download complete, unzipping...",
+								null, null);
+
 						// this is a blocking call
 						if (dl.unzipFolder("download"+Util.sep+"update.zip", "webapps"))
-							messageplayer("done.", "softwareupdate", "downloadcomplete");
+							messageplayer("done.", "softwareupdate",
+									"downloadcomplete");
 
 						// not needed now is unpacked
 						dl.deleteDir(new File(Settings.redhome+Util.sep+"download"));

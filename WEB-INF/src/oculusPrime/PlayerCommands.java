@@ -30,7 +30,7 @@ public enum PlayerCommands {
     streamsettingscustom, playerbroadcast, videosoundmode, publish,
     streamsettingsset, framegrabtofile,
 	// experimental (undocumented):
-	jpgstream,
+	jpgstream, streammode,
     
     // malg board 
     motorsreset, getdrivingsettings, drivingsettingsupdate, malgcommand,
@@ -58,13 +58,14 @@ public enum PlayerCommands {
 	speech, serverbrowser, email, state, rssadd,
     
 	// undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, deletelogs, archivelogs, 
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, 
+    archivelogs, deletelogs,
     
     // experimental (undocumented)
-    opennisensor, clearmap, error, streammode,
+    opennisensor, clearmap, error,
 
     // deprecated (kept for mobile client compatibility, undocumented)
-    spotlightsetbrightness;
+    spotlightsetbrightness, ;
 	
 	// sub-set that are restricted to "user0"
 	public enum AdminCommands {

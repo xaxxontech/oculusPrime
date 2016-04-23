@@ -687,22 +687,19 @@ public class Navigation implements Observer {
 		
 		// watch dog
 		state.delete(values.routeoverdue);
-		if(estimatedtime > Util.ONE_MINUTE){
-			new Thread(new Runnable() { public void run() {
-		
-				Util.delay(estimatedtime*1000 + 30000); // TODO: make a setting? in seconds 
+		new Thread(new Runnable() { public void run() {
+			Util.delay(estimatedtime*1000 + 20000); // TODO: make a setting? in seconds 
+			if( ! (state.getBoolean(State.values.autodocking) || 
+			   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || 
+			   state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
 				
-				if( ! (state.getBoolean(State.values.autodocking) || 
-				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
-					// over due, cancel route, drive to dock.. 
-					state.set(values.routeoverdue, true);
-					Util.log("** overdue ** estimated: " + estimatedtime     + " seconds : ", this);
-					dock(); // set new target 
-					navlog.newItem(NavigationLog.ERRORSTATUS, "** overdue ** called back to dock after " + estimatedtime + " seconds",
-							routestarttime, null, name, consecutiveroute, routedistance, rotations);
-				}
-			}}).start();
-		} 
+				state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
+				Util.log("** route overdue ** estimated time: " + estimatedtime + " seconds", this);
+				dock(); // set new target 
+				navlog.newItem(NavigationLog.ERRORSTATUS, "** overdue ** called back to dock after " + estimatedtime + " seconds",
+						routestarttime, null, name, consecutiveroute, routedistance, rotations);
+			}
+		}}).start();
 		
 		new Thread(new Runnable() { public void run() {
 			
