@@ -860,14 +860,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 			
-/*		case archive: 
-			Util.manageLogs();
-			break;
-		case truncarchive:
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-*/				
 			case deletelogs:
 				if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
 					Util.log("archiving skipped, must be docked, skipping.. ", null);

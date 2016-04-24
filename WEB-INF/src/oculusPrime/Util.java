@@ -215,37 +215,6 @@ public class Util {
 		} catch (Exception e) { printError(e); }
 	}
 
-//	/** @return a list of ip's for this local network */ 
-//	public static String getLocalAddress() {
-//		String address = "";
-//		try {
-//			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-//			if (interfaces != null)
-//				while (interfaces.hasMoreElements()) {
-//					NetworkInterface ni = (NetworkInterface) interfaces.nextElement();
-//					if (!ni.isVirtual())
-//						if (!ni.isLoopback())
-//							if (ni.isUp()) {
-//								Enumeration<InetAddress> addrs = ni.getInetAddresses();
-//								while (addrs.hasMoreElements()) {
-//									InetAddress a = (InetAddress) addrs.nextElement();
-//									address += a.getHostAddress() + " ";
-//								}
-//							}
-//				}
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//		
-//		String[] addrs = address.split(" ");
-//		for(int i = 0 ; i < addrs.length ; i++){
-//			if(!addrs[i].contains(":"))
-//				return addrs[i];
-//		}
-//		
-//		return null;
-//	}
-
 	public static void setSystemVolume(int percent){
 		if (State.getReference().get(values.osarch).equals(Application.ARM))
 			try {
@@ -1007,14 +976,6 @@ public class Util {
 				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
 				appendUserMessage("restart required");
 				
-				// TODO: images to clean out too... 
-				//deleteLogFiles();		
-				//deleteROS();
-				//PowerLogger.append("shutting down application", this);
-				//PowerLogger.close();
-				//delay(10000);					
-				//systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
-				
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
@@ -1163,53 +1124,6 @@ public class Util {
 		} catch (Exception e){ rosinfor = "0.00"; }
 		
 		return rosinfor;
-	}	
-	
-	public static void main(String[] args){
-	
-		Vector<File> files = new Vector<File>();
-		files = walk("D:\\films", files);
-		
-		System.out.println("files: " + files.size());
-
-		for(int i = 0 ; i < files.size() ; i++){
-			
-			String name = files.get(i).getName().substring(0, files.get(i).getName().indexOf("."));
-			if(  ! name.endsWith("]")) {
-				System.out.println(i + " files " + files.get(i).getAbsolutePath());
-			}
-			if( name.startsWith("the ")) {
-				System.out.println(i + " the.... " + files.get(i).getAbsolutePath());
-			}
-			
-			/*
-			String folder = files.get(i).getParent();
-			
-			folder = folder.substring(folder.lastIndexOf("\\")+1);
-			
-			folder = folder.replaceAll("-", "");
-			folder = folder.replaceAll(" ", "");
-			name = name.replaceAll(" ", "");
-			name = name.replaceAll("-", "");
-			
-			if( ! folder.contains(name)){
-				System.out.println(i + " ");
-				System.out.println(i + " name   = " + name);
-				System.out.println(i + " folder = " + folder);
-				System.out.println(i + " not folder name " + files.get(i).getAbsolutePath());
-			}
-			*/
-			
-			if(files.get(i).getName().contains("thumbs.db"))files.get(i).delete();
-			
-			String ext = files.get(i).getName().substring(files.get(i).getName().indexOf("."));
-			if( ! (ext.equals(".mp4") || ext.equals(".mp4") || ext.equals(".sub") || ext.equals(".srt") 
-					|| ext.equals(".avi")  || ext.equals(".mkv"))) files.get(i).delete();
-			
-		}
-		
-		System.out.println("files: " + files.size());
-		
 	}
 	
 }

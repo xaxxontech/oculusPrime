@@ -3,8 +3,6 @@ package oculusPrime;
 import java.io.*;
 import java.net.*;
 
-import org.python.core.util.ByteSwapper;
-
 public class Downloader {
 	
 	/**

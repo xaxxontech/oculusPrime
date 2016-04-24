@@ -137,7 +137,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 			if(action.equalsIgnoreCase("email")){
 	            new SendMail("oculus prime log files", "dashboard requested.. \n" + getTail(100), 
-	            		new String[]{ NavigationLog.navigationlogpath, Settings.stdout, Settings.settingsfile });
+	            	new String[]{ NavigationLog.navigationlogpath, Settings.stdout, Settings.settingsfile });
 			}  
 			
 			if(action.equalsIgnoreCase("resetstats") && route!=null){
@@ -309,108 +309,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.close();	
 	}
 	
-	/*
-	public String toTableHTML(){
-		StringBuffer str = new StringBuffer("<table cellspacing=\"10\" border=\"2\"> \n");
-		str.append("<tr>" 
-				+ "<td><b>distanceangle</b><td>" + state.get(values.distanceangle)
-				+ "<td><b>direction</b><td>" + state.get(values.direction)
-				+ "<td><b>odometry</b><td>" + state.get(values.odometry) 
-				+ "</tr> \n");
-		str.append("<tr>" 
-				+ "<td><b>distanceanglettl</b><td>" + state.get(values.distanceanglettl) 
-				+ "<td><b>stopbetweenmoves</b><td>" + state.get(values.stopbetweenmoves) 
-				+ "<td><b>odometrybroadcast</b><td>" + state.get(values.odometrybroadcast) 
-				+ "<td><b>odomturndpms</b><td>" + state.get(values.odomturndpms) 
-				+ "</tr> \n");
-		str.append("<tr>" 
-				+ "<td><b>odomturnpwm</b><td>" + state.get(values.odomturnpwm) 
-				+ "<td><b>odomupdated</b><td>" + state.get(values.odomupdated) 
-				+ "<td><b>odomlinearmpms</b><td>" + state.get(values.odomlinearmpms) 
-				+ "<td><b>odomlinearpwm</b><td>" + state.get(values.odomlinearpwm) 
-				+ "</tr> \n");
-		str.append("<tr><td><b>rosmapinfo</b><td colspan=\"7\">" + state.get(values.rosmapinfo) +"</tr> \n");
-		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
-				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
-				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
-				+ "</tr> \n");	
-		str.append("<tr>" 
-				+ "<td><b>rossetgoal</b><td>" + state.get(values.rossetgoal) 
-				+ "<td><b>rosgoalstatus</b><td>" + state.get(values.rosgoalstatus)
-				+ "<td><b>rosgoalcancel</b><td>" + state.get(values.rosgoalcancel) 
-				+ "<td><b>navigationroute</b><td>" + state.get(values.navigationroute)
-				+ "</tr> \n");
-		str.append("<tr>" 
-				+ "<td><b>rosinitialpose</b><td>" + state.get(values.rosinitialpose) 
-				+ "<td><b>navigationrouteid</b><td>" + state.get(values.navigationrouteid) 
-				+ "</tr> \n");
-		
-		str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"7\">" + state.get(values.rosmapwaypoints) );
-		
-	//	str.append("<tr><td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) + "</tr> \n");
-				
-		str.append("\n</table>\n");
-		return str.toString();
-	}
-	*/
-	
-	/*
-	public String rosDashboard(){	
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"1\"> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>distanceangle</b><td>" + state.get(values.distanceangle)
-				+ "<td><b>direction</b><td>" + state.get(values.direction)
-				+ "<td><b>odometry</b><td>" + state.get(values.odometry) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>distanceanglettl</b><td>" + state.get(values.distanceanglettl) 
-				+ "<td><b>stopbetweenmoves</b><td>" + state.get(values.stopbetweenmoves) 
-				+ "<td><b>odometrybroadcast</b><td>" + state.get(values.odometrybroadcast) 
-				+ "<td><b>odomturndpms</b><td>" + state.get(values.odomturndpms) 
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>odomturnpwm</b><td>" + state.get(values.odomturnpwm) 
-				+ "<td><b>odomupdated</b><td>" + state.get(values.odomupdated) 
-				+ "<td><b>odomlinearmpms</b><td>" + state.get(values.odomlinearmpms) 
-				+ "<td><b>odomlinearpwm</b><td>" + state.get(values.odomlinearpwm) 
-				+ "</tr> \n");
-		
-		str.append("<tr>"
-				+ "<td><b>rosmapinfo</b><td colspan=\"7\">" + state.get(values.rosmapinfo) 
-				+ "</tr> \n");
-			
-		str.append("<tr><td><b>roscurrentgoal</b><td>" + state.get(values.roscurrentgoal) 
-				+ "<td><b>rosmapupdated</b><td>" + state.get(values.rosmapupdated) 
-				+ "<td><b>navsystemstatus</b><td>" + state.get(values.navsystemstatus)
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>rossetgoal</b><td>" + state.get(values.rossetgoal) 
-				+ "<td><b>rosgoalstatus</b><td>" + state.get(values.rosgoalstatus)
-				+ "<td><b>rosgoalcancel</b><td>" + state.get(values.rosgoalcancel) 
-				+ "<td><b>navigationroute</b><td>" + state.get(values.navigationroute)
-				+ "</tr> \n");
-		
-		str.append("<tr>" 
-				+ "<td><b>rosinitialpose</b><td>" + state.get(values.rosinitialpose) 
-				+ "<td><b>navigationrouteid</b><td>" + state.get(values.navigationrouteid) 
-				+ "</tr> \n");
-		
-		str.append("<tr><td><b>rosglobalpath</b><td colspan=\"10\">" + state.get(values.rosglobalpath) + "</tr> \n");
-		str.append("\n</table>\n");
-		return str.toString();
-	}
-	*/
-	
 	public String toDashboard(final String url){
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
 		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
-		//str.append("\n<tr><td colspan=\"11\">---------------------------------------------------------------------------------------------------------\n");
 		str.append("\n<tr><td colspan=\"11\"></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
 			+"\" target=\"_blank\" title=\"go to network control panel\">" + state.get(values.localaddress) + "</a>");
@@ -421,7 +324,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				+ "/oculusPrime/" +"\" target=\"_blank\" title=\"go to user interface on external address\">" + ext + "</a>");
 		str.append( "<td><b>linux</b><td>" + Util.diskFullPercent() + "%</a> used</tr> \n"); 
 	
-		//==
 		String dock = "<font color=\"blue\">undocked</font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
@@ -439,7 +341,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.equals(values.dockstatus, AutoDock.DOCKING)) dock = "<font color=\"blue\">docking</font>";
 		if(state.equals(values.dockstatus, AutoDock.UNKNOWN)) dock = "<font color=\"blue\">UNKNOWN</font>";
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
-		//---
 		
 		//	batterylife	95%_charging	
 		String life = state.get(values.batterylife);

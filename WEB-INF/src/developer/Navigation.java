@@ -694,9 +694,9 @@ public class Navigation implements Observer {
 			   state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
 				
 				state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
-				Util.log("** route overdue ** estimated time: " + estimatedtime + " seconds", this);
+				Util.log("Overdue on Route, estimated time: " + estimatedtime + " seconds", this);
 				dock(); // set new target 
-				navlog.newItem(NavigationLog.ERRORSTATUS, "** overdue ** called back to dock after " + estimatedtime + " seconds",
+				navlog.newItem(NavigationLog.ERRORSTATUS, "Overdue, called back to dock after " + estimatedtime + " seconds",
 						routestarttime, null, name, consecutiveroute, routedistance, rotations);
 			}
 		}}).start();
