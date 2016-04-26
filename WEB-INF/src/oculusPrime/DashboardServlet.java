@@ -126,7 +126,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
 			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
-			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
+			if(action.equalsIgnoreCase("gotodock")) {
+				app.driverCallServer(PlayerCommands.gotodock, null);
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "User called robot back to the dock");
+			}
 			if(action.equalsIgnoreCase("startnav")) app.driverCallServer(PlayerCommands.startnav, null);
 			if(action.equalsIgnoreCase("stopnav")) app.driverCallServer(PlayerCommands.stopnav, null);
 			if(action.equalsIgnoreCase("deletelogs")) app.driverCallServer(PlayerCommands.deletelogs, null);			

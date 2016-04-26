@@ -479,18 +479,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
-						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0);
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user");
 				navigation.cancelAllRoutes();
-			}
-			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
+			
+			} else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
 			}
 
 			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
-				
 			move(str); 
 			break;
 		}
@@ -798,17 +795,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case runroute:
 			if (navigation != null) {
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0, 0);
 				navigation.runRoute(str);
 			}
 			break;
 
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
 						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0);
+						navigation.consecutiveroute, 0, 0);
 				navigation.cancelAllRoutes();
 			}
 			break;

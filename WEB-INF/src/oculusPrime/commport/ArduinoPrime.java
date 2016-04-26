@@ -3,6 +3,7 @@ package oculusPrime.commport;
 import java.util.ArrayList;
 import java.util.List;
 
+import developer.NavigationLog;
 import developer.Ros;
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
@@ -378,10 +379,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			state.set(State.values.direction, direction.stop.toString());
 		
 		else if (s[0].equals("stopdetectfail")){
-			if (state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
+			// if (state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
 			Util.log("**FIRMWARE STOP DETECT FAIL", this);
-			// state.dumpFile("collision");
-			// TODO: create an event for this... 
+			NavigationLog.newItem(NavigationLog.ALERTSTATUS, "FIRMWARE STOP DETECT FAIL");
 		}
 	}
 
