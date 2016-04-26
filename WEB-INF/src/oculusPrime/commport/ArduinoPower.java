@@ -56,7 +56,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int WARNING_ONLY_BELOW = 40;
 	public static final int RESET_REQUIRED_ABOVE= 19;
 	public static final int FORCE_UNDOCK_ABOVE = 79;
-	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4,3,7);  // log only, suppress gui warnings:
+	public static final int ERROR_NO_BATTERY_CONNECTED = 3;
+	public static final List<Integer> IGNORE_ERROR = Arrays.asList(1,4,7,ERROR_NO_BATTERY_CONNECTED);  // log only, suppress gui warnings:
+
 
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
@@ -382,14 +384,15 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!s[1].contains(",")) {
 				int e = Integer.parseInt(s[1]);
 				if (IGNORE_ERROR.contains(e) && !state.exists(State.values.powererror.toString())) {
-					sendCommand(CLEARALLWARNINGERRORS);
+					if (e != ERROR_NO_BATTERY_CONNECTED)
+						sendCommand(CLEARALLWARNINGERRORS);
 					Util.log("Power warning "+e+", "+pwrerr.get(e)+", cleared", this); 
 					PowerLogger.append("Power warning "+e+", "+pwrerr.get(e)+", cleared", this);
 					return;
 				}
 			}
 			
-			if (!s[1].equals("0")) { 
+			if (!s[1].equals("0")) {
 				state.set(State.values.powererror, s[1]);
 				application.message("from power PCB, code " + s[1], null, null);
 			}
@@ -444,12 +447,18 @@ public class ArduinoPower implements SerialPortEventListener  {
 				state.set(State.values.motionenabled, false);
 			}
 		}
-		
+
+		// debugenabled skips graceful shutdown, straight to power cut
 		else if (s[0].equals("shutdown")) {
 			sendCommand(CONFIRMSHUTDOWN);
 			Util.log("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
 			PowerLogger.append("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
-			application.powerdown();
+
+			if (settings.getBoolean(ManualSettings.debugenabled)) {
+				Util.debug("debugenabled, skipping graceful shutodwn");
+				PowerLogger.append("debugenabled, skipping graceful shutodwn", this);
+			} else
+				application.powerdown();
 		}
 		
 		else if (s[0].equals("redock") && state.getUpTime() > Util.TWO_MINUTES) {
