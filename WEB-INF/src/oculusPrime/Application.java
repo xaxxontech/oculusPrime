@@ -441,7 +441,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
-	@SuppressWarnings("incomplete-switch")
+	@SuppressWarnings({ "incomplete-switch", "static-access" })
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
@@ -858,25 +858,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 			case deletelogs:
-				if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-					Util.log("archiving skipped, must be docked, skipping.. ", null);
-					break;
-				}
 				driverCallServer(PlayerCommands.cancelroute, null);
 				Util.deleteLogFiles();
 				break;
-			
 			case archivelogs: 
-				if(Util.archivePID()){ 
-					Util.log("archiving skipped, skipping.. ", this);
-					break;
-				}
-				if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-					Util.log("archiving busy, must be docked, skipping.. ", null);
-					break;
-				}
 				driverCallServer(PlayerCommands.cancelroute, null);
-				Util.archiveLogs();
+				Util.manageLogs();
 				break;
 				
 		case streammode: // TODO: testing ffmpeg/avconv streaming

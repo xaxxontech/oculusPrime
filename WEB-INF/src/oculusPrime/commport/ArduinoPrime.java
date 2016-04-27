@@ -381,7 +381,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		else if (s[0].equals("stopdetectfail")){
 			// if (state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
 			Util.log("**FIRMWARE STOP DETECT FAIL", this);
-			NavigationLog.newItem(NavigationLog.ALERTSTATUS, "FIRMWARE STOP DETECT FAIL");
+			if (settings.getBoolean(ManualSettings.developer.name())) 
+				NavigationLog.newItem(NavigationLog.ALERTSTATUS, "FIRMWARE STOP DETECT FAIL");
 		}
 	}
 

@@ -44,7 +44,7 @@ public class NavigationLog {
     // use if only needing to write a simple message 
     public synchronized static void newItem(final String status, final String msg){
     	newItem(status, msg, System.currentTimeMillis(), null, /*State.getReference().get(values.roscurrentgoal),*/
-			   State.getReference().get(values.navigationroute), Navigation.consecutiveroute, 0, 0);
+			   State.getReference().get(values.navigationroute), 0, 0, 0);
     }
     
     public static synchronized void newItem(final String status, final String msg, final long starttime, final String waypoint,

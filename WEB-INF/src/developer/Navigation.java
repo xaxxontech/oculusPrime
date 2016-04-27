@@ -46,7 +46,7 @@ public class Navigation implements Observer {
 	
 	private final Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
-	public static int consecutiveroute = 1;
+	public int consecutiveroute = 1;
 	public long routestarttime;
 	public int rotations = 0;
 	public NavigationLog navlog;
@@ -81,7 +81,7 @@ public class Navigation implements Observer {
 				// if( ! state.getBoolean(values.recoveryrotation))
 				// count it, eat it.. 
 				// state.delete(values.recoveryrotation);
-			} else Util.log(".. done recovery rotation", this);
+			} 
 		}
 	}
 
@@ -578,7 +578,7 @@ public class Navigation implements Observer {
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				
-				Util.log("... update xml route:  " + name + " count:  " + routecount + " fails: " + routefails, null);
+				Util.log("update xml route:  " + name + " count:  " + routecount + " fails: " + routefails, null);
 				
 				route = (Element) routes.item(i);				
 				try {

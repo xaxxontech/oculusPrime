@@ -115,7 +115,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null && app != null && member != null){
 			if(action.equals("delete")){
-				Util.log("doGet: .. detete state member: " + member, this);
+				Util.log("doGet: detete state member: " + member, this);
 				state.delete(member);
 				action = null;
 			}
@@ -139,11 +139,22 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 
 			if(action.equalsIgnoreCase("email")){
-	            new SendMail("oculus prime log files", "dashboard requested.. \n" + getTail(100), 
+				
+				// testing.. 
+				// 58672295936
+				if(new File(Settings.stdout).getTotalSpace() > 999){
+					
+					Util.compressFiles("log.bz.tar", new String[]{ Settings.stdout });
+				//	Util.systemCall("tail " + Settings.stdout + " 100 > log.txt");
+					Util.log("log size: "+new File(Settings.stdout).getTotalSpace(), this);
+					
+					
+				} else new SendMail("oculus prime log files", "dashboard requested.. \n" + getTail(100), 
 	            	new String[]{ NavigationLog.navigationlogpath, Settings.stdout, Settings.settingsfile });
 			}  
 			
 			if(action.equalsIgnoreCase("resetstats") && route!=null){
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route status");
 				Navigation.updateRouteStats(route, 0, 0);
 			}
 			

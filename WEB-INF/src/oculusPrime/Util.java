@@ -45,10 +45,10 @@ public class Util {
 	public static final long TWO_MINUTES = 120000;
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
-	public static final long ONE_HOUR = 3600000;
-	public static final int PRECISION = 2;		 
-	public static final int MIN_FILE_COUNT = 30;  
+	public static final long ONE_HOUR = 3600000; 
+	public static final int MIN_FILE_COUNT = 20;  
 	public static final int MAX_HISTORY = 60;
+	public static final int PRECISION = 2;	
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
@@ -783,6 +783,17 @@ public class Util {
 	}
 
 	public static void deleteLogFiles(){
+		
+		if(archivePID()){ 
+			log("deleteLogFiles(): busy, skipping.. ", null);
+			return;
+		}
+		
+		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
+			log("deleteLogFiles(): reboot required and must be docked, skipping.. ", null);
+			return;
+		}
+		
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) files[i].delete();
@@ -875,7 +886,7 @@ public class Util {
 	}
 	
 	public static String archiveImages(){
-		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar.bz2";
+		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.framefolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
@@ -885,7 +896,7 @@ public class Util {
 	}
 	
 	public static String archiveROS(){
-		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar.bz2";
+		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
 		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
@@ -895,7 +906,7 @@ public class Util {
 	}
 	
 	public static String archiveAll(String[] files){
-		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar.bz2";
+		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar";
 		String args = "  " + NavigationLog.navigationlogpath + " ";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + args};
@@ -907,6 +918,22 @@ public class Util {
 	}
 	
 	public static void archiveFiles(final String fname, final String[] files){
+		String args = "";
+		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
+		log("file created: " + fname, null);
+		new Thread(new Runnable() { public void run() {
+			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
+		}}).start();
+	}
+	
+	public static void compressFiles(final String fname, final String[] files){
+		
+		if(archivePID()){ 
+			log("compressFiles(): busy, skipping.. ", null);
+			return;
+		}
+		
 		String args = "";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
@@ -935,6 +962,7 @@ public class Util {
 	}
 	
 	public static void manageLogs(){
+		
 		if(archivePID()){ 
 			log("manageLogs(): busy, skipping.. ", null);
 			return;
@@ -970,6 +998,7 @@ public class Util {
 					new File(images).delete();
 					new File(logs).delete();
 					new File(ros).delete();
+					truncStaleArchive();
 					truncState();
 				}
 				
