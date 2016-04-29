@@ -43,6 +43,8 @@ public class Video {
 //            dumpfps = 8;
 //            STREAM_CONNECT_DELAY=3000;
         }
+        File dir=new File(PATH);
+        dir.mkdirs(); // setup shared mem folder
     }
 
     private void setAudioDevice() {
@@ -231,9 +233,7 @@ public class Video {
 
         state.set(State.values.writingframegrabs, true);
 
-        // setup ram drive folder, this part blocking so complete before framegrab thread gets underway
         File dir=new File(PATH);
-        dir.mkdirs();
         for(File file: dir.listFiles()) file.delete(); // nuke any existing files
 
         int width = defaultwidth;
@@ -262,7 +262,7 @@ public class Video {
             while(state.getBoolean(State.values.writingframegrabs)
                     && System.currentTimeMillis() - lastframegrab < Util.ONE_MINUTE) {
                 File file = new File(PATH+i+EXT);
-                if (file.exists() && new File(PATH+(i+7)+EXT).exists()) {
+                if (file.exists() && new File(PATH+(i+32)+EXT).exists()) {
                     file.delete();
                     i++;
                 }
@@ -270,8 +270,9 @@ public class Video {
             }
 
             state.set(State.values.writingframegrabs, false);
-            Util.systemCall("pkill -n "+avprog); // kills newest only
-            Util.log("dumpframegrabs thread exit", this);  // TODO: nuke
+            Util.systemCall("pkill -n " + avprog); // kills newest only
+            File dir=new File(PATH);
+            for(File file: dir.listFiles()) file.delete(); // clean up (gets most files)
 
         } }).start();
 
