@@ -266,6 +266,7 @@ function callServer(fn, str) {
 function play(str) { // called by javascript only?
 	streammode = str;
 	var num = 1;
+	if (str.split("_")[1]=="2") num = 2; // TODO: testing separate audio stream with avconv
 	if (streammode == "stop") { num =0 ; } 
 	oculusPrimeplayerSWF.flashplay(num, videoscale);
 }
@@ -447,16 +448,16 @@ function setstatus(status, value) {
 		document.getElementById("navigationmenu").style.display = "";
 	}
 	else if (status == "debug") { debug(value); }
-	else if (status=="pushtotalk") {
-		if (value=="false") {
-			pushtotalk = false;
-			oculusPrimeplayerSWF.unmutePlayerMic();
-		}
-		else {
-			pushtotalk = true;
-			oculusPrimeplayerSWF.mutePlayerMic();
-		}
-	}
+	// else if (status=="pushtotalk") {
+		// if (value=="false") {
+			// pushtotalk = false;
+			// oculusPrimeplayerSWF.unmutePlayerMic();
+		// }
+		// else {
+			// pushtotalk = true;
+			// oculusPrimeplayerSWF.mutePlayerMic();
+		// }
+	// }
 	else if (status=="loadpage") {
 		playerexit();
 		window.open(value,'_self');
@@ -470,10 +471,9 @@ function setstatus(status, value) {
 			broadcasting = "off";
 			clicksteer("on");
 		}
-		
+		document.getElementById("selfstream_controls").style.display = "";
+		document.getElementById("self_stream_status").style.display = "";
 	}
-	
-	
  
 }
 

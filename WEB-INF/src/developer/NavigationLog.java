@@ -59,9 +59,11 @@ public class NavigationLog {
             }
 
             newItemBusy = true;
+
             String id = String.valueOf(System.nanoTime());
             String str = "<div id='"+id+"' ";
             str += "class='"+status.toLowerCase()+"' ";
+
             str += "onclick=\"clicked(this.id);\" ";
             str += ">"+Util.getTime() + PIPE;
             String rname = routename;
@@ -167,6 +169,7 @@ public class NavigationLog {
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
         str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #770077; padding-bottom: 3px}\n";
+
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";
         str += "var scrollpos = 0;\n" +

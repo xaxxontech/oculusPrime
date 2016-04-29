@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import developer.Ros;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -52,7 +53,8 @@ public class AutoDock {
 		this.comport = com;
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
-		if (!settings.getBoolean(ManualSettings.useflash)) allowforClickSteer = 750;
+		if (!settings.getBoolean(ManualSettings.useflash)) allowforClickSteer = 1000; // may need to be higher for rpi... about 1000
+//		if (state.get(State.values.osarch).equals(Application.ARM)) allowforClickSteer = 1000; // raspberry pi, other low power boards
 	}
 
 	public void autoDock(String str){
@@ -73,8 +75,8 @@ public class AutoDock {
 				return;
 			}
 			if (state.getBoolean(State.values.odometry)) {
-				app.message("unable to dock, odometry running", "autodockcancelled", null);
-				return;
+				app.message("odometry running, disabling", null, null);
+				app.driverCallServer(PlayerCommands.odometrystop, null);
 			}
 
 			lowres=true;
@@ -313,7 +315,7 @@ public class AutoDock {
 //						app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_HORIZ));
 						app.driverCallServer(PlayerCommands.floodlight, "0");
 						app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
-						state.set(State.values.redockifweakconnection, true);
+//						state.set(State.values.redockifweakconnection, true); // TODO: testing, moved to ArduinoPower.execute()
 					}
 					
 					app.message("docked successfully", "multiple", str);

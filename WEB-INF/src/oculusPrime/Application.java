@@ -34,7 +34,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	public enum streamstate { stop, camera, camandmic, mic };
 	public enum camquality { low, med, high, custom };
-	public enum driverstreamstate { stop, mic, pending };
+	public enum driverstreamstate { stop, mic, pending, disabled };
 	public static final String VIDEOSOUNDMODELOW = "low";
 	public static final String VIDEOSOUNDMODEHIGH = "high";
 	public static final int STREAM_CONNECT_DELAY = 2000;
@@ -158,7 +158,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 						comport.stopGoing();
 					}
 	
-					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())) {
+					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())
+							&& !state.get(values.driverstream).equals(driverstreamstate.disabled.toString())) {
 						state.set(State.values.driverstream, driverstreamstate.stop.toString());
 						grabberPlayPlayer(0);
 						messageGrabber("playerbroadcast", "0");
@@ -265,10 +266,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			scanUtils = new developer.depth.ScanUtils();
 		}
 
-		try {
-			System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
-		} catch (UnsatisfiedLinkError e) {
-			Util.log("opencv native lib not available", this);
+		if (!state.get(values.osarch).equals(ARM)) {
+			try {
+				System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+			} catch (UnsatisfiedLinkError e) {
+				Util.log("opencv native lib not available", this);
+			}
 		}
 
 		if (settings.getBoolean(GUISettings.navigation)) {
@@ -278,7 +281,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
-		state.set(State.values.driverstream, driverstreamstate.stop.toString());
+
+		if (state.get(values.osarch).equals(ARM))
+			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if (!settings.getBoolean(ManualSettings.useflash))
+			state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else
+			state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
 		if (state.get(values.osarch).equals(ARM))
 			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
@@ -1061,28 +1070,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	}
 
-	public void muteROVMic() {
-		String stream = state.get(State.values.stream);
-		if (grabber == null) return;
-		if (stream == null) return;
-		if (grabber instanceof IServiceCapableConnection
-				&& (stream.equals("camandmic") || stream.equals("mic"))) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("muteROVMic", new Object[] {});
-		}
-	}
-
-	// TODO: unused
-	public void unmuteROVMic() {
-		String stream = state.get(State.values.stream);
-		if (grabber == null) return;
-		if (stream == null) return;
-		if (grabber instanceof IServiceCapableConnection
-				&& (stream.equals("camandmic") || stream.equals("mic"))) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("unmuteROVMic", new Object[] {});
-		}
-	}
 
 //	private void muteROVMicOnMoveToggle() {
 //		if (settings.getBoolean(GUISettings.muteonrovmove)) {
@@ -1384,11 +1371,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			}
 
-			str += " vidctroffset " + settings.readSetting("vidctroffset");
+			str += " vidctroffset " + settings.readSetting(GUISettings.vidctroffset);
 			str += " rovvolume " + settings.readSetting(GUISettings.volume);
 			str += " stream " + state.get(State.values.stream);
-			str += " selfstream " + state.get(State.values.driverstream);
-			str += " pushtotalk " + settings.readSetting("pushtotalk");
+			if (!state.get(values.driverstream).equals(driverstreamstate.disabled.toString()))
+				str += " selfstream " + state.get(State.values.driverstream);
+//			str += " pushtotalk " + settings.readSetting("pushtotalk");
 			
 			if (loginRecords.isAdmin()) str += " admin true";
 			
@@ -1482,10 +1470,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		Util.delay(1000);
-		if (!state.get(values.osarch).equals(ARM)) {
-			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
-		}
-		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+
+//		if (!state.get(values.osarch).equals(ARM)) {
+//			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+//		}
+//		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+
+
 	}
 
 	public void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
@@ -1494,10 +1486,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
-		if (!state.get(values.osarch).equals(ARM)) {
-			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
-		}
-		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
+
+//		if (!state.get(values.osarch).equals(ARM)) {
+//			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+//		}
+//		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
+		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+
 	}
 
 	public void shutdownApplication() {

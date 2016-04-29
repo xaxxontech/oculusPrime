@@ -103,14 +103,7 @@ public class Navigation implements Observer {
 			
 			// undock if necessary
 			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
-				state.set(State.values.motionenabled, true);
-				app.driverCallServer(PlayerCommands.forward, "0.7");
-				Util.delay(3000);
-
-				// rotate to localize
-				app.driverCallServer(PlayerCommands.left, "360");
-				Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
-				Util.delay(1000);
+				undockandlocalize();
 			}
 
 			if (!Ros.setWaypointAsGoal(str))
@@ -167,7 +160,8 @@ public class Navigation implements Observer {
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
 
 			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)){
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+				if (settings.getBoolean(ManualSettings.useflash))
+					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString()); // reduce cpu
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
 					state.set(State.values.rosinitialpose, "0_0_0");
 				Util.log("navigation running", this);
@@ -191,7 +185,8 @@ public class Navigation implements Observer {
 
 			// check if running
 			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)) {
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+				if (settings.getBoolean(ManualSettings.useflash))
+					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString()); // reduce cpu
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
 					state.set(State.values.rosinitialpose, "0_0_0");
 				Util.log("navigation running", this);
@@ -249,7 +244,10 @@ public class Navigation implements Observer {
 			// wait to reach waypoint
 			start = System.currentTimeMillis();
 			while (System.currentTimeMillis() - start < WAYPOINTTIMEOUT && state.exists(State.values.roscurrentgoal)) {
-				if (!state.get(State.values.roscurrentgoal).equals(goalcoords)) return; // waypoint changed while waiting
+				try {
+					if (!state.get(State.values.roscurrentgoal).equals(goalcoords))
+						return; // waypoint changed while waiting
+				} catch (Exception e) {}
 				Util.delay(10);
 			}
 
@@ -308,23 +306,25 @@ public class Navigation implements Observer {
 //			if (state.exists(State.values.lightlevel)) Util.log("lightlevel: "+state.get(State.values.lightlevel), this);
 //			else Util.log("error, lightlevel null", this);
 
-			SystemWatchdog.waitForCpu(30, 20000); // added stricter 30% check, lots of missed dock grabs here
+			SystemWatchdog.waitForCpu(30, 20000); // stricter 30% check, lots of missed dock grabs here
 
 			// make sure dock in view before calling autodock go
-			if (!finddock(AutoDock.LOWRES)) { // something wrong with camera capture, try again?
-				Util.log("error, finddock() needs to try 2nd time", this);
-				Util.delay(20000); // allow cam shutdown, system settle
-				app.killGrabber(); // force chrome restart
-				Util.delay(Application.GRABBERRESPAWN + 4000); // allow time for grabber respawn
-				// camera, lights (in case malg had dropped commands)
-				app.driverCallServer(PlayerCommands.spotlight, "0");
-				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
-				app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
-				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
-				Util.delay(4000); // wait for cam startup, light adjust
-				app.comport.checkisConnectedBlocking(); // just in case
-				if (!navdockactive) return;
-				if (!finddock(AutoDock.HIGHRES)) return; // give up
+			if (!finddock(AutoDock.HIGHRES, false)) { // single highres dock search, no rotate to start
+				if (!finddock(AutoDock.LOWRES, true)) { // lowres dock search with rotate (lowres much faster)
+					Util.log("error, finddock() needs to try 2nd time", this);
+					Util.delay(20000); // allow cam shutdown, system settle
+					app.killGrabber(); // force chrome restart
+					Util.delay(Application.GRABBERRESPAWN + 4000); // allow time for grabber respawn
+					// camera, lights (in case malg had dropped commands)
+					app.driverCallServer(PlayerCommands.spotlight, "0");
+					app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
+					app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
+					app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
+					Util.delay(4000); // wait for cam startup, light adjust
+					app.comport.checkisConnectedBlocking(); // just in case
+					if (!navdockactive) return;
+					if (!finddock(AutoDock.HIGHRES, true)) return; // highres dock search with rotate (slow)
+				}
 			}
 
 			// onwards
@@ -348,7 +348,7 @@ public class Navigation implements Observer {
 	}
 
 	// dock detect, rotate if necessary
-	private boolean finddock(String resolution) {
+	private boolean finddock(String resolution, boolean rotate) {
 		int rot = 0;
 		while (navdockactive) {
 			SystemWatchdog.waitForCpu(); // added stricter 40% check, lots of missed dock grabs here
@@ -359,6 +359,7 @@ public class Navigation implements Observer {
 				Util.delay(10);  // wait
 
 			if (state.getBoolean(State.values.dockfound)) break; // great, onwards
+			else if (!rotate) return false;
 			else { // rotate a bit
 				app.comport.checkisConnectedBlocking(); // just in case
 				app.driverCallServer(PlayerCommands.right, "25");
@@ -758,21 +759,12 @@ public class Navigation implements Observer {
 				
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
-					state.set(State.values.motionenabled, true);
-					app.comport.checkisConnectedBlocking(); // just in case
-
 					SystemWatchdog.waitForCpu();
-					app.driverCallServer(PlayerCommands.forward, "1.2"); // TODO: MAKE SETTING ?
-					Util.delay(5000);
 
-					// rotate to localize
-					app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
-					app.driverCallServer(PlayerCommands.left, "360");
-					Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())));
-					Util.delay(1000);
-					app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+					undockandlocalize();
 				}
-				
+				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+
 		    	// go to each waypoint
 		    	NodeList waypoints = navroute.getElementsByTagName("waypoint");	    	
 		    	int wpnum = 0;
@@ -885,6 +877,19 @@ public class Navigation implements Observer {
 				if (!delayToNextRoute(navroute, name, id)) return;
 			}
 		}}).start();
+	}
+
+
+	private void undockandlocalize() { // blocking
+		state.set(State.values.motionenabled, true);
+		double distance = 1.0;
+		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
+		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString())) + 1000);
+
+		// rotate to localize
+		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
+		app.driverCallServer(PlayerCommands.left, "360");
+		Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 1000);
 	}
 
 	private boolean delayToNextRoute(Element navroute, String name, String id) {
