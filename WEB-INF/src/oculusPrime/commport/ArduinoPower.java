@@ -107,11 +107,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 			pwrerr.put(entry.getValue(), entry.getKey());
 		}
 
-		new CommandSender().start();
+//		new CommandSender().start();
 
 		if(!settings.readSetting(ManualSettings.powerport).equals(Settings.DISABLED)) connect();
 		
 		if (isconnected) {
+			new CommandSender().start();
 			checkFirmWareVersion();
 			initialize();
 			new WatchDog().start();

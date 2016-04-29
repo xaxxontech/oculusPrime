@@ -27,17 +27,22 @@ public class Video {
     private int lastfps=0;
     private Application.streamstate lastmode = Application.streamstate.stop;
     private long publishid = 0;
-    static final long STREAM_RESTART = Util.ONE_MINUTE*7;
+    static final long STREAM_RESTART = Util.ONE_MINUTE*6;
     static final String FFMPEG = "ffmpeg";
     static final String AVCONV = "avconv";
     private String avprog = AVCONV;
+    private static long STREAM_CONNECT_DELAY = Application.STREAM_CONNECT_DELAY;
+    private static int dumpfps = 15;
 
     public Video(Application a) {
         app = a;
         state.set(State.values.stream, Application.streamstate.stop.toString());
         setAudioDevice();
-        if (state.get(State.values.osarch).equals(Application.ARM))
-            avprog = AVCONV;
+        if (state.get(State.values.osarch).equals(Application.ARM)) {
+//            avprog = FFMPEG;
+//            dumpfps = 8;
+//            STREAM_CONNECT_DELAY=3000;
+        }
     }
 
     private void setAudioDevice() {
@@ -81,9 +86,9 @@ public class Video {
             // nuke currently running avconv if any
             if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
                     !mode.equals(Application.streamstate.stop.toString())) {
-                state.set(State.values.writingframegrabs, false);
+                forceShutdownFrameGrabs();
                 Util.systemCallBlocking("pkill "+avprog);
-                Util.delay(Application.STREAM_CONNECT_DELAY);
+                Util.delay(STREAM_CONNECT_DELAY);
             }
 
             switch (mode) {
@@ -121,6 +126,7 @@ public class Video {
 //                    cmd += "</dev/null >/dev/null 2>/dev/null & ";
 //
 //                    if (avprog.equals(FFMPEG))
+
 //                        cmd += "sleep 1; v4l2-ctl --set-input "+devicenum+" ; ";
 //
 //                    cmd += avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
@@ -138,10 +144,11 @@ public class Video {
 
                     break;
                 case stop:
-                    state.set(State.values.writingframegrabs, false);
+                    forceShutdownFrameGrabs();
                     Util.systemCall("pkill "+avprog);
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
+
             }
 
         } }).start();
@@ -151,21 +158,29 @@ public class Video {
         // stream restart timer
         new Thread(new Runnable() { public void run() {
             long start = System.currentTimeMillis();
-            while ( (id == publishid && System.currentTimeMillis() < start + STREAM_RESTART) ||
+            while ( id == publishid && (System.currentTimeMillis() < start + STREAM_RESTART) ||
                     state.getBoolean(State.values.writingframegrabs) ||
                     state.getBoolean(State.values.autodocking) )
                 Util.delay(50);
 
             if (id == publishid) { // restart stream
-                Util.systemCall("pkill "+avprog);
+                forceShutdownFrameGrabs();
+                Util.systemCall("pkill -9 "+avprog);
                 lastmode = Application.streamstate.stop;
-                Util.delay(Application.STREAM_CONNECT_DELAY);
+                Util.delay(STREAM_CONNECT_DELAY);
                 publish(mode, w,h,fps);
 //                app.driverCallServer(PlayerCommands.messageclients, "stream restart after "+(System.currentTimeMillis()-start+"ms"));
             }
 
         } }).start();
 
+    }
+
+    private void forceShutdownFrameGrabs() {
+        if (state.getBoolean(State.values.writingframegrabs)) {
+            state.set(State.values.writingframegrabs, false);
+//            Util.delay(STREAM_CONNECT_DELAY);
+        }
     }
 
     public void framegrab(final String res) {
@@ -178,7 +193,7 @@ public class Video {
         new Thread(new Runnable() { public void run() {
             if (!state.getBoolean(State.values.writingframegrabs)) {
                 dumpframegrabs(res);
-                Util.delay(Application.STREAM_CONNECT_DELAY);
+                Util.delay(STREAM_CONNECT_DELAY);
             }
 
             // determine latest image file
@@ -234,7 +249,8 @@ public class Video {
         try {
             Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
                     "rtmp://" + host + ":" + port + "/oculusPrime/stream1 live=1", "-s", width+"x"+height,
-                    "-r", Integer.toString(15), "-q", Integer.toString(quality), PATH+"%d"+EXT  });
+                    "-r", Integer.toString(dumpfps), "-q", Integer.toString(quality), PATH+"%d"+EXT  });
+            // avconv -analyzeduration 0 -i rtmp://127.0.0.1:1935/oculusPrime/stream1 live=1 -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
         }catch (Exception e) { Util.printError(e); }
 
         new Thread(new Runnable() { public void run() {

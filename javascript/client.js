@@ -448,16 +448,16 @@ function setstatus(status, value) {
 		document.getElementById("navigationmenu").style.display = "";
 	}
 	else if (status == "debug") { debug(value); }
-	else if (status=="pushtotalk") {
-		if (value=="false") {
-			pushtotalk = false;
-			oculusPrimeplayerSWF.unmutePlayerMic();
-		}
-		else {
-			pushtotalk = true;
-			oculusPrimeplayerSWF.mutePlayerMic();
-		}
-	}
+	// else if (status=="pushtotalk") {
+		// if (value=="false") {
+			// pushtotalk = false;
+			// oculusPrimeplayerSWF.unmutePlayerMic();
+		// }
+		// else {
+			// pushtotalk = true;
+			// oculusPrimeplayerSWF.mutePlayerMic();
+		// }
+	// }
 	else if (status=="loadpage") {
 		playerexit();
 		window.open(value,'_self');
@@ -471,10 +471,9 @@ function setstatus(status, value) {
 			broadcasting = "off";
 			clicksteer("on");
 		}
-		
+		document.getElementById("selfstream_controls").style.display = "";
+		document.getElementById("self_stream_status").style.display = "";
 	}
-	
-	
  
 }
 
