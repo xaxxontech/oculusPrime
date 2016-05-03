@@ -953,7 +953,7 @@ public class Util {
 		String line = null;
 		try { 
 			proc = Runtime.getRuntime().exec( new String[]{ "/bin/sh", "-c", "ps -a" });
-			proc.waitFor();
+//			proc.waitFor();
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
 			while ((line = procReader.readLine()) != null){
 				if(line.contains("tar") || line.contains("zip")){

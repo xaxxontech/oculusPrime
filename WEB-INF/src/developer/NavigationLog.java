@@ -86,12 +86,16 @@ public class NavigationLog {
             if( !status.equals(INFOSTATUS.toString()) && !status.equals(ERRORSTATUS.toString())
             		&& !status.equals(NavigationLog.PHOTOSTATUS.toString())){
             	long st = Navigation.routestarttime;
-            	if (st==0) st = System.currentTimeMillis();
+            	if(st==0) st = System.currentTimeMillis();
             	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
             }
             
-            if(Navigation.routedistance > 0) str += "Route distance: " + Util.formatFloat(Navigation.routedistance/(double)1000, 2) + " meters <br>\n";
-            if(Navigation.rotations > 0) str += "Recovery Rotations: " + Navigation.rotations; 
+            if(Navigation.routedistance > 0 && !status.equals(INFOSTATUS.toString())) 
+            	str += "Route distance: " + Util.formatFloat(Navigation.routedistance/(double)1000, 2) + " meters <br>\n";
+            
+            if(Navigation.rotations > 0 && !status.equals(INFOSTATUS.toString())) 
+            		str += "Recovery Rotations: " + Navigation.rotations; 
+            
             str += "</div>\n";
             writeFile(str);
             newItemBusy = false;

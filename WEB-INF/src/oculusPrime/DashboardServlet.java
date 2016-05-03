@@ -126,10 +126,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
 			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
-			if(action.equalsIgnoreCase("gotodock")) {
-				app.driverCallServer(PlayerCommands.gotodock, null);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "User called robot back to the dock");
-			}
+			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(action.equalsIgnoreCase("startnav")) app.driverCallServer(PlayerCommands.startnav, null);
 			if(action.equalsIgnoreCase("stopnav")) app.driverCallServer(PlayerCommands.stopnav, null);
 			if(action.equalsIgnoreCase("deletelogs")) app.driverCallServer(PlayerCommands.deletelogs, null);			
@@ -439,9 +436,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				|| ! state.exists(values.navigationroute)) return null;
 		
 		String link = "<td colspan=\"11\"><a href=\"dashboard?action=resetstats&route="
-				+ state.get(values.navigationroute) + "\" title=\"reest meta data | distance: " +
-			Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)) + " time: " +
-			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " count: " +
+				+ state.get(values.navigationroute) + "\" title=\"reset xml | " +
+			Long.parseLong(Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)))/1000 + " meters " +
+			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " seconds counter: " +
 			Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
 			Navigation.getRouteFailsString(state.get(values.navigationroute)) + "\">"+
 			state.get(values.navigationroute)+"</a>&nbsp;"; 
@@ -457,8 +454,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp;waypoint " + state.get(values.roswaypoint);			
 		if(routedistance > 0) link += "&nbsp;|&nbsp;distance " + Util.formatFloat((double)routedistance/(double)1000) + " meters";
 		
-		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">**overdue**</font>";
-		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">**recovery**</font>";
+		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">*overdue*</font>";
+		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">*recovery*</font>";
 	
 		link = link.trim();
 		if(link.startsWith("|")) link = link.substring(1, link.length());

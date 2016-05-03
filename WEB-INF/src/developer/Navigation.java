@@ -48,13 +48,15 @@ public class Navigation implements Observer {
 	
 	// SHOULD ALL BE PUT IN STATE? 
 	public volatile boolean navdockactive = false;
-	public static int consecutiveroute = 1;
+	public static int consecutiveroute = 1;   
+	public static long estimateddistance = 0;	// mm  
+	public static long routedistance = 0;       // mm 
+	public static int estimatedtime = 0;
 	public static long routestarttime;
 	public static int rotations = 0;
-	public static long estimateddistance = 0;	
-	public static long routedistance = 0;
-	public static int estimatedtime = 0;
-
+	
+	private boolean failed = false;
+	
 	public NavigationLog navlog; // make static
 
 	/** Constructor */
@@ -245,16 +247,15 @@ public class Navigation implements Observer {
 				Util.delay(10);
 			}
 
-			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
-//				Util.log("error, state rosgoalstatus null, waypoint may have been cancelled", this);
-//				return;
+			if ( !state.exists(State.values.rosgoalstatus)) { 
+				//this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 				Util.log("error, rosgoalstatus null, setting to empty string", this); // TODO: testing
 				state.set(State.values.rosgoalstatus, "");
 			}
 
 			if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach dock");
-				// failed = true;
+				failed = true;
 				return;
 			}
 
@@ -703,15 +704,14 @@ public class Navigation implements Observer {
 		final String id = String.valueOf(System.nanoTime());
 		state.set(State.values.navigationroute, name);
 		state.set(State.values.navigationrouteid, id);
-
+	
 		// flag route active, save to xml file
 		route.getElementsByTagName("active").item(0).setTextContent("true");
 		String xmlstring = Util.XMLtoString(document);
 		saveRoute(xmlstring);
 		
 		// watch dog
-		// state.delete(values.routeoverdue);
-		//TODO: TESTING........
+		// TODO: TESTING........
 		if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 				state.delete(values.routeoverdue);
@@ -736,10 +736,13 @@ public class Navigation implements Observer {
 			// repeat route schedule forever until cancelled
 			while (true) {
 
-				// clear counter 
+				// clear counters and flags  
+				/*
 				state.delete(values.recoveryrotation);
 				state.delete(values.recoveryrotation);
+				failed = false;
 				rotations = 0;
+				*/
 				
 				// determine next scheduled route time, wait if necessary
 				state.delete(State.values.nextroutetime);
@@ -780,15 +783,19 @@ public class Navigation implements Observer {
 				if (!state.exists(State.values.navigationroute)) return;
 				if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-				// start!
+				// start.. clear counters and flags  
+				state.delete(values.recoveryrotation);
+				state.delete(values.recoveryrotation);
 				routestarttime = System.currentTimeMillis();
 				routedistance = 0l;
+				failed = false;
+				rotations = 0;
 				
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
-					SystemWatchdog.waitForCpu();
-					undockandlocalize();
+					SystemWatchdog.waitForCpu(); undockandlocalize();
 				}
+				
 				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
 
 		    	// go to each waypoint
@@ -838,7 +845,7 @@ public class Navigation implements Observer {
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
 						// TODO: COUNT FAILURES BETTER ? 
-						// routefails++;
+						failed = true;
 						continue; 
 					}
 
@@ -888,21 +895,22 @@ public class Navigation implements Observer {
 				}
 			
 				// DODO: flawless route? 
-				if( /*!(overdue || failed) &&*/ rotations == 0){
+				if( /*!(overdue || failed) &&*/ rotations == 0 && !failed){
 					
 					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
-					updateRouteEstimates(state.get(State.values.navigationroute), ((estimatedtime + seconds)/2), ((estimateddistance + routedistance)/2));
-				
+					updateRouteEstimates(state.get(State.values.navigationroute), ((estimatedtime + seconds)/2)/1000, ((estimateddistance + routedistance)/2));
 					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance) + "mm ", this);
-					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds) + "sec ", this);
+					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds) + "seconds ", this);
 					
 				} else {
 					
 					Util.log("runRoute: was recovery rotations: " + rotations, this);
 					
 				}
-			
-				updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name));
+				
+				if(failed) updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name)+1);
+				else updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name));
+					
 				NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
 				consecutiveroute++;
 				

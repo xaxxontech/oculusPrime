@@ -794,7 +794,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case gotodock:
-			if (navigation != null) navigation.dock(); 
+			if (navigation != null) {
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route canceled by user, returning to dock");
+				navigation.dock(); 
+			}
 			break;
 			
 		case saveroute: 
@@ -864,11 +867,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 			case deletelogs:
-				driverCallServer(PlayerCommands.cancelroute, null);
+//				driverCallServer(PlayerCommands.cancelroute, null);
 				Util.deleteLogFiles();
 				break;
 			case archivelogs: 
-				driverCallServer(PlayerCommands.cancelroute, null);
+//				driverCallServer(PlayerCommands.cancelroute, null);
 				Util.manageLogs();
 				break;
 				
