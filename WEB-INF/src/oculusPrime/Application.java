@@ -804,17 +804,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case runroute:
 			if (navigation != null) {
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0, 0);
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user");
 				navigation.runRoute(str);
 			}
 			break;
 
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
-						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0, 0);
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled");
 				navigation.cancelAllRoutes();
 			}
 			break;

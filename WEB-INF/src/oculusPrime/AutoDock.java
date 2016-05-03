@@ -9,12 +9,9 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import developer.Ros;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
-
-import org.red5.server.api.service.IServiceCapableConnection;
 
 public class AutoDock { 
 	

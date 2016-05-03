@@ -141,20 +141,20 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("email")){
 				
 				// testing.. 
-				// 58672295936
-				if(new File(Settings.stdout).getTotalSpace() > 999){
+				// 58672295936Settings.stdout, 
+				//if(new File(Settings.stdout).getTotalSpace() > 999){
 					
-					Util.compressFiles("log.bz.tar", new String[]{ Settings.stdout });
+					Util.compressFiles("stuff.bz.tar", new String[]{ Settings.settingsfile, BanList.banfile });
 				//	Util.systemCall("tail " + Settings.stdout + " 100 > log.txt");
 					Util.log("log size: "+new File(Settings.stdout).getTotalSpace(), this);
+				
 					
-					
-				} else new SendMail("oculus prime log files", "dashboard requested.. \n" + getTail(100), 
-	            	new String[]{ NavigationLog.navigationlogpath, Settings.stdout, Settings.settingsfile });
+					new SendMail("oculus prime log files", "dashboard requested.. \n", new String[]{ "stuff.bz.tar", Settings.settingsfile, BanList.banfile });
 			}  
 			
 			if(action.equalsIgnoreCase("resetstats") && route!=null){
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route status");
+				Navigation.updateRouteEstimates(route, 0, 0);
 				Navigation.updateRouteStats(route, 0, 0);
 			}
 			
@@ -327,7 +327,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\"> \n");
-		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus().toLowerCase() + "</tr> \n");
+		str.append("\n<tr><td colspan=\"11\"><b>v" + VERSION + "</b>&nbsp;&nbsp;" + Util.getJettyStatus() + "</tr> \n");
 		str.append("\n<tr><td colspan=\"11\"></tr> \n");
 		str.append("<tr><td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
 			+"\" target=\"_blank\" title=\"go to network control panel\">" + state.get(values.localaddress) + "</a>");
@@ -438,15 +438,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				|| state.equals(values.dockstatus, AutoDock.DOCKING)
 				|| ! state.exists(values.navigationroute)) return null;
 		
-		String link = "<td colspan=\"11\">";
-		
-		int cnt = Navigation.getRouteCount(state.get(values.navigationroute));
-		int fl = Navigation.getRouteFails(state.get(values.navigationroute));
-		
-		link += state.get(values.navigationroute); 
-		// if(fl==0) link += " 100% "; 
-		if(fl > 0) link += " <a href=\"dashboard?action=resetstats&route="+ state.get(values.navigationroute) +"\">"
-				+ Util.formatFloat((fl/cnt)*100, 0) + "%</a>&nbsp;&nbsp;"; 
+		String link = "<td colspan=\"11\"><a href=\"dashboard?action=resetstats&route="
+				+ state.get(values.navigationroute) + "\" title=\"reest meta data | distance: " +
+			Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)) + " time: " +
+			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " count: " +
+			Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
+			Navigation.getRouteFailsString(state.get(values.navigationroute)) + "\">"+
+			state.get(values.navigationroute)+"</a>&nbsp;"; 
 		
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)) {

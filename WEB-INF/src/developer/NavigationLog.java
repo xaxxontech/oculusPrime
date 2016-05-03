@@ -38,19 +38,17 @@ public class NavigationLog {
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
     private static final String FILEEND = "</body></html>";
-    private static final int maxitems = 300;
+    private static final int maxitems = 500; // Development
     private static volatile boolean newItemBusy = false;
     
     // use if only needing to write a simple message 
     public synchronized static void newItem(final String status, final String msg){
-    	newItem(status, msg, System.currentTimeMillis(), null, /*State.getReference().get(values.roscurrentgoal),*/
-			   State.getReference().get(values.navigationroute), 0, 0, 0);
+    	newItem(status, msg, State.getReference().get(values.roscurrentgoal), State.getReference().get(values.navigationroute));
     }
     
-    public static synchronized void newItem(final String status, final String msg, final long starttime, final String waypoint,
-                        final String routename, final int consecutiveroute, final double routedistance, final int rotations) {
-
+    public static synchronized void newItem(final String status, final String msg, final String waypoint, final String routename){ 
         new Thread(new Runnable() { public void run() {
+        	
             long timeout = System.currentTimeMillis() + 5000;
             while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
             if (newItemBusy) {
@@ -77,7 +75,7 @@ public class NavigationLog {
                     "style='display: none; padding-top: 5px; padding-left: 20px'>\n";
             if (msg != null) str += msg+"<br>\n";
             if (waypoint != null) str += "Waypoint: "+waypoint+"<br>\n";
-            str += "Consecutive Route: "+consecutiveroute+"<br>\n";
+            str += "Consecutive Route: "+Navigation.consecutiveroute+"<br>\n";
             
             if(status.equals(COMPLETEDSTATUS.toString()) && routename != null){ 
             	str += "Route Count: " + Navigation.getRouteCount(routename) + " <br>\n";
@@ -87,13 +85,13 @@ public class NavigationLog {
             
             if( !status.equals(INFOSTATUS.toString()) && !status.equals(ERRORSTATUS.toString())
             		&& !status.equals(NavigationLog.PHOTOSTATUS.toString())){
-            	long st = starttime;
+            	long st = Navigation.routestarttime;
             	if (st==0) st = System.currentTimeMillis();
             	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
             }
             
-            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n";
-            if(rotations > 0) str += "Recovery Rotations: " + rotations; 
+            if(Navigation.routedistance > 0) str += "Route distance: " + Util.formatFloat(Navigation.routedistance/(double)1000, 2) + " meters <br>\n";
+            if(Navigation.rotations > 0) str += "Recovery Rotations: " + Navigation.rotations; 
             str += "</div>\n";
             writeFile(str);
             newItemBusy = false;

@@ -973,10 +973,10 @@ public class Util {
 			return;
 		}
 		
-//		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
-//			log("manageLogs(): reboot required and must be docked, skipping.. ", null);
-//			return;
-//		}
+		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
+			log("manageLogs(): must be docked, skipping.. ", null);
+			return;
+		}
 	
 		new Thread(new Runnable() { public void run() {
 			try {
