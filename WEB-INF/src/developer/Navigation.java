@@ -54,8 +54,7 @@ public class Navigation implements Observer {
 	private long estimateddistance = 0;	
 	private long routedistance = 0;
 	private int estimatedtime = 0;
-	static private int routecount = 0;
-	static private int routefails = 0;
+
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -539,23 +538,37 @@ public class Navigation implements Observer {
 		}
 	}
 	
-	public static String getRouteFails(final String name){
+	public static int getRouteFails(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = null;
+		String result =  "0";
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
 					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
-				} catch (Exception e){result = "0";}
+				} catch (Exception e){}
 				break;
 			}
 		}
-		routefails = Integer.parseInt(result);
+		return Integer.parseInt(result);
+	}
+	
+	public static String getRouteFailsString(final String name){
+		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		String result = "0";
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				try {
+					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
+				} catch (Exception e){}
+				break;
+			}
+		}
 		return result;
 	}
 	
-	public static String getRouteCount(final String name){
+	public static int getRouteCount(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
 		String result = null;
 		for (int i = 0; i < routes.getLength(); i++){
@@ -567,7 +580,21 @@ public class Navigation implements Observer {
 				break;
 			}
 		}
-		routecount = Integer.parseInt(result);
+		return Integer.parseInt(result);
+	}
+	
+	public static String getRouteCountString(final String name){
+		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		String result = "0";
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			if (rname.equals(name)){
+				try {
+					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
+				} catch (Exception e){}
+				break;
+			}
+		}
 		return result;
 	}
 	
@@ -648,23 +675,6 @@ public class Navigation implements Observer {
     				Util.log("no route _time_ available for: " + rname, this);
     				estimatedtime = 0;
     			}
-    			
-    			try { 
-    				routecount = Integer.parseInt(route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent());
-    				Util.log("["+ rname + "] routecount: " + routecount, this);
-    			} catch (Exception e){
-    				Util.log("no _routecount_ available for: " + rname, this);
-    				routecount = 0;
-    			}
-    			
-    			try { 
-    				routefails = Integer.parseInt(route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent());
-    				Util.log("["+ rname + "] routefails: " + routefails, this);
-    			} catch (Exception e){
-    				Util.log("no _routefails_ available for: " + rname, this);
-    				routefails = 0;
-    			}
-    			
     			break;
     		}
 		}
@@ -687,19 +697,22 @@ public class Navigation implements Observer {
 		
 		// watch dog
 		state.delete(values.routeoverdue);
-		new Thread(new Runnable() { public void run() {
-			Util.delay(estimatedtime*1000 + 20000); // TODO: make a setting? in seconds 
-			if( ! (state.getBoolean(State.values.autodocking) || 
-			   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || 
-			   state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
-				
-				state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
-				Util.log("Overdue on Route, estimated time: " + estimatedtime + " seconds", this);
-				dock(); // set new target 
-				NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Overdue, called back to dock after " + estimatedtime + " seconds",
-						routestarttime, null, name, consecutiveroute, routedistance, rotations);
-			}
-		}}).start();
+		//TODO: TESTING........
+		if (settings.getBoolean(ManualSettings.developer.name())){
+			new Thread(new Runnable() { public void run() {
+				Util.delay(estimatedtime*1000 + 40000); // TODO: make a setting? in seconds 
+				if( ! (state.getBoolean(State.values.autodocking) || 
+				   state.get(State.values.dockstatus).equals(AutoDock.DOCKING) || 
+				   state.get(State.values.dockstatus).equals(AutoDock.DOCKED))){
+					
+					state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
+					Util.log("Overdue on Route, estimated time: " + estimatedtime + " seconds", this);
+					dock(); // set new target 
+					NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Overdue, called back to dock after " + estimatedtime + " seconds",
+							routestarttime, null, name, consecutiveroute, routedistance, rotations);
+				}
+			}}).start();
+		}
 		
 		new Thread(new Runnable() { public void run() {
 			
@@ -717,9 +730,7 @@ public class Navigation implements Observer {
 				while (state.exists(State.values.navigationroute)){
 					Util.delay(1000);
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
-						if (updateTimeToNextRoute(navroute, id)){ 
-						break;
-					}
+					if (updateTimeToNextRoute(navroute, id)) break;
 				}
 
 				// check if cancelled while waiting
@@ -760,7 +771,6 @@ public class Navigation implements Observer {
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
 					SystemWatchdog.waitForCpu();
-
 					undockandlocalize();
 				}
 				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
@@ -808,11 +818,16 @@ public class Navigation implements Observer {
 					// failed, try next waypoint
 					// TODO: state.dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
+						
+						// int routecount = getRouteCount(name)+1;
+						// int routefails = getRouteFails(name);
 						NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
-								routestarttime, wpname, name, consecutiveroute, 0, rotations);
+								routestarttime, wpname, name, consecutiveroute, routedistance, rotations);
+						
 						app.driverCallServer(PlayerCommands.messageclients, "route "+name+" failed to reach waypoint");
 						wpnum ++;
-						routefails++;
+						// TODO: COUNT FAILURES BETTER ? 
+						// routefails++;
 						continue; 
 					}
 
@@ -821,6 +836,17 @@ public class Navigation implements Observer {
 					long duration = Long.parseLong(
 						((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
 					if (duration > 0)  processWayPointActions(actions, duration * 1000, wpname, name, id);
+					
+					//TODO: TESTING........
+					if (settings.getBoolean(ManualSettings.developer.name())){
+//						app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
+//						SystemWatchdog.waitForCpu();
+						Util.log("testing.... localization rotation...", this);
+						Util.delay(1000);
+						app.driverCallServer(PlayerCommands.left, "360");
+						Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 1000);
+					}
+					
 					wpnum ++;
 				}
 		    	
@@ -868,7 +894,9 @@ public class Navigation implements Observer {
 					
 				}
 			
-				updateRouteStats(state.get(State.values.navigationroute), ++routecount, routefails);
+				int routecount = getRouteCount(name)+1;
+				int routefails = getRouteFails(name);
+				updateRouteStats(state.get(State.values.navigationroute), routecount, routefails);
 				NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance, rotations);
 				state.delete(values.routeoverdue);
 				consecutiveroute++;

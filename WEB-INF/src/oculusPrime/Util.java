@@ -801,6 +801,10 @@ public class Util {
 	    }
 	    files = new File(Settings.logfolder).listFiles();
 	    if(files.length != 0) log("deleteLogFiles(): must be subfolders: " + files.length, null);	
+	    
+		truncStaleArchive();
+		truncStaleFrames();
+		truncState();
 	}
 	
 	public static void truncStaleFrames(){
@@ -895,6 +899,7 @@ public class Util {
 		return path;
 	}
 	
+	/* not needed? we have this in log folder already..
 	public static String archiveROS(){
 		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
@@ -903,7 +908,7 @@ public class Util {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
 		return path;
-	}
+	}*/
 	
 	public static String archiveAll(String[] files){
 		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar";
@@ -968,20 +973,20 @@ public class Util {
 			return;
 		}
 		
-		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
-			log("manageLogs(): reboot required and must be docked, skipping.. ", null);
-			return;
-		}
+//		if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)) {
+//			log("manageLogs(): reboot required and must be docked, skipping.. ", null);
+//			return;
+//		}
 	
 		new Thread(new Runnable() { public void run() {
 			try {
 				
 				long start = System.currentTimeMillis();
-				appendUserMessage("log files being archived..");
+				appendUserMessage("log files being archived");
 				
-				String ros = archiveROS();
-				log("manageLogs(): log file: " + ros, null);
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + ros, null);
+//				String ros = archiveROS();
+//				log("manageLogs(): log file: " + ros, null);
+//				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + ros, null);
 				
 				String images = archiveImages();
 				log("manageLogs(): log file: " + images, null);	
@@ -991,19 +996,22 @@ public class Util {
 				log("manageLogs(): log file: " + logs, null);
 				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + logs, null);
 			
+				/*
 				String all = archiveAll(new String[]{logs, images, ros, Settings.settingsfile});
 				log("manageLogs(): log file: " + all, null);
 				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + all, null);
-				else { // done, now clean up.. 
+				else {
+					
+					// done, now clean up.. 
 					new File(images).delete();
 					new File(logs).delete();
 					new File(ros).delete();
-					truncStaleArchive();
-					truncState();
 				}
+				*/
 				
-				log("manageLogs(): .. done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
-				appendUserMessage("restart required");
+				waitForArchive();
+				log("manageLogs(): done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
+				appendUserMessage(", archiving complete");
 				
 			} catch (Exception e){printError(e);}
 		} }).start();

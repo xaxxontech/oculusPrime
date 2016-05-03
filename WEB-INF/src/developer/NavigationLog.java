@@ -81,7 +81,7 @@ public class NavigationLog {
             
             if(status.equals(COMPLETEDSTATUS.toString()) && routename != null){ 
             	str += "Route Count: " + Navigation.getRouteCount(routename) + " <br>\n";
-            	int fails = Integer.parseInt(Navigation.getRouteFails(routename));
+            	int fails = Navigation.getRouteFails(routename);
             	if(fails > 0) str += "Route Failures: " + fails + "<br>\n"; 	
             }
             

@@ -440,8 +440,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String link = "<td colspan=\"11\">";
 		
-		double cnt = Double.parseDouble(Navigation.getRouteCount(state.get(values.navigationroute)));
-		double fl = Double.parseDouble(Navigation.getRouteFails(state.get(values.navigationroute)));
+		int cnt = Navigation.getRouteCount(state.get(values.navigationroute));
+		int fl = Navigation.getRouteFails(state.get(values.navigationroute));
 		
 		link += state.get(values.navigationroute); 
 		// if(fl==0) link += " 100% "; 
