@@ -62,7 +62,7 @@ public enum PlayerCommands {
     archivelogs, deletelogs,
     
     // experimental (undocumented)
-    opennisensor, clearmap, error,
+    opennisensor, clearmap, error, resetroutedata,
 
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness, ;

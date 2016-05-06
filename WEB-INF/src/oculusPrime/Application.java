@@ -804,6 +804,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null) navigation.saveRoute(str);
 			messageplayer("route saved", null, null);
 			break;
+		
+		case resetroutedata: 
+			// TODO: TESTING... 
+			if( ! settings.getBoolean(ManualSettings.developer.name())) break;
+			NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route status for "+str);
+			messageplayer("User reset route status for "+str, null, null);
+			Navigation.updateRouteEstimatess(str, 0, 0);
+			Navigation.updateRouteStats(str, 0, 0);
+			break;
 			
 		case runroute:
 			if (navigation != null) {

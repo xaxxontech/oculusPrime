@@ -158,6 +158,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("reboot")){
 				new Thread(new Runnable() { public void run() {
 					Util.log("reboot called, going down..", this);
+					settings.writeSettings(ManualSettings.restarted, "0");
 					Util.delay(3000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.reboot, null);
 				}}).start();
@@ -166,6 +167,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("restart")){
 				new Thread(new Runnable() { public void run() {
 					Util.log("restart called, going down..", this);
+					settings.writeSettings(ManualSettings.restarted, (settings.getInteger(ManualSettings.restarted)+1)+" ");
 					Util.delay(3000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.restart, null);
 				}}).start();
@@ -369,8 +371,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String power = " not connected";
 		if(state.exists(values.powerport)) power = state.get(values.powerport);
+		String restarts = "";
+		if(settings.getInteger(ManualSettings.restarted) > 5) restarts = "&nbsp;&nbsp;&nbsp;#"+settings.readSetting(ManualSettings.restarted); 
 		str.append("<tr><td><b>power</b><td>" + power
-			+ "<td><b>java</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins " 
+			+ "<td><b>java</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins " + restarts 
 			+ "<td><b>archive</b><td>"+ archivelogs + Util.countMbytes(Settings.archivefolder) + "</a> mb<td></tr> \n" );
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + life
@@ -436,12 +440,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				|| ! state.exists(values.navigationroute)) return null;
 		
 		String link = "<td colspan=\"11\"><a href=\"dashboard?action=resetstats&route="
-				+ state.get(values.navigationroute) +
-			//+ "\" title=\"reset xml | " +
-			//Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)) + " meters " +
-			//Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " sec, success: " +
-			//Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
-			//Navigation.getRouteFailsString(state.get(values.navigationroute)) 
+				+ state.get(values.navigationroute) + "\" title=\"reset xml " +
+			Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)) + " meters " +
+			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " seconds, success: " +
+			Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
+			Navigation.getRouteFailsString(state.get(values.navigationroute)) +
 			 "\">"+ state.get(values.navigationroute)+"</a>&nbsp;"; 
 		
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
