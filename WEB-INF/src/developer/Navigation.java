@@ -49,19 +49,18 @@ public class Navigation implements Observer {
 	// SHOULD ALL BE PUT IN STATE? 
 	public volatile boolean navdockactive = false;
 	public static int consecutiveroute = 1;   
-	public static long estimateddistance = 0;	// mm  
-	public static long routedistance = 0;       // mm 
+	public static long routemillimeters = 0;  
+	public static long routestarttime = 0;
+	public static int estimatedmeters = 0;	      
 	public static int estimatedtime = 0;
-	public static long routestarttime;
 	public static int rotations = 0;
-	
 	private boolean failed = false;
 	
 	public NavigationLog navlog; // make static
 
 	/** Constructor */
 	public Navigation(Application a){
-		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
+		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.name());
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		navlog = new NavigationLog();
@@ -73,7 +72,11 @@ public class Navigation implements Observer {
 	public void updated(String key) {
 		if(key.equals(values.distanceangle.name())){
 			try {
-				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
+				int mm = Integer.parseInt(state.get(values.distanceangle).split(" ")[0]);
+				if(mm > 0){
+					routemillimeters += mm;
+					// Util.log("meters: " + routemillimeters + " state: " + state.get(values.distanceangle).split(" ")[0], this);
+				}
 			} catch (Exception e){}
 		}
 		if(key.equals(values.recoveryrotation.name())){
@@ -98,14 +101,11 @@ public class Navigation implements Observer {
 			if (!waitForNavSystem()) return;
 			
 			// undock if necessary
-			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
-				undockandlocalize();
-			}
-
+			if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) undockandlocalize();
+			
 			if (!Ros.setWaypointAsGoal(str))
 				app.driverCallServer(PlayerCommands.messageclients, "unable to set waypoint");
 
-		
 		}  }).start();
 	}
 	
@@ -267,7 +267,8 @@ public class Navigation implements Observer {
 //			Util.delay(Ros.ROSSHUTDOWNDELAY/2); // 5000 too low, massive cpu sometimes here
 
 			Util.delay(5000); // 5000 too low, massive cpu sometimes here
-
+			SystemWatchdog.waitForCpu();
+			
 			if (!navdockactive) return;
 
 			SystemWatchdog.waitForCpu();
@@ -503,24 +504,29 @@ public class Navigation implements Observer {
 		return startroute;
 	}
 	
-	public static void updateRouteEstimates(final String name, final int seconds, final long distance){
+	public static void updateRouteEstimatess(final String name, final int seconds, final long mm){
+
+		Util.log("...................update xml route:  " + name + " mm:  " + mm + " seconds: " + seconds, null);
+
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-				Util.debug("update xml route:  " + name + " distance:  " + distance + " seconds: " + seconds, null);
+			
 				route = (Element) routes.item(i);				
-				try {
-					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Long.toString(distance));
+				try {	
+					Util.log(".....update xml route distance:  " + name + " distance:  " + mm, null);
+					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(mm / (double)1000, 1));
 				} catch (Exception e) { // create if not there 
 					Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
-					dist.setTextContent(Double.toString(distance));
+					dist.setTextContent(Util.formatFloat(mm / (double)1000, 1));
 					route.appendChild(dist);
 				}
 				try {
+					Util.log(".....update xml route distance:  " + name + " seconds: " + seconds, null);
 					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
 					Util.log("xml error missing tag: " + e.getMessage(), null);
@@ -566,13 +572,13 @@ public class Navigation implements Observer {
 	
 	public static int getRouteCount(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = null;
+		String result = "0";
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
 					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
-				} catch (Exception e){result = "0";}
+				} catch (Exception e){}
 				break;
 			}
 		}
@@ -632,7 +638,7 @@ public class Navigation implements Observer {
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				
-				Util.log("update xml route:  " + name + " count:  " + routecount + " fails: " + routefails, null);
+				Util.log("update xml route stats:  " + name + " count:  " + routecount + " fails: " + routefails, null);
 				
 				route = (Element) routes.item(i);				
 				try {
@@ -682,16 +688,11 @@ public class Navigation implements Observer {
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
-		for (int i = 0; i< routes.getLength(); i++) {
-    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+		for (int i = 0; i < routes.getLength(); i++){
 			// unflag any currently active routes. New active route gets flagged below..
+    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
     		((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
-			if (rname.equals(name)) {
-    			route = (Element) routes.item(i);
-    			estimateddistance = Long.parseLong(getRouteDistanceEstimate(rname));
-    			estimatedtime = Integer.parseInt(getRouteTimeEstimate(rname));
-    			break;
-    		}
+			if(rname.equals(name)) route = (Element) routes.item(i); // break; }
 		}
 
 		if (route == null) { // name not found
@@ -712,7 +713,9 @@ public class Navigation implements Observer {
 		
 		// watch dog
 		// TODO: TESTING........
-		if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
+		estimatedmeters = Integer.parseInt(getRouteDistanceEstimate(name));
+		estimatedtime = Integer.parseInt(getRouteTimeEstimate(name));
+	/*	if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 				state.delete(values.routeoverdue);
 				Util.delay(estimatedtime*1000 + 7000); // TODO: make a setting? in seconds 
@@ -728,7 +731,7 @@ public class Navigation implements Observer {
 				}
 			}}).start();
 		}
-		
+	*/	
 		new Thread(new Runnable() { public void run() {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
@@ -736,14 +739,6 @@ public class Navigation implements Observer {
 			// repeat route schedule forever until cancelled
 			while (true) {
 
-				// clear counters and flags  
-				/*
-				state.delete(values.recoveryrotation);
-				state.delete(values.recoveryrotation);
-				failed = false;
-				rotations = 0;
-				*/
-				
 				// determine next scheduled route time, wait if necessary
 				state.delete(State.values.nextroutetime);
 				while (state.exists(State.values.navigationroute)){
@@ -787,7 +782,7 @@ public class Navigation implements Observer {
 				state.delete(values.recoveryrotation);
 				state.delete(values.recoveryrotation);
 				routestarttime = System.currentTimeMillis();
-				routedistance = 0l;
+				routemillimeters = 0;
 				failed = false;
 				rotations = 0;
 				
@@ -897,17 +892,22 @@ public class Navigation implements Observer {
 				// DODO: flawless route? 
 				if( /*!(overdue || failed) &&*/ rotations == 0 && !failed){
 					
-					int seconds = (int) ((System.currentTimeMillis()-routestarttime)/1000);
-					updateRouteEstimates(state.get(State.values.navigationroute), ((estimatedtime + seconds)/2)/1000, ((estimateddistance + routedistance)/2));
-					Util.log("estimated: " + estimateddistance + " distance: " + routedistance + " diff: " + Math.abs(estimateddistance - routedistance) + "mm ", this);
-					Util.log("estimated: " + estimatedtime     + " seconds : " + seconds       + " diff: " + Math.abs(estimatedtime - seconds) + "seconds ", this);
+					int seconds = (int)((System.currentTimeMillis()-routestarttime)/1000);
 					
-				} else {
+					Util.log("["+ name + "] estimated: " + estimatedmeters + " distance: " + routemillimeters + " delta: " + Math.abs(estimatedmeters - routemillimeters) + " mm ", this);
+					Util.log("["+ name + "] estimated: " + estimatedtime   + " seconds : " + seconds     + " delta: " + Math.abs(estimatedtime - seconds) + " seconds ", this);
 					
-					Util.log("runRoute: was recovery rotations: " + rotations, this);
-					
+					if(estimatedtime == 0){
+						Util.log("...... time is zero ....... : " + seconds, this);
+						updateRouteEstimatess(name, seconds, ((estimatedmeters + routemillimeters)/2));
+					} else if(estimatedmeters == 0){
+						Util.log("...... distance is zero ...... : " + seconds, this);
+						updateRouteEstimatess(name, ((estimatedtime + seconds)/2), routemillimeters/1000);
+					}
 				}
 				
+			// else Util.log("runRoute: was recovery rotations: " + rotations + " on route ["+ name + "]", this);
+					
 				if(failed) updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name)+1);
 				else updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name));
 					

@@ -58,7 +58,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-	static long routedistance = 0;
+	// static int routedistance = 0;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -146,12 +146,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					Util.log("log size: "+new File(Settings.stdout).getTotalSpace(), this);
 				
 					
-					new SendMail("oculus prime log files", "dashboard requested.. \n", new String[]{ "stuff.bz.tar", Settings.settingsfile, BanList.banfile });
+					new SendMail("oculus prime log files", "dashboard requested.. \n", new String[]{ Settings.settingsfile, BanList.banfile });
 			}  
 			
 			if(action.equalsIgnoreCase("resetstats") && route!=null){
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route status");
-				Navigation.updateRouteEstimates(route, 0, 0);
+				Navigation.updateRouteEstimatess(route, 0, 0);
 				Navigation.updateRouteStats(route, 0, 0);
 			}
 			
@@ -338,11 +338,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String dock = "<font color=\"blue\">undocked</font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
-			routedistance = 0;
+			// routedistance = 0;
 		}
 		if(!state.getBoolean(values.odometry) || state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
-			routedistance = 0;
+			// routedistance = 0;
 		}
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
@@ -436,12 +436,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				|| ! state.exists(values.navigationroute)) return null;
 		
 		String link = "<td colspan=\"11\"><a href=\"dashboard?action=resetstats&route="
-				+ state.get(values.navigationroute) + "\" title=\"reset xml | " +
-			Long.parseLong(Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)))/1000 + " meters " +
-			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " seconds counter: " +
-			Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
-			Navigation.getRouteFailsString(state.get(values.navigationroute)) + "\">"+
-			state.get(values.navigationroute)+"</a>&nbsp;"; 
+				+ state.get(values.navigationroute) +
+			//+ "\" title=\"reset xml | " +
+			//Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)) + " meters " +
+			//Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " sec, success: " +
+			//Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
+			//Navigation.getRouteFailsString(state.get(values.navigationroute)) 
+			 "\">"+ state.get(values.navigationroute)+"</a>&nbsp;"; 
 		
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)) {
@@ -452,7 +453,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} 
 		
 		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp;waypoint " + state.get(values.roswaypoint);			
-		if(routedistance > 0) link += "&nbsp;|&nbsp;distance " + Util.formatFloat((double)routedistance/(double)1000) + " meters";
+		if(Navigation.routemillimeters > 0) link += "&nbsp;|&nbsp;meters " + Util.formatFloat(Navigation.routemillimeters / (double)1000, 1);
 		
 		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">*overdue*</font>";
 		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">*recovery*</font>";
@@ -515,15 +516,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 //		if(key.equals(values.rosscan.name())) return;
 // 		if(key.equals(values.cpu.name())) return; 
 		
-		if(key.equals(values.distanceangle.name())){
-			try { 
-				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
-			} catch (Exception e){}
-		}
+//		if(key.equals(values.distanceangle.name())){
+//			try { 
+//				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
+//			} catch (Exception e){}
+//		}
 		
-		if(key.equals(values.docking)){
-			if(state.getBoolean(values.docking)) routedistance = 0;
-		}
+	//	if(key.equals(values.docking)){
+	//		if(state.getBoolean(values.docking)) routedistance = 0;
+		
 		
 		// trim size
 		if(history.size() > MAX_STATE_HISTORY) history.remove(0);

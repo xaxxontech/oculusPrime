@@ -87,11 +87,13 @@ public class NavigationLog {
             		&& !status.equals(NavigationLog.PHOTOSTATUS.toString())){
             	long st = Navigation.routestarttime;
             	if(st==0) st = System.currentTimeMillis();
-            	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
+            	str += "Elapsed time: "
+            			+ Util.formatFloat((System.currentTimeMillis()-(double)st)/(double)1000/(double)60, 1)
+            			+" minutes <br>\n";
             }
             
-            if(Navigation.routedistance > 0 && !status.equals(INFOSTATUS.toString())) 
-            	str += "Route distance: " + Util.formatFloat(Navigation.routedistance/(double)1000, 2) + " meters <br>\n";
+            if(Navigation.routemillimeters > 0 && !status.equals(INFOSTATUS.toString())) 
+            	str += "Route distance: " + Util.formatFloat(Navigation.routemillimeters/(double)1000, 2) + " meters <br>\n";
             
             if(Navigation.rotations > 0 && !status.equals(INFOSTATUS.toString())) 
             		str += "Recovery Rotations: " + Navigation.rotations; 

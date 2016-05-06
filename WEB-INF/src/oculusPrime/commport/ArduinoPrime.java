@@ -1486,6 +1486,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	public void movedistance(final direction dir, final double meters) {
 		new Thread(new Runnable() {
+			@SuppressWarnings("incomplete-switch")
 			public void run() {
 				
 				final int tempspeed = state.getInteger(State.values.motorspeed);
@@ -1497,10 +1498,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				short[] depthFrameAfter = null;
 				
 				// stereo
-				short[][] cellsBefore = null;
-				short[][] cellsAfter = null;
-
-				String currentdirection = state.get(State.values.direction);
+	//			short[][] cellsBefore = null;
+	//			short[][] cellsAfter = null;
+	//			String currentdirection = state.get(State.values.direction);
 				
 				switch (dir) {
 					case forward:
