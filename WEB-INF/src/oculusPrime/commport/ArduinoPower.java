@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.949;
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.950; // trailing zeros ignored!
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -33,6 +33,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte READCAPACITY = '6';
 	public static final byte PING = 'X'; 
 	public static final byte GET_PRODUCT = 'x';
+	public static final byte READ_SAFECURRENT = 'G';
+	public static final byte READ_DOCKVOLTAGE = 'E';
 	public static final int COMM_LOST = -99;
 	
 	protected Application application = null;
@@ -118,13 +120,15 @@ public class ArduinoPower implements SerialPortEventListener  {
 			new WatchDog().start();
 		}
 	}
-	
+
 	public void initialize() {
 		
 		Util.debug("initialize", this);
 		sendCommand(READERROR);
 		lastReset = System.currentTimeMillis();
 		sendCommand(READCAPACITY);
+		sendCommand(READ_SAFECURRENT);
+		sendCommand(READ_DOCKVOLTAGE);
 	}
 	
 	private void connect() {
@@ -290,6 +294,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		if (firmwareversion == 0) {
 			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
 			Util.log("error, "+msg, this);
+			PowerLogger.append(msg, this);
 			state.set(State.values.guinotify, msg);
 			return;
 		}
@@ -298,8 +303,9 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
 				String msg = "current power firmware: "+firmwareversion+
 						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
-				state.set(State.values.guinotify, msg);
+//				state.set(State.values.guinotify, msg);
 				Util.log(msg, this);
+				PowerLogger.append(msg, this);
 				return;
 			}
 
