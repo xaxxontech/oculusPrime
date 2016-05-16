@@ -682,8 +682,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case opennisensor:
 			if(str.equals("on")) { 
-				openNIRead.startDepthCam(); 
-				if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
+				if (openNIRead.startDepthCam())
+					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
+				else  messageplayer("roslaunch already running, abort", null, null);
 			}
 			else { 
 				openNIRead.stopDepthCam(); 
@@ -773,8 +774,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case roslaunch:
-			Ros.launch(str);
-			messageplayer("roslaunch "+str+".launch", null, null);
+			if (Ros.launch(str))
+				messageplayer("roslaunch "+str+".launch", null, null);
+			else
+				messageplayer("roslaunch already running", null, null);
 			break;
 		
 		case savewaypoints:

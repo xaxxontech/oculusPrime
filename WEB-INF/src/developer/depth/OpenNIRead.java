@@ -11,6 +11,7 @@ import java.util.Map;
 import developer.Ros;
 import developer.image.ImageUtils;
 import oculusPrime.Application;
+import oculusPrime.PlayerCommands;
 import oculusPrime.Util;
 
 
@@ -27,8 +28,8 @@ public class OpenNIRead  {
 	private static int height = 240;
 	private final static int BYTEDEPTH = 2;
 	
-	public void startDepthCam() {
-		if (depthCamInit) return;
+	public boolean startDepthCam() {
+		if (depthCamInit) return false;
 		oculusPrime.Util.log("START ros openni 320x240", this);
 
 		lockfile.delete();
@@ -56,9 +57,12 @@ public class OpenNIRead  {
 //		String cmd = Application.RED5_HOME+Util.sep+"ros.sh"; // setup ros environment
 //		cmd += " roslaunch oculusprime depthcam_to_java.launch";
 //		Util.systemCall(cmd);
-		Ros.launch("depthcam_to_java");
+
+		if (!Ros.launch("depthcam_to_java")) return false;
+
 		depthCamGenerating = true;
 		depthCamInit = true;
+		return true;
 		
 	}
 	

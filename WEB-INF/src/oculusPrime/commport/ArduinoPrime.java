@@ -21,7 +21,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.128;
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.128; // trailing zeros ignored!
 	public static final long DEAD_TIME_OUT = 20000;
 	public static final int WATCHDOG_DELAY = 8000;
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
@@ -243,7 +243,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
 				String msg = "current power firmware: "+firmwareversion+
 						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
-				state.set(State.values.guinotify, msg);
+//				state.set(State.values.guinotify, msg);
 				Util.log(msg, this);
 				return;
 			}
@@ -1107,10 +1107,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		if (!settings.getBoolean(ManualSettings.usearcmoves))  return;
 		// 	measured carpet = 195pwm (volts comped 0.0857degrees per ms  12.04 battery volts)
 		// no carpet = pwm 110-140
-		int pwmthreshold = 150;
 		boolean rosarcmove = state.getBoolean(State.values.rosarcmove);
-		if (unVoltsComp(state.getInteger(State.values.odomturnpwm)) > pwmthreshold)
-		{ if (rosarcmove) state.set(State.values.rosarcmove, false); }
+		if (unVoltsComp(state.getInteger(State.values.odomturnpwm)) > settings.getInteger(ManualSettings.arcpwmthreshold))
+			{ if (rosarcmove) state.set(State.values.rosarcmove, false); }
 		else { if (!rosarcmove) state.set(State.values.rosarcmove, true); }
 	}
 	

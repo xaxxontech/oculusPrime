@@ -9,10 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
-import oculusPrime.AutoDock;
-import oculusPrime.Settings;
-import oculusPrime.State;
-import oculusPrime.Util;
+import oculusPrime.*;
 
 public class Ros {
 	
@@ -163,11 +160,39 @@ public class Ros {
 
 		return str;
 	}
-	
-	public static void launch(String launch) {
+
+	/**
+	 *
+	 * @param launch
+	 * @return false if roslauch already running
+	 */
+	public static boolean launch(String launch) {
+		if (checkIfRoslaunchRunning())	 return false;
+
 		String cmd =  Settings.redhome+Util.sep+"ros.sh"; // setup ros environment
 		cmd += " roslaunch oculusprime "+launch+".launch";
 		Util.systemCall(cmd);
+		return true;
+	}
+
+	private static boolean checkIfRoslaunchRunning() {
+		try {
+			Process proc = Runtime.getRuntime().exec("ps xa");
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String line;
+			while ((line = procReader.readLine()) != null) {
+//				Util.log("Ros.checkIfRoslaunchRunning(): "+line, null);
+				if (line.contains("roslaunch")) {
+//					Util.log("Ros.checkIfRoslaunchRunning(): found roslaunch!", null);
+					procReader.close();
+					return true;
+				}
+			}
+			procReader.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return false;
 	}
 	
 	public static void savewaypoints(String str) {

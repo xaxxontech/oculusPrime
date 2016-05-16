@@ -158,10 +158,10 @@ public class NavigationLog {
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
         str += "."+ERRORSTATUS.toLowerCase()+"expand {background-color: #FC7E7E; padding-bottom: 3px}\n";
-        str += "."+PHOTOSTATUS.toLowerCase()+" {background-color: #CC00CC; cursor: pointer; " +
+        str += "."+PHOTOSTATUS.toLowerCase()+" {background-color: #cb72e5; cursor: pointer; " +
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
-        str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #770077; padding-bottom: 3px}\n";
+        str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #d3a6e0; padding-bottom: 3px}\n";
 
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";
