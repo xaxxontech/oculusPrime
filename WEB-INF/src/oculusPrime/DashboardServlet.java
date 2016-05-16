@@ -141,7 +141,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				// 58672295936Settings.stdout, 
 				//if(new File(Settings.stdout).getTotalSpace() > 999){
 					
-					Util.compressFiles("stuff.bz.tar", new String[]{ Settings.settingsfile, BanList.banfile });
+					Util.compressFiles("ssstuff.bz.tar", new String[]{ Settings.settingsfile, BanList.banfile });
 				//	Util.systemCall("tail " + Settings.stdout + " 100 > log.txt");
 					Util.log("log size: "+new File(Settings.stdout).getTotalSpace(), this);
 				
@@ -165,11 +165,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(action.equalsIgnoreCase("restart")){
-				new Thread(new Runnable() { public void run() {
-					Util.log("restart called, going down..", this);
-					settings.writeSettings(ManualSettings.restarted, (settings.getInteger(ManualSettings.restarted)+1)+" ");
-					Util.delay(3000); // redirect before calling.. 
-					app.driverCallServer(PlayerCommands.restart, null);
+				new Thread(new Runnable() { public void run(){
+					int b = settings.getInteger(ManualSettings.restarted);
+					if(b > 10){
+						Util.log("restart called but reboot neededd, going down..", this);
+						settings.writeSettings(ManualSettings.restarted, "0");
+						Util.delay(3000); // redirect before calling.. 
+						app.driverCallServer(PlayerCommands.reboot, null);
+					} else {
+						Util.log("restart called, going down..", this);
+						settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+						Util.delay(3000); // redirect before calling.. 
+						app.driverCallServer(PlayerCommands.restart, null);
+					}
 				}}).start();
 			}
 			
@@ -377,9 +385,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>java</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins " + restarts 
 			+ "<td><b>archive</b><td>"+ archivelogs + Util.countMbytes(Settings.archivefolder) + "</a> mb<td></tr> \n" );
 			
-		str.append("<tr><td><b>battery</b>&nbsp;<td>" + life
-				+ "<td><b>dock</b><td>" + dock
-				//+ "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
+		str.append("<tr><td><b>battery</b>&nbsp;<td>" + life + "<td><b>dock</b><td>" + dock
+			// + "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
 			+ "<td><b>images</b><td>" + Util.countMbytes(Settings.framefolder) + " mb<td></tr> \n" );
 		
 		String od = "<a href=\"dashboard?action=startnav\" title=\"start ROS navigation \">on</a></font>&nbsp;&nbsp;|&nbsp;&nbsp;off"; 

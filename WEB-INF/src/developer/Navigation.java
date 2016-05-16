@@ -506,7 +506,7 @@ public class Navigation implements Observer {
 	
 	public static void updateRouteEstimatess(final String name, final int seconds, final long mm){
 
-		Util.log("...................update xml route:  " + name + " mm:  " + mm + " seconds: " + seconds, null);
+		// Util.log("...updateRouteEstimatess:  " + name + " mm:  " + mm + " seconds: " + seconds, null);
 
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
@@ -517,7 +517,7 @@ public class Navigation implements Observer {
 			
 				route = (Element) routes.item(i);				
 				try {	
-					Util.log(".....update xml route distance:  " + name + " distance:  " + mm, null);
+					// Util.log(".....update xml route distance:  " + name + " distance:  " + mm, null);
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(mm / (double)1000, 0));
 				} catch (Exception e) { // create if not there 
 					Util.log("xml error missing tag: " + e.getMessage(), null);
@@ -526,7 +526,7 @@ public class Navigation implements Observer {
 					route.appendChild(dist);
 				}
 				try {
-					Util.log(".....update xml route distance:  " + name + " seconds: " + seconds, null);
+					// Util.log(".....update xml route distance:  " + name + " seconds: " + seconds, null);
 					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
 					Util.log("xml error missing tag: " + e.getMessage(), null);
@@ -638,7 +638,7 @@ public class Navigation implements Observer {
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				
-				Util.log("update xml route stats:  " + name + " count:  " + routecount + " fails: " + routefails, null);
+				// Util.log(".....update xml route stats:  " + name + " count:  " + routecount + " fails: " + routefails, null);
 				
 				route = (Element) routes.item(i);				
 				try {
@@ -713,10 +713,7 @@ public class Navigation implements Observer {
 		
 		// watch dog
 		// TODO: TESTING........
-		/// estimatedmeters = (int) Long.parseLong(Util.formatFloat(getRouteDistanceEstimate(name), 0));
-		/// estimatedtime = Integer.parseInt(getRouteTimeEstimate(name));
-		/// Util.log("starting routed.. xml now: " +estimatedtime + "sec " + estimatedmeters + "meters ", this);
-
+		
 	/*	if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 				state.delete(values.routeoverdue);
@@ -738,17 +735,18 @@ public class Navigation implements Observer {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
 			
-			if(settings.getBoolean(ManualSettings.developer.name())){
-				Util.log("starting routed.. xml estimate: " +estimatedtime + "sec   " + estimatedmeters + "meters ", this);
-				estimatedmeters = (int) Long.parseLong(Util.formatFloat(getRouteDistanceEstimate(name), 0));
-				estimatedtime = Integer.parseInt(getRouteTimeEstimate(name));
-				state.delete(values.recoveryrotation);
-				state.delete(values.routeoverdue);
-			}
-			
 			// repeat route schedule forever until cancelled
 			while (true) {
-
+	
+				// TODO: DEV FLAG 
+				if(settings.getBoolean(ManualSettings.developer.name())){
+					estimatedmeters = (int) Long.parseLong(Util.formatFloat(getRouteDistanceEstimate(name), 0));
+					estimatedtime = Integer.parseInt(getRouteTimeEstimate(name));
+					state.delete(values.recoveryrotation);
+					state.delete(values.routeoverdue);				
+					Util.log("starting routed, xml estimate: " +estimatedtime + " seconds, " + estimatedmeters + " meters", this);
+				}
+				
 				// determine next scheduled route time, wait if necessary
 				state.delete(State.values.nextroutetime);
 				while (state.exists(State.values.navigationroute)){
@@ -901,51 +899,50 @@ public class Navigation implements Observer {
 				}
 			
 				// TODO: flawless route? 
-				if( /*!(overdue || failed) &&*/ rotations == 0 && !failed){
+				if( /*!(overdue*/ rotations == 0 && !failed){
 					
 					int seconds = (int)((System.currentTimeMillis()-routestarttime)/1000);
-					Util.log("["+ name + "] estimated: " + estimatedmeters + " distance: " + routemillimeters + " delta: " + Math.abs(estimatedmeters - routemillimeters) + " mm ", this);
-					Util.log("["+ name + "] estimated: " + estimatedtime   + " seconds : " + seconds     + " delta: " + Math.abs(estimatedtime - seconds) + " seconds ", this);
+					Util.log("["+ name + "] estimated: " + estimatedmeters + " meters: " +
+							Util.formatFloat((double)routemillimeters/(double)1000) + 
+							" delta: " + Math.abs(estimatedmeters - routemillimeters/1000) + " meters ", this);
+					
+					Util.log("["+ name + "] estimated: " + estimatedtime   + " seconds : " + seconds     
+							+ " delta: " + Math.abs(estimatedtime - seconds) + " seconds ", this);
 					
 					if(estimatedtime == 0 && estimatedmeters > 0){
-						// Util.log("...... time is zero ....... meters:: " + estimatedmeters, this);
-						updateRouteEstimatess(name, seconds, ((estimatedmeters + routemillimeters)/2));
+						Util.log("route estimate is zero, meters = " + estimatedmeters, this);
+						updateRouteEstimatess(name, seconds, ((estimatedmeters*1000 + routemillimeters/1000)/2));
 					} 
 					
 					if(estimatedmeters == 0 && estimatedtime > 0){
-						// Util.log("...... distance is zero ...... sec:: " + seconds, this);
+						Util.log("route estimated distance is zero, seconds = " + seconds, this);
 						updateRouteEstimatess(name, ((estimatedtime + seconds)/2), routemillimeters);
-					}
+					} 
 					
 					if(estimatedmeters > 0 && estimatedtime > 0){
-						updateRouteEstimatess(name, seconds, estimatedmeters + routemillimeters);
-
-				//		updateRouteEstimatess(name, ((estimatedtime + seconds)/2), ((estimatedmeters + routemillimeters)/2));
-				//		Util.log("...... writing .. averages ....", this);
-						Util.log("xml now: " + getRouteTimeEstimate(name) + "sec " + getRouteDistanceEstimate(name) + "meters ", this);
-					}
+						Util.log("route distance and time greater zero.. compute average", this);
+						updateRouteEstimatess(name, ((estimatedtime + seconds)/2),((estimatedmeters*1000 + routemillimeters)/2));
+					} 
 					
 					if(estimatedmeters == 0 && estimatedtime == 0){
-				//		Util.log("...... no estimates, writing current route info ....", this);
+						Util.log("route distance and time are zero, use these values", this);
 						updateRouteEstimatess(name, seconds, estimatedmeters + routemillimeters);
-						Util.log("xml now: " + getRouteTimeEstimate(name) + "sec " + getRouteDistanceEstimate(name) + "meters ", this);
-					}
+					}	
+					
+					Util.debug("route xml updated: " + getRouteTimeEstimate(name) + " seconds " + getRouteDistanceEstimate(name) + " meters ", this);
 				}
 									
 				if(failed) updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name)+1);
 				else updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name));
-					
-				if(settings.getBoolean(ManualSettings.developer.name())){
-					NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, "Route Delta: " + Math.abs(estimatedmeters - routemillimeters) + " mm "
-							+ Math.abs(estimatedtime - (int)((System.currentTimeMillis()-routestarttime)/1000)) + " seconds ");
-				} else NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
+				NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
 
 				// reset 	
 				consecutiveroute++;
 				state.delete(values.recoveryrotation);
 				state.delete(values.routeoverdue);
 				
-				if (!delayToNextRoute(navroute, name, id)) return;
+				// wait 
+				if(!delayToNextRoute(navroute, name, id)) return;
 			}
 		}}).start();
 	}

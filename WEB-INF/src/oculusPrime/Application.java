@@ -297,19 +297,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
-		Util.updateLocalIPAddress();
-
-		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
-		//else {
+		Util.updateLocalIPAddress();	
 		Util.setJettyTelnetPort();
 		Util.updateJetty();		 
-		
-		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
-		
+			
 		watchdog = new SystemWatchdog(this);
-
-		Util.debug("application initialize done", this);
+		// Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 		
+		if (settings.getBoolean(ManualSettings.developer.name()) && state.equals(values.dockstatus, AutoDock.UNDOCKED)){
+			new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
+			watchdog.redock("Oculus Prime rebooted undocked");
+			// if(navigation != null) navigation.dock();
+		}
+		
+		Util.debug("application initialize done", this);
 	}
 
 	private void grabberInitialize() {
@@ -751,8 +752,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case erroracknowledged:
 			if (str.equals("true")) {
 				Util.log("power error acknowledged",this);
-				Util.log("power error acknowledged","Application_power");
-				
 				if (watchdog.powererrorwarningonly) { 
 					powerport.clearWarningErrors(); 
 					watchdog.lastpowererrornotify = null; 
