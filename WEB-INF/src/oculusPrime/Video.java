@@ -16,15 +16,19 @@ public class Video {
     private String port = "1935";
     private int devicenum = 0;  // should match lifecam cam
     private int adevicenum = 1; // should match lifecam mic
-    private int quality = 5;
+    private static final int defaultquality = 5;
+    private static final int quality720p = 7;
     private static final int defaultwidth=640;
     private static final int defaultheight=480;
+    private static final int lowreswidth=320;
+    private static final int lowresheight=240;
     private static final String PATH="/dev/shm/avconvframes/";
     private static final String EXT=".bmp";
     private volatile long lastframegrab = 0;
     private int lastwidth=0;
     private int lastheight=0;
     private int lastfps=0;
+    private int lastquality = 0;
     private Application.streamstate lastmode = Application.streamstate.stop;
     private long publishid = 0;
     static final long STREAM_RESTART = Util.ONE_MINUTE*6;
@@ -52,7 +56,7 @@ public class Video {
             String cmd[] = new String[]{"arecord", "--list-devices"};
             Process proc = Runtime.getRuntime().exec(cmd);
             proc.waitFor();
-            proc.waitFor();
+//            proc.waitFor();
 
             String line = null;
             BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -83,6 +87,10 @@ public class Video {
         final long id = System.currentTimeMillis();
         publishid = id;
 
+        lastquality = defaultquality;
+        if (w > defaultwidth) lastquality = quality720p;
+        final int q = lastquality;
+
         new Thread(new Runnable() { public void run() {
 
             // nuke currently running avconv if any
@@ -96,7 +104,7 @@ public class Video {
             switch (mode) {
                 case camera:
                     Util.systemCall(avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
-                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
+                            " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
                     // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
@@ -115,34 +123,10 @@ public class Video {
                     // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream2
 
                     Util.systemCall(avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
-                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
+                            " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
                             port + "/oculusPrime/stream1");
 
-
-
-//                    String cmd = "bash -c '"+ avprog+" -re -f alsa -ac 1 -ar 22050 " +
-//                            "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
-//                            port + "/oculusPrime/stream2";
-//                    // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream2
-//
-//                    cmd += "</dev/null >/dev/null 2>/dev/null & ";
-//
-//                    if (avprog.equals(FFMPEG))
-
-//                        cmd += "sleep 1; v4l2-ctl --set-input "+devicenum+" ; ";
-//
-//                    cmd += avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
-//                            " -i /dev/video" + devicenum + " -f flv -q " + quality + " rtmp://" + host + ":" +
-//                            port + "/oculusPrime/stream1";
-//
-//                    cmd += " '";
-//
-//                    Util.log(cmd, this); // TODO: nuke
-//                    Util.systemCall(cmd);
-
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
-//                    if (state.get(State.values.osarch).equals(Application.ARM))
-//                        Util.delay(Application.STREAM_CONNECT_DELAY);
 
                     break;
                 case stop:
@@ -161,7 +145,7 @@ public class Video {
         new Thread(new Runnable() { public void run() {
             long start = System.currentTimeMillis();
             while ( id == publishid && (System.currentTimeMillis() < start + STREAM_RESTART) ||
-                    state.getBoolean(State.values.writingframegrabs) ||
+                    state.exists(State.values.writingframegrabs) ||
                     state.getBoolean(State.values.autodocking) )
                 Util.delay(50);
 
@@ -179,9 +163,10 @@ public class Video {
     }
 
     private void forceShutdownFrameGrabs() {
-        if (state.getBoolean(State.values.writingframegrabs)) {
-            state.set(State.values.writingframegrabs, false);
+        if (state.exists(State.values.writingframegrabs)) {
+            state.delete(State.values.writingframegrabs);
 //            Util.delay(STREAM_CONNECT_DELAY);
+            Util.log("writingframegrabs delete", this); // TODO: nuke
         }
     }
 
@@ -189,11 +174,25 @@ public class Video {
 
         state.set(State.values.framegrabbusy.name(), true);
 
-//        Util.log("framegrab start", this); // TODO: nuke
         lastframegrab = System.currentTimeMillis();
 
         new Thread(new Runnable() { public void run() {
-            if (!state.getBoolean(State.values.writingframegrabs)) {
+
+            // resolution check: set to same as main stream params as default
+            int width = lastwidth;
+            // set lower resolution if required
+            if (res.equals(AutoDock.LOWRES)) {
+                width=lowreswidth;
+            }
+
+            if (!state.exists(State.values.writingframegrabs)) {
+                dumpframegrabs(res);
+                Util.delay(STREAM_CONNECT_DELAY);
+            }
+            else if (state.getInteger(State.values.writingframegrabs) != width) {
+                Util.log("dumpframegrabs() not using width: "+width, this);
+                forceShutdownFrameGrabs();
+                Util.delay(STREAM_CONNECT_DELAY);
                 dumpframegrabs(res);
                 Util.delay(STREAM_CONNECT_DELAY);
             }
@@ -231,25 +230,26 @@ public class Video {
 
         Util.log("dumpframegrabs start", this); // TODO: nuke
 
-        state.set(State.values.writingframegrabs, true);
-
         File dir=new File(PATH);
         for(File file: dir.listFiles()) file.delete(); // nuke any existing files
 
-        int width = defaultwidth;
-        int height = defaultheight;
+        // set to same as main stream params as default
+        int width = lastwidth;
+        int height = lastheight;
+        int q = lastquality;
 
-        // set resolution
+        // set lower resolution if required
         if (res.equals(AutoDock.LOWRES)) {
-            width=320;
-            height=240;
+            width=lowreswidth;
+            height=lowresheight;
         }
 
+        state.set(State.values.writingframegrabs, width);
 
         try {
             Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
                     "rtmp://" + host + ":" + port + "/oculusPrime/stream1 live=1", "-s", width+"x"+height,
-                    "-r", Integer.toString(dumpfps), "-q", Integer.toString(quality), PATH+"%d"+EXT  });
+                    "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH+"%d"+EXT  });
             // avconv -analyzeduration 0 -i rtmp://127.0.0.1:1935/oculusPrime/stream1 live=1 -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
         }catch (Exception e) { Util.printError(e); }
 
@@ -259,7 +259,7 @@ public class Video {
 
             // continually clean all but the latest few files, prevent mem overload
             int i=1;
-            while(state.getBoolean(State.values.writingframegrabs)
+            while(state.exists(State.values.writingframegrabs)
                     && System.currentTimeMillis() - lastframegrab < Util.ONE_MINUTE) {
                 File file = new File(PATH+i+EXT);
                 if (file.exists() && new File(PATH+(i+32)+EXT).exists()) {
@@ -269,10 +269,11 @@ public class Video {
                 Util.delay(50);
             }
 
-            state.set(State.values.writingframegrabs, false);
+            state.delete(State.values.writingframegrabs);
             Util.systemCall("pkill -n " + avprog); // kills newest only
             File dir=new File(PATH);
             for(File file: dir.listFiles()) file.delete(); // clean up (gets most files)
+            Util.log("dumpframegrabs stop", this); // TODO: nuke
 
         } }).start();
 
