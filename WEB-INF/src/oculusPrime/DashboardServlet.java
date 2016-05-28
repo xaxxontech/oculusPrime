@@ -30,7 +30,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 100; // in development keep high number 
+	private static final int MAX_STATE_HISTORY = 25; // in development keep high number 
 	private static final String HTTP_REFRESH_DELAY_SECONDS = "10"; // keep low in development 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
@@ -67,8 +67,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		settings = Settings.getReference();
 		ban = BanList.getRefrence();
 		state.addObserver(this);
-		Document document = Util.loadXMLFromString(routesLoad());
-		routes = document.getDocumentElement().getChildNodes();
 	}
 
 	public static void setApp(Application a){app = a;}
@@ -430,7 +428,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	private String getRouteLinks(){   
 	
 		if( state.getBoolean(values.autodocking)) return null;
-	
+		
+		Document document = Util.loadXMLFromString(routesLoad());
+		routes = document.getDocumentElement().getChildNodes();
+		
 		String link = "<td colspan=\"11\">";
 		for (int i = 0; i < routes.getLength(); i++) {  
 			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();

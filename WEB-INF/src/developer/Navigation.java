@@ -726,7 +726,7 @@ public class Navigation implements Observer {
 		// watch dog
 		// TODO: TESTING........
 		
-	/*	if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
+		if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
 			new Thread(new Runnable() { public void run() {
 				state.delete(values.routeoverdue);
 				Util.delay(estimatedtime*1000 + 7000); // TODO: make a setting? in seconds 
@@ -742,7 +742,7 @@ public class Navigation implements Observer {
 				}
 			}}).start();
 		}
-	*/	
+	
 		new Thread(new Runnable() { public void run() {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
