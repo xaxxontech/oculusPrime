@@ -47,8 +47,8 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
 	public static final int MIN_FILE_COUNT = 20;  
-	public static final int MAX_HISTORY = 60;
-	public static final int PRECISION = 2;	
+	public static final int MAX_HISTORY = 40;
+	public static final int PRECISION = 1;	
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;

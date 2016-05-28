@@ -80,9 +80,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
-		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
-		initialize();
+		initialize();		
+		
+		// do last always 
+		if(settings.getBoolean(ManualSettings.developer.name())) DashboardServlet.setApp(this);
 	}
 
 	@Override
@@ -1448,7 +1450,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void restart() {
-		messageplayer("restarting server application", null, null);	
+		messageplayer("restarting server application", null, null);
+		
+		if(settings.getBoolean(ManualSettings.developer.name())){
+			int b = settings.getInteger(ManualSettings.restarted);
+			settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+//			if(settings.getInteger(ManualSettings.restarted) > 10){
+//			Util.log("restart called but reboot neededd, going down..", this);
+		}
 		
 		// write file as restart flag for script
 		File f = new File(Settings.redhome + Util.sep + "restart");
@@ -1468,6 +1477,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
+		settings.writeSettings(ManualSettings.restarted, "0");
 
 		if (navigation != null) { // TODO: << condition required?
 			if (state.exists(values.odomlinearpwm)) {

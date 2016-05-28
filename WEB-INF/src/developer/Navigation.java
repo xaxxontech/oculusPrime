@@ -553,18 +553,7 @@ public class Navigation implements Observer {
 	}
 	
 	public static int getRouteFails(final String name){
-		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result =  "0";
-		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			if (rname.equals(name)){
-				try {
-					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
-				} catch (Exception e){}
-				break;
-			}
-		}
-		return Integer.parseInt(result);
+		return Integer.parseInt(getRouteFailsString(name));
 	}
 	
 	public static String getRouteFailsString(final String name){
@@ -583,63 +572,46 @@ public class Navigation implements Observer {
 	}
 	
 	public static int getRouteCount(final String name){
-		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = "0";
-		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			if (rname.equals(name)){
-				try {
-					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
-				} catch (Exception e){}
-				break;
-			}
-		}
-		return Integer.parseInt(result);
+		return Integer.parseInt( getRouteCountString(name));
 	}
 	
 	public static String getRouteCountString(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = "0";
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-				try {
-					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
-				} catch (Exception e){}
-				break;
+				try {	
+					return ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
+				} catch (Exception e){break;}
 			}
 		}
-		return result;
+		return "0";
 	}
 	
 	public static String getRouteDistanceEstimate(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = "0";
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
-					result = ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent(); 
-				} catch (Exception e){}
-				break;
+					return ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent(); 
+				} catch (Exception e){break;}
 			}
 		}
-		return result;
+		return "0";
 	}
 	
 	public static String getRouteTimeEstimate(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = "0";
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
-					result = ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent(); 
-				} catch (Exception e){}
-				break;
+					return ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent(); 
+				} catch (Exception e){break;}
 			}
 		}
-		return result;
+		return "0";
 	}
 	
 	public static void updateRouteStats(final String name, final int routecount, final int routefails){
@@ -650,13 +622,13 @@ public class Navigation implements Observer {
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				
-				// Util.log(".....update xml route stats:  " + name + " count:  " + routecount + " fails: " + routefails, null);
+				Util.debug(".....update xml route stats:  " + name + " count:  " + routecount + " fails: " + routefails, null);
 				
 				route = (Element) routes.item(i);				
 				try {
 					route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).setTextContent(Integer.toString(routecount));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), null);
+					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node count = document.createElement(ROUTE_COUNT_TAG);
 					count.setTextContent(Integer.toString(routecount));
 					route.appendChild(count);
@@ -664,7 +636,7 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), null);
+					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node fail = document.createElement(ROUTE_FAIL_TAG);
 					fail.setTextContent(Integer.toString(routefails));
 					route.appendChild(fail);
@@ -723,29 +695,29 @@ public class Navigation implements Observer {
 		String xmlstring = Util.XMLtoString(document);
 		saveRoute(xmlstring);
 		
-		// watch dog
-		// TODO: TESTING........
-		
-		if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
-			new Thread(new Runnable() { public void run() {
-				state.delete(values.routeoverdue);
-				Util.delay(estimatedtime*1000 + 7000); // TODO: make a setting? in seconds 
-				if( ! (state.getBoolean(State.values.autodocking) || 
-				   state.equals(values.roswaypoint, DOCK) ||
-				   state.equals(State.values.dockstatus, AutoDock.DOCKING) || 
-				   state.equals(State.values.dockstatus, AutoDock.DOCKED))){
-					
-					state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
-					Util.log("Overdue on Route, estimated time: " + estimatedtime + " seconds", this);
-					dock(); // set new target 
-					NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Overdue, called back to dock after " + estimatedtime + " seconds");
-				}
-			}}).start();
-		}
 	
 		new Thread(new Runnable() { public void run() {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
+			
+			// watch dog
+			// TODO: TESTING........
+			if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
+				new Thread(new Runnable() { public void run() {
+					state.delete(values.routeoverdue);
+					Util.delay(estimatedtime*1000 + 7000); // TODO: make a setting? in seconds 
+					if( ! (state.getBoolean(State.values.autodocking) || 
+					   state.equals(values.roswaypoint, DOCK) ||
+					   state.equals(State.values.dockstatus, AutoDock.DOCKING) || 
+					   state.equals(State.values.dockstatus, AutoDock.DOCKED))){
+						
+						state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
+						Util.log("Overdue on Route, estimated time: " + estimatedtime + " seconds", this);
+						dock(); // set new target 
+						NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Overdue, called back to dock after " + estimatedtime + " seconds");
+					}
+				}}).start();
+			}
 			
 			// repeat route schedule forever until cancelled
 			while (true) {
@@ -853,7 +825,6 @@ public class Navigation implements Observer {
 					}
 					
 					// failed, try next waypoint
-					// TODO: state.dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						
 						NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname, wpname, name);

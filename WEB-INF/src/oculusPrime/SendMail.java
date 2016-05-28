@@ -9,12 +9,12 @@ import oculusPrime.Settings;
 
 public class SendMail {
 
-	private Settings settings = Settings.getReference();
-	private final String username = settings.readSetting(GUISettings.email_username.toString());
-	private final String password = settings.readSetting(GUISettings.email_password.toString());
-	private final String host = settings.readSetting(GUISettings.email_smtp_server.toString());
-	private final int port = Integer.parseInt(settings.readSetting(GUISettings.email_smtp_port.toString()));
-	private final String from = settings.readSetting(GUISettings.email_from_address.toString());
+	private static Settings settings = Settings.getReference();
+	private final static String username = settings.readSetting(GUISettings.email_username.toString());
+	private final static String password = settings.readSetting(GUISettings.email_password.toString());
+	private final static String host = settings.readSetting(GUISettings.email_smtp_server.toString());
+	private final static int port = Integer.parseInt(settings.readSetting(GUISettings.email_smtp_port.toString()));
+	private final static String from = settings.readSetting(GUISettings.email_from_address.toString());
 	private String recipient = settings.readSetting(GUISettings.email_from_address.toString());
 	private Application application = null;
 	private String subject = null;
@@ -28,8 +28,7 @@ public class SendMail {
 
 		new Thread(new Runnable() {
 			public void run() {
-				SendMail.sendEmailWithAttachments(host, settings.readSetting(GUISettings.email_smtp_port.toString()), 
-						username, text, recipient, sub, text, files);
+				SendMail.sendEmailWithAttachments(sub, text, files);
 			}
 		}).start();
 	}
@@ -90,7 +89,7 @@ public class SendMail {
 		props.put("mail.smtp.port", port);
 		props.put("mail.smtp.starttls.enable", "true");
 		Session mailSession = Session.getDefaultInstance(props);
-
+		
 		try {
 
 			MimeMessage message = new MimeMessage(mailSession);
@@ -104,8 +103,7 @@ public class SendMail {
 			transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO));
 			transport.close();
 
-			if (application != null)
-				application.message("email has been sent", null, null);
+			if (application != null) application.message("email has been sent", null, null);
 			Util.log("email has been sent", this);
 
 		} catch (MessagingException e) {
@@ -116,29 +114,42 @@ public class SendMail {
 	}
 
 	/** */
-	public static void sendEmailWithAttachments(String host, String port, final String userName, final String password,
-			String toAddress, String subject, String message, String[] attachFiles) {
+	public static void sendEmailWithAttachments(
+			//String host, //String port, //final String userName, final String password, String toAddress, 
+			String subject, String message, String[] attachFiles) {
+		
+		Properties props = new Properties();
+		props.put("mail.smtp.host", host);
+		props.put("mail.user", username);
+		props.put("mail.password", password);
+		props.put("mail.smtp.port", port);
+		props.put("mail.smtp.starttls.enable", "true");
+		props.put("mail.smtp.starttls.enable", "true");
 
+	//	Session mailSession = Session.getDefaultInstance(props);
+/*
 		Properties properties = new Properties();
 		properties.put("mail.smtp.host", host);
 		properties.put("mail.smtp.port", port);
 		properties.put("mail.smtp.auth", "true");
 		properties.put("mail.smtp.starttls.enable", "true");
-		properties.put("mail.user", userName);
-		properties.put("mail.password", password);
-
+		if(!userName.equals("disabled")) properties.put("mail.user", userName);
+		if(!password.equals("disabled")) properties.put("mail.password", password);
+*/
+		
 		Authenticator auth = new Authenticator() {
 			public PasswordAuthentication getPasswordAuthentication() {
-				return new PasswordAuthentication(userName, password);
+				return new PasswordAuthentication(username, password);
 			}
 		};
 
-		Session session = Session.getInstance(properties, auth);
+//		Transport transport = mailSession.getTransport("smtp");
+		Session session = Session.getInstance(props, auth);
 		Message msg = new MimeMessage(session);
 
 		try {
-			msg.setFrom(new InternetAddress(userName));
-			InternetAddress[] toAddresses = { new InternetAddress(toAddress) };
+			msg.setFrom(new InternetAddress(username));
+			InternetAddress[] toAddresses = { new InternetAddress(from) };
 			msg.setRecipients(Message.RecipientType.TO, toAddresses);
 			msg.setSubject(subject);
 			msg.setSentDate(new Date());

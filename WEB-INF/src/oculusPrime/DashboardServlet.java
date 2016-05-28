@@ -31,7 +31,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	
 	private static final int MAX_STATE_HISTORY = 25; // in development keep high number 
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "10"; // keep low in development 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "13"; // keep low in development 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -58,7 +58,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-	// static int routedistance = 0;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -91,6 +90,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 		if( ! ban.knownAddress(request.getRemoteAddr())){
 			Util.log("unknown address: sending to login: "+request.getRemoteAddr(), this);
+			response.sendRedirect("/oculusPrime");   
+			return;
+		}
+		
+		if( ! settings.getBoolean(ManualSettings.developer.name())){
+			Util.log("not in developer mode: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
@@ -134,17 +139,29 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 
 			if(action.equalsIgnoreCase("email")){
+				new Thread(new Runnable() { public void run() {
+					
+					StringBuffer text = new StringBuffer();
+					text.append("\n\r-- " + new Date() + " --\n\r");
+					text.append(Util.tail(100).replaceAll("<br>", ""));
+					text.append("\n\r -- state history --\n\r");
+					text.append(getHistory() + "\n\r");
+					text.append("\n\r -- state values -- \n\r");
+					text.append(state.toString().replaceAll("<br>", ""));	
+					text.append("\n\r -- settings --\n\r");
+					text.append(Settings.getReference().toString().replaceAll("<br>",  "\n"));
+					new SendMail("oculus prime log files", text.toString());//, new String[]{ BanList.banfile });
+				}}).start();
 				
 				// testing.. 
 				// 58672295936Settings.stdout, 
 				//if(new File(Settings.stdout).getTotalSpace() > 999){
 					
-					Util.compressFiles("ssstuff.bz.tar", new String[]{ Settings.settingsfile, BanList.banfile });
+				//	Util.compressFiles("ssstuff.bz.tar", new String[]{ Settings.settingsfile, BanList.banfile });
 				//	Util.systemCall("tail " + Settings.stdout + " 100 > log.txt");
-					Util.log("log size: "+new File(Settings.stdout).getTotalSpace(), this);
+				//	Util.log("log size: "+new File(Settings.stdout).getTotalSpace(), this);
 				
 					
-					new SendMail("oculus prime log files", "dashboard requested.. \n", new String[]{ Settings.settingsfile, BanList.banfile });
 			}  
 			
 			if(action.equalsIgnoreCase("resetstats") && route!=null){
@@ -164,15 +181,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			if(action.equalsIgnoreCase("restart")){
 				new Thread(new Runnable() { public void run(){
-					int b = settings.getInteger(ManualSettings.restarted);
-					if(b > 10){
+			//		int b = settings.getInteger(ManualSettings.restarted);
+					if(settings.getInteger(ManualSettings.restarted) > 10){
 						Util.log("restart called but reboot neededd, going down..", this);
-						settings.writeSettings(ManualSettings.restarted, "0");
+			//			settings.writeSettings(ManualSettings.restarted, "0");
 						Util.delay(3000); // redirect before calling.. 
 						app.driverCallServer(PlayerCommands.reboot, null);
 					} else {
 						Util.log("restart called, going down..", this);
-						settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+			//			settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
 						Util.delay(3000); // redirect before calling.. 
 						app.driverCallServer(PlayerCommands.restart, null);
 					}
@@ -192,8 +209,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					Util.log("busy, skipping..", this);
 					return;
 				}
-//				Util.archiveFiles("./archive" + Util.sep + "snapshot_"+System.currentTimeMillis() 
-//					+ ".tar.bz2", new String[]{NavigationLog.navigationlogpath, state.dumpFile("dashboard command")});
 				sendSnap(request, response);
 				return;
 			}
@@ -225,7 +240,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(view.equalsIgnoreCase("stdout")){
 				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;  \n" 
 						+ new File(Settings.stdout).getAbsolutePath() + "<br />\n");
-				out.println(Util.tail(40) + "\n");
+				out.println(Util.tail(35) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -378,7 +393,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String power = " not connected";
 		if(state.exists(values.powerport)) power = state.get(values.powerport);
 		String restarts = "";
-		if(settings.getInteger(ManualSettings.restarted) > 5) restarts = "&nbsp;&nbsp;&nbsp;#"+settings.readSetting(ManualSettings.restarted); 
+		if(settings.getInteger(ManualSettings.restarted) > 	4) 
+			restarts = "&nbsp;&nbsp;&nbsp;#"+settings.readSetting(ManualSettings.restarted); 
+		
 		str.append("<tr><td><b>power</b><td>" + power
 			+ "<td><b>java</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins " + restarts 
 			+ "<td><b>archive</b><td>"+ archivelogs + Util.countMbytes(Settings.archivefolder) + "</a> mb<td></tr> \n" );
@@ -436,7 +453,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		for (int i = 0; i < routes.getLength(); i++) {  
 			String r = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if( ! state.equals(values.navigationroute, r)) 
-				link += "<a href=\"dashboard?action=runroute&route="+r+"\">" +r+ "</a>&nbsp;&nbsp;";
+				link += "<a href=\"dashboard?action=runroute&route="+r+"\" title=\""+
+					Navigation.getRouteDistanceEstimate(r) + " meters " +
+					Navigation.getRouteTimeEstimate(r) + " seconds " +
+					Navigation.getRouteCountString(r) + " with fails: " +
+					Navigation.getRouteFailsString(r)+ "\">" +r+ "</a>&nbsp;&nbsp;";
 		}
 		return link + "<a href=\"dashboard?action=gotodock\" title=\"return to the dock\">dock</a>"; 
 	}
@@ -448,10 +469,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				|| ! state.exists(values.navigationroute)) return null;
 		
 		String link = "<td colspan=\"11\"><a href=\"dashboard?action=resetstats&route="
-				+ state.get(values.navigationroute) + "\" title=\"reset xml " +
+				+ state.get(values.navigationroute) + "\" title=\"**reset xml* " +
 			Navigation.getRouteDistanceEstimate(state.get(values.navigationroute)) + " meters " +
-			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " seconds, success: " +
-			Navigation.getRouteCountString(state.get(values.navigationroute)) + " fails: " +
+			Navigation.getRouteTimeEstimate(state.get(values.navigationroute)) + " seconds " +
+			Navigation.getRouteCountString(state.get(values.navigationroute)) + " with fails: " +
 			Navigation.getRouteFailsString(state.get(values.navigationroute)) +
 			 "\">"+ state.get(values.navigationroute)+"</a>&nbsp;"; 
 		
