@@ -409,8 +409,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	        if (state.exists(State.values.powerport)) otherdevice = state.get(State.values.powerport);
 	        
 	        for (int i=0; i<portNames.length; i++) {
-        		if (portNames[i].matches("/dev/tty(USB|ACM).+") && !portNames[i].equals(otherdevice)) {
-        			
+				if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
+
         			Util.log("querying port "+portNames[i], this);
         			
         			serialPort = new SerialPort(portNames[i]);

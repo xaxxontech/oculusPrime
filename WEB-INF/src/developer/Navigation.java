@@ -1057,6 +1057,17 @@ public class Navigation implements Observer {
 			else app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
 			if (photo) app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
 			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
+			if (human)
+				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+			else if (motion)
+    			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			else // photo
+				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+
+			if (photo)
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
+			else
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
 
 		}
 
@@ -1119,8 +1130,15 @@ public class Navigation implements Observer {
 
 			// PHOTO
 			if (photo) {
+				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
+
 				String link = FrameGrabHTTP.saveToFile("");
-				Util.delay(2000); // wait while downloads
+
+				Util.delay(2000); // allow time for framgrabusy flag to be set true
+				long timeout = System.currentTimeMillis() + 10000;
+				while (state.getBoolean(values.framegrabbusy) && System.currentTimeMillis() < timeout) Util.delay(10);
+				Util.delay(3000); // allow time to download
+
 				String navlogmsg = "<a href='" + link + "' target='_blank'>Photo</a>";
 				String msg = "[Oculus Prime Photo] ";
 				msg += navlogmsg+", time: "+ Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
@@ -1138,7 +1156,6 @@ public class Navigation implements Observer {
 				}
 
 				NavigationLog.newItem(NavigationLog.PHOTOSTATUS, navlogmsg, wpname, state.get(State.values.navigationroute));
-
 			}
 
 			// ALERT
@@ -1261,6 +1278,7 @@ public class Navigation implements Observer {
 		while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() < timeout) {
 			Util.delay(10);
 		}
+
 		if (state.exists(State.values.lightlevel)) {
 			if (state.getInteger(State.values.lightlevel) < 25) {
 				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on

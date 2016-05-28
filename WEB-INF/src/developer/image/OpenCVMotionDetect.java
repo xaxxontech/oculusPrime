@@ -82,7 +82,7 @@ public class OpenCVMotionDetect  {
 //                    }
 
                     boolean fg = app.frameGrab();
-                    long waittime = System.currentTimeMillis() + 2000;
+                    long waittime = System.currentTimeMillis() + 5000;
                     while (state.getBoolean(State.values.framegrabbusy) && System.currentTimeMillis() < waittime) {
                         Util.delay(1);
                         if (!state.getBoolean(State.values.motiondetect)) return; // help reduce cpu quicker on shutdown

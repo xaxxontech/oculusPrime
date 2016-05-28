@@ -145,7 +145,8 @@ public class ArduinoPower implements SerialPortEventListener  {
         	otherdevice = state.get(State.values.motorport);
         
         for (int i=0; i<portNames.length; i++) {
-    		if (portNames[i].matches("/dev/tty(USB|ACM).+") && !portNames[i].equals(otherdevice)) {
+//			if (portNames[i].matches("/dev/tty(USB|ACM).+") && !portNames[i].equals(otherdevice)) {
+    		if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
 
     			try {
         			Util.log("querying port "+portNames[i], this);
