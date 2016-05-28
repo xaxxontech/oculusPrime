@@ -137,6 +137,11 @@ public class Navigation implements Observer {
 			return;
 		}
 
+		if (!Ros.launch(Ros.MAKE_MAP)) {
+			app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, aborting mapping start");
+			return;
+		}
+
 		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
 		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
@@ -147,8 +152,11 @@ public class Navigation implements Observer {
 		if (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) return;
 		new Thread(new Runnable() { public void run() {
 			app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
+			if (!Ros.launch(Ros.REMOTE_NAV)) {
+				app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, abort");
+				return;
+			}
 			state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
-			Ros.launch(Ros.REMOTE_NAV);
 
 			// wait
 			long start = System.currentTimeMillis();
@@ -173,7 +181,11 @@ public class Navigation implements Observer {
 			Util.log("navigation start attempt #2", this);
 			stopNavigation();
 			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) Util.delay(10);
-			Ros.launch(Ros.REMOTE_NAV);
+
+			if (!Ros.launch(Ros.REMOTE_NAV)) {
+				app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, abort");
+				return;
+			}
 
 			start = System.currentTimeMillis(); // wait
 			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)
