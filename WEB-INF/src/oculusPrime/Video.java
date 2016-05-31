@@ -1,6 +1,9 @@
 package oculusPrime;
 
 
+import org.red5.server.api.IConnection;
+import org.red5.server.stream.ClientBroadcastStream;
+
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
