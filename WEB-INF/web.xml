@@ -63,6 +63,14 @@
 		<servlet-name>StaticContentServlet</servlet-name>
 		<url-pattern>/navigationlog/*</url-pattern>
 	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/streams/</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/streams/*</url-pattern>
+	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>NetworkServlet</servlet-name>
