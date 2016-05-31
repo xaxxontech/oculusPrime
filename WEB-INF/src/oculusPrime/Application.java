@@ -28,13 +28,14 @@ import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
+import org.red5.server.stream.ClientBroadcastStream;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
 
-	public enum streamstate { stop, camera, camandmic, mic };
-	public enum camquality { low, med, high, custom };
-	public enum driverstreamstate { stop, mic, pending, disabled };
+	public enum streamstate { stop, camera, camandmic, mic }
+	public enum camquality { low, med, high, custom }
+	public enum driverstreamstate { stop, mic, pending, disabled }
 	public static final String VIDEOSOUNDMODELOW = "low";
 	public static final String VIDEOSOUNDMODEHIGH = "high";
 	public static final int STREAM_CONNECT_DELAY = 2000;
@@ -91,14 +92,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public boolean appConnect(IConnection connection, Object[] params) {
 
 		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
-		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
-			Util.log("localhost/LAN/known netstream connect, no params", this);
+//		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
+//			Util.log("localhost/LAN/known netstream connect, no params", this);
+//			return true;
+//		}
+
+		// always accept local avconv/ffmpeg
+		if ((connection.getRemoteAddress()).equals("127.0.0.1") && params.length==0) {
+			grabber = Red5.getConnectionLocal();
 			return true;
 		}
 
 		String logininfo[] = ((String) params[0]).split(" ");
 
-		// always accept local grabber
+		// always accept local grabber (flash)
 		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
 
 		// TODO: if banned, but cookie exists?? 
@@ -183,6 +190,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if (connection.equals(grabber)) {
 			grabber = null;
+
+			if (!settings.getBoolean(ManualSettings.useflash))  return;
+
+			// flash only
 			// wait a bit, see if still no grabber, THEN reload
 			new Thread(new Runnable() {
 				public void run() {
@@ -432,7 +443,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public void driverCallServer(PlayerCommands fn, String str) {
 		playerCallServer(fn, str, true);
 	}
-	
+
+	/**
+	 * called by remote flash
+	 * */
 	public void playerCallServer(String fn, String str) {
 		
 		if (fn == null) return;
@@ -534,6 +548,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
+		case record: record(grabber, str); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 
@@ -1046,6 +1061,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (state.get(State.values.stream)  == null) {
 			messageplayer("stream control unavailable, server may be in setup mode", null, null);
 			return;
+		}
+
+		if (state.get(State.values.record) == null)
+			state.set(State.values.record, Application.streamstate.stop.toString());
+
+		// if recording and mode changing, kill recording
+		if (state.exists(values.stream)) {
+			if (!mode.equals(streamstate.valueOf(state.get(values.stream))) && !state.get(values.record).equals(streamstate.stop.toString()))
+				record(grabber, Settings.FALSE);
 		}
 
 		ArduinoPrime.checkIfInverted();
@@ -1637,7 +1661,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void messageGrabber(String str, String status) {
-		Util.debug("TO grabber flash: "+str+", "+status, this);  
+		Util.debug("TO grabber flash: " + str + ", " + status, this);
 
 		if (grabber instanceof IServiceCapableConnection) {
 			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
@@ -2269,8 +2293,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.log("setStreamActivityThreshold() error grabber reload timeout", this);
 
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-		sc.invoke("setActivityThreshold", new Object[] { videoThreshold, audioThreshold });
-		messageplayer("stream activity set to: "+str, null, null);
+		sc.invoke("setActivityThreshold", new Object[]{videoThreshold, audioThreshold});
+		messageplayer("stream activity set to: " + str, null, null);
 
 	}
 	
@@ -2292,6 +2316,98 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable
 			state.set(State.values.streamactivity, str); // needs to be after disable, method deletes state val
+		}
+	}
+
+	// record to flv in webapps/oculusPrime/streams/
+	private void record(IConnection conn, String mode) {
+
+		if (state.get(State.values.stream) == null) return;
+
+		if (state.get(State.values.record) == null)
+			state.set(State.values.record, Application.streamstate.stop.toString());
+
+		if (conn == null) return;
+
+
+		if (mode.toLowerCase().equals(Settings.TRUE)) {  // TRUE, start recording
+
+			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
+				driverCallServer(PlayerCommands.messageclients, "no stream running, unable to record");
+				return;
+			}
+
+			if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
+				driverCallServer(PlayerCommands.messageclients, "already recording, command dropped");
+				return;
+			}
+
+			// Get a reference to the current broadcast stream.
+			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
+
+
+			try {
+				// Save the stream to disk.
+				String streamName = Util.getDateStamp();
+
+				switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
+					case mic:
+						driverCallServer(PlayerCommands.messageclients, "recording to: " + streamName + "_audio");
+						stream.saveAs(streamName + "_audio", false);
+						break;
+
+					case camandmic:
+						if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
+							ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
+							driverCallServer(PlayerCommands.messageclients, "recording to: " + streamName + "_audio");
+							audiostream.saveAs(streamName+"_audio", false);
+						}
+						// BREAK OMITTED ON PURPOSE
+
+					case camera:
+						driverCallServer(PlayerCommands.messageclients, "recording to: " + streamName + "_video");
+						stream.saveAs(streamName + "_video", false);
+						break;
+				}
+
+				state.set(State.values.record, state.get(State.values.stream));
+
+			} catch (Exception e) {
+				Util.printError(e);
+			}
+		}
+
+
+		else { // FALSE, stop recording
+
+			if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
+				driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
+				return;
+			}
+
+			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
+			if (stream == null) return; // if page reload
+
+			switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
+
+				case camandmic:
+					if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
+						ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
+						driverCallServer(PlayerCommands.messageclients, "2nd audio recording stopped");
+						audiostream.stopRecording();
+					}
+					// BREAK OMITTED ON PURPOSE
+
+				case mic:
+					// BREAK OMITTED ON PURPOSE
+
+				case camera:
+					stream.stopRecording();
+					driverCallServer(PlayerCommands.messageclients, "recording stopped");
+					break;
+			}
+
+			state.set(State.values.record, Application.streamstate.stop.toString());
 		}
 	}
 

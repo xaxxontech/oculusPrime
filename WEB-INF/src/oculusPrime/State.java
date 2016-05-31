@@ -28,7 +28,7 @@ public class State {
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
-		writingframegrabs, // undocumented
+		writingframegrabs, record, // undocumented
 
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
 		powererror, forceundock,
