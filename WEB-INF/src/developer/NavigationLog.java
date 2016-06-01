@@ -30,6 +30,7 @@ public class NavigationLog {
     public static final String COMPLETEDSTATUS = "Completed";
     public static final String INFOSTATUS = "Info";
     public static final String PHOTOSTATUS = "Photo";
+    public static final String VIDEOSTATUS = "Video";
 //    private static final String PIPE = " <span style='color: #999999'>|</span> ";
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
@@ -55,8 +56,8 @@ public class NavigationLog {
             String id=String.valueOf(System.nanoTime());
             String str="<div id='"+id+"' ";
 
-//            if (status.equals(PHOTOSTATUS)) str += "class='"+INFOSTATUS.toLowerCase()+"' ";
-//            else
+            if (status.equals(VIDEOSTATUS)) str += "class='"+PHOTOSTATUS.toLowerCase()+"' ";
+            else
                 str += "class='"+status.toLowerCase()+"' ";
 
             str += "onclick=\"clicked(this.id);\" ";
@@ -70,8 +71,13 @@ public class NavigationLog {
             str += "</div>\n";
 
             // expand
-            str += "<div id='"+id+"_expand' class='"+status.toLowerCase()+"expand' " +
-                    "style='display: none; padding-top: 5px; padding-left: 20px'>\n";
+            if (status.equals(VIDEOSTATUS)) {
+                str += "<div id='"+id+"_expand' class='"+PHOTOSTATUS.toLowerCase()+"expand' " +
+                        "style='display: none; padding-top: 5px; padding-left: 20px'>\n";
+            } else {
+                str += "<div id='" + id + "_expand' class='" + status.toLowerCase() + "expand' " +
+                        "style='display: none; padding-top: 5px; padding-left: 20px'>\n";
+            }
             if (msg != null) str += msg+"<br>\n";
             if (waypoint != null) str += "Waypoint: "+waypoint+"<br>\n";
             str += "Consecutive Route: "+consecutiveroute+"<br>\n";

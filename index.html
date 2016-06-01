@@ -562,32 +562,33 @@ video settings:<br>
 <a class="blackbg" href="javascript: streamset('high');">high</a>
 <span id="high_specs" style="font-size: 11px; color: #666666;"></span><br>
 
+<div style="display: none">
 <span id="full_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('full');">full</a>
 <span id="full_specs" style="font-size: 11px; color: #666666;"></span><br>
+</div>
 
 <span id="custom_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('custom');">custom</a>
 <span id="custom_specs" style="font-size: 11px; color: #666666;"></span>&nbsp;<a 
 class="blackbg" href="javascript: streamset('setcustom');">change</a> &gt;
 <br>
+<a id="recordlink" class="blackbg" href="javascript: callServer('record','true');">record</a>
 <table><tr><td style="height: 5px"></td></tr></table>
 
 <table><tr>
 <td style="padding-right: 5px;padding-bottom: 2px;">volume: </td><td id="rovvolumecontrol"
-style="padding-bottom: 4px;"></td>
+style="padding-bottom: 4px;"></td><td></td>
 </tr><tr>
 <td style="padding-right: 5px;">spotlight: </td><td id="spotlightcontrol"
-style="padding-bottom: 4px;"></td>
+style="padding-bottom: 4px;"></td><td></td>
 </tr><tr>
 <td style="padding-right: 5px;">dock light: </td><td id="floodlightcontrol"></td>
-</tr></table>
-
-<table><tr><td style='height: 11px'></td></tr></table>
-
+<td style="padding-left: 25px">
 <a class="blackbg" style="cursor: pointer;" onmousedown="callServer('strobeflash','on')"
 onmouseup="callServer('strobeflash','off')">strobeflash</a><br>
-<a class="blackbg" href="javascript: motionenabletoggle();">motion enable/disable</a><br>
+</td>
+</tr></table>
 
 <table><tr><td style='height: 11px'></td></tr></table>
 
@@ -813,6 +814,9 @@ Account Settings:<br>
 <a class="blackbg" href="javascript: account('add_user');">add extra user</a> &gt;<br>
 <a class="blackbg" href="javascript: account('change_extra_pass');">change extra user password</a> &gt;<br>
 <a class="blackbg" href="javascript: account('delete_user');">delete extra user</a> &gt;<br>
+
+<table><tr><td style='height: 11px'></td></tr></table>
+
 <a class="blackbg" href="javascript: disconnectOtherConnections();">eliminate any passengers</a> <br>
 
 <a class="blackbg" href="javascript: chatdivShow();">chat</a><span 
@@ -1005,6 +1009,8 @@ onKeyPress="if (keypress(event)==13) { systemcall('',''); }">
 <span class="cancelbox">&#x2714;</span></a>
 </span><br>
 
+
+<a class="blackbg" href="javascript: motionenabletoggle();">motion enable/disable</a><br>
 <a class="blackbg" href="javascript: clicksteer('');">crosshairs on/off</a><br>
 <a class="blackbg" href="frameGrabHTTP" target="_blank">frame grab</a><br> 
 <a class="blackbg" href="rss.xml" target="_blank">rss feed</a><br>
