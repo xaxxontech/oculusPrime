@@ -73,9 +73,8 @@ var lastcommand;
 var maintopbarTimer = null;
 var subwindows = ["aux", "context", "menu", "main", "rosmap"];  // purposely skipped "error" window
 var windowpos = [null, null, null, null]; // needs same length as above
-
 var oculusPrimeplayerSWF;
-
+var recordmode = streammode;
 
 function loaded() {
 	oculusPrimeplayerSWF = document.getElementById("oculusPrime_player");
@@ -266,7 +265,8 @@ function callServer(fn, str) {
 function play(str) { // called by javascript only?
 	streammode = str;
 	var num = 1;
-	if (str.split("_")[1]=="2") num = 2; // TODO: testing separate audio stream with avconv
+	var s = str.split("_");
+	if (s[1]=="2") { num = 2; streammode = s[0] } // separate audio stream with avconv
 	if (streammode == "stop") { num =0 ; } 
 	oculusPrimeplayerSWF.flashplay(num, videoscale);
 }
@@ -366,7 +366,14 @@ function setstatus(status, value) {
 			value += " <img src='images/ajax-loader.gif' style='vertical-align: bottom;'>";
 		}
 		if (status=="cameratilt") { value += "&deg;"; }
+		if (status=="stream") {
+			var s = value.split("_");
+			if (s[0] != streammode) { play(value); }
+			value = s[0];
+		}
+
 		a.innerHTML = value;
+
 		if (status == "connection" && value == "closed") { 
 			connectionlost();
 		}
@@ -408,7 +415,6 @@ function setstatus(status, value) {
 	else if (status == "someonealreadydriving") { someonealreadydriving(value); }
 	else if (status == "user") { username = value; }
 	else if (status == "hijacked") { window.location.reload(); }
-	else if (status == "stream" && (value.toUpperCase() != streammode.toUpperCase())) { play(value); }
 	else if (status == "admin" && value == "true") { admin = true; }
 	else if (status == "dock") {
 		if (initialdockedmessage==false) {
@@ -448,16 +454,6 @@ function setstatus(status, value) {
 		document.getElementById("navigationmenu").style.display = "";
 	}
 	else if (status == "debug") { debug(value); }
-	// else if (status=="pushtotalk") {
-		// if (value=="false") {
-			// pushtotalk = false;
-			// oculusPrimeplayerSWF.unmutePlayerMic();
-		// }
-		// else {
-			// pushtotalk = true;
-			// oculusPrimeplayerSWF.mutePlayerMic();
-		// }
-	// }
 	else if (status=="loadpage") {
 		playerexit();
 		window.open(value,'_self');
@@ -473,6 +469,21 @@ function setstatus(status, value) {
 		}
 		document.getElementById("selfstream_controls").style.display = "";
 		document.getElementById("self_stream_status").style.display = "";
+	}
+	else if (status=="record") {
+		recordmode = value;
+		a= document.getElementById("stream_status");
+		var b = document.getElementById("recordlink");
+		if (value == streammode && value != "stop") {
+			a.innerHTML = "<span style='color: red'>&bull; "+value+"</span>";
+			b.innerHTML = "stop recording";
+			b.href="javascript: callServer('record','false');";
+		}
+		else if (value != streammode) {
+			a.innerHTML = streammode;
+			b.innerHTML = "record";
+			b.href="javascript: callServer('record','true');";
+		}
 	}
  
 }
@@ -899,6 +910,17 @@ function streamdetailspopulate() {
 		streamSettingsBullSet(streamdetails[0].slice(1));
 		resized();
 	}
+
+	var b = document.getElementById("recordlink");
+	if (recordmode != "stop") {
+		b.innerHTML = "stop recording";
+		b.href="javascript: callServer('record','false');";
+	}
+	else  {
+		b.innerHTML = "record";
+		b.href="javascript: callServer('record','true');";
+	}
+
 }
 
 function streamSettingsBullSet(str) {

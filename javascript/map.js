@@ -35,11 +35,12 @@ var mapshowwaypoints = true;
 var routesxml = null;
 var temproutesxml;
 var navmenuinit = false;
-var navrouteavailableactions = ["rotate", "email", "rss", "photo", 
+var navrouteavailableactions = ["rotate", "email", "rss", "photo", "record video",
 	"motion", "sound", "human", "not detect" ];
 var navrouteactiondescriptions = ["rotate in place 45 degrees at a time, at least 1 full rotation", 
 	"send email alert if action detected",
 	"post new item to RSS feed if action detected",
+	"record video and audio to local file",
 	"take photo at waypoint and post to navigation log",
 	"detect motion", "detect loud noise", "detect human", 
 	"alert only if action NOT detected"];
@@ -791,6 +792,7 @@ function savewaypoint() {
 	waypoints.push.apply(waypoints, pendingwaypoint);
 	rosmaparrow("cancel"); // this function includes set pendingwaypoint = null
 	writewaypointstofile();
+	if (document.getElementById("waypointslist").offsetParent != null)	waypointsmenu();
 }
 
 function writewaypointstofile() {
@@ -1444,6 +1446,7 @@ function waypointactionaddnew(routenum, waypointnum, id) {
 			waypointDeleteAnyActionsNamed(waypoint, "rotate");
 			waypointDeleteAnyActionsNamed(waypoint, "human");
 			waypointDeleteAnyActionsNamed(waypoint, "motion");
+			waypointDeleteAnyActionsNamed(waypoint, "sound");
 		}
 		else if (actiontext == "rotate") waypointDeleteAnyActionsNamed(waypoint, "photo");
 		
