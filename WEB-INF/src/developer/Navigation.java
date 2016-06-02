@@ -59,8 +59,10 @@ public class Navigation implements Observer {
 	public NavigationLog navlog; // make static
 
 	/** Constructor */
-	public Navigation(Application a){
-		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.name());
+
+	public Navigation(Application a) {
+		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
+
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		navlog = new NavigationLog();
@@ -1004,6 +1006,7 @@ public class Navigation implements Observer {
 		boolean sound = false;
 		boolean human = false;
 		boolean photo = false;
+		boolean record = false;
 		
 		boolean camera = false;
 		boolean mic = false;
@@ -1012,32 +1015,38 @@ public class Navigation implements Observer {
     	for (int i=0; i < actions.getLength(); i++) {
     		String action = ((Element) actions.item(i)).getTextContent();
     		switch (action) {
-			case "rotate": rotate = true; break;
-			case "email": email = true; break;
-			case "rss": rss = true; break;
-			case "motion":
-				motion = true;
-				camera = true;
-				notdetectedaction = action;
-				break;
-			case "not detect":
-				notdetect = true;
-				break;
-			case "sound":
-				sound = true;
-				mic = true;
-				notdetectedaction = action;
-				break;
-			case "human":
-				human = true;
-				camera = true;
-				notdetectedaction = action;
-				break;
-			case "photo":
-				photo = true;
-				camera = true;
-				break;
-      		}	
+				case "rotate": rotate = true; break;
+				case "email": email = true; break;
+				case "rss": rss = true; break;
+				case "motion":
+					motion = true;
+					camera = true;
+					notdetectedaction = action;
+					break;
+				case "not detect":
+					notdetect = true;
+					break;
+				case "sound":
+					sound = true;
+					mic = true;
+					notdetectedaction = action;
+					break;
+				case "human":
+					human = true;
+					camera = true;
+					notdetectedaction = action;
+					break;
+				case "photo":
+					photo = true;
+					camera = true;
+					break;
+
+				case "record video":
+					record = true;
+					camera = true;
+					mic = true;
+					break;
+			}
     	}
 
 		// if no camera, what's the point in rotating
@@ -1061,13 +1070,15 @@ public class Navigation implements Observer {
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 			else if (motion)
     			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-			else // photo
+			else if (photo)
 				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+			else // record
+				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 
 			if (photo)
 				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
 			else
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
 
 		}
 
@@ -1075,6 +1086,7 @@ public class Navigation implements Observer {
 		if (camera && mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
 			Util.delay(5000);
+			if (!settings.getBoolean(ManualSettings.useflash)) Util.delay(5000); // takes a while for 2 streams
 		} else if (camera && !mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			Util.delay(5000);
@@ -1082,6 +1094,9 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.mic.toString());
 			Util.delay(5000);
 		}
+
+		String recordlink = null;
+		if (record)  recordlink = app.record(Settings.TRUE); // start recording
 
 		long waypointstart = System.currentTimeMillis();
 		long delay = 10000;
@@ -1093,7 +1108,7 @@ public class Navigation implements Observer {
 			turns = maxturns;
 		}
 
-		// remain at waypoint looping and/or waiting, detection running if enabled
+		// remain at waypoint rotating and/or waiting, detection running if enabled
 		while (System.currentTimeMillis() - waypointstart < duration || turns < maxturns) {
 
 			if (!state.exists(State.values.navigationroute)) return;
@@ -1263,6 +1278,32 @@ public class Navigation implements Observer {
 			}
 		}
 
+		// END RECORD
+		if (record && recordlink != null) {
+
+			String navlogmsg = "<a href='" + recordlink + "_video.flv' target='_blank'>Video</a>";
+			if (!settings.getBoolean(ManualSettings.useflash))
+				navlogmsg += "<br><a href='" + recordlink + "_audio.flv' target='_blank'>Audio</a>";
+			String msg = "[Oculus Prime Video] ";
+			msg += navlogmsg+", time: "+
+					Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
+
+			if (email) {
+				String emailto = settings.readSetting(GUISettings.email_to_address);
+				if (!emailto.equals(Settings.DISABLED)) {
+					app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
+					navlogmsg += "<br> email sent ";
+				}
+			}
+			if (rss) {
+				app.driverCallServer(PlayerCommands.rssadd, msg);
+				navlogmsg += "<br> new RSS item ";
+			}
+			navlog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
+			app.record(Settings.FALSE); // stop recording
+		}
+
+
 		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 		if (camera) {
 			app.driverCallServer(PlayerCommands.spotlight, "0");
@@ -1272,6 +1313,9 @@ public class Navigation implements Observer {
 	}
 
 	private boolean turnLightOnIfDark() {
+
+		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
+
 		state.delete(State.values.lightlevel);
 		app.driverCallServer(PlayerCommands.getlightlevel, null);
 		long timeout = System.currentTimeMillis() + 5000;

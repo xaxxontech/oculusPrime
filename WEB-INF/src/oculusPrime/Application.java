@@ -548,7 +548,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: record(grabber, str); break;
+		case record: record(str); break;
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 
@@ -1069,7 +1069,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// if recording and mode changing, kill recording
 		if (state.exists(values.stream)) {
 			if (!mode.equals(streamstate.valueOf(state.get(values.stream))) && !state.get(values.record).equals(streamstate.stop.toString()))
-				record(grabber, Settings.FALSE);
+				record(Settings.FALSE);
 		}
 
 		ArduinoPrime.checkIfInverted();
@@ -1427,6 +1427,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (videoScale != null) str += " videoscale " + videoScale;
 
 			str += " battery " + state.get(State.values.batterylife);
+
+			if (state.exists(values.record)) str += " record " + state.get(values.record);
 			
 			messageplayer("status check received", "multiple", str.trim());
 
@@ -2320,57 +2322,65 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	// record to flv in webapps/oculusPrime/streams/
-	private void record(IConnection conn, String mode) {
+	public String record(String mode) {
+		IConnection conn = grabber;
 
-		if (state.get(State.values.stream) == null) return;
+		if (state.get(State.values.stream) == null) return null;
 
 		if (state.get(State.values.record) == null)
 			state.set(State.values.record, Application.streamstate.stop.toString());
 
-		if (conn == null) return;
-
+		if (conn == null) return null;
 
 		if (mode.toLowerCase().equals(Settings.TRUE)) {  // TRUE, start recording
 
 			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
 				driverCallServer(PlayerCommands.messageclients, "no stream running, unable to record");
-				return;
+				return null;
 			}
 
 			if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
 				driverCallServer(PlayerCommands.messageclients, "already recording, command dropped");
-				return;
+				return null;
 			}
 
 			// Get a reference to the current broadcast stream.
 			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
 
 
+			// Save the stream to disk.
 			try {
-				// Save the stream to disk.
 				String streamName = Util.getDateStamp();
+				final String urlString = "http://"+state.get(State.values.externaladdress)+":"+
+						state.get(State.values.httpport) + "/oculusPrime/streams/";
+
+				state.set(State.values.record, state.get(State.values.stream));
 
 				switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
 					case mic:
-						driverCallServer(PlayerCommands.messageclients, "recording to: " + streamName + "_audio");
+						messageplayer("recording to: " + urlString+streamName + "_audio.flv",
+								values.record.toString(), state.get(values.record));
 						stream.saveAs(streamName + "_audio", false);
 						break;
 
 					case camandmic:
 						if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
 							ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
-							driverCallServer(PlayerCommands.messageclients, "recording to: " + streamName + "_audio");
+							messageplayer("recording to: " + urlString+streamName + "_audio.flv",
+									values.record.toString(), state.get(values.record));
 							audiostream.saveAs(streamName+"_audio", false);
 						}
 						// BREAK OMITTED ON PURPOSE
 
 					case camera:
-						driverCallServer(PlayerCommands.messageclients, "recording to: " + streamName + "_video");
+						messageplayer("recording to: " + urlString+streamName + "_video.flv",
+								values.record.toString(), state.get(values.record));
 						stream.saveAs(streamName + "_video", false);
 						break;
 				}
 
-				state.set(State.values.record, state.get(State.values.stream));
+				Util.log("recording: streamName",this);
+				return urlString + streamName;
 
 			} catch (Exception e) {
 				Util.printError(e);
@@ -2382,11 +2392,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
 				driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
-				return;
+				return null;
 			}
 
 			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
-			if (stream == null) return; // if page reload
+			if (stream == null) return null; // if page reload
+
+			state.set(State.values.record, Application.streamstate.stop.toString());
 
 			switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
 
@@ -2403,12 +2415,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 				case camera:
 					stream.stopRecording();
-					driverCallServer(PlayerCommands.messageclients, "recording stopped");
+					Util.log("recording stopped", this);
+					messageplayer("recording stopped", values.record.toString(), state.get(values.record));
 					break;
 			}
 
-			state.set(State.values.record, Application.streamstate.stop.toString());
+
 		}
+		return null;
 	}
 
 }
