@@ -52,7 +52,7 @@ public enum PlayerCommands {
 	objectdetect, objectdetectcancel,
 	motiondetect, motiondetectcancel,
 	// undocumented:
-	objectdetectstream, motiondetectstream,
+	objectdetectstream, motiondetectstream, sounddetect,
 
 	// un-categorized
 	speech, serverbrowser, email, state, rssadd,

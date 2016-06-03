@@ -912,7 +912,7 @@ public class Navigation implements Observer {
 		}
 
 		String recordlink = null;
-		if (record)  recordlink = app.record(Settings.TRUE); // start recording
+		if (record)  recordlink = app.video.record(Settings.TRUE); // start recording
 
 		long waypointstart = System.currentTimeMillis();
 		long delay = 10000;
@@ -1043,6 +1043,7 @@ public class Navigation implements Observer {
 					app.driverCallServer(PlayerCommands.objectdetectcancel, null);
 				if (state.exists(State.values.streamactivityenabled))
 					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+				state.set(State.values.sounddetect, false);
 
 				break; // go to next waypoint, stop if rotating
 			}
@@ -1132,7 +1133,7 @@ public class Navigation implements Observer {
 			}
 			navlog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg, routestarttime, wpname,
 					state.get(State.values.navigationroute), consecutiveroute, 0);
-			app.record(Settings.FALSE); // stop recording
+			app.video.record(Settings.FALSE); // stop recording
 		}
 
 
