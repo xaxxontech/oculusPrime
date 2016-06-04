@@ -431,7 +431,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
-		else msg += "&nbsp;&nbsp;<a href=\"dashboard?action=gui\">(ignore)</a>";
+		else msg += "&nbsp;&nbsp;(<a href=\"dashboard?action=gui\">ignore</a>)";
 		if(msg.length() > 1) {
 			msg = "<tr><td><b>message</b><td colspan=\"11\">" + msg + "</tr> \n";
 			str.append(msg);
@@ -485,7 +485,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} 
 		
 		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp;waypoint " + state.get(values.roswaypoint);			
-		if(Navigation.routemillimeters > 0) link += "&nbsp;|&nbsp;meters " + Util.formatFloat(Navigation.routemillimeters / (double)1000, 1);
+		if(Navigation.routemillimeters > 0) link += "&nbsp;|&nbsp;meters " 
+				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 1) + " (" 
+				+ (System.currentTimeMillis() - Navigation.routestarttime)/1000 + "sec)";
 		
 		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">*overdue*</font>";
 		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">*recovery*</font>";
@@ -547,16 +549,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 //		if(key.equals(values.rosglobalpath.name())) return;
 //		if(key.equals(values.rosscan.name())) return;
 // 		if(key.equals(values.cpu.name())) return; 
-		
-//		if(key.equals(values.distanceangle.name())){
-//			try { 
-//				routedistance += Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
-//			} catch (Exception e){}
-//		}
-		
-	//	if(key.equals(values.docking)){
-	//		if(state.getBoolean(values.docking)) routedistance = 0;
-		
 		
 		// trim size
 		if(history.size() > MAX_STATE_HISTORY) history.remove(0);

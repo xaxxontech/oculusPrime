@@ -519,31 +519,25 @@ public class Navigation implements Observer {
 	}
 	
 	public static void updateRouteEstimatess(final String name, final int seconds, final long mm){
-
-		// Util.log("...updateRouteEstimatess:  " + name + " mm:  " + mm + " seconds: " + seconds, null);
-
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-			
 				route = (Element) routes.item(i);				
 				try {	
-					// Util.log(".....update xml route distance:  " + name + " distance:  " + mm, null);
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(mm / (double)1000, 0));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), null);
+					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
 					dist.setTextContent(Util.formatFloat(mm / (double)1000, 1));
 					route.appendChild(dist);
 				}
 				try {
-					// Util.log(".....update xml route distance:  " + name + " seconds: " + seconds, null);
 					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
-					Util.log("xml error missing tag: " + e.getMessage(), null);
+					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node time = document.createElement(ESTIMATED_TIME_TAG);
 					time.setTextContent(Integer.toString(seconds));
 					route.appendChild(time);
@@ -560,17 +554,16 @@ public class Navigation implements Observer {
 	
 	public static String getRouteFailsString(final String name){
 		NodeList routes = Util.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		String result = "0";
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
-					result = ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
+					return ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
 				} catch (Exception e){}
 				break;
 			}
 		}
-		return result;
+		return "0";
 	}
 	
 	public static int getRouteCount(final String name){
@@ -707,16 +700,15 @@ public class Navigation implements Observer {
 			if (settings.getBoolean(ManualSettings.developer.name()) && estimatedtime > 0){
 				new Thread(new Runnable() { public void run() {
 					state.delete(values.routeoverdue);
-					Util.delay(estimatedtime*1000 + 7000); // TODO: make a setting? in seconds 
+					Util.delay(estimatedtime*1000 + 1000); // TODO: make a setting? in seconds 
 					if( ! (state.getBoolean(State.values.autodocking) || 
 					   state.equals(values.roswaypoint, DOCK) ||
 					   state.equals(State.values.dockstatus, AutoDock.DOCKING) || 
 					   state.equals(State.values.dockstatus, AutoDock.DOCKED))){
-						
-						state.set(values.routeoverdue, true);	// over due, cancel route, drive to dock.. 
+						state.set(values.routeoverdue, true); // over due, cancel route, drive to dock.. 
 						Util.log("Overdue on Route, estimated time: " + estimatedtime + " seconds", this);
-						dock(); // set new target 
 						NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Overdue, called back to dock after " + estimatedtime + " seconds");
+						dock(); // set new target 
 					}
 				}}).start();
 			}
@@ -724,13 +716,13 @@ public class Navigation implements Observer {
 			// repeat route schedule forever until cancelled
 			while (true) {
 	
-				// TODO: DEV FLAG 
+				// TODO: DEV FLAG ... remove next time?
+				state.delete(values.recoveryrotation);
+				state.delete(values.routeoverdue);	
 				if(settings.getBoolean(ManualSettings.developer.name())){
 					estimatedmeters = (int) Long.parseLong(Util.formatFloat(getRouteDistanceEstimate(name), 0));
 					estimatedtime = Integer.parseInt(getRouteTimeEstimate(name));
-					state.delete(values.recoveryrotation);
-					state.delete(values.routeoverdue);				
-					Util.log("starting routed, xml estimate: " +estimatedtime + " seconds, " + estimatedmeters + " meters", this);
+					Util.log("route estimate meters: " + estimatedmeters + " seconds: "+estimatedtime, this);
 				}
 				
 				// determine next scheduled route time, wait if necessary
@@ -935,14 +927,14 @@ public class Navigation implements Observer {
 
 	private void undockandlocalize() { // blocking
 		state.set(State.values.motionenabled, true);
-		double distance = 1.0;
+		double distance = 1.5;
 		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
-		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString())) + 1000);
+		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString())) + 2000);
 
 		// rotate to localize
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
 		app.driverCallServer(PlayerCommands.left, "360");
-		Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 1000);
+		Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 2000);
 	}
 
 	private boolean delayToNextRoute(Element navroute, String name, String id) {
@@ -998,6 +990,7 @@ public class Navigation implements Observer {
 		 */
     	// takes 5-10 seconds to init if mic is on (mic only, or mic + camera)
 
+		
 		boolean rotate = false;
 		boolean email = false;
 		boolean rss = false;
@@ -1058,7 +1051,7 @@ public class Navigation implements Observer {
     	// VIDEOSOUNDMODELOW required for flash stream activity function to work, saves cpu for camera
     	String previousvideosoundmode = state.get(State.values.videosoundmode);
     	if (mic || camera) app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW);
-
+    	
 		// setup camera mode and position
 		if (camera) {
 			if (human) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
@@ -1066,6 +1059,7 @@ public class Navigation implements Observer {
 			else app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
 			if (photo) app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
 			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
+
 			if (human)
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 			else if (motion)
@@ -1075,13 +1069,15 @@ public class Navigation implements Observer {
 			else // record
 				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 
-			if (photo)
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
-			else
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
-
+			if (photo)app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
+			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
+			if (human) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+			else if (motion) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			else app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+			if (photo) app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
+			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
 		}
-
+																				
 		// turn on cam and or mic, allow delay for normalize
 		if (camera && mic) {
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
@@ -1258,7 +1254,6 @@ public class Navigation implements Observer {
 				NavigationLog.newItem(NavigationLog.ALERTSTATUS, navlogmsg);
 			}
 
-
 			if (rotate) {
 				Util.delay(2000);
 				SystemWatchdog.waitForCpu(8000); // lots of missed stop commands, cpu timeouts here
@@ -1279,6 +1274,7 @@ public class Navigation implements Observer {
 		}
 
 		// END RECORD
+		
 		if (record && recordlink != null) {
 
 			String navlogmsg = "<a href='" + recordlink + "_video.flv' target='_blank'>Video</a>";
@@ -1299,17 +1295,16 @@ public class Navigation implements Observer {
 				app.driverCallServer(PlayerCommands.rssadd, msg);
 				navlogmsg += "<br> new RSS item ";
 			}
-			navlog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
+			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
 			app.record(Settings.FALSE); // stop recording
 		}
-
 
 		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 		if (camera) {
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
 		}
-		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
+		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode) ;
 	}
 
 	private boolean turnLightOnIfDark() {
