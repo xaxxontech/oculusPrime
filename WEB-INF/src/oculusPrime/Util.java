@@ -46,7 +46,7 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
-	public static final int MIN_FILE_COUNT = 20;  
+	public static final int MIN_FILE_COUNT = 10;  
 	public static final int MAX_HISTORY = 40;
 	public static final int PRECISION = 1;	
 	
@@ -797,15 +797,50 @@ public class Util {
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) files[i].delete();
-	       else appendUserMessage("logs folder contains sub folders!");
+	       // else appendUserMessage("logs folder contains sub folders!");
 	    }
-	    files = new File(Settings.logfolder).listFiles();
-	    if(files.length != 0) log("deleteLogFiles(): must be subfolders: " + files.length, null);	
+
+	    // files = new File(Settings.logfolder).listFiles();
+	    // if(files.length != 0) log("deleteLogFiles(): must be subfolders: " + files.length, null);	
 	    
+		truncStaleAudioVideo();		
 		truncStaleArchive();
 		truncStaleFrames();
 		truncState();
 	}
+	
+	//
+	// _video.flv _audio.flv 
+	//
+	public static void truncStaleAudioVideo(){
+		File[] files  = new File(Settings.streamfolder).listFiles();	
+        for (int i = 0; i < files.length; i++){
+			if (files[i].isFile()){
+				if(!linkedFrame(files[i].getName())){
+					debug(files[i].getName() + " was deleted");
+					files[i].delete();
+				}
+	        }
+		} 
+	}
+	
+	/*
+	public static boolean linkedVideo(final String fname){ 
+		Process proc = null;
+		String line = null;
+		try { 
+			proc = Runtime.getRuntime().exec( new String[]{ "/bin/sh", "-c", "grep -w \"" + fname + "\" " + NavigationLog.navigationlogpath });
+			proc.waitFor();
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
+			while ((line = procReader.readLine()) != null){
+				Util.debug("linkedFrame(): " + line);
+				return true;
+			}
+		} catch (Exception e){return false;};
+		
+		return false;
+	}
+	*/
 	
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
@@ -953,7 +988,7 @@ public class Util {
 		String line = null;
 		try { 
 			proc = Runtime.getRuntime().exec( new String[]{ "/bin/sh", "-c", "ps -a" });
-//			proc.waitFor();
+			proc.waitFor();
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
 			while ((line = procReader.readLine()) != null){
 				if(line.contains("tar") || line.contains("zip")){

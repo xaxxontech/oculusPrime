@@ -847,17 +847,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			break;
 
-		case startmapping:
-			if (navigation != null) navigation.startMapping();
-			break;
-
-		case savemap:
-			if (navigation != null) navigation.saveMap();
-			break;
-
-		case clearmap: Mapper.clearMap();
-			break;
-
+		case startmapping: if (navigation != null) navigation.startMapping(); break;
+		case savemap: if (navigation != null) navigation.saveMap(); break;
+		case clearmap: Mapper.clearMap(); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
@@ -893,16 +885,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			new OpenCVUtils(this).jpgStream(str);
 //			opencvutils.jpgStream(str);
 			break;
+		
+		case deletelogs: Util.deleteLogFiles(); break;
+		case archivelogs: Util.manageLogs(); break;
 			
-			case deletelogs:
-//				driverCallServer(PlayerCommands.cancelroute, null);
-				Util.deleteLogFiles();
-				break;
-			case archivelogs: 
-//				driverCallServer(PlayerCommands.cancelroute, null);
-				Util.manageLogs();
-				break;
-				
 		case streammode: // TODO: testing ffmpeg/avconv streaming
 			grabberSetStream(str);
 			break;
@@ -2322,6 +2308,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	// record to flv in webapps/oculusPrime/streams/
+	@SuppressWarnings("incomplete-switch")
 	public String record(String mode) {
 		IConnection conn = grabber;
 

@@ -24,15 +24,13 @@ public class NavigationLog {
     public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
             "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
 
-// testing:
-// public static final String navigationlogpath = System.getenv("HOME")+Util.sep+"temp"+Util.sep+"navroutelog/index.html";
-
     public static final String ALERTSTATUS = "ALERT";
     public static final String ERRORSTATUS = "ERROR";
     public static final String COMPLETEDSTATUS = "Completed";
     public static final String INFOSTATUS = "Info";
     public static final String PHOTOSTATUS = "Photo";
     public static final String VIDEOSTATUS = "Video";
+    
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
     private static final String FILEEND = "</body></html>";
@@ -40,7 +38,7 @@ public class NavigationLog {
     private static volatile boolean newItemBusy = false;
     
     // use if only needing to write a simple message 
-    public synchronized static void newItem(final String status, final String msg){
+    public static void /*synchronized*/ newItem(final String status, final String msg){
     	newItem(status, msg, State.getReference().get(values.roscurrentgoal), State.getReference().get(values.navigationroute));
     }
     

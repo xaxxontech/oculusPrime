@@ -1,9 +1,5 @@
 package oculusPrime;
 
-
-import org.red5.server.api.IConnection;
-import org.red5.server.stream.ClientBroadcastStream;
-
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +18,7 @@ public class Video {
     private static final int defaultquality = 5;
     private static final int quality720p = 7;
     private static final int defaultwidth=640;
-    private static final int defaultheight=480;
+ //   private static final int defaultheight=480;
     private static final int lowreswidth=320;
     private static final int lowresheight=240;
     private static final String PATH="/dev/shm/avconvframes/";
@@ -59,7 +55,6 @@ public class Video {
             String cmd[] = new String[]{"arecord", "--list-devices"};
             Process proc = Runtime.getRuntime().exec(cmd);
             proc.waitFor();
-//            proc.waitFor();
 
             String line = null;
             BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -201,7 +196,7 @@ public class Video {
             }
 
             // determine latest image file
-            File dir=new File(PATH);
+            File dir = new File(PATH);
             File imgfile = null;
             long start = System.currentTimeMillis();
             while (imgfile == null && System.currentTimeMillis()-start < 10000) {
@@ -218,7 +213,7 @@ public class Video {
             if (imgfile == null) { Util.log(avprog+" frame unavailable", this); }
             else {
                 try {
-                    app.processedImage = ImageIO.read(imgfile);
+                    Application.processedImage = ImageIO.read(imgfile);
                 } catch (IOException e) {
                     Util.printError(e);
                 }
@@ -279,7 +274,6 @@ public class Video {
             Util.log("dumpframegrabs stop", this); // TODO: nuke
 
         } }).start();
-
     }
 
 }

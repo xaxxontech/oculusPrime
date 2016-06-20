@@ -56,16 +56,15 @@ public class Navigation implements Observer {
 	public static int rotations = 0;
 	private boolean failed = false;
 	
-	public NavigationLog navlog; // make static
+//	public NavigationLog navlog; // make static
 
 	/** Constructor */
 
 	public Navigation(Application a) {
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
-
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
-		navlog = new NavigationLog();
+//		navlog = new NavigationLog();
 		state.addObserver(this);
 		app = a;
 	}	
