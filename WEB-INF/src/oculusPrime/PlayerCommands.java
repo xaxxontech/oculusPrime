@@ -9,6 +9,7 @@ public enum PlayerCommands {
     
     // operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu,
+	waitforcpu, // undocumented
     
     //user, accounts
     who, chat, disconnectotherconnections, driverexit, loginrecords, messageclients,  

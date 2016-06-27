@@ -41,6 +41,7 @@ public class State {
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 		localaddress, externaladdress, ssid, guinotify,
 		osarch,
+		waitingforcpu, // to be documented
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
@@ -428,7 +429,7 @@ public class State {
 		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
 
 		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
-		Util.log("file created: "+dump.getAbsolutePath(), this);
+		Util.log("State.dumpFile() file created: "+dump.getAbsolutePath(), this);
 		
 		try {
 			FileWriter fw = new FileWriter(dump);	

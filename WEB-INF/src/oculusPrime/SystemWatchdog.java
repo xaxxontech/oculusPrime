@@ -108,28 +108,28 @@ public class SystemWatchdog implements Observer {
 			}
 			
 			// deal with abandonded, undocked, low battery, not redocking, not already attempted redock
-			if ( ! state.exists(State.values.driver) &&
-					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN && 
-					redocking == false &&
-					Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 35 && // was 10%
-					state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
-					settings.getBoolean(GUISettings.redock)
-					) {
-				if (!lowbattredock) {
-					lowbattredock = true;
-					lowbattredockstart = System.currentTimeMillis();
-					Util.log("abandonded, undocked, low battery, not redocking", this);
-					PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
-					redock(NOFORWARD);
-				}
-				else { // power down if redock failed, helps with battery death by parasitics
-					if (System.currentTimeMillis() - lowbattredockstart > AUTODOCKTIMEOUT) {
-						Util.log("abandonded, undocked, low battery, redock failed", this);
-						application.driverCallServer(PlayerCommands.powershutdown, null);
+			if (state.get(values.batterylife).matches(".*\\d+.*")) {  // make sure batterylife != 'TIMEOUT', throws error
+				if (!state.exists(State.values.driver) &&
+						System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN &&
+						redocking == false &&
+						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 35 && // was 10%
+						state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
+						settings.getBoolean(GUISettings.redock)
+						) {
+					if (!lowbattredock) {
+						lowbattredock = true;
+						lowbattredockstart = System.currentTimeMillis();
+						Util.log("abandonded, undocked, low battery, not redocking", this);
+						PowerLogger.append("abandonded, undocked, low battery, not redocking", this);
+						redock(NOFORWARD);
+					} else { // power down if redock failed, helps with battery death by parasitics
+						if (System.currentTimeMillis() - lowbattredockstart > AUTODOCKTIMEOUT) {
+							Util.log("abandonded, undocked, low battery, redock failed", this);
+							application.driverCallServer(PlayerCommands.powershutdown, null);
+						}
 					}
-				}
+				} else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 			}
-			else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 
 //			 check cpu useage
 			int cpuNow = Util.getCPU();
@@ -366,13 +366,19 @@ public class SystemWatchdog implements Observer {
 //		callForHelp(subject, body);
 	}
 
+	public void waitForCpuThread() {
+		new Thread(new Runnable() { public void run() {
+			waitForCpu();
+		}  }).start();
+	}
 
 	public static void waitForCpu() { waitForCpu(60, 20000); }
 
 	public static void waitForCpu(long timeout) { waitForCpu(60, timeout); }
 
 	public static void waitForCpu(int threshold, long timeout) {
-
+		State state = State.getReference();
+		state.set(values.waitingforcpu, true);
 		long start = System.currentTimeMillis();
 		int cpu = 0;
 		while (System.currentTimeMillis() - start < timeout) {
@@ -381,11 +387,13 @@ public class SystemWatchdog implements Observer {
 				cpu = Util.getCPU();
 				if (cpu <threshold) {
 					Util.debug("SystemWatchdog.waitForCpu() cleared, cpu @ " + cpu + "% after " + (System.currentTimeMillis() - start) + "ms", null);
+					state.set(values.waitingforcpu, false);
 					return;
 				}
 			}
 			Util.delay(1000);
 		}
+		state.set(values.waitingforcpu, false);
 		Util.log("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + "ms", null);
 	}
 }

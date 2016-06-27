@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.swingtool.Input;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
@@ -865,6 +866,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
 			break;
+		case waitforcpu: watchdog.waitForCpuThread();  break;
 
 		// dev tool only
 		case error:
@@ -2283,18 +2285,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	private void setStreamActivityThreshold(String str) {
 
-		// only works with flash, assuming sound detect called
-		if (!settings.getBoolean(ManualSettings.useflash)) {
-			video.sounddetect(Settings.TRUE);
-			return;
-		}
 
-		String stream = state.get(State.values.stream);
+
 		String val[] = str.split("\\D+");
 		if (val.length != 2) { return; } 
 		Integer videoThreshold = Integer.parseInt(val[0]);
 		Integer audioThreshold = Integer.parseInt(val[1]);
 
+		String stream = state.get(State.values.stream);
 		state.delete(State.values.streamactivity);
 		state.set(State.values.streamactivitythreshold, str);
 		

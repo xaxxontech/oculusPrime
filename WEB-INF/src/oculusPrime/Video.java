@@ -174,7 +174,6 @@ public class Video {
         if (state.exists(State.values.writingframegrabs)) {
             state.delete(State.values.writingframegrabs);
 //            Util.delay(STREAM_CONNECT_DELAY);
-            Util.log("writingframegrabs delete", this); // TODO: nuke
         }
     }
 
@@ -198,7 +197,7 @@ public class Video {
                 Util.delay(STREAM_CONNECT_DELAY);
             }
             else if (state.getInteger(State.values.writingframegrabs) != width) {
-                Util.log("dumpframegrabs() not using width: "+width, this);
+//                Util.log("dumpframegrabs() not using width: "+width, this);
                 forceShutdownFrameGrabs();
                 Util.delay(STREAM_CONNECT_DELAY);
                 dumpframegrabs(res);
@@ -235,8 +234,6 @@ public class Video {
     }
 
     private void dumpframegrabs(final String res) {
-
-        Util.log("dumpframegrabs start", this); // TODO: nuke
 
         File dir=new File(PATH);
         for(File file: dir.listFiles()) file.delete(); // nuke any existing files
@@ -281,7 +278,6 @@ public class Video {
             Util.systemCall("pkill -n " + avprog); // kills newest only
             File dir=new File(PATH);
             for(File file: dir.listFiles()) file.delete(); // clean up (gets most files)
-            Util.log("dumpframegrabs stop", this); // TODO: nuke
 
         } }).start();
 
@@ -427,7 +423,10 @@ public class Video {
 
         if (state.get(State.values.record) == null)
             state.set(State.values.record, Application.streamstate.stop.toString());
-        if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) return;
+        if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
+            app.driverCallServer(PlayerCommands.messageclients, "record already running, sound detection command dropped");
+            return;
+        }
 
         final String filename = "temp";
         final String fullpath = Settings.streamsfolder+Util.sep+filename+AUDIO+FMTEXT;
@@ -491,7 +490,7 @@ public class Video {
                     return;
                 }
 
-                if (voldB > Settings.getReference().getDouble(ManualSettings.soundthresholdalt)) {
+                if (voldB > Settings.getReference().getDouble(ManualSettings.soundthresholdalt) && state.getBoolean(State.values.sounddetect)) {
                     state.set(State.values.streamactivity, "audio " + voldB+"dB");
                     state.set(State.values.sounddetect, false);
                     app.driverCallServer(PlayerCommands.messageclients, "sound detected: "+ voldB+"dB");

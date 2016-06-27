@@ -1455,7 +1455,11 @@ function waypointactionaddnew(routenum, waypointnum, id) {
 			waypointDeleteAnyActionsNamed(waypoint, "not detect");
 			waypointDeleteAnyActionsNamed(waypoint, "photo");
 		}
-		else if (actiontext == "sound")  waypointDeleteAnyActionsNamed(waypoint, "record video");
+		else if (actiontext == "sound") {
+			 waypointDeleteAnyActionsNamed(waypoint, "record video");
+			 waypointDeleteAnyActionsNamed(waypoint, "photo");
+		 }
+			 
 		else if (actiontext == "record video")  waypointDeleteAnyActionsNamed(waypoint, "sound");
 		
 		// check for existing 'not detect', if so nuke any existing sense actions
