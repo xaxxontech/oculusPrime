@@ -31,7 +31,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	
 	private static final int MAX_STATE_HISTORY = 25; // in development keep high number 
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "13"; // keep low in development 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "5"; // keep low in development 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -359,17 +359,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append( "<td><b>linux</b><td>" + Util.diskFullPercent() + "%</a> used</tr> \n"); 
 	
 		String dock = "<font color=\"blue\">undocked</font>";
-		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) 
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
-			// routedistance = 0;
-		}
-		if(!state.getBoolean(values.odometry) || state.equals(values.dockstatus, AutoDock.DOCKED)) {
+		
+		if(!state.getBoolean(values.odometry) || state.equals(values.dockstatus, AutoDock.DOCKED)) 
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
-			// routedistance = 0;
-		}
-		if(state.equals(values.dockstatus, AutoDock.DOCKED)) {
+
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) 
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
-		}
 		
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">un-docked</a>";	
 		if(state.equals(values.dockstatus, AutoDock.DOCKING)) dock = "<font color=\"blue\">docking</font>";
@@ -401,8 +398,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>archive</b><td>"+ archivelogs + Util.countMbytes(Settings.archivefolder) + "</a> mb<td></tr> \n" );
 			
 		str.append("<tr><td><b>battery</b>&nbsp;<td>" + life + "<td><b>dock</b><td>" + dock
-			// + "<td><b>cpu</b><td>" + state.get(values.cpu) + "% "
-			+ "<td><b>images</b><td>" + Util.countMbytes(Settings.framefolder) + " mb<td></tr> \n" );
+			+ "<td><b>streams</b><td>" + (Util.countMbytes(Settings.streamfolder) + Util.countMbytes(Settings.framefolder))+ " mb<td></tr> \n" );
 		
 		String od = "<a href=\"dashboard?action=startnav\" title=\"start ROS navigation \">on</a></font>&nbsp;&nbsp;|&nbsp;&nbsp;off"; 
 		 if(state.getBoolean(values.odometry)) 
@@ -438,7 +434,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		
 		str.append("\n</table>\n");
-		str.append(getTail(15) + "\n");
+		str.append(getTail(12) + "\n");
 		return str.toString();
 	}
 	
