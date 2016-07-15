@@ -1,28 +1,29 @@
 package oculusPrime;
 
-import developer.Navigation;
-import developer.Ros;
-import developer.depth.Mapper;
-import developer.depth.ScanUtils;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
-import java.awt.*;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-
-import javax.servlet.annotation.MultipartConfig;
+import developer.Navigation;
+import developer.Ros;
+import developer.depth.Mapper;
+import developer.depth.ScanUtils;
 
 @SuppressWarnings("serial")
 @MultipartConfig(fileSizeThreshold=1024*1024*2, // 2MB

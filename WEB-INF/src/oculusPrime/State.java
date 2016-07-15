@@ -1,8 +1,6 @@
 package oculusPrime;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -10,7 +8,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 import java.util.Vector;
 
 import developer.Ros.navsystemstate;
@@ -84,28 +81,14 @@ public class State {
 		props.put(values.telnetusers.name(), "0");
 		getLinuxUptime();
 	}
-
-	public void getLinuxUptime(){
-		new Thread(new Runnable() {
-			@Override
-			public void run() {	
-				try {
-					
-					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
-					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
-					String line = procReader.readLine();
-					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
-					set(values.linuxboot, date.getTime());
-					
-				} catch (Exception e) {
-					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
-				}										
-			}
-		}).start();
-	}
 	
 	public void addObserver(Observer obs){
 		observers.add(obs);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public HashMap<String, String> getState(){
+		return (HashMap<String, String>) props.clone();
 	}
 	
 	/** test for string equality. any nulls will return false */ 
@@ -136,70 +119,6 @@ public class State {
 	
 	public boolean equals(values a, navsystemstate b) {
 		return equals(a.name(), b.name());
-	}
-	
-	public String toHTML(){ 
-		StringBuffer str = new StringBuffer("<table>"); 
-		Set<String> keys = props.keySet();
-		for(Iterator<String> i = keys.iterator(); i.hasNext();){
-			try {
-				if( !i.hasNext()) break;
-				
-				String key = i.next();
-				if(key.equals(values.rosamcl.name())) key = i.next();
-				if(key.equals(values.rosglobalpath.name())) key = i.next();
-				if(key.equals(values.rosmapinfo.name())) key = i.next();
-				if(key.equals(values.rosscan.name())) key = i.next();
-				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<tr><td><b>" + key + "</b><td> " + props.get(key));
-
-				if( !i.hasNext()) break;
-				
-				key = i.next();
-				if(key.equals(values.rosamcl.name())) key = i.next();
-				if(key.equals(values.rosglobalpath.name())) key = i.next();
-				if(key.equals(values.rosmapinfo.name())) key = i.next();
-				if(key.equals(values.rosscan.name())) key = i.next();
-				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<td><b>" + key + "</b><td> " + props.get(key));
-				
-				if( !i.hasNext()) break;
-				
-				key = i.next();
-				if(key.equals(values.rosamcl.name())) key = i.next();
-				if(key.equals(values.rosglobalpath.name())) key = i.next();
-				if(key.equals(values.rosmapinfo.name())) key = i.next();
-				if(key.equals(values.rosscan.name())) key = i.next();
-				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<td><b>" + key + "</b><td> " + props.get(key));
-			} catch (Exception e) {
-				break;
-			}
-		}
-			
-		if(props.containsKey(values.rosmapwaypoints.name())) {
-			String names = "";
-			String[] way =  props.get(values.rosmapwaypoints.name()).split(",");
-			for(int i = 0 ; i < way.length ; i++) 
-				if(way[i].matches("[a-zA-Z]+"))
-					names += way[i].trim() + ", "; 
-					
-			str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"9\"> " + names + " </tr> \r");
-		}
-	
-		if(props.containsKey(values.rosamcl.name())) 
-			str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
-	
-		if(props.containsKey(values.batteryinfo.name())) 
-			str.append("<tr><td colspan=\"9\"><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
-		
-		str.append("<tr><td colspan=\"9\"><b>NULL:</b>");
-		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
-		str.append("</table>\n");
-		return str.toString();
 	}
 	
 	/**
@@ -350,22 +269,17 @@ public class State {
 	
 	synchronized void delete(String key) {
 		
-		// Util.log("delete: " + key, this);
+		Util.debug("delete: " + key, this);
 		
-		if( ! props.containsKey(key)) return;
-		
-		props.remove(key);
-		for(int i = 0 ; i < observers.size() ; i++)
-			observers.get(i).updated(key);	
+		if(props.containsKey(key)) props.remove(key);
+		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);	
 	}
 	
 	public void delete(values key) {
-		// Util.log("delete: " + key, this);
 		if(exists(key)) delete(key.name());
 	}
 	
 	public void set(values key, values value) {
-		
 		set(key.name(), value.name());
 	}
 	
@@ -419,11 +333,30 @@ public class State {
 		return getDouble(key.name());
 	}
 
+	private void getLinuxUptime(){
+		new Thread(new Runnable() {
+			@Override
+			public void run() {	
+				try {
+					
+					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
+					String line = procReader.readLine();
+					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
+					set(values.linuxboot, date.getTime());
+					
+				} catch (Exception e) {
+					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
+				}										
+			}
+		}).start();
+	}
+	
 	/*
 	public String dumpFile(){	
 		return dumpFile(" no message ");
 	}
-	*/
+	
 	
 	public String dumpFile(final String msg) {
 		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
@@ -447,5 +380,5 @@ public class State {
 		} catch (Exception e) { Util.printError(e); }
 	
 		return dump.getAbsolutePath();
-	}
+	}*/
 }

@@ -15,7 +15,6 @@ public class Updater {
 		double currentVersion = -1;
 
 		// get current version info from txt file in root folder
-		String sep = System.getProperty("file.separator");
 		String filename =  Settings.redhome+Util.sep+"version.nfo";
 		
 		FileInputStream filein;

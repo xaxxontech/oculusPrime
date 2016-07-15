@@ -10,7 +10,6 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
-import developer.swingtool.Input;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
@@ -29,7 +28,6 @@ import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
-import org.red5.server.stream.ClientBroadcastStream;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -547,7 +545,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: video.record(str); break;
+		case record: video.record(str); break; // record [true | false]
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 
@@ -887,60 +885,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 			
-		case archive: 
-			Util.manageLogs();
-			break;
-		case truncarchive:
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
+		case deletelogs:
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
-			Util.truncStaleArchive();
 			Util.deleteLogFiles();
-			Util.truncState();
 			break;
-		case truncimages: 
-			Util.truncStaleFrames();
-			break;
-		case truncros: 
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			Util.deleteROS();
-			break;
-		case archiveimages: 
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
-			Util.archiveImages();
-			break;
-		case archiveros:
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
-				break;
-			}
-			Util.archiveROS();
-			break;
-		case archivelogs: 
-			if(Util.archivePID()){ 
-				Util.log("archiving busy, skipping.. ", this);
-				break;
-			}
 			
-			//if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-			//	Util.log("archiving busy, must be docked, skipping.. ", null);
-			//	break;
-			//}
+		case archivelogs: 
+//			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+//				Util.log("archiving busy, must be docked, skipping.. ", null);
+//				break;
+//			}
 			Util.archiveLogs();
 			break;
 
