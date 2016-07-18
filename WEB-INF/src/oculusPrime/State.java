@@ -165,7 +165,7 @@ public class State {
 		try {
 			props.put(key.trim(), value.trim());
 		} catch (Exception e) {
-			e.printStackTrace();
+			Util.printError(e);
 		}
 
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());
@@ -268,11 +268,10 @@ public class State {
 	}
 	
 	synchronized void delete(String key) {
-		
-		Util.debug("delete: " + key, this);
-		
+		if(!exists(key)) return;
 		if(props.containsKey(key)) props.remove(key);
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);	
+		Util.debug("delete: " + key, this);
 	}
 	
 	public void delete(values key) {
