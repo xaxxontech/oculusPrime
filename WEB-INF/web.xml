@@ -1,26 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<web-app xmlns="http://java.sun.com/xml/ns/javaee" version="2.5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	 xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+<web-app    xmlns="http://java.sun.com/xml/ns/j2ee" 
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd" 
+   version="2.4"> 
 
-	<display-name>root</display-name>
+	<display-name>oculusPrime</display-name>
 
-	<servlet>
-		<servlet-name>gateway</servlet-name>
-		<servlet-class>
-			org.red5.server.net.servlet.AMFGatewayServlet
-		</servlet-class>
-		<load-on-startup>1</load-on-startup>
-	</servlet>
-
-	<servlet>
-		<servlet-name>rtmpt</servlet-name>
-		<servlet-class>
-			org.red5.server.net.rtmpt.RTMPTServlet
-		</servlet-class>
-		<load-on-startup>2</load-on-startup>
-	</servlet>
+	<context-param>
+		<param-name>webAppRootKey</param-name>
+		<param-value>/oculusPrime</param-value>
+	</context-param>
 	
-	<!-- start of added by colin adamson -->
 	<servlet>
 		<servlet-name>rtmpPortRequest</servlet-name>
 		<servlet-class>
@@ -46,95 +36,68 @@
 		<servlet-name>frameGrabHTTP</servlet-name>
 		<url-pattern>/frameGrabHTTP</url-pattern>
 	</servlet-mapping>
-	<!--end of added by colin adamson-->
 	
-	<!--  brad  -->
+	
 	<servlet>
-		<servlet-name>authGrab</servlet-name>
-		<servlet-class>
-			oculusPrime.AuthGrab
-		</servlet-class>
+		<servlet-name>DashboardServlet</servlet-name>
+		<servlet-class>oculusPrime.DashboardServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
-		<servlet-name>authGrab</servlet-name>
-		<url-pattern>/AuthGrab</url-pattern>
+		<servlet-name>DashboardServlet</servlet-name>
+		<url-pattern>/dashboard</url-pattern>
 	</servlet-mapping>
 	
-	
+	<servlet>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<servlet-class>oculusPrime.StaticContentServlet</servlet-class>
+	</servlet>
 	<servlet-mapping>
-		<servlet-name>gateway</servlet-name>
-		<url-pattern>/gateway</url-pattern>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/framegrabs/</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/framegrabs/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/navigationlog/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/streams/</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>StaticContentServlet</servlet-name>
+		<url-pattern>/streams/*</url-pattern>
 	</servlet-mapping>
 
+	<servlet>
+		<servlet-name>NetworkServlet</servlet-name>
+		<servlet-class>oculusPrime.NetworkServlet</servlet-class>
+	</servlet>
 	<servlet-mapping>
-		<servlet-name>rtmpt</servlet-name>
-		<url-pattern>/open/*</url-pattern>
+		<servlet-name>NetworkServlet</servlet-name>
+		<url-pattern>/network</url-pattern>
 	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>rtmpt</servlet-name>
-		<url-pattern>/idle/*</url-pattern>
-	</servlet-mapping>
-
-	<servlet-mapping>
-		<servlet-name>rtmpt</servlet-name>
-		<url-pattern>/send/*</url-pattern>
-	</servlet-mapping>
- 
-	<servlet-mapping>
-		<servlet-name>rtmpt</servlet-name>
-		<url-pattern>/close/*</url-pattern>
-	</servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>rtmpt</servlet-name>
-        <url-pattern>/fcs/*</url-pattern>
-    </servlet-mapping>
-
-	<welcome-file-list>
-		<welcome-file>index.jsp</welcome-file>
-		<welcome-file>index.html</welcome-file>
-		<welcome-file>index.htm</welcome-file>
-	</welcome-file-list>
 
 	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>Forbidden</web-resource-name>
 			<url-pattern>/WEB-INF/*</url-pattern>
+			<url-pattern>/scripts/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint />
 	</security-constraint>
 
-	<security-constraint>
-		<web-resource-collection>
-			<web-resource-name>Forbidden</web-resource-name>
-			<url-pattern>/persistence/*</url-pattern>
-		</web-resource-collection>
-		<auth-constraint />
-	</security-constraint>
 
-	<security-constraint>
+<!--	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>Forbidden</web-resource-name>
-			<url-pattern>/streams/*</url-pattern>
+			<url-pattern>/scripts/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint />
-	</security-constraint>
+	</security-constraint>-->
 	
-	<!-- 
-	<listener>
-	    <listener-class>org.red5.logging.ContextLoggingListener</listener-class>
-	</listener>
-	
-	<filter>
-	    <filter-name>LoggerContextFilter</filter-name>
-	    <filter-class>org.red5.logging.LoggerContextFilter</filter-class>
-	</filter>
-	
-	<filter-mapping>
-	    <filter-name>LoggerContextFilter</filter-name>
-	    <url-pattern>/*</url-pattern>
-	</filter-mapping>
-	 -->
-	 
+
 </web-app>

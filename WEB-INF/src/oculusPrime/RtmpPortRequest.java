@@ -8,13 +8,14 @@ import javax.servlet.http.*;
 
 public class RtmpPortRequest extends HttpServlet {
 	private Settings settings;
-	private static Application app = null;
 
-	//TODO: need this??
-	public static void setApp(Application a) {
-		if(app != null) return;
-		app = a;
-	}
+//	private static Application app = null;
+//
+//	//TODO: need this??
+//	public static void setApp(Application a) {
+//		if(app != null) return;
+//		app = a;
+//	}
 	
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {

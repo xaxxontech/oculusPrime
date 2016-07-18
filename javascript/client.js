@@ -1,15 +1,12 @@
 //TODO: clean out unused 'overlay off' and 'extended settings box' references (in html too) 
 
 var sentcmdcolor = "#777777";
-var systimeoffset;
 var enablekeyboard = false;
 var lagtimer = 0;
 var officiallagtimer = 0;
-var maxlogbuffer = 50000;
 var statusflashingarray= new Array();
 var pinginterval = null; //timer
 var pingcountdown = null; //timer
-var pingintervalcountdowntimer; //timer
 var pingcountdownaftercheck; //timer
 var laststatuscheck = null;
 var pingintervalamount = 5;
@@ -38,50 +35,89 @@ var cameramoving = false;
 var broadcasting = null;
 var broadcastmicon = false; 
 var clicksteeron = true;
-var maxmessagecontents = 150000;
+var maxmessagecontents = 50000; // was 150000
 var maxmessageboxsize = 4000;
+
 var tempimage = new Image();
 tempimage.src = 'images/eye.gif';
 var tempimage2 = new Image();
 tempimage2.src = 'images/ajax-loader.gif';
 var tempimage3 = new Image();
 tempimage3.src = 'images/dockline.gif';
+var tempimage4 = new Image();
+tempimage4.src = 'images/steering_icon_selected.gif';
+
 var admin = false;
 var userlistcalledby;
 var initialdockedmessage = false;
 var html5 = true;
-var faceboxtimer;
-var facegrabon = false;
-var tempdivtext;
 var autodocking = false;
 var sendcommandtimelast = 0;
 var lastcommandsent;
-//var popupmenumouseposinterval;
 var popupmenu_xoffset = null;
 var popupmenu_yoffset = null;
+var popupmenu_xsizestart;
+var popupmenu_ysizestart;
+var popupmenu_widthstart;
+var popupmenu_heightstart;
+var mainmenuwidth = null;
 var bworig;
 var rovvolume = 0;
 var xmlhttp=null;
 var spotlightlevel = -1;
+var floodlightlevel = -1;
 var videoscale = 100;
 var pingcountertimer;
 var pushtotalk;
+var lastcommand; 
+var maintopbarTimer = null;
+var subwindows = ["aux", "context", "menu", "main", "rosmap"];  // purposely skipped "error" window
+var windowpos = [null, null, null, null]; // needs same length as above
+var oculusPrimeplayerSWF;
+var recordmode = streammode;
 
 function loaded() {
+	oculusPrimeplayerSWF = document.getElementById("oculusPrime_player");
+	
+	loadwindowpositions();
+	loadrosmapwindowpos();
+	
+	// main window init:
+	var mm = document.getElementById("main_menu_over");
+	var mt = document.getElementById("maintable");
+	var x = mt.offsetLeft;
+	var y = mt.offsetTop - mm.style.paddingTop;
+	mm.style.position = "absolute";
+	var i = subwindows.indexOf("main");
+	if (windowpos[i] != null) {
+		x = windowpos[i][0];
+		y = windowpos[i][1]+22;
+	}
+	mm.style.left = x + "px";
+	mm.style.top = y -22 + "px"; 
+	var under = document.getElementById("main_menu_under");
+	under.style.display = "";
+	under.style.width = null; //ie fix
+	under.style.height = null; //ie fix
+	var margin = 4;
+	under.style.left = (mm.offsetLeft - margin) + "px";
+	under.style.top = (mm.offsetTop -margin) + "px";
+	under.style.width = (mm.offsetWidth + margin*2) + "px";
+	under.style.height = (mm.offsetHeight + margin*2) + "px";
+	under.style.display = "none";
+	
+	
 	if (clicksteeron) { clicksteer("on"); }
     overlay("on");
     browserwindowresized();
-	var b = new Image();
-	b.src = 'images/steering_icon_selected.gif';
 	bworig= document.body.clientWidth;
-	var a = document.getElementById("blorg");
-
-//	debug("<a href='javascript: displaymessages();'>show msg</a>"); // message recording
 }
 
 function flashloaded() {
 	videologo("on");
 	openxmlhttp("rtmpPortRequest",rtmpPortReturned);
+	
+
 }
 
 function openxmlhttp(theurl, functionname) {
@@ -104,7 +140,7 @@ function openxmlhttp(theurl, functionname) {
 function rtmpPortReturned() { //xmlhttp event handler
 	if (xmlhttp.readyState==4) {// 4 = "loaded"
 		if (xmlhttp.status==200) {// 200 = OK
-			getFlashMovie("oculusPrime_player").setRtmpPort(xmlhttp.responseText);
+			oculusPrimeplayerSWF.setRtmpPort(xmlhttp.responseText);
 			if (/auth=/.test(document.cookie)) { loginfromcookie(); }
 			else { login(); }
 		}
@@ -124,12 +160,10 @@ function resized() {
 }
 
 function browserwindowresized() {
-	var a = document.getElementById("visiblepagediv");
-//	debug(document.body.clientHeight + " " + a.offsetHeight);
-	if (document.body.clientHeight < document.getElementById("visiblepagediv").offsetHeight + 40) {
-		document.getElementById("topgap").style.height = "5px";
-	}
-	else { document.getElementById("topgap").style.height = "30px"; }
+//	if (document.body.clientHeight < document.getElementById("visiblepagediv").offsetHeight + 40) {
+//		document.getElementById("topgap").style.height = "5px";
+//	}
+//	else { document.getElementById("topgap").style.height = "30px"; }
 	
 	docklineposition();
 	videooverlayposition();
@@ -186,13 +220,22 @@ function checkforstatusreceived() {
 		message("status request failed", sentcmdcolor);
 		setstatus("lag","<span style='color: red;'>LARGE</span>");
 		if (missedstatuschecks > 20) {
-			setstatus("connection","<span style='color: #666666;'>RELOAD PAGE</span>");
+			connectionlost();
 		}
 		else { countdowntostatuscheck(); }
 	}
 	else { 
 		missedstatuschecks =0;
 	}
+}
+
+function connectionlost() {
+	setstatus("connection","<span style='color: red;'>CLOSED</span>");
+	document.title = "closed";
+	connected = false;
+	setstatusunknown();
+	videologo("on");
+	message("reload page", "green");
 }
 
 function callServer(fn, str) {
@@ -211,7 +254,7 @@ function callServer(fn, str) {
 		
 		var nowtime = new Date().getTime();
 		if (!(lastcommandsent == fn+str && nowtime - sendcommandtimelast < 200)) {
-			getFlashMovie("oculusPrime_player").flashCallServer(fn,str);
+			oculusPrimeplayerSWF.flashCallServer(fn,str);
 		}
 		else message("rapid succession command dropped",sentcmdcolor);
 		sendcommandtimelast = nowtime;
@@ -222,39 +265,30 @@ function callServer(fn, str) {
 function play(str) { // called by javascript only?
 	streammode = str;
 	var num = 1;
+	var s = str.split("_");
+	if (s[1]=="2") { num = 2; streammode = s[0] } // separate audio stream with avconv
 	if (streammode == "stop") { num =0 ; } 
-	getFlashMovie("oculusPrime_player").flashplay(num, videoscale);
+	oculusPrimeplayerSWF.flashplay(num, videoscale);
 }
 
 function getFlashMovie(movieName) {
 	var isIE = navigator.appName.indexOf("Microsoft") != -1;
 	return (isIE) ? window[movieName] : document[movieName];
+	// return document.getElementById(movieName);
 }
 
-function publish(str) {
-	if (str=="broadcast_camandmic") {
-		callServer("playerbroadcast","camandmic");
-		broadcasting = "camandmic";
-		message ("sending: playerbroadcast camandmic",sentcmdcolor);
-		clicksteer("off");
+function publish(str) { 
+	if (str=="broadcast_mic") {  // forces page reload
+		callServer("playerbroadcast","mic"); 
+//		broadcasting = "mic";
+//		message ("sending: playerbroadcast miconly",sentcmdcolor);
+//		clicksteer("off");
 	}
-	else if (str=="broadcast_camera") {
-		callServer("playerbroadcast","camera");
-		broadcasting = "camera";
-		message ("sending: playerbroadcast camonly",sentcmdcolor);
-		clicksteer("off");
-	}
-	else if (str=="broadcast_mic") {
-		callServer("playerbroadcast","mic");
-		broadcasting = "mic";
-		message ("sending: playerbroadcast miconly",sentcmdcolor);
-		clicksteer("off");
-	}
-	else if (str=="broadcast_off") {
+	else if (str=="broadcast_off") { // forces page reload
 		callServer("playerbroadcast","off"); 
-		broadcasting = null;
-		message ("sending: playerbroadcast off",sentcmdcolor);
-		clicksteer("on"); 
+//		broadcasting = null;
+//		message ("sending: playerbroadcast off",sentcmdcolor);
+//		clicksteer("on"); 
 	}
 	else {
 		message("sending command: publish " + str, sentcmdcolor);
@@ -264,8 +298,6 @@ function publish(str) {
 }
 
 function message(message, colour, status, value) {
-	
-//	recordmessage(message, colour, status, value); // message recording, dev only
 	
 	if (message != null) {
 		var tempmessage = message;
@@ -334,18 +366,22 @@ function setstatus(status, value) {
 			value += " <img src='images/ajax-loader.gif' style='vertical-align: bottom;'>";
 		}
 		if (status=="cameratilt") { value += "&deg;"; }
+		if (status=="stream") {
+			var s = value.split("_");
+			if (s[0] != streammode) { play(value); }
+			value = s[0];
+		}
+
 		a.innerHTML = value;
+
 		if (status == "connection" && value == "closed") { 
-			a.style.color = "red";
-			connected = false;
-			setstatusunknown();
-			videologo("on");
+			connectionlost();
 		}
 		var clr = a.style.color;
 		var bclr = a.style.backgroundColor;
 		b=document.getElementById(status+"_title");
 		var tclr = b.style.color;
-		var tbclr = "#1b1b1b";
+		var tbclr = "#000000";
 		if (statusflashingarray[status]==null) {
 			statusflashingarray[status]="flashing";
 			a.style.color = bclr;
@@ -364,48 +400,46 @@ function setstatus(status, value) {
 		}
 	}
 	if (status=="vidctroffset") { ctroffset = parseInt(value); }
-	//if (status=="motion" && value=="disabled") { motionenabled = false; }
-	if (status=="connection" && value == "connected" && !connected) { // initialize
+	else if (status=="connection" && value == "connected" && !connected) { // initialize
 		overlay("off");
 		countdowntostatuscheck(); 
 		connected = true;
 		keyboard("enable");
 		setTimeout("videomouseaction = true;",30); // firefox screen glitch fix
 		clearTimeout(logintimer);
+		callServer("videosoundmode", "high");
 	}
-	if (status == "storecookie") {
+	else if (status == "storecookie") {
 		createCookie("auth",value,30); 
 	}
-	if (status == "someonealreadydriving") { someonealreadydriving(value); }
-	if (status == "user") { username = value; }
-	if (status == "hijacked") { window.location.reload(); }
-	if (status == "stream" && (value.toUpperCase() != streammode.toUpperCase())) { play(value); }
-	if (status == "admin" && value == "true") { admin = true; }
-	if (status == "dock") {
+	else if (status == "someonealreadydriving") { someonealreadydriving(value); }
+	else if (status == "user") { username = value; }
+	else if (status == "hijacked") { window.location.reload(); }
+	else if (status == "admin" && value == "true") { admin = true; }
+	else if (status == "dock") {
 		if (initialdockedmessage==false) {
 			initialdockedmessage = true;
 			if (value == "docked") {
-				message("docked, charging","green");
+				message("docked","green");
 			}
 		}
 		if (!/docking/i.test(value)) {
 			docklinetoggle("off");
 		}
 	}
-	if (status == "streamsettings") {
+	else if (status == "streamsettings") {
 		streamdetails = value.split("_");
 	}
-//	if (status=="facefound") { facefound(value); }
-	if (status=="autodocklock") { autodocklock(value)}
-	if (status=="autodockcancelled") { autodocking=false; autodock("cancel"); }
-	if (status=="softwareupdate") {
+	else if (status=="autodocklock") { autodocklock(value)}
+	else if (status=="autodockcancelled") { autodocking=false; autodock("cancel"); }
+	else if (status=="softwareupdate") {
 		if (value=="downloadcomplete") { softwareupdate("downloadcomplete",""); }
 		else { softwareupdate("available",value); }
 	}
-	// if (status == "framegrabbed") { framegrabbed(); }
-	if (status == "rovvolume") { rovvolume = parseInt(value); }
-	if (status == "light") { spotlightlevel = parseInt(value); }
-	if (status == "videoscale") { 
+	else if (status == "rovvolume") { rovvolume = parseInt(value); }
+	else if (status == "light") { spotlightlevel = parseInt(value); }
+	else if (status == "floodlight") { floodlightlevel = parseInt(value); }
+	else if (status == "videoscale") { 
 		var vs = parseInt(value);	
 		if (vs != videoscale && (streammode == "camera" || streammode == "camandmic")){
 			videoscale = vs;
@@ -413,16 +447,42 @@ function setstatus(status, value) {
 		}
 		else { videoscale = vs; }
 	}
-	if (status == "developer") { document.getElementById("developermenu").style.display = ""; }
-	if (status == "debug") { debug(value); }
-	if (status=="pushtotalk") {
-		if (value=="false") {
-			pushtotalk = false;
-			getFlashMovie("oculusPrime_player").unmutePlayerMic();
+	else if (status == "developer") { 
+		document.getElementById("developermenu").style.display = "";
+	}
+	else if (status == "navigation") {
+		document.getElementById("navigationmenu").style.display = "";
+	}
+	else if (status == "debug") { debug(value); }
+	else if (status=="loadpage") {
+		playerexit();
+		window.open(value,'_self');
+	}
+	else if (status=="selfstream") {
+		if (value == "mic") {
+			broadcasting = "mic";
+			clicksteer("off");
 		}
 		else {
-			pushtotalk = true;
-			getFlashMovie("oculusPrime_player").mutePlayerMic();
+			broadcasting = "off";
+			clicksteer("on");
+		}
+		document.getElementById("selfstream_controls").style.display = "";
+		document.getElementById("self_stream_status").style.display = "";
+	}
+	else if (status=="record") {
+		recordmode = value;
+		a= document.getElementById("stream_status");
+		var b = document.getElementById("recordlink");
+		if (value == streammode && value != "stop") {
+			a.innerHTML = "<span style='color: red'>&bull; "+value+"</span>";
+			b.innerHTML = "stop recording";
+			b.href="javascript: callServer('record','false');";
+		}
+		else if (value != streammode) {
+			a.innerHTML = streammode;
+			b.innerHTML = "record";
+			b.href="javascript: callServer('record','true');";
 		}
 	}
  
@@ -451,7 +511,7 @@ function hiddenmessageboxShow() {
 	document.getElementById("overlaydefault").style.display = "none";
 	document.getElementById("login").style.display = "none";
 	document.getElementById("someonealreadydrivingbox").style.display = "none";
-	document.getElementById("advancedmenubox").style.display = "none";
+//	document.getElementById("advancedmenubox").style.display = "none";
 	document.getElementById("extrastuffcontainer").style.display = "none";
 	document.getElementById("hiddenmessageboxcontainer").style.display = "";
 	overlay("on");
@@ -461,7 +521,7 @@ function extrastuffboxShow() {
 	document.getElementById("overlaydefault").style.display = "none";
 	document.getElementById("login").style.display = "none";
 	document.getElementById("someonealreadydrivingbox").style.display = "none";
-	document.getElementById("advancedmenubox").style.display = "none";
+//	document.getElementById("advancedmenubox").style.display = "none";
 	document.getElementById("hiddenmessageboxcontainer").style.display = "none";
 	document.getElementById("extrastuffcontainer").style.display = "";
 	overlay("on");
@@ -474,15 +534,19 @@ function keyBoardPressed(event) {
 			move("stop");
 		}
 		if (keycode == 38 || keycode == 87) { // up arrow or W
+			event.preventDefault(); // supress scrolling
 			move("forward");
 		}
 		if (keycode == 40 || keycode == 88) { // down arrow or X
+			event.preventDefault(); // supress scrolling
 			move("backward");
 		}
-		if (keycode == 37 || keycode == 81) { // left arrow
+		if (keycode == 37 || keycode == 81) { // left arrow or Q
+			event.preventDefault(); // supress scrolling
 			move("left");
 		}
-		if (keycode == 39 || keycode == 69) { // right arrow
+		if (keycode == 39 || keycode == 69) { // right arrow or E
+			event.preventDefault(); // supress scrolling
 			move("right");
 		}
 		if (keycode == 65) { // A
@@ -491,24 +555,42 @@ function keyBoardPressed(event) {
 		if (keycode == 68) { // D
 			nudge("right");
 		}
+		if (keycode == 84) { nudge("forward"); } // T
+		if (keycode == 66) { nudge("backward") } // B
 		if (keycode == 49) { speedset('slow'); } // 1
 		if (keycode == 50) { speedset('med'); } // 2
 		if (keycode == 51) { speedset('fast'); } // 3
 		if (keycode == 82) { camera('upabit'); } // R
 		if (keycode == 70) { camera('horiz'); } // F
-		if (keycode == 86) { camera('downabit'); } // v
+		if (keycode == 86) { camera('downabit'); } // V
 		if (keycode == 77) { // M
 			if (document.getElementById("menu_menu_over").style.display == "none") {
 				mainmenu('mainmenulink'); 
 			} else { javascript: popupmenu('menu', 'close'); }
 		}
+		if (keycode == 73) { // I
+			if (streammode == "stop") {
+				publish("camera");
+			} else {
+				publish("stop");
+			}
+		}
+		if (keycode == 67) { // C - command window
+			mainmenu('mainmenulink'); 
+			popupmenu('menu', 'show', null, null, document.getElementById("advanced_menu").innerHTML);
+			oculuscommanddivShow();
+		}
 		if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 		
-		if (keycode == 84 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // T
-			getFlashMovie("oculusPrime_player").unmutePlayerMic();
+		if (keycode == 89 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // Y
+			oculusPrimeplayerSWF.unmutePlayerMic();
 			broadcastmicon = true;
 			setstatus("selfstream","mic ON");
 			//message("unmute player mic", "orange");
+		}
+		if (keycode == 80 && streammode != "stop") { // P
+			autodock('start');
+			autodock('go');
 		}
 	}
 }
@@ -517,7 +599,7 @@ function keyBoardReleased(event) {
 	if (enablekeyboard) {
 		var keycode = event.keyCode;
 		if (keycode == 84 && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) {
-			getFlashMovie("oculusPrime_player").mutePlayerMic();
+			oculusPrimeplayerSWF.mutePlayerMic();
 			setstatus("selfstream",broadcasting);
 			broadcastmicon = false;
 			//message("mute player mic", "orange");
@@ -529,12 +611,12 @@ function pushtotalktoggle() {
 	var str;
 	if (pushtotalk) {
 		pushtotalk = false;
-		getFlashMovie("oculusPrime_player").unmutePlayerMic();
+		oculusPrimeplayerSWF.unmutePlayerMic();
 		str = "false";
 	}
 	else {
 		pushtotalk = true;
-		getFlashMovie("oculusPrime_player").mutePlayerMic();
+		oculusPrimeplayerSWF.mutePlayerMic();
 		str = "true";			
 	}
 	if (broadcasting=="mic" || broadcasting=="camandmic") {
@@ -572,12 +654,6 @@ function nudge(direction) {
 	lagtimer = new Date().getTime();
 }
 
-function slide(direction) {
-	message("sending command: slide " + direction, sentcmdcolor);
-	callServer("slide", direction);
-	lagtimer = new Date().getTime();	
-}
-
 function docklinetoggle(str) {
 	var a = document.getElementById("dockline");
 	var b = document.getElementById("docklineleft");
@@ -600,12 +676,14 @@ function docklinetoggle(str) {
 		docklineposition();
 		
 		var str = "<table><tr><td style='height: 5px'></td></tr></table>";
-		str += "Manual dock <table><tr><td style='height: 7px'></td></tr></table>";
-		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
-		str += "<table><tr><td style='height: 7px'></td></tr></table>";
-		str += "&nbsp; <a href='javascript: dock(&quot;dock&quot;);'><span class='cancelbox'>&radic;</span> GO</a>";
+				str += "<img src='images/dockline.png'"; 
+		str += " border='0' height='22' style='vertical-align: middle'> ";
+		str += "Manual dock <table><tr><td style='height: 20px'></td></tr></table>";
+		str += "&nbsp; <a href='javascript: dock();'><span class='cancelbox'>&#x2714;</span> GO</a>";
 		str += "&nbsp; <a href='javascript: docklinetoggle(&quot;off&quot;); move(&quot;stop&quot;);'><span "; 
-		str += "class='cancelbox'>X</span> CANCEL</a>";
+		str += "class='cancelbox'><b>X</b></span> CANCEL</a>";
+		str += "<table><tr><td style='height: 20px'></td></tr></table>";
+		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
 		
 	    var link = document.getElementById("docklink");
 	    var xy = findpos(link);
@@ -619,25 +697,21 @@ function docklineposition(n) {
 	if (n) { i = n; }
 	var a = document.getElementById("dockline");
 	var b = document.getElementById("video");
+	var xy = findpos(b);
 	var c = document.getElementById("docklineleft");
 	var d = document.getElementById("docklineright");
-	var top = b.offsetTop;
+	var top = xy[1];
 	var height = b.offsetHeight;
-	var ctr = b.offsetLeft + b.offsetWidth/2;
+	var ctr = xy[0] + b.offsetWidth/2;
 	a.style.left = (ctr+i) +"px";
 	c.style.left = (ctr+i-(docklinewidth/2))+"px";
 	d.style.left = (ctr+i+(docklinewidth/2))+"px";
 	a.style.top = top + "px";
 	a.style.height = height + "px";
-	c.style.top = (top + 60) + "px";
-	c.style.height = (height/2-40) + "px";
-	d.style.top = (top + 60) + "px";
-	d.style.height = (height/2-40) + "px";
-}
-
-function relaunchgrabber() {
-	callServer("relaunchgrabber", "");
-	message("sending command: relaunch grabber", sentcmdcolor, 0);
+	c.style.top = height/2 - 60 + top + "px";
+	c.style.height = "120px";
+	d.style.top = height/2 - 60 + top + "px";
+	d.style.height = "120px";
 }
 
 function speech() {
@@ -661,66 +735,62 @@ function mainmenu(id) {
 	if (id) {
 		var link = document.getElementById(id);
 		var xy = findpos(link);
-		x = xy[0]+link.offsetWidth+270; // =150;
+		
+//		var w = mainmenuwidth;
+//		if (w == null) { w=285; }
+		w = 0;
+		
+		x = xy[0]+ w; // =150;
 		xy = findpos(document.getElementById("video"));
 		y = xy[1]+4; // +30
 	}
-	popupmenu("menu", "show", x, y, str, null, 1, 0);
+	popupmenu("menu", "show", x, y, str, null, 0, 0);
+	if (mainmenuwidth == null) {
+		var m = document.getElementById("menu_menu_contents");
+		mainmenuwidth = m.offsetWidth;
+		
+	}
 //	resized();
 }
 
 function rovvolumepopulate() {
-	var str = "<table><tr><td><span style='font-variant: small-caps'>rov</span> speaker volume: &nbsp;</td>";
+	var str = "<table><tr>";
 	for (var i=0; i<=10; i++) {
-		str+="<td  id='rvoltd"+i+"' style='height: 26px; width: 8px; text-align: center;" +
-		" border: 1px solid transparent; cursor: pointer;' onmouseover='rovvolumeover(&quot;"+i+"&quot;)'" +
-		" onmouseout='rovvolumeout(&quot;"+i+"&quot;)'>" +
-				"<span style='color: #4c56fe; font-size: 15px' id='rvolspan"+i+"'" +
-				" onclick='rovvolumeclick(&quot;"+i+"&quot;)'>|</span></td>";
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 8; fsz=15; }
+		str+="<td  id='rvoltd"+i+"' class='slider' style='width: "+wpx+"px;'" +
+		" onmouseover='rovvolumeover(&quot;"+i+"&quot;)'" +
+		" onmouseout='rovvolumeout(&quot;"+i+"&quot;)' onclick='rovvolumeclick(&quot;"+i+"&quot;)'>" +
+				"<span style='font-size: "+fsz+"px'" +
+				" >|</span></td>";
 	}
 	str += "</tr></table>";
 	document.getElementById("rovvolumecontrol").innerHTML = str;
 	var b=document.getElementById("rvoltd"+parseInt(rovvolume/10));
-	b.style.borderColor = "#4c56fe";
-	b.style.backgroundColor = "#222222";
-	if (rovvolume > 0) { 
-		document.getElementById("rvoltd"+parseInt((rovvolume/10)-1)).style.borderRightColor = "#4c56fe";
-	}
+	b.style.backgroundColor = "#aaaaaa";
+	b.style.color = "#111111";
 }
 
 function rovvolumeover(i) {
-	var a = document.getElementById("rvolspan"+i);
-	a.style.color = "#ffffff";
-//	a.style.fontSize = "20px";
-	var b = document.getElementById("rvoltd"+i);
-	b.style.backgroundColor = "#555555";
+	if (i*10 == rovvolume) return;
+	document.getElementById("rvoltd"+i).style.backgroundColor = "#555555";
 }
 
 function rovvolumeout(i) {
-	var a = document.getElementById("rvolspan"+i);
-	a.style.color = "#4c56fe";
-//	a.style.fontSize = "15px";
-	var b = document.getElementById("rvoltd"+i);
-	if (i*10 != rovvolume) {
-		b.style.backgroundColor = "transparent";
-	}
-	else { 	b.style.backgroundColor = "#222222"; }
+	if (i*10 == rovvolume) return;
+	document.getElementById("rvoltd"+i).style.backgroundColor = "#111111"; 
 }
 
 function rovvolumeclick(vol) {
+	// unset old
 	var b = document.getElementById("rvoltd"+parseInt(rovvolume/10));
-	b.style.borderColor = "transparent";
-	b.style.backgroundColor = "transparent";
-	if (rovvolume > 0) { 
-		document.getElementById("rvoltd"+parseInt((rovvolume/10)-1)).style.borderRightColor = "transparent";
-	}
+	b.style.color = "#cccccc";
+	b.style.backgroundColor = "#111111";
 	
+	// set new
 	var a = document.getElementById("rvoltd"+vol);
-	a.style.borderColor = "#4c56fe";
-	a.style.backgroundColor = "#222222";
-	if (vol > 0) { 
-		document.getElementById("rvoltd"+parseInt(vol-1)).style.borderRightColor = "#4c56fe";
-	}
+	a.style.color = "#111111";
+	a.style.backgroundColor = "#aaaaaa";
+
 	message("sending system volume: "+ parseInt(vol*10)+"%", sentcmdcolor);
 	callServer("setsystemvolume", parseInt(vol*10));
 	lagtimer = new Date().getTime();
@@ -728,73 +798,92 @@ function rovvolumeclick(vol) {
 }
 
 function lightpopulate() {
-	var a = document.getElementById("lightcontrol");
-	if (spotlightlevel != -1) {
-		var str = "<table><tr><td>spotlight brightness: &nbsp;</td>";
-		for (var i=0; i<=10; i++) {
-			str+="<td  id='lighttd"+i+"' style='height: 26px; width: 8px; text-align: center;" +
-			" border: 1px solid transparent; cursor: pointer;' onmouseover='lightover(&quot;"+i+"&quot;)'" +
-			" onmouseout='lightout(&quot;"+i+"&quot;)'>" +
-					"<span style='color: #4c56fe; font-size: 15px' id='lightspan"+i+"'" +
-					" onclick='lightclick(&quot;"+i+"&quot;)'>|</span></td>";
-		}
-		str += "</tr></table>";
-		str += "floodlight <a class='blackbg' href ='javascript: floodlight(&quot;on&quot;)'";
-		str += ">on</a> / <a class='blackbg' href ='javascript: javascript: floodlight(&quot;off&quot;)'>off</a>";
-		a.style.display = "";
-		a.innerHTML = str;
-		var b=document.getElementById("lighttd"+parseInt(spotlightlevel/10));
-		b.style.borderColor = "#4c56fe";
-		b.style.backgroundColor = "#222222";
-		if (spotlightlevel > 0) { 
-			document.getElementById("lighttd"+parseInt((spotlightlevel/10)-1)).style.borderRightColor = "#4c56fe";
-		}
+	var a = document.getElementById("spotlightcontrol");
+	var str = "<table><tr>";
+	for (var i=0; i<=10; i++) {
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 8; fsz=15; }
+		str+="<td  id='lighttd"+i+"' class='slider' style='width: "+wpx+"px;'" +
+		" onmouseover='lightover(&quot;"+i+"&quot;)'" +
+		" onmouseout='lightout(&quot;"+i+"&quot;)' onclick='lightclick(&quot;"+i+"&quot;)'>" +
+				"<span style='font-size: "+fsz+"px'" +
+				" >|</span></td>";
 	}
-	else { a.style.display = "none"; }
+	str += "</tr></table>";
+	a.style.display = "";
+	a.innerHTML = str;
+	var b=document.getElementById("lighttd"+parseInt(spotlightlevel/10));
+	b.style.backgroundColor = "#aaaaaa";
+	b.style.color = "#111111";
+	
+	// floodlight:
+	var c = document.getElementById("floodlightcontrol");
+	var str = "<table><tr>";
+	for (var i=0; i<=10; i++) {
+		if (i==0 || i==10) { wpx = 14; fsz=19; } else { wpx = 8; fsz=15; }
+		str+="<td  id='floodlighttd"+i+"' class='slider' style='width: "+wpx+"px;'" +
+		" onmouseover='floodlightover(&quot;"+i+"&quot;)'" +
+		" onmouseout='floodlightout(&quot;"+i+"&quot;)' onclick='floodlightclick(&quot;"+i+"&quot;)'>" +
+				"<span style='font-size: "+fsz+"px'" +
+				" >|</span></td>";
+	}
+	str += "</tr></table>";
+	c.style.display = "";
+	c.innerHTML = str;
+	var d=document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
+	d.style.backgroundColor = "#aaaaaa";
+	d.style.color = "#111111";
 }
 
 function lightover(i) {
-	var a = document.getElementById("lightspan"+i);
-	a.style.color = "#ffffff";
-	var b = document.getElementById("lighttd"+i);
-	b.style.backgroundColor = "#555555";
+	if (i*10 == spotlightlevel) return;
+	document.getElementById("lighttd"+i).style.backgroundColor = "#555555";
 }
 
 function lightout(i) {
-	var a = document.getElementById("lightspan"+i);
-	a.style.color = "#4c56fe";
-	var b = document.getElementById("lighttd"+i);
-	if (i*10 != spotlightlevel) {
-		b.style.backgroundColor = "transparent";
-	}
-	else { 	b.style.backgroundColor = "#222222"; }
+	if (i*10 == spotlightlevel) return;
+	document.getElementById("lighttd"+i).style.backgroundColor = "#111111";
 }
 
 function lightclick(level) {
+	// unset old
 	var b = document.getElementById("lighttd"+parseInt(spotlightlevel/10));
-	b.style.borderColor = "transparent";
-	b.style.backgroundColor = "transparent";
-	if (spotlightlevel > 0) { 
-		document.getElementById("lighttd"+parseInt((spotlightlevel/10)-1)).style.borderRightColor = "transparent";
-	}
+	b.style.color = "#cccccc";
+	b.style.backgroundColor = "#111111";
 	
+	// set new
 	var a = document.getElementById("lighttd"+level);
-	a.style.borderColor = "#4c56fe";
-	a.style.backgroundColor = "#222222";
-	if (level > 0) { 
-		document.getElementById("lighttd"+parseInt(level-1)).style.borderRightColor = "#4c56fe";
-	}
+	a.style.color = "#111111";
+	a.style.backgroundColor = "#aaaaaa";
+	
 	message("sending spotlight brightness: "+ parseInt(level*10)+"%", sentcmdcolor);
-	callServer("spotlightsetbrightness", parseInt(level*10)); // parseInt(level*255/10));
+	callServer("spotlightsetbrightness", parseInt(level*10));
 	lagtimer = new Date().getTime();
-	//spotlightlevel = level*10; // allow to be set by server message instead
 }
 
-function floodlight(str) {
-	message("sending floodlight: "+ str, sentcmdcolor);
-	callServer("floodlight", str);
-	lagtimer = new Date().getTime();
+function floodlightover(i) {
+	if (i*10 == floodlightlevel) return;
+	document.getElementById("floodlighttd"+i).style.backgroundColor = "#555555";
+}
 
+function floodlightout(i) {
+	if (i*10 == floodlightlevel) return;
+	document.getElementById("floodlighttd"+i).style.backgroundColor = "#111111";
+}
+
+function floodlightclick(level) {
+	// unset old
+	var b = document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
+	b.style.color = "#cccccc";
+	b.style.backgroundColor = "#111111";
+	
+	// set new
+	var a = document.getElementById("floodlighttd"+level);
+	a.style.color = "#111111";
+	a.style.backgroundColor = "#aaaaaa";
+	
+	message("sending floodlight: "+ parseInt(level*10)+"%", sentcmdcolor);
+	callServer("floodlight", parseInt(level*10));
+	lagtimer = new Date().getTime();
 }
 
 function streamdetailspopulate() {
@@ -821,11 +910,22 @@ function streamdetailspopulate() {
 		streamSettingsBullSet(streamdetails[0].slice(1));
 		resized();
 	}
+
+	var b = document.getElementById("recordlink");
+	if (recordmode != "stop") {
+		b.innerHTML = "stop recording";
+		b.href="javascript: callServer('record','false');";
+	}
+	else  {
+		b.innerHTML = "record";
+		b.href="javascript: callServer('record','true');";
+	}
+
 }
 
 function streamSettingsBullSet(str) {
 	var settings = ["low", "med", "high", "full", "custom"];
-	for (i in settings) {
+	for (var i = 0; i < settings.length; i++) {
 //		debug(setting);
 		document.getElementById(settings[i]+"_bull").style.visibility = "hidden";
 	}
@@ -849,7 +949,58 @@ function battStats() {
 	lagtimer = new Date().getTime();
 }
 
-function drivingsettings(state) {
+function emailsettings() {
+	var str = document.getElementById("emailsettings").innerHTML;
+	popupmenu("menu","show",null,null,str);
+	callServer("getemailsettings","");
+	message("request email settings values", sentcmdcolor);
+	lagtimer = new Date().getTime(); // has to be *after* message()
+}
+
+function emailsettingsdisplay(str) { // called by server via flashplayer
+	message("email settings values received", "green");
+	splitstr = str.split(" ");
+	document.getElementById('email_smtp_server').value = splitstr[0];
+	document.getElementById('email_smtp_port').value = splitstr[1];
+	document.getElementById('email_username').value = splitstr[2];
+	document.getElementById('email_password').value = splitstr[3];
+	document.getElementById('email_from_address').value = splitstr[4];
+	document.getElementById('email_to_address').value = splitstr[5];
+
+}
+
+function emailsettingssend() {
+	var str = "";
+	var s =  document.getElementById('email_smtp_server').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_smtp_port').value;
+	if (!/\S/.test(s)) s="25";
+	str += s.trim() + " ";
+	
+	s =  document.getElementById('email_username').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_password').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_from_address').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	s =  document.getElementById('email_to_address').value;
+	if (!/\S/.test(s)) s="disabled";
+	str += s.trim() + " ";
+
+	callServer("emailsettingsupdate", str);
+	message("sending email settings", sentcmdcolor);
+	lagtimer = new Date().getTime(); // has to be *after* message()
+}
+
+function drivingsettings() {
 	var str = document.getElementById("drivingsettings").innerHTML;
 	popupmenu("menu","show",null,null,str);
 	callServer("getdrivingsettings","");
@@ -865,9 +1016,12 @@ function drivingsettingsdisplay(str) { // called by server via flashplayer
 	document.getElementById('medoffset').value = splitstr[1];
 	document.getElementById('nudgedelay').value = splitstr[2];
 	document.getElementById('maxclicknudgedelay').value = splitstr[3];
-	document.getElementById('clicknudgemomentummult').value = splitstr[4];
-	document.getElementById('maxclickcam').value = splitstr[5];
-	document.getElementById('fullrotationdelay').value = splitstr[6];
+	document.getElementById('maxclickcam').value = splitstr[4];
+	document.getElementById('fullrotationdelay').value = splitstr[5];
+	document.getElementById('onemeterdelay').value = splitstr[6];
+	document.getElementById('steeringcomp').value = splitstr[7];
+	document.getElementById('camhorizpos').value = splitstr[8];
+	document.getElementById('camreversepos').value = splitstr[9];
 }
 
 function drivingsettingssend() {
@@ -875,9 +1029,12 @@ function drivingsettingssend() {
 			+ document.getElementById('medoffset').value + " "
 			+ document.getElementById('nudgedelay').value + " "
 			+ document.getElementById('maxclicknudgedelay').value + " "
-			+ document.getElementById('clicknudgemomentummult').value + " "
 			+ document.getElementById('maxclickcam').value + " "
-			+ document.getElementById('fullrotationdelay').value;	
+			+ document.getElementById('fullrotationdelay').value + " "
+			+ document.getElementById('onemeterdelay').value + " "
+			+ document.getElementById('steeringcomp').value + " "	
+			+ document.getElementById('camhorizpos').value+ " "
+			+ document.getElementById('camreversepos').value;
 	callServer("drivingsettingsupdate", str);
 	message("sending driving settings values: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
@@ -895,51 +1052,22 @@ function camera(fn) {
 	}
 }
 
-function tiltcontrols(state) {
-	var str = document.getElementById("tiltcontrols").innerHTML;
-	popupmenu("menu","show",null,null,str);
-	callServer("gettiltsettings", "");
-	message("request tilt settings values", sentcmdcolor);
-	lagtimer = new Date().getTime(); // has to be *after* message()
-}
-
-function tiltsettingssend() {
-	str = document.getElementById('camhoriz').value + " "
-			+ document.getElementById('cammax').value + " "
-			+ document.getElementById('cammin').value + " "
-			+ document.getElementById('maxclickcam').value + " "
-			+ parseInt(document.getElementById('vidscale').value);
-	callServer("tiltsettingsupdate", str);
-	message("sending tilt settings values: " + str, sentcmdcolor);
-	lagtimer = new Date().getTime(); // has to be *after* message()
-}
-
-function tiltsettingsdisplay(str) {
-	message("tilt setings values received", "green");
-	splitstr = str.split(" ");
-	document.getElementById('camhoriz').value = splitstr[0];
-	document.getElementById('cammax').value = splitstr[1];
-	document.getElementById('cammin').value = splitstr[2];
-	document.getElementById('maxclickcam').value = splitstr[3];
-	document.getElementById('vidscale').value = splitstr[4];
-}
-
 function tilttest() {
 	var str = document.getElementById('tilttestposition').value;
-	callServer("tilttest", str);
-	message("sending tilt test: " + str, sentcmdcolor);
+	callServer("camtilt", str);
+	message("sending tilt position: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }
 
 function speedset(str) {
-	callServer("speedset", str);
+	callServer("speed", str);
 	message("sending speedset: " + str, sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }
 
-function dock(str) {
-	callServer("dock", str);
-	message("sending: " + str, sentcmdcolor);
+function dock() {
+	callServer("dock", "");
+	message("sending: dock", sentcmdcolor);
 	lagtimer = new Date().getTime(); // has to be *after* message()
 	if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 }
@@ -951,16 +1079,19 @@ function autodock(str) {
 //		document.getElementById("video").style.zIndex = "0";
 		clicksteer("off");
 		
-	    var str = "Dock with charger: <table><tr><td style='height: 7px'></td></tr></table>";
-	    str+="Get the dock in view, within 2 meters"
-    	str+="<table><tr><td style='height: 11px'></td></tr></table>";
+	    var str = "<img src='images/charge.png'"; 
+		str += " border='0' height='26' style='vertical-align: middle'> " +
+	    		"Dock with charger <table><tr><td style='height: 7px'></td></tr></table>";
+	    str+="Get the dock in view, within 3 meters"
+    	str+="<table><tr><td style='height: 20px'></td></tr></table>";
 	    
 	    str+="<a href='javascript: autodock(&quot;go&quot;);'>";
-	    str+= "<span class='cancelbox'>&radic;</span> GO</a> &nbsp; &nbsp;";
+	    str+= "<span class='cancelbox'>&#x2714;</span> GO</a> &nbsp; &nbsp;";
 	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>";
-	    str+= "<span class='cancelbox'>X</span> CANCEL</a><br><br>";
-		str += "<a href='javascript: docklinetoggle(&quot;on&quot;);'><img src='images/dockline.gif'"; 
-		str += " border=0' style='vertical-align: bottom'> manual dock</a>";
+	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a>";
+	    str+="<table><tr><td style='height: 20px'></td></tr></table>";
+		str += "<a href='javascript: docklinetoggle(&quot;on&quot;);'><img src='images/dockline.png'"; 
+		str += " border='0' height='22' style='vertical-align: middle'> manual dock</a>";
 
 	    var link = document.getElementById("docklink");
 	    var xy = findpos(link);
@@ -984,11 +1115,13 @@ function autodock(str) {
 		videooverlayposition();
 		var a =document.getElementById("videooverlay");
 	    a.onclick = autodockcalibrate;
-	    var str = "Auto-dock calibration: <table><tr><td style='height: 7px'></td></tr></table>";
-	    str+="Place Oculus square and centered in charging dock, then click within white area of target"
+	    var str = "Auto-Dock Calibration: <table><tr><td style='height: 7px'></td></tr></table>";
+	    str+="Align robot with charging dock, reverse camera, then click within white area of target"
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";
-	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
-	    str+= "<span class='cancelbox'>X</span> CANCEL</a><br>"
+		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
+    	str+="<table><tr><td style='height: 11px'></td></tr></table>";
+    	str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
+	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
 	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, 160, 1, 0);
@@ -1002,7 +1135,7 @@ function autodock(str) {
 	    str+="in progress... stand by"
 		str+="<table><tr><td style='height: 11px'></td></tr></table>";
 	    str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
-	    str+= "<span class='cancelbox'>X</span> CANCEL</a><br>"
+	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
     	popupmenu("context","show",null,null,str);
 	}
 }
@@ -1018,8 +1151,9 @@ function autodockclick(ev) { // TODO: unused if autodock("go") used above, inste
 		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
 	}
 	var v = document.getElementById("video");
-	x -= v.offsetLeft;
-	y -= v.offsetTop;
+	var xy = findpos(v);
+	x -= xy[0];
+	y -= xy[1];
 	//alert(v.offsetLeft);
 	
 	var b = document.getElementById("docklinecalibratebox")
@@ -1027,7 +1161,7 @@ function autodockclick(ev) { // TODO: unused if autodock("go") used above, inste
     str+="in progress... stand by"
 	str+="<table><tr><td style='height: 11px'></td></tr></table>";
     str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
-    str+= "<span class='cancelbox'>X</span> CANCEL</a><br>"
+    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"
     b.innerHTML = str;
 	
 	callServer("autodockgo", x+" "+y);
@@ -1043,14 +1177,15 @@ function autodocklock(str) {
 	videooverlayposition();
 	var scale =2;
 	var video = document.getElementById("video");
+	var xy = findpos(video);
 	var box = document.getElementById("facebox");
 	splitstr = str.split(" "); // left top width height
 	box.style.width = (splitstr[2]*scale*videoscale/100)+"px";
 	box.style.height = (splitstr[3]*scale*videoscale/100)+"px";
 	//box.style.left = (video.offsetLeft + (splitstr[0]*scale)) + "px";
-	box.style.left = video.offsetLeft + (video.offsetWidth/2) + 
+	box.style.left = xy[0] + (video.offsetWidth/2) + 
 	   (((splitstr[0]*scale) - (video.offsetWidth/2)) * (videoscale/100)) + "px";
-	box.style.top = video.offsetTop + (video.offsetHeight/2) + 
+	box.style.top = xy[1] + (video.offsetHeight/2) + 
 	   (((splitstr[1]*scale) - (video.offsetHeight/2)) * (videoscale/100)) + "px";
 	box.style.display = "";
 	setTimeout("document.getElementById('facebox').style.display='none';",500);
@@ -1067,9 +1202,10 @@ function autodockcalibrate(ev) {
 		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
 	}
 	var video = document.getElementById("video");
+	var xy = findpos(video);
 	scale = 2; // convert to 320
-	var xctroffset = x - (video.offsetLeft + (video.offsetWidth/scale)); 
-	var yctroffset = y - (video.offsetTop + (video.offsetHeight/scale)); 
+	var xctroffset = x - (xy[0] + (video.offsetWidth/scale)); 
+	var yctroffset = y - (xy[1] + (video.offsetHeight/scale)); 
 	if (!(xctroffset ==0 && yctroffset==0)) {
 		xctroffset /= videoscale/100;
 		yctroffset /= videoscale/100;
@@ -1100,11 +1236,18 @@ function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offset
 		under.style.height = null; //ie fix
 		if (sizewidth != null) { contents.style.width = sizewidth + "px"; }
 		
-		if (x != null && y !==null) {
+		if (x != null && y != null) {
 			if (!x_offsetmult) { x_offsetmult = 0; }
 			if (!y_offsetmult) { y_offsetmult = 0; }
 			x = x - (x_offsetmult * over.offsetWidth);
 			y = y - (y_offsetmult * over.offsetHeight); 
+			
+			var i = subwindows.indexOf(pre_id);
+			if (windowpos[i] != null) {
+				x = windowpos[i][0];
+				y = windowpos[i][1];
+			}
+			
 			over.style.left = x + "px";
 			over.style.top = y + "px";		
 			under.style.display = "";
@@ -1152,19 +1295,14 @@ function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offset
 		over.style.width = over.offsetWidth;
 		over.style.height = over.offsetHeight;
 	}
+	
 	resized();
 }
 
 function popupmenumove(ev, pre_id) {
-	ev = ev || window.event;
-	if (ev.pageX || ev.pageY) {
-		var x = ev.pageX;
-		var y = ev.pageY;
-	}
-	else {
-		var x = ev.clientX + document.body.scrollLeft - document.body.clientLeft;
-		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
-	}
+	var xy = getmousepos(ev);
+	var x= xy[0];
+	var y= xy[1];
 	var under = document.getElementById(pre_id+"_menu_under");
 	var over = document.getElementById(pre_id+"_menu_over");
 	if (!popupmenu_xoffset) { popupmenu_xoffset = over.offsetLeft - x; }
@@ -1178,10 +1316,86 @@ function popupmenumove(ev, pre_id) {
 	resized();
 }
 
-function debug(str) {
-	document.getElementById('debugbox').innerHTML = str;
+function popupmenusize(pre_id, ev) {
+	var xy = getmousepos(ev);
+	popupmenu_xsizestart = xy[0];
+	popupmenu_ysizestart = xy[1];
 	
+	var contents = document.getElementById(pre_id+"_menu_contents");
+	popupmenu_widthstart = contents.offsetWidth - 20; 
+	popupmenu_heightstart = contents.offsetHeight-18; 
+	document.onmousemove = function(event) { popupmenusizedrag(event, pre_id); }
+	
+	document.body.onclick = null;
+	if (clicksteeron && document.getElementById("videologo").style.display == "none") {  
+		clicksteer("off");
+		clicksteeron = true;
+	}
+	
+	document.onmouseup = function (pre_id) { 
+		document.onmousemove = null;
+		document.onmouseup = null;
+		if (clicksteeron && document.getElementById("videologo").style.display == "none") {
+			clicksteer("on");
+		}
+	}
 }
+
+function popupmenusizedrag(ev, pre_id) {
+	var xy = getmousepos(ev);
+	var xdelta = xy[0] - popupmenu_xsizestart;
+	var ydelta = xy[1] - popupmenu_ysizestart;
+
+	var contents = document.getElementById(pre_id +"_menu_contents");
+	contents.style.width = null; //ie fix
+	contents.style.height = null; //ie fix
+	contents.style.width = (popupmenu_widthstart + xdelta) + "px";
+	contents.style.height = (popupmenu_heightstart + ydelta) + "px";
+
+	var over = document.getElementById(pre_id +"_menu_over");	
+	over.style.width = null; //ie fix
+	over.style.height = null; //ie fix
+	over.style.width = over.offsetWidth;
+	over.style.height = over.offsetHeight;
+	
+	var under = document.getElementById(pre_id+"_menu_under");
+	var margin = 4;
+	under.style.left = (over.offsetLeft - margin) + "px";
+	under.style.top = (over.offsetTop -margin) + "px";
+	under.style.width = (over.offsetWidth + margin*2) + "px";
+	under.style.height = (over.offsetHeight + margin*2) + "px";
+	
+	if (pre_id == "rosmap") {
+		rmid = document.getElementById('rosmapimgdiv');
+		mapimgdivwidth = contents.offsetWidth - 20 ;
+		rmid.style.width = mapimgdivwidth + "px";
+		mapimgdivheight = contents.offsetHeight - 17 - 
+			document.getElementById("rosmapheader").offsetHeight;
+		rmid.style.height = mapimgdivheight +"px";
+//		debug(rmid.style.height);
+	}
+	
+	resized();
+}
+
+function getmousepos(ev) {
+	ev = ev || window.event;
+	if (ev.pageX || ev.pageY) {
+		var x = ev.pageX;
+		var y = ev.pageY;
+	}
+	else {
+		var x = ev.clientX + document.body.scrollLeft - document.body.clientLeft;
+		var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
+	}
+	return [x,y];
+}
+
+function debug(str) {
+	document.getElementById('debugbox').style.display = "";
+	document.getElementById('debugbox').innerHTML = str;
+}
+
 function keyboard(str) {
 	if (str=="enable") {
 		setstatus("keyboard","enabled");
@@ -1258,25 +1472,26 @@ function crosshairs(state) {
 function crosshairsposition() {
     var hfromctr=cspulsatenum;
     var vfromctr=cspulsatenum;
-    var video = document.getElementById('video');
+    var video = document.getElementById("video");
+    var xy = findpos(video);
     var videow = video.offsetWidth; // + ctroffset*2;
     var videoh = video.offsetHeight;
 
     var a=document.getElementById("crosshair_top");
-    a.style.left = (videow/2 + video.offsetLeft) + "px";
-    a.style.top = (video.offsetTop + videoh/2 - vfromctr - parseInt(a.style.height)) + "px";
+    a.style.left = (videow/2 + xy[0]) + "px";
+    a.style.top = (xy[1] + videoh/2 - vfromctr - parseInt(a.style.height)) + "px";
 
     var b=document.getElementById("crosshair_right");
-    b.style.left = (videow/2 + hfromctr + video.offsetLeft) + "px";
-    b.style.top = (videoh/2 + video.offsetTop) + "px";
+    b.style.left = (videow/2 + hfromctr + xy[0]) + "px";
+    b.style.top = (videoh/2 + xy[1]) + "px";
 
     var c=document.getElementById("crosshair_bottom");
-    c.style.left = (videow/2 + video.offsetLeft) + "px";
-    c.style.top = (videoh/2 + vfromctr + video.offsetTop) + "px";
+    c.style.left = (videow/2 + xy[0]) + "px";
+    c.style.top = (videoh/2 + vfromctr + xy[1]) + "px";
 
     var d=document.getElementById("crosshair_left");
-	d.style.left = (videow/2 - hfromctr - parseInt(d.style.width) + video.offsetLeft) + "px";
-	d.style.top = (videoh/2 + video.offsetTop) + "px";
+	d.style.left = (videow/2 - hfromctr - parseInt(d.style.width) + xy[0]) + "px";
+	d.style.top = (videoh/2 + xy[1]) + "px";
 }
 
 function crosshairspulsate() {
@@ -1327,13 +1542,15 @@ function oculuscommanddivHide() {
 
 function oculuscommanddivShow() {
 	document.getElementById('oculuscommanddiv').style.display='';
-	document.getElementById('oculuscommand').value='';
+	if (!lastcommand) lastcommand = null;
 	document.getElementById('oculuscommand').focus();
 	popupmenu('menu','resize');
+	setTimeout("document.getElementById('oculuscommand').value=lastcommand;", 50);
 }
 
 function oculuscommandgo() {
 	var str = document.getElementById('oculuscommand').value;
+	lastcommand = str;
 	str = str.replace(/^\s+|\s+$/g, ''); // strip
 	var cmd = str.split(" ",1);
 	var val = str.substring(cmd[0].length+1);
@@ -1343,16 +1560,17 @@ function oculuscommandgo() {
 	lagtimer = new Date().getTime(); // has to be *after* message()
 }
 
-function arduinoReset() {
-	message("resetting arduinoculus ",sentcmdcolor);
-	callServer("arduinoreset","");
-//	overlay('off');
+
+function chatdivHide() {
+	document.getElementById('chatdiv').style.display='none';
+	popupmenu('menu','resize');
 }
 
-function arduinoEcho(value){
-	message("firmware command echo " + value, sentcmdcolor);
-	if(value=="true")	{ callServer("arduinoecho", "true"); }
-	if(value=="false")  { callServer("arduinoecho", "false"); }
+function chatdivShow() {
+	document.getElementById('chatdiv').style.display='';
+	document.getElementById('chatbox_input').value='';
+	document.getElementById('chatbox_input').focus();
+	popupmenu('menu','resize');
 }
 
 function writesetting(value){
@@ -1368,7 +1586,7 @@ function holdservo(str) {
 }
 
 function restart() {
-	if (confirm("restart server\nare you sure?")) { 
+	if (confirm("restart server application\nare you sure?")) { 
 	  message("sending restart: "+str,sentcmdcolor);
 	  callServer('restart','');
 	}
@@ -1433,10 +1651,11 @@ function clicksteer(str) {
 function videooverlayposition() {
 	var a = document.getElementById("videooverlay");
     var video = document.getElementById("video");
+    var xy = findpos(video);
     a.style.width = video.offsetWidth + "px";
     a.style.height = video.offsetHeight + "px";
-    a.style.left = video.offsetLeft + "px";
-    a.style.top = video.offsetTop + "px";
+    a.style.left = xy[0] + "px";
+    a.style.top = xy[1] + "px";
 }
 
 function videoOverlayMouseOver() {
@@ -1448,25 +1667,26 @@ function videoOverlayMouseOver() {
 		document.getElementById("videocursor_left").style.display="";
 		document.getElementById("videocursor_right").style.display="";
 		crosshairs("on");
-		var a=document.getElementById("videocursor_ctr"); // <canvas>
+//		var a=document.getElementById("videocursor_ctr"); // <canvas>
+//		a.style.display = "";
+//		try {
+//
+//			var ctx = a.getContext("2d");
+//			ctx.strokeStyle = "#34ae2b"; // "#45F239";
+//			ctx.beginPath();
+//			ctx.arc(25,25,24,0,Math.PI*2,true);
+//			ctx.stroke();
+//		}
+//		catch(err) { 
+//			html5=false;
+//		} // some non html5 browsers
+//		html5=false;
+//		if (html5==false) {
+//			a.style.display = "none";
+		var a=document.getElementById("videocursor_ctr_html4");
 		a.style.display = "";
-		try {
-
-			var ctx = a.getContext("2d");
-			ctx.strokeStyle = "#34ae2b"; // "#45F239";
-			ctx.beginPath();
-			ctx.arc(25,25,24,0,Math.PI*2,true);
-			ctx.stroke();
-		}
-		catch(err) { 
-			html5=false;
-		} // some non html5 browsers
-		if (html5==false) {
-			a.style.display = "none";
-			a=document.getElementById("videocursor_ctr_html4");
-			a.style.display = "";
-
-		}
+//
+//		}
 		videoOverlayGetMousePos(); // ie fix
 	}
 }
@@ -1489,29 +1709,31 @@ function videoOverlayGetMousePos(ev) {
 	var b = document.getElementById("videocursor_top");
 	b.style.left = x + "px";
     var video = document.getElementById("video");
-    b.style.top = video.offsetTop + "px";
-    var th = y - video.offsetTop -25; if (th<0) { th=0; } 
+    var xy = findpos(video);
+    b.style.top = xy[1] + "px";
+    var th = y - xy[1] -15; if (th<0) { th=0; } 
     b.style.height = th + "px";
 	var c = document.getElementById("videocursor_bottom");
 	c.style.left = x + "px";
-    c.style.top = (y + 25) + "px";
-    var bh = video.offsetTop + video.offsetHeight - y -25; if (bh<0) { bh=0; }
+    c.style.top = (y + 16) + "px";
+    var bh = xy[1] + video.offsetHeight - y -15; if (bh<0) { bh=0; }
     c.style.height = bh + "px";
     var d = document.getElementById("videocursor_left");
-    d.style.left = video.offsetLeft + "px";
+    d.style.left = xy[0] + "px";
     d.style.top = y + "px";
-    var lw = x - video.offsetLeft - 25; if (lw<0) { lw=0; }
+    var lw = x - xy[0] - 15; if (lw<0) { lw=0; }
     d.style.width = lw + "px";
     var e = document.getElementById("videocursor_right");
     e.style.top = y + "px";
-    e.style.left = (x +25) + "px";
-    var rw = video.offsetLeft + video.offsetWidth - x -25; if (rw<0) { rw=0; }
+    e.style.left = (x +16) + "px";
+    var rw = xy[0] + video.offsetWidth - x -15; if (rw<0) { rw=0; }
     e.style.width = rw + "px";
-    if (html5) { var f = document.getElementById("videocursor_ctr"); }
-    else { var f = document.getElementById("videocursor_ctr_html4"); }
+//    if (html5) { var f = document.getElementById("videocursor_ctr"); }
+//    else { var f = document.getElementById("videocursor_ctr_html4"); }
+    var f = document.getElementById("videocursor_ctr_html4");
 	f.style.display = "";
-	f.style.left = (x-25) + "px";
-	f.style.top = (y-25) + "px";
+	f.style.left = (x-15) + "px";
+	f.style.top = (y-15) + "px";
 	document.onmousemove = null;
 	videooverlaymouseposinterval = setTimeout("videoOverlaySetMousePosGrabber();", 20)
 }
@@ -1528,9 +1750,10 @@ function videoOverlayClick(ev) {
 			var y = ev.clientY + document.body.scrollTop - document.body.clientTop;
 		}
 		var video = document.getElementById("video");
+		var xy = findpos(video);
 		scale = 2; // convert to 320
-		var xctroffset = x - (video.offsetLeft + (video.offsetWidth/scale)); 
-		var yctroffset = y - (video.offsetTop + (video.offsetHeight/scale)); 
+		var xctroffset = x - (xy[0] + (video.offsetWidth/scale)); 
+		var yctroffset = y - (xy[1] + (video.offsetHeight/scale)); 
 		if (Math.abs(xctroffset) < 30*videoscale/100 ) { xctroffset = 0; }
 		else { flashvidcursor("videocursor_top"); flashvidcursor("videocursor_bottom"); }
 		if (Math.abs(yctroffset) < 15*videoscale/100) { yctroffset = 0; }
@@ -1557,7 +1780,7 @@ function videoOverlayMouseOut() {
 		document.getElementById("videocursor_bottom").style.display="none";
 		document.getElementById("videocursor_left").style.display="none";
 		document.getElementById("videocursor_right").style.display="none";
-		document.getElementById("videocursor_ctr").style.display="none";
+//		document.getElementById("videocursor_ctr").style.display="none";
 		document.getElementById("videocursor_ctr_html4").style.display="none";
 		crosshairs("off");
 	}
@@ -1624,7 +1847,7 @@ function eraseCookie(name) {
 function loginfromcookie() {
 	var str = ""; 
 	str = readCookie("auth");
-	getFlashMovie("oculusPrime_player").connect(str);
+	oculusPrimeplayerSWF.connect(str);
 	logintimer = setTimeout("eraseCookie('auth'); window.location.reload()", logintimeout);
 }
 
@@ -1642,7 +1865,7 @@ function loginsend() {
 	var str3= document.getElementById("user_remember").checked;
 	if (str3 == true) { str3="remember"; }
 	else { eraseCookie("auth"); }
-	getFlashMovie("oculusPrime_player").connect(str1+" "+str2+" "+str3+" ");
+	oculusPrimeplayerSWF.connect(str1+" "+str2+" "+str3+" ");
 	logintimer = setTimeout("window.location.reload()", logintimeout);
 }
 
@@ -1670,7 +1893,7 @@ function assumecontrol() {
 }
 
 function playerexit() {
-	callServer("playerexit","");
+	callServer("driverexit","");
 }
 
 function steeringmouseover(id, str) {
@@ -1680,7 +1903,7 @@ function steeringmouseover(id, str) {
 		var highlitebox = document.getElementById("mousecontrolshighlitebox");
 		highlitebox.style.left = xy[0]+"px";
 		highlitebox.style.top = xy[1]+"px";
-		highlitebox.style.backgroundColor = "#444444";
+		highlitebox.style.backgroundColor = "#333333";
 		highlitebox.style.display = "";
 	}
 	document.getElementById("steering_textbox").innerHTML = id.toUpperCase();
@@ -1739,8 +1962,6 @@ function steeringmousedown(id) {
 	if (id == "backward") { move("backward"); }
 	if (id == "rotate right") { move("right"); }
 	if (id == "rotate left") { move("left"); }
-	if (id == "slide right") { slide("right"); }
-	if (id == "slide left") { slide("left"); }
 	if (id == "nudge right") { nudge("right"); id = null; }
 	if (id == "nudge left") { nudge("left"); id = null; }
 	if (id == "nudge forward") { nudge("forward"); }
@@ -1791,10 +2012,11 @@ function videologo(state) {
 	// pass "" as state to reposition only
 	var i = document.getElementById("videologo");
     var video = document.getElementById("video");
+    var xy = findpos(video);
 	if (state=="on") { i.style.display = ""; }
 	if (state=="off") { i.style.display = "none"; }
-    var x = video.offsetLeft + (video.offsetWidth/2) - (i.width/2);
-    var y = video.offsetTop + (video.offsetHeight/2) - (i.height/2);
+    var x = xy[0] + (video.offsetWidth/2) - (i.width/2);
+    var y = xy[1] + (video.offsetHeight/2) - (i.height/2);
     i.style.left = x + "px";
     i.style.top = y + "px";
 }
@@ -1815,19 +2037,18 @@ function docklinecalibrate(str) {
 	    document.getElementById("docklineright").style.display = "";
 	    docklineposition();
 
-	    var str = "Dockline Calibration:"
+	    var str = "Manual Dock Guide Calibration:"
 	    str += "<table><tr><td style='height: 7px'></td></tr></table>";
-	    str += "place Oculus square and centered in charging dock, then click screen to align dockline";
-	    str += " with dock spire.";
+	    str += "Align robot with charging dock, then click screen to align guide line";
 	    str += "<table><tr><td style='height: 7px'></td></tr></table>";
 	    str += "<a href='javascript: docklinecalibrate(&quot;save&quot;);'>";
-	    str += "<span class='cancelbox'>&radic;</span> save</a> &nbsp; &nbsp; ";
+	    str += "<span class='cancelbox'>&#x2714;</span> SAVE</a> &nbsp; &nbsp; ";
 	    str += "<a href='javascript: docklinecalibrate(&quot;cancel&quot;);'>";
-	    str += "<span class='cancelbox'>X</span> CANCEL</a><br>";
+	    str += "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>";
 	    
 	    var video = document.getElementById("video");
 	    var xy = findpos(video);
-	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, 160, 1, 0);
+	    popupmenu("context", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, 180, 1, 0);
 	}
 
 	if (str == "save") {
@@ -1855,7 +2076,8 @@ function docklineclick(ev) {
 	} 
 	// var x = ev.clientX + document.body.scrollLeft - document.body.clientLeft;
 	var video = document.getElementById("video");
-	ctroffsettemp  = x - (video.offsetLeft + (video.offsetWidth/2));
+	var xy = findpos(video);
+	ctroffsettemp  = x - (xy[0] + (video.offsetWidth/2));
 	docklineposition(ctroffsettemp);
 }
 
@@ -1939,6 +2161,10 @@ function account(str) { // change_password, password_update  DONE
 	if (str=="username_update") { //
 		var user = document.getElementById('usernamechanged').value;
 		var pass = document.getElementById('usernamechangedpass').value;
+		if (/\s+/.test(user)) { 
+			message("no spaces allowed in user name", "orange"); 
+			return;
+		} 
 		if (user!="") {
 			message("sending new username", sentcmdcolor);
 			callServer("username_update", user+" "+pass);
@@ -1985,15 +2211,15 @@ function userlistpopulate(list) {
 					str += "new password: ";
 					str += "<input id='extrauserpass_"+users[i]+"' class='inputbox' type='password' name='password' size='10'"; 
 					str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
-					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#262626&quot;'><br/>";
+					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'><br/>";
 					str += "re-enter new password: ";
 					str += "<input id='extrauserpassagain_"+users[i]+"' class='inputbox' type='password' name='password' size='10'"; 
 					str += "onfocus='keyboard(&quot;disable&quot;); this.style.backgroundColor=&quot;#000000&quot;'"; 
-					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#262626&quot;'><br/>";
+					str += "onblur='keyboard(&quot;enable&quot;); this.style.backgroundColor=&quot;#151515&quot;'><br/>";
 					str += "<a class='blackbg' href='javascript: updateextrapass(&quot;"+users[i]+"&quot;);'>";
-					str += "<span class='cancelbox'>&radic;</span> update</a> &nbsp;";
+					str += "<span class='cancelbox'>&#x2714;</span> update</a> &nbsp;";
 					str += "<a class='blackbg' href='javascript: closebox(&quot;passfield_"+users[i]+"&quot;);'>";
-					str += "<span class='cancelbox'>X</span> <span style='font-size: 11px'>CANCEL</span></a>";
+					str += "<span class='cancelbox'><b>X</b></span> <span style='font-size: 11px'>CANCEL</span></a>";
 					str += "</div>";
 				}
 			}
@@ -2046,6 +2272,11 @@ function openbox(str) {
 	popupmenu("menu","resize");
 }
 
+function closebox(str) {
+	document.getElementById(str).style.display = "none";
+	popupmenu("menu","resize");
+}
+
 function disconnectOtherConnections() {
 	message("request eliminate passengers: "+str, sentcmdcolor);
 	callServer("disconnectotherconnections", "");
@@ -2056,26 +2287,27 @@ function disconnectOtherConnections() {
 function speakchat(command,id) {
 	var links = document.getElementById("speakchatlinks");
 	var over = document.getElementById(id);
-	var under = document.getElementById("popoutbox_under");
+	// var under = document.getElementById("popoutbox_under");
 	var linksinput = document.getElementById(id+"_input");
 	if (command=='show') {
 		var xy = findpos(links);
 		over.style.display = "";
-		over.style.left = (xy[0] - 60) + "px";
-		over.style.top = xy[1] + "px";
-		under.style.display = "";
-		under.style.left = (xy[0] - 65) + "px";
-		under.style.top = (xy[1] -5) + "px";
-		under.style.width = (over.offsetWidth + 12) + "px";
-		under.style.height = (over.offsetHeight + 10) + "px";
+		over.style.left = (xy[0] + 20) + "px";
+		over.style.top = (xy[1] + 22) + "px";
+		// under.style.display = "";
+		// under.style.left = (xy[0] - 65) + "px";
+		// under.style.top = (xy[1] -5) + "px";
+		// under.style.width = (over.offsetWidth + 12) + "px";
+		// under.style.height = (over.offsetHeight + 10) + "px";
 		linksinput.focus();
 		keyboard('disable');
 	}
 	else {
 		over.style.display = "none";
-		under.style.display = "none";
+		// under.style.display = "none";
 		keyboard('enable');
 	}
+	resized();
 }
 
 function findpos(obj) { // derived from http://bytes.com/groups/javascript/148568-css-javascript-find-absolute-position-element
@@ -2114,17 +2346,10 @@ function chat() {
 	a.value = "";
 	if (str != "") {
 		callServer("chat", "<i>"+username.toUpperCase()+"</i>: "+str);
-		message("sending command: textchat '" + str + "'", sentcmdcolor);
+		message("sending command: chat '" + str + "'", sentcmdcolor);
 		lagtimer = new Date().getTime();
 	}
 }
-
-//function monitor(str) {
-//	callServer("monitor",str);
-//	message("sending monitor: " + str, sentcmdcolor);
-//	lagtimer = new Date().getTime();
-//	overlay('off');
-//}
 
 function serverlog() {
 	callServer("showlog","");
@@ -2141,12 +2366,46 @@ function showserverlog(str) {
 
 function camiconbutton(str,id) {
 	var a=document.getElementById(id);
-	if (str == "over") { a.style.color = "#ffffff"; }
-	if (str == "out") { a.style.color = "#484fcd"; }
-	if (str == "click") {
+	if (str == "over") { a.style.color = "#ffffff"; a.style.backgroundColor = "#333333"; }
+	else if (str == "out") { a.style.color = "#cccccc"; a.style.backgroundColor = "transparent"; }
+	else if (str == "click") {
 		if (id=="pubstop") { id="stop"; } // stop already in use?
 		publish(id); 
 	}
+	else if (str== "down") { a.style.backgroundColor = "#999999"; }
+	else if (str== "up")  { a.style.backgroundColor = "transparent"; }
+	
+	if (id=="camera" || id=="pubstop") {
+		if (str=="over") {
+			document.getElementById("steering_textbox").innerHTML = "CAMERA ON/OFF".toUpperCase();
+			document.getElementById("steeringkeytextbox").innerHTML = "I";
+		}
+		else {
+			document.getElementById("steering_textbox").innerHTML = "";
+			document.getElementById("steeringkeytextbox").innerHTML = "";
+		}
+	}
+	else if (id=="docklink") {
+		if (str=="over") {
+			document.getElementById("steering_textbox").innerHTML = "DOCK".toUpperCase();
+			document.getElementById("steeringkeytextbox").innerHTML = "P";
+		}
+		else {
+			document.getElementById("steering_textbox").innerHTML = "";
+			document.getElementById("steeringkeytextbox").innerHTML = "";
+		}
+	}
+	else if (id=="mainmenulink") {
+		if (str=="over") {
+			document.getElementById("steering_textbox").innerHTML = "MENU".toUpperCase();
+			document.getElementById("steeringkeytextbox").innerHTML = "M";
+		}
+		else {
+			document.getElementById("steering_textbox").innerHTML = "";
+			document.getElementById("steeringkeytextbox").innerHTML = "";
+		}
+	}
+	
 }
 
 function streamset(str) {
@@ -2187,45 +2446,141 @@ function streamset(str) {
 	}
 }
 
-function emailgrab() {
-	callServer("emailgrab", null);
-	overlay("off");
-}
-
-
-/* message recording utils 
- * also line in loaded(), message()
- * */
-
-var messages = []
-var messagesstart = new Date().getTime();
-
-function recordmessage(message, colour, status, value) {
-	var d = new Date().getTime();
-	d -= messagesstart;
-	messages.push([message, colour, status, value,d]);
-}
-
-function displaymessages() {
-	var str = "";
-	for (var i = 0; i < messages.length; i++) {
-		for (var n = 0; n < messages[i].length; n++) {
-			str += "&quot;"+messages[i][n] + "&quot,";
-		}
-		str +=  "<br>";
+function acknowledgeerror(str) {
+	
+	if (str == "true") {
+		popupmenu("error", "close");
+		callServer("erroracknowledged","true");
 	}
-	document.write(str);
-}
-/* end of message recording utils */
+	else if (str == "cancel") {
+		popupmenu("error", "close");
+		callServer("erroracknowledged","false");
+	}
+	
+	else {
+		
+		popupmenu("menu","close");
+	    
+	    var video = document.getElementById("video");
+	    var xy = findpos(video);
+	    popupmenu("error", "show", xy[0] + video.offsetWidth - 10, xy[1] + 10, str, null, 1, 0);
+	    //function popupmenu(pre_id, command, x, y, str, sizewidth, x_offsetmult, y_offsetmult) {
 
-/* 
- * radar functions
- * TODO: put radar functions into separate js file, load only if needed
+	}
+
+}
+
+function guinotify(str) {
+	if (str == "ok") {
+		popupmenu("aux", "close");
+		callServer("state","delete guinotify");
+	}
+	else {
+	    var video = document.getElementById("video");
+	    var xy = findpos(video);
+	    popupmenu("aux", "show", xy[0] + video.offsetWidth - 30, xy[1] + 30, str, null, 1, 0);				
+	}
+}
+
+function maintopbar(mode) {
+	if (mode=="over") {
+		document.getElementById('main_menu_under').style.display='';
+		document.getElementById('main_menu_contents').style.backgroundColor='#151515';
+	}
+	else if (mode=="out") {
+		clearTimeout(maintopbarTimer);
+		document.getElementById('main_menu_under').style.display='none';
+		document.getElementById('main_menu_contents').style.backgroundColor='transparent';
+	}
+	else if (mode="overpending") {
+		maintopbarTimer = setTimeout("maintopbar('over');", 250);
+	}
+}
+
+/*
+ * menu functions:
+ * 	save open window positions
+ *  	-aux, context, (error), menu, main
+ * 	default window positions (takes effect next browser page reload)
+ * 		-simply delete windowpositions cookie
+ * 
+ *  in loaded():
+ *  	-check for windowpositions cookie, set values for non null global vars window_[name]_x, window_[name]_y
+ *  
+ *  in popupmenu(show)
+ *  	-check for non null vars window_[name]_x, window_[name]_y, use instead of default 
+ *  	
+ * 
  */
+
+//createCookie(name,value,days) 
+//readCookie(name) 
+//eraseCookie(name) 
+
+function saveopenwindowpositions() {
+	
+	var value = "";
+	for (var i = 0; i < subwindows.length; i++) {
+		var w = document.getElementById(subwindows[i]+"_menu_over");
+		if (w.style.display == "") { // if open 
+			var xy = findpos(w);
+			value += xy[0]+","+xy[1]+",";
+			windowpos[i] = xy;
+			
+			if (subwindows[i]="rosmap")  saverosmapwindowpos();
+			
+		}
+		else {
+			value += "null,null,";
+			windowpos[i] = null;
+		}
+	}
+	createCookie("windowpositions",value,364);
+	message("window positions saved","orange");
+
+}
+
+function defaultwindowpositions() {
+	eraseCookie("windowpositions");
+	for (var i = 0; i < subwindows.length; i++)  windowpos[i] = null;
+	defaultrosmapwindowpos();
+	message("default window positions, refresh page","orange");
+}
+
+function loadwindowpositions() {
+	var c = readCookie("windowpositions")
+	if (c == null)  return;
+	
+	positions=c.split(","); 
+	for (var i = 0; i < subwindows.length; i++) {
+		if (positions[i*2] == "null") windowpos[i] = null; //?
+		else {
+			windowpos[i] = [parseInt(positions[i*2]), parseInt(positions[i*2+1])];
+		}
+	}
+	
+}
+
+if (!Array.prototype.indexOf) {
+    Array.prototype.indexOf = function(obj, start) {
+         for (var i = (start || 0), j = this.length; i < j; i++) {
+             if (this[i] === obj) { return i; }
+         }
+         return -1;
+    }
+}
+
+/*
+ * dev functions follow
+ */
+
+var radartimer = null;
+
+
 function radar(mode) {
 	if (mode=="init") {		
 		callServer("opennisensor", "on"); 
-		message("sending opennisensor on " + str, sentcmdcolor);
+		message("sending opennisensor on", sentcmdcolor);
 		lagtimer = new Date().getTime(); // has to be *after* message()
 	}
 	if (mode=="on") {	
@@ -2245,38 +2600,29 @@ function radar(mode) {
 		str += "<div style='position: relative; top: -70px; left: 107px; width: 75px;'>";
 		str +="<span style='background-color: #666666; color: #000000;'>ROV</span></div>";
 		str += "</div>"
-		popupmenu('context', 'show', x, y, str, 240, 1, 0);
-//		radarimagereload();
+		popupmenu('aux', 'show', x, y, str, 240, 1, 0);
 	}
 	if (mode=="off") {
-		lagtimer = new Date().getTime(); // has to be *after* message()
-		// document.getElementById("radarimg").src="";
-		popupmenu("context", "close");
+		popupmenu("aux", "close");
 	}
-	if (mode=="shutdown") { // unused
+	if (mode=="shutdown") { 
 		callServer("opennisensor", "off");
-		message("sending opennisensor off " + str, sentcmdcolor);
+		message("sending opennisensor off", sentcmdcolor);
 	}
 }
 
 
-var radartimer = null;
-//var radartimeout = null;
-
 function radarrepeat() {
 	clearTimeout(radartimer);
-//	clearTimeout(radartimeout);
-	radartimer = setTimeout("radarimagereload();", 250);
+	radartimer = setTimeout("radarimagereload();", 50);
 }
 
 function radarimagereload() {
 	radartimer = null;
 	var img = document.getElementById('radarimg');
-//	img.src= "";
+	if (img == null) return;
 	img.src = "frameGrabHTTP?mode=radar&date="+new Date().getTime();
-//	img.addEventListener("load", radarrepeat, false);
 	img.onload = function() { radarrepeat(); }
-	// radartimeout = setTimeout("radartimedout();", 500);
 }
 
 function processedImg(mode) {
@@ -2285,19 +2631,90 @@ function processedImg(mode) {
 		var xy = findpos(v);
 		var x = xy[0]+v.offsetWidth;
 		var y=xy[1];
-		var str ="<div style='height: 240px; line-height: 10px;'>";
+		var str ="<a href='javascript: processedImg(&quot;close&quot;);'>"
+    str+= "<span class='cancelbox'><b>X</b></span> CLOSE</a><br><br>"
+		str +="<div style='height: 240px; line-height: 10px;'>";
 		str +="<img src='frameGrabHTTP?mode=processedImg&date=" + new Date().getTime();
 		str +=	"' alt='' width='320' height='240'>";
 		str += "</div>"
-		popupmenu('context', 'show', x, y, str, 320, 1, 0);
+		popupmenu('context', 'show', x, y, str, 320, 0, 0);
 	//	radarimagereload();
 	}
 	if (mode=="close") {
-		lagtimer = new Date().getTime(); // has to be *after* message()
+//		lagtimer = new Date().getTime(); // has to be *after* message()
 		// document.getElementById("radarimg").src="";
 		popupmenu("context", "close");
 	}
 
 }
 
+function depthView(mode) {
+	if (mode=="off")  { popupmenu("aux", "close"); }
+	else {
+		var w = 320;
+		var h = 240;
+		if (mode=="floorPlaneTop") {
+			w = 232;
+			h = 240;
+		}
+		else if (mode=="stereo") {
+			w = 640;
+			h = 339;
+		}
+		else if (mode=="stereoleft") {
+		    w=640; h=360;
+		}
+		else if (mode=="stereotop") { w=435; h=320; }
+		var v = document.getElementById("video");
+		var xy = findpos(v);
+		var x = xy[0]+v.offsetWidth;
+		var y=xy[1];
+		src = "frameGrabHTTP?mode="+mode;
+		var str ="<img id='depthImg' src='"+src+"' alt='' ";
+		str +="onload='depthViewRepeat(&quot;"+mode+"&quot;);' "
+		str += "width='"+w+"' height='"+h+"'>"
+		popupmenu('aux', 'show', x, y, str, w, 1, 0);
+//		radarimagereload();
+	}
 
+}
+
+function depthViewRepeat(mode) {
+	clearTimeout(radartimer);
+	radartimer = setTimeout("depthViewImgReload('"+mode+"');", 50);
+}
+
+function depthViewImgReload(mode) {
+	radartimer = null;
+	var img = document.getElementById('depthImg');
+	img.src = "frameGrabHTTP?mode="+mode+"&date="+new Date().getTime();
+	img.onload = function() { depthViewRepeat(mode); }
+}
+
+function imgOverVideo(mode) {
+	var img = document.getElementById("videologo");
+	if (mode == "on") {
+		play("stop"); // will stop playing stream, and turn videologo on
+		// <img id="videologo" src="images/eye.gif" width="640" height="480"
+		img.src = "frameGrabHTTP?mode=videoOverlayImg&date=" + new Date().getTime();
+		img.onload = function() { imgOverVideoRepeat(); }
+	}
+	else {
+		clearTimeout(radartimer);
+		radartimer = null;
+		img.onload = null;
+		img.src = "images/eye.gif";
+	}
+}
+
+function imgOverVideoRepeat() {
+	clearTimeout(radartimer);
+	radartimer = setTimeout("imgOverVideoReload();", 50);
+}
+
+function imgOverVideoReload() {
+	radartimer = null;
+	var img = document.getElementById("videologo");
+	img.src = "frameGrabHTTP?mode=videoOverlayImg&date=" + new Date().getTime();
+	img.onload = function() { imgOverVideoRepeat(); }
+}

@@ -3,3 +3,9 @@
 *.class
 /bin
 /.settings
+rss.xml
+*.DS_Store
+*.iml
+/.idea
+/framegrabs
+/deploy/

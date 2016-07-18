@@ -19,19 +19,16 @@ public class Input extends JTextField implements KeyListener {
 	private String userInput = null;
 	private int ptr, stateptr = 0;
 
-	public Input(Socket s, final String usr, final String pass) {
+	public Input(Socket s) {
 		super();
 		socket = s;
 
 		try {
 			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
 		} catch (Exception e) {
-			Util.log("can not connect", this);
+			System.out.println("can not connect");
 			System.exit(-1);
 		}
-
-		// if connected, login now
-		out.println(usr + ":" + pass);
 
 		// listen for key input
 		addKeyListener(this);
@@ -42,21 +39,18 @@ public class Input extends JTextField implements KeyListener {
 
 	/** inner class to check if getting responses in timely manor */
 	public class WatchDog extends Thread {
-		public WatchDog() {
-			this.setDaemon(true);
-		}
-
 		public void run() {
 			Util.delay(2000);
 			while (true) {
 				Util.delay(2000);
 				if (out.checkError()) {
-					Util.log("watchdog closing", this);
+					System.out.println("watchdog closing");
 					System.exit(-1);
 				}
 
 				// send dummy
-				out.println("\t\t\n");
+				out.println("\t\t\n\n");
+				// System.out.println("....");
 			}
 		}
 	}
@@ -106,7 +100,7 @@ public class Input extends JTextField implements KeyListener {
 			
 			if (stateptr++ >= (state.length-1)) stateptr = 0;
 
-			setText("state " + state[stateptr].name() + " ");
+			setText("state delete " + state[stateptr].name() + " ");
 
 			setCaretPosition(getText().length());
 		
@@ -114,7 +108,7 @@ public class Input extends JTextField implements KeyListener {
 			
 			if (stateptr-- <= 0) stateptr = (state.length-1);
 			
-			setText("state " + state[stateptr].name() + " ");
+			setText("state delete " + state[stateptr].name() + " ");
 
 			setCaretPosition(getText().length());
 			

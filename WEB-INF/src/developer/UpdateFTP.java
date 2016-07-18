@@ -4,16 +4,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
-
-//import oculus.Observer;
-import oculusPrime.LoginRecords;
-import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.Util;
 
-/** */
-public class UpdateFTP { // implements Observer {
-	// private static final int WARN_LEVEL = 40;
+public class UpdateFTP {
+
+	public final static String sep = System.getProperty("file.separator");
+	public final static String redhome = System.getenv("RED5_HOME");
+	public static String ftpconfig = redhome+sep+"conf"+sep+"ftp.properties";
+	
 	public static final int DEFAULT_TIME = 30 * 60000; 
 	public static final String ftpTimer = "ftpTimer";
 	
@@ -24,18 +23,17 @@ public class UpdateFTP { // implements Observer {
 	private String host, port, user, pass, folder;
 	
 	public static boolean configured(){
-		File propfile = new File(Settings.ftpconfig);
+		File propfile = new File(ftpconfig);
 		return propfile.exists();
 	}
 
-	/** Constructor */
 	public UpdateFTP(){ 
 		
 		Properties props = new Properties();
 		
 		try {
 
-			FileInputStream propFile = new FileInputStream(Settings.ftpconfig);
+			FileInputStream propFile = new FileInputStream(ftpconfig);
 			props.load(propFile);
 			propFile.close();
 			
@@ -65,15 +63,6 @@ public class UpdateFTP { // implements Observer {
 		}).start();
 	}
 	
-	/*
-	@Override
-	public void updated(final String key) {
-		
-		if( ! key.equals(ftpTimer)) return;
-		
-	}
-	*/
-		
 	public void updateServer() {
 		new Thread(new Runnable() {
 			@Override
@@ -83,11 +72,10 @@ public class UpdateFTP { // implements Observer {
 					ftp.connect(host, port, user, pass);
 					ftp.cwd(folder);
 					
-					ftp.storString("ip.php", state.get(State.values.externaladdress.name()));
+					ftp.storString("ip.php", state.get(State.values.externaladdress));
 					ftp.storString("last.php", new java.util.Date().toString());
 					ftp.storString("user.php", System.getProperty("user.name"));		
 					ftp.storString("state.php", state.toString());
-					ftp.storString("users.php",  new LoginRecords().toString());
 					
 					ftp.disconnect();
 					

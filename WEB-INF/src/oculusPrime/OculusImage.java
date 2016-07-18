@@ -49,51 +49,55 @@ public class OculusImage {
 	}
 	
 	private void sendToImage(int[] pixelRGB) { // dev tool
-		Util.debug("sendtoImage "+pixelRGB.length,this);
-		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		for(int y=0; y<height; y++) {
-			for (int x=0; x<width; x++) {
-				int grey = pixelRGB[x + y*width];
-				if (grey==1) {grey=255;} // only if psuedo-boolean parr
-				int argb = (grey<<16) + (grey<<8) + grey;
-				Application.processedImage.setRGB(x, y, argb);
-			}
-		}
+//		Util.debug("sendtoImage "+pixelRGB.length,this);
+//		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+//		for(int y=0; y<height; y++) {
+//			for (int x=0; x<width; x++) {
+//				int grey = pixelRGB[x + y*width];
+//				if (grey==1) {grey=255;} // only if psuedo-boolean parr
+//				int argb = (grey<<16) + (grey<<8) + grey;
+//				Application.processedImage.setRGB(x, y, argb);
+//			}
+//		}
 	}
 	
 	private void sendToImage(Boolean[] pixelRGB) { // dev tool
 		Util.debug("sendtoImageBoolean "+pixelRGB.length,this);
-//		int fillsize =0; // debug log
 
 		Application.processedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		for(int y=0; y<height; y++) {
 			for (int x=0; x<width; x++) {
 				int p = x + y*width;
-//				Util.log("p: "+p, this);
 				int argb;
 				if (pixelRGB[p]==true) { argb = (255<<16) + (0<<8) + 0; } // fillsize ++; } // red
-				else {  
-					int grey = parrorig[p]; 
-					argb = (grey<<16) + (grey<<8) + grey; 
+				else {
+					int grey = parrorig[p];
+					argb = (grey<<16) + (grey<<8) + grey;
 				}
 				Application.processedImage.setRGB(x, y, argb);
 
 			}
 		}
-//		Util.debug("fillsize "+fillsize,this);
 
 	}
 	
 	private Boolean[] floodFill(int[] ablob, int start) {  
 		ArrayList<Integer> q= new ArrayList<Integer>();
 		q.add(start);
-		Boolean[] blob = new Boolean[width*height];
+		Boolean[] blob = new Boolean[0];
+		try {
+			blob = new Boolean[width*height];
+		} catch (Exception e) { // probably heap overflow CATCH NOT WORKING
+			Util.log("floodFill()", e, this);
+//			e.printStackTrace();
+			return new Boolean[0];
+		}
 		Arrays.fill(blob, false);
 		int n;
 		int w;
 		int e;
 		int i;
-		
+
 		while (q.size() > 0) {
 			n = q.remove(q.size()-1);
 			if (ablob[n]==1) {
@@ -120,7 +124,7 @@ public class OculusImage {
 	public String[] findBlobStart(int x, int y, int w, int h, int[] bar) { // calibrate only...
 		lastThreshhold = 0;
 		String r[];
-		findBlobStartSub(x,y,w,h,bar);
+//		findBlobStartSub(x, y, w, h, bar);
 		r = findBlobStartSub(x,y,w,h,bar); // do it again, with contrast averaged
 		return r;
 	}
@@ -146,22 +150,22 @@ public class OculusImage {
 		}
 		Boolean[] blob = floodFill(parr, start);
 		int blobSize =0;
-			int r[] = getRect(blob,start);
-			int minx = r[0];
-			int maxx = r[1];
-			int miny = r[2];
-			int maxy = r[3];  
-			blobSize = r[4];
-			int	blobBox = (maxx-minx)*(maxy-miny);
-			lastTopRatio = (float) getPixelEqTrueCount(blob, minx, (int) (minx+(maxx-minx)*0.333), miny, maxy) / (float) blobBox; // left
-			lastMidRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.333), (int) (minx+(maxx-minx)*0.666), miny, maxy) / (float) blobBox;
-			lastBottomRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.666), maxx, miny, maxy) / (float) blobBox; // left
-			lastBlobRatio = (float)(maxx-minx)/(float)(maxy-miny);
-			float slope =  getBottomSlope(blob,minx,maxx,miny,maxy)[0];
-			//result = x,y,width,height,slope,lastBlobRatio,lastTopRatio,lastMidRatio,lastBottomRatio
-			result = new String[]{Integer.toString(minx), Integer.toString(miny), Integer.toString(maxx-minx),
-					Integer.toString(maxy-miny), Float.toString(slope), Float.toString(lastBlobRatio),
-					Float.toString(lastTopRatio), Float.toString(lastMidRatio), Float.toString(lastBottomRatio)}; 
+		int r[] = getRect(blob,start);
+		int minx = r[0];
+		int maxx = r[1];
+		int miny = r[2];
+		int maxy = r[3];
+		blobSize = r[4];
+		int	blobBox = (maxx-minx)*(maxy-miny);
+		lastTopRatio = (float) getPixelEqTrueCount(blob, minx, (int) (minx+(maxx-minx)*0.333), miny, maxy) / (float) blobBox; // left
+		lastMidRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.333), (int) (minx+(maxx-minx)*0.666), miny, maxy) / (float) blobBox;
+		lastBottomRatio = (float) getPixelEqTrueCount(blob, (int) (minx+(maxx-minx)*0.666), maxx, miny, maxy) / (float) blobBox; // left
+		lastBlobRatio = (float)(maxx-minx)/(float)(maxy-miny);
+		float slope =  getBottomSlope(blob,minx,maxx,miny,maxy)[0];
+		//result = x,y,width,height,slope,lastBlobRatio,lastTopRatio,lastMidRatio,lastBottomRatio
+		result = new String[]{Integer.toString(minx), Integer.toString(miny), Integer.toString(maxx-minx),
+				Integer.toString(maxy-miny), Float.toString(slope), Float.toString(lastBlobRatio),
+				Float.toString(lastTopRatio), Float.toString(lastMidRatio), Float.toString(lastBottomRatio)};
 
 		if (lastThreshhold==0) {
 			int runningttl = 0;
@@ -172,6 +176,7 @@ public class OculusImage {
 			}
 			lastThreshhold = (int) ((runningttl/blobSize)*threshholdMult); // adaptive threshhold
 		}
+		sendToImage(blob);
 		return result;
 	}
 	
@@ -221,7 +226,8 @@ public class OculusImage {
 		String[] result = new String[]{"0","0","0","0","0"}; //x,y,width,height,slope
 		convertToGrey(bar);
 		parrorig = parr.clone();
-
+		int minimumsize = (int) (width*height*0.002);
+		
 		if (lastThreshhold == -1)  {lastThreshhold = imgaverage; } 
 		int threshhold = lastThreshhold;
 		
@@ -258,14 +264,18 @@ public class OculusImage {
 		int blobBox;
 		ArrayList<Integer> blobstarts = new ArrayList<Integer>();
 		for (pixel=0; pixel<width*height; pixel++) { // zero to end, find all blobs
-			if (parr[pixel]==1) { // finds a white one 
-					Boolean[] temp = floodFill(parr, pixel);
-					if (temp.length > 150) { // discard tiny blobs
-						blobs.add(temp);
-						blobstarts.add(pixel);
+			if (parr[pixel]==1) { // finds a white one
+				Boolean[] temp = floodFill(parr, pixel);
+				if (temp.length > minimumsize) { // discard tiny blobs  was 150
+					blobs.add(temp);
+					blobstarts.add(pixel);
+					if (blobs.size() > 255) { // probably noisy img, avoid heap overflow
+						Util.log("error, too many blobs", this);
+						return result;
 					}
-					
 				}
+					
+			}
 		}		
 		
 		ArrayList<Integer> rejectedBlobs = new ArrayList<Integer>();
@@ -287,7 +297,7 @@ public class OculusImage {
 							maxx, miny, maxy) / (float) blobBox;
 					float blobRatio = (float) (maxx-minx)/(float)(maxy-miny);
 					diff = Math.abs(topRatio - lastTopRatio) + Math.abs(bottomRatio- lastBottomRatio) + Math.abs(midRatio- lastMidRatio);
-					if (diff < maxdiff && blobRatio <= lastBlobRatio*1.1) { 
+					if (diff < maxdiff && blobRatio <= lastBlobRatio*1.1) {
 						winner=blobnum;
 						maxdiff = diff;
 						winRect = r.clone();
@@ -310,7 +320,7 @@ public class OculusImage {
 					if (minx<r[0] && maxx>r[1] && miny<r[2] && maxy>r[3] && r[4] > 10 && r[4]<winRect[4]*0.5 && r[4]>winRect[4]*0.2 ) { // ctrblob completely within blob
 						float[] sl = getBottomSlope(blobs.get(winner),minx,maxx,miny,maxy);
 						slope = sl[0];
-						if (sl[1]<=minx || sl[2]>=maxx) { // bottom slope is widest on at least one side
+						if (sl[1]<=minx*0.9 || sl[2]>=maxx*0.9) { // bottom slope is widest on at least one side
 							break;
 						} // else { Util.debug("failed slope test",this); sendToImage(blobs.get(winner));  }
 					}
@@ -318,8 +328,8 @@ public class OculusImage {
 
 				rejectedBlobs.add(winner);
 				winner = -1;
-			
-				
+
+
 			}
 		}
 
@@ -337,9 +347,11 @@ public class OculusImage {
 			}
 			lastThreshhold = (int) ((runningttl/blobSize)*threshholdMult); // adaptive threshhold
 			
-			sendToImage(blobs.get(winner)); // testing
+//			sendToImage(blobs.get(winner)); // testing
 		}
-		else { sendToImage(parrorig); } // testing
+		else {
+//			sendToImage(parrorig);  // testing
+		}
 		return result;
 	}
 	

@@ -1,86 +1,109 @@
 package oculusPrime;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.UUID;
 
 import oculusPrime.State.values;
 
 public class Settings {
+
+	public final static String redhome = System.getenv("RED5_HOME");
+	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
+	public final static String appsubdir = "webapps/oculusPrime";
+	public final static String streamfolder = redhome + Util.sep+"webapps/oculusPrime/streams/";
+	public final static String framefolder = redhome+Util.sep+appsubdir+"/framegrabs";
+	public final static String streamsfolder = redhome+Util.sep+appsubdir+"/streams";
+	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
+	public final static String archivefolder = redhome+Util.sep+"archive";
+	public final static String logfolder = redhome+Util.sep+"log";
+	public final static String roslogfolder = "~/.ros/";
 	
-	public static final int ERROR = -1;
-	public final static String sep = System.getProperty("file.separator");
-	public static String redhome = System.getenv("RED5_HOME");
-	public static String framefile = System.getenv("RED5_HOME") + sep+"webapps"+sep+"oculus"+sep+"images"+sep+"framegrab.jpg";
-	public static String loginactivity = redhome+sep+"log"+sep+"loginactivity.txt";
-	public static String settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
-	public static String stdout = redhome+sep+"log"+sep+"jvm.stdout";
-	public static String ftpconfig = redhome+sep+"conf"+sep+"ftp.properties";
-	
-	public static String os = "windows" ; 
 	public final static String DISABLED= "disabled";
+	public final static String ENABLED = "enabled";
+	public static final String FALSE = "false";
+	public static final String TRUE = "true";	
+	public static final int ERROR = -1;
 	
-	/** reference to this singleton class */
 	private static Settings singleton = null;
 	public static Settings getReference() {
-		if (singleton == null) {
-			singleton = new Settings();
-		}
+		if (singleton == null) singleton = new Settings();
 		return singleton;
 	}
 	
-	/** only check for settings file once */ 
+	private HashMap<String, String> settings = new HashMap<String, String>(); 
+	
 	private Settings(){
 		
-		if (System.getProperty("os.name").matches("Linux")) { os = "linux"; }
-		
 		// be sure of basic configuration 
-		if(! new File(settingsfile).exists()) { createFile(settingsfile); }
-	}
-	
-	/** ONLY USE FOR JUNIT */
-	public Settings(String path){
+		if(! new File(settingsfile).exists()) createFile(settingsfile); 
 		
-		redhome = path;
-		settingsfile = redhome+sep+"conf"+sep+"oculus_settings.txt";
+		importFile();
 	}
 	
-	/**
-	 * lookup values from props file
-	 * 
-	 * @param key
-	 *            is the lookup value
-	 * @return the matching value from properties file (or false if not found)
-	 */
+	private void importFile(){
+		try {
+			String line;
+			FileInputStream filein = new FileInputStream(settingsfile);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
+			while ((line = reader.readLine()) != null) {
+				String items[] = line.split(" ");
+				settings.put(items[0], items[1]);
+			}
+			reader.close();
+			filein.close();
+		} catch (Exception e) {
+			Util.log("importFile: " + e.getMessage(), this);
+		}
+		
+		// test for missing
+		
+		for (GUISettings setting : GUISettings.values()) {
+			if (readSetting(setting.name()) == null) {
+				Util.log("missing setting, changed to default: " + setting.name(), this);
+				writeFile();
+				break;
+			} else {
+				if(readSetting(setting.name()).equalsIgnoreCase("null")){
+					Util.log("missing setting, changed to default: " + setting.name(), this);
+					writeFile();
+					break;
+				}
+			}
+		}
+		
+		for (ManualSettings setting : ManualSettings.values()) {
+			if (readSetting(setting.name()) == null) {
+				Util.log("missing setting, changed to default: " + setting.name(), this);
+				writeFile();
+				break;
+			} else {
+				if(readSetting(setting.name()).equalsIgnoreCase("null")){
+					Util.log("missing setting, changed to default: " + setting.name(), this);
+					writeFile();
+					break;
+				}
+			}
+		}
+	}
+		
 	public boolean getBoolean(String key) {
-		if (key == null)
-			return false;
+		if (key == null) return false;
 		String str = readSetting(key);
-		if (str == null)
-			return false;
-		if (str.toUpperCase().equals("YES"))
-			return true;
-		else if (str.toUpperCase().equals("TRUE"))
-			return true;
+		if (str == null) return false;
+		if (str.toUpperCase().equals("YES")) return true;
+		else if (str.equalsIgnoreCase(TRUE)) return true;
 		return false;
 	}
 
-	/**
-	 * lookup values from props file
-	 * 
-	 * @param key
-	 *            is the lookup value
-	 * @return the matching value from properties file (or zero if not found)
-	 */
 	public int getInteger(String key) {
 
 		String ans = null;
 		int value = ERROR;
 
 		try {
-
 			ans = readSetting(key);
 			value = Integer.parseInt(ans);
-
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -88,23 +111,14 @@ public class Settings {
 		return value;
 	}
 
-	/**
-	 * lookup values from props file
-	 * 
-	 * @param key
-	 *            is the lookup value
-	 * @return the matching value from properties file (or zero if not found)
-	 */
 	public double getDouble(String key) {
 
 		String ans = null;
 		double value = ERROR;
 
 		try {
-
 			ans = readSetting(key);
 			value = Double.parseDouble(ans);
-
 		} catch (Exception e) {
 			return ERROR;
 		}
@@ -112,14 +126,10 @@ public class Settings {
 		return value;
 	}
 
-	/**
-	 * read through whole file line by line, extract result
-	 * 
-	 * @param str
-	 *            this parameter we are looking for
-	 * @return a String value for this given parameter, or null if not found
-	 */
 	public String readSetting(String str) {
+		
+		if(settings.containsKey(str)) return settings.get(str);
+	
 		FileInputStream filein;
 		String result = null;
 		try {
@@ -133,7 +143,7 @@ public class Settings {
 					if ((items[0].toUpperCase()).equals(str.toUpperCase())) {
 						result = items[1];
 					}
-				} else throw new Exception("can NOT readSetting("+str+")");
+				} 
 			}
 			reader.close();
 			filein.close();
@@ -148,23 +158,21 @@ public class Settings {
 		return result;
 	}
 
-
-	/** Make a copy in order and "cleaned" of anything but valid settings */
+	@Override
 	public String toString(){
 		
 		String result = new String();
 		for (GUISettings factory : GUISettings.values()) {
 			String val = readSetting(factory.toString());
-			if (val != null) // if( ! val.equals("null")) 
-				result += factory.toString() + " " + val + "<br>";
+			if (val != null) { // never send out plain text passwords 
+				if( ! factory.equals(GUISettings.email_password))
+					result += factory.toString() + " " + val + "<br>"; 
+			}
 		}
 	
 		for (ManualSettings ops : ManualSettings.values()) {
 			String val = readSetting(ops.toString());
-			if (val != null)  { 
-				if(ops.equals(ManualSettings.email_password)) { val = "***"; }// never send out plain text passwords 
-				result += ops.toString() + " " + val + "<br>";
-			}
+			if (val != null) result += ops.toString() + " " + val + "<br>"; 
 		}
 		
 		return result;
@@ -196,14 +204,12 @@ public class Settings {
 		}
 	}
 	
-	/**
-	 * Organize the settings file into 3 sections. Use Enums's to order the file
-	 */
-	public synchronized void writeFile(String path) {
+	/** Organize the settings file into 3 sections. Use Enums's to order the file */
+	public synchronized void writeFile(){
 		
 		try {
 			
-			final String temp = redhome + sep+"conf"+sep+"oculus_created.txt";
+			final String temp = redhome + Util.sep+"conf"+Util.sep+"oculus_created.txt";
 			FileWriter fw = new FileWriter(new File(temp));
 			
 			fw.append("# gui settings \r\n");
@@ -237,37 +243,27 @@ public class Settings {
 					fw.append("pass" + j + " " + users[j][1] + "\r\n");
 				}
 			} 
-			
 			fw.close();
 			
 			// now swap temp for real file
-			new File(path).delete();
+			new File(settingsfile).delete();
 			new File(temp).renameTo(new File(settingsfile));
 			new File(temp).delete();
 
+			importFile();
+			
 		} catch (Exception e) {
 			Util.log("Settings.writeFile(): " + e.getMessage(), this);
 		}
 	}
 
-	/**
-	 * Organize the settings file into 3 sections. Use Enums's to order the file
-	 */
-	public synchronized void writeFile() {
-		writeFile(settingsfile);
-	}
-	
-	/**
-	 * @return a list of user/pass values from the existing settings file
-	 */
-	public String[][] getUsers() {
+	private String[][] getUsers() {
 
-		int i = 0; // count users
+		int i = 0;
 		for (;; i++)
 			if (readSetting("user" + i) == null)
 				break;
-
-		// System.out.println("found: " + i);
+		
 		String[][] users = new String[i][2];
 
 		for (int j = 0; j < i; j++) {
@@ -277,39 +273,46 @@ public class Settings {
 
 		return users;
 	}
-
-	/**
-	 * modify value of existing settings file
-	 * 
-	 * @param setting
-	 *            is the key to be written to file
-	 * @param value
-	 *            is the integer to parse into a string before being written to
-	 *            file
-	 */
+ 
 	public void writeSettings(String setting, int value) {
-
 		String str = null;
-
 		try {
 			str = Integer.toString(value);
 		} catch (Exception e) {
 			return;
 		}
 
-		if (str != null)
-			writeSettings(setting, str);
+		if (str != null) writeSettings(setting, str);
+	}
+	
+	public void writeSettings(ManualSettings setting, String str) {
+		writeSettings(setting.name(), str);
 	}
 
+	public void writeSettings(GUISettings setting, String str) {
+		writeSettings(setting.name(), str);
+	}
+	
 	/**
 	 * Modify value of existing setting. read whole file, replace line while
 	 * you're at it, write whole file
-	 * 
-	 * @param setting
-	 * @param value
 	 */
-	public void writeSettings(String setting, String value) {
+	public synchronized void writeSettings(String setting, String value) {
+		
+		if(setting == null) return;
+		if(value == null) return;
+		if(value.equalsIgnoreCase("null")) return;
+				
+		setting = setting.trim();
 		value = value.trim();
+		
+		//TODO: revisit -- test if is existing setting already 
+		if(settings.get(setting).equals(value)) {
+			Util.debug("setting rejected, "+setting+" already set to: " + value, this);
+			return;
+		}
+		
+		settings.put(setting, value);
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {
@@ -319,10 +322,10 @@ public class Settings {
 			int i = 0;
 			while ((lines[i] = reader.readLine()) != null) {
 				String items[] = lines[i].split(" ");
-				if(items.length==2){
+				if(items.length==2){ //TODO: SHOULD SETTINGS BE CASE SENSITIVE? 
 					if ((items[0].toUpperCase()).equals(setting.toUpperCase())) {
 						lines[i] = setting + " " + value;
-					} // else Util.log("error wwritting: "+lines[0], this);
+					}
 				}
 				i++;
 			}
@@ -345,15 +348,9 @@ public class Settings {
 		}
 	}
 
-	/**
-	 * read whole file, add single line, write whole file
-	 * 
-	 * @param setting
-	 * @param value
-	 */
 	public void newSetting(String setting, String value) {
 
-		setting = setting.trim(); // remove trailing whitespace
+		setting = setting.trim();
 		value = value.trim();
 
 		FileInputStream filein;
@@ -390,7 +387,7 @@ public class Settings {
 
 	public void deleteSetting(String setting) {
 		// read whole file, remove offending line, write whole file
-		setting = setting.replaceAll("\\s+$", ""); // remove trailing whitespace
+		setting = setting.replaceAll("\\s+$", ""); 
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {
@@ -425,7 +422,7 @@ public class Settings {
 	}
 
 	public String readRed5Setting(String str) {
-		String filenm = System.getenv("RED5_HOME") + sep+"conf"+sep+"red5.properties";
+		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
 		FileInputStream filein;
 		String result = null;
 		try {
@@ -446,13 +443,9 @@ public class Settings {
 		return result;
 	}
 
-	public void writeRed5Setting(String setting, String value) { // modify value
-																	// of
-																	// existing
-																	// setting
-		// read whole file, replace line while you're at it, write whole file
-		String filenm = System.getenv("RED5_HOME") + sep+"conf"+sep+"red5.properties";
-		value = value.replaceAll("\\s+$", ""); // remove trailing whitespace
+	public void writeRed5Setting(String setting, String value) { 
+		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
+		value = value.replaceAll("\\s+$", ""); 
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {
@@ -513,21 +506,12 @@ public class Settings {
 		return getBoolean(key.name());
 	}
 
-	public double getDouble(GUISettings setting) {
-		return getDouble(setting.name());
-	}
+	public double getDouble(GUISettings setting) { return getDouble(setting.name()); }
 
-	public synchronized void incrementSettings(ManualSettings attempts) {
-		Util.log("_____ increment: " + readSetting(attempts), this);
-		Integer value = 0;
-		if(readSetting(attempts) != null){
-			value = Integer.valueOf(readSetting(attempts));
-			writeSettings(attempts.name(), String.valueOf(value+1));
-		}
-	}
+	public double getDouble(ManualSettings setting) { return getDouble(setting.name()); }
 
-	public long getLong(ManualSettings setting) {
-		return Long.valueOf(readSetting(setting));
-	}
+	public long getLong(ManualSettings setting) { return Long.valueOf(readSetting(setting)); }
+
+	public long getLong(GUISettings setting) { return Long.valueOf(readSetting(setting)); }
 
 }

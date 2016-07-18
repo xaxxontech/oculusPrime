@@ -14,7 +14,7 @@ public class Frame extends JFrame implements Runnable {
 		setDefaultLookAndFeelDecorated(true);
 		setLayout(new BorderLayout());
 		JScrollPane chatScroller = new JScrollPane(out);
-		chatScroller.setPreferredSize(new Dimension(340, 810));
+		chatScroller.setPreferredSize(new Dimension(400, 700));
 		getContentPane().add(chatScroller, BorderLayout.NORTH);
 		getContentPane().add(in, BorderLayout.PAGE_END);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -28,7 +28,7 @@ public class Frame extends JFrame implements Runnable {
 	// swing will call us when ready 
 	public void run() {
 		setResizable(false);
-		setAlwaysOnTop(true);
+		setAlwaysOnTop(false);
 		pack();
 		setVisible(true);
 	}

@@ -2,100 +2,136 @@ package oculusPrime;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
-import oculusPrime.commport.ArduinoPrime;
-import oculusPrime.commport.Discovery;
-
+import org.jasypt.util.password.ConfigurablePasswordEncryptor;
+import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
-import org.jasypt.util.password.*;
-import org.red5.io.amf3.ByteArray;
 
-import developer.SendMail;
-import developer.UpdateFTP;
-
+import developer.Navigation;
+import developer.NavigationLog;
+import developer.Ros;
+import developer.depth.Mapper;
+import developer.image.OpenCVMotionDetect;
+import developer.image.OpenCVObjectDetect;
+import developer.image.OpenCVUtils;
+import oculusPrime.State.values;
+import oculusPrime.commport.ArduinoPower;
+import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.PowerLogger;
 
 /** red5 application */
-public class Application extends MultiThreadedApplicationAdapter implements Observer {
+public class Application extends MultiThreadedApplicationAdapter {
 
-	private static final int STREAM_CONNECT_DELAY = 2000;
-	private static final double LOW_BATTERY_THRESHOLD = 120.06; //TODO: set this value 
+	public enum streamstate { stop, camera, camandmic, mic }
+	public enum camquality { low, med, high, custom }
+	public enum driverstreamstate { stop, mic, pending, disabled }
+	public static final String VIDEOSOUNDMODELOW = "low";
+	public static final String VIDEOSOUNDMODEHIGH = "high";
+	public static final int STREAM_CONNECT_DELAY = 2000;
+	private static final int GRABBERRELOADTIMEOUT = 5000;
+	public static final int GRABBERRESPAWN = 8000;
+	public static final String ARM = "arm";
 	
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
-	private String salt = null;
-	private String authtoken = null;
-	private IConnection grabber = null;
-	private IConnection player = null;
-	private boolean pendingplayerisnull = true;
 	private boolean initialstatuscalled = false; 
-	private LoginRecords loginRecords = new LoginRecords();
+	private boolean pendingplayerisnull = true;
+	public IConnection grabber = null;
+	private IConnection player = null;
+	private String authtoken = null;
+	private String salt = null;
+	
 	private Settings settings = Settings.getReference();
+	private BanList banlist = BanList.getRefrence();
 	private State state = State.getReference();
-	private ArduinoPrime comport = null;
+	private LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
+	private SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
+	public Video video = null;
+
+	public ArduinoPrime comport = null;
+	public ArduinoPower powerport = null;
+	public TelnetServer commandServer = null;
 	
-	// try to make private 
-	public static TelnetServer commandServer = null;
-	public static developer.OpenNIRead openNIRead = null;
-	public static Speech speech = new Speech();
+	public static developer.depth.OpenNIRead openNIRead = null;
+	public static developer.depth.ScanUtils scanUtils = null;
+	private developer.Navigation navigation = null;
+
 	public static byte[] framegrabimg  = null;
-	public static Boolean passengerOverride = false;
 	public static BufferedImage processedImage = null;
-	
+	public static BufferedImage videoOverlayImage = null;
+
 	public Application() {
 		super();
+		state.set(values.osarch, System.getProperty("os.arch"));
+		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+"===============", this);
+		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
+
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
+		loginRecords = new LoginRecords(this);
+		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
-		RtmpPortRequest.setApp(this);
-		AuthGrab.setApp(this);
 		initialize();
-		state.addObserver(this);
-		
-		
-		// TODO: take action 
-		long last = settings.getLong(ManualSettings.lastboot);
-		Util.log("last booted: " + ((System.currentTimeMillis() - last)/1000), this);
-		
-		//TODO: now alive, write it to file 
-		settings.writeSettings(ManualSettings.lastboot.name(), String.valueOf(System.currentTimeMillis()));
 	}
 
 	@Override
 	public boolean appConnect(IConnection connection, Object[] params) {
 
+		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
+//		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
+//			Util.log("localhost/LAN/known netstream connect, no params", this);
+//			return true;
+//		}
+
+		// always accept local avconv/ffmpeg
+		if ((connection.getRemoteAddress()).equals("127.0.0.1") && params.length==0) {
+			grabber = Red5.getConnectionLocal();
+			return true;
+		}
+
 		String logininfo[] = ((String) params[0]).split(" ");
 
-		// always accept local grabber
-		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals(""))
-			return true;
+		// always accept local grabber (flash)
+		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
 
-		if (logininfo.length == 1) { // test for cookie auth
+		// TODO: if banned, but cookie exists?? 
+		if(banlist.isBanned(connection.getRemoteAddress())) return false;
+		
+		// test for cookie auth
+		if (logininfo.length == 1) { 
 			String username = logintest("", logininfo[0]);
 			if (username != null) {
 				state.set(State.values.pendinguserconnected, username);
+				banlist.clearAddress(connection.getRemoteAddress());
 				return true;
 			}
 		}
-		if (logininfo.length > 1) { // test for user/pass/remember
+	
+		// test for user/pass/remember
+		if (logininfo.length > 1) {
 			String encryptedPassword = (passwordEncryptor.encryptPassword(logininfo[0] + salt + logininfo[1])).trim();
 			if (logintest(logininfo[0], encryptedPassword) != null) {
 				if (logininfo[2].equals("remember")) {
 					authtoken = encryptedPassword;
 				}
 				state.set(State.values.pendinguserconnected, logininfo[0]);
+				banlist.clearAddress(connection.getRemoteAddress());
 				return true;
 			}
 		}
-		String str = "login from: " + connection.getRemoteAddress() + " failed";
-		Util.log("appConnect(): " + str);
-		messageGrabber(str, "");
+		
+		banlist.loginFailed(connection.getRemoteAddress(), logininfo[0]);			
 		return false;
 	}
 
@@ -103,31 +139,38 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	public void appDisconnect(IConnection connection) {
 		if(connection==null) { return; }
 		if (connection.equals(player)) {
-			String str = state.get(State.values.driver.name()) + " disconnected";
+			String str = state.get(State.values.driver) + " disconnected";
 			
-			Util.log("appDisconnect(): " + str); 
+			Util.log("appDisconnect(): " + str,this); 
 
 			messageGrabber(str, "connection awaiting&nbsp;connection");
 			loginRecords.signoutDriver();
 
-			if (!state.getBoolean(State.values.autodocking)) { //if autodocking, keep autodocking
-				if (state.get(State.values.stream) != null) {
-					if (!state.get(State.values.stream).equals("stop")) {
-						publish("stop");
+			//if autodocking, keep autodocking
+			if (!state.getBoolean(State.values.autodocking) &&
+					!(state.exists(values.navigationroute) && !state.exists(values.nextroutetime)) ) {
+				
+				if (!state.get(State.values.driverstream).equals(driverstreamstate.pending.toString())) {
+				
+					if (state.get(State.values.stream) != null) {
+						if (!state.get(State.values.stream).equals(streamstate.stop.toString())) {
+							publish(streamstate.stop);
+						}
 					}
-				}
-
-				if (comport.isConnected()) { 
-					comport.setSpotLightBrightness(0);
-//					comport.floodLightOff();
-//					comport.floodLight("off");
-					comport.stopGoing();
-				}
-
-				if (state.getBoolean(State.values.driverstream)) {
-					state.set(State.values.driverstream, false);
-					grabberPlayPlayer(0);
-					messageGrabber("playerbroadcast", "0");
+	
+					if (comport.isConnected()) { 
+						comport.setSpotLightBrightness(0);
+						comport.floodLight(0);
+						comport.stopGoing();
+					}
+	
+					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())
+							&& !state.get(values.driverstream).equals(driverstreamstate.disabled.toString())) {
+						state.set(State.values.driverstream, driverstreamstate.stop.toString());
+						grabberPlayPlayer(0);
+						messageGrabber("playerbroadcast", "0");
+					}
+					
 				}
 				
 				// this needs to be before player = null
@@ -139,20 +182,25 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 			
 			player = null;
+			connection.close();
 		}
 		
 		if (connection.equals(grabber)) {
 			grabber = null;
+
+			if (!settings.getBoolean(ManualSettings.useflash))  return;
+
+			// flash only
 			// wait a bit, see if still no grabber, THEN reload
 			new Thread(new Runnable() {
 				public void run() {
 					try {
-						Thread.sleep(8000);
+						Thread.sleep(GRABBERRESPAWN);
 						if (grabber == null) {
 							grabberInitialize();
 						}
 					} catch (Exception e) {
-						e.printStackTrace();
+						Util.printError(e);
 					}
 				}
 			}).start();
@@ -164,21 +212,23 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		// currently no username info when passenger disconnects
 	}
 
+	// called by flash
 	public void grabbersignin(String mode) {
 		if (mode.equals("init")) {
 			state.delete(State.values.stream);
 		} else {
-			state.set(State.values.stream, "stop");
+			state.set(State.values.stream, Application.streamstate.stop.toString());
 		}
 		grabber = Red5.getConnectionLocal();
 		String str = "awaiting&nbsp;connection";
-		if (state.get(State.values.driver.name()) != null) {
-			str = state.get(State.values.driver.name()) + "&nbsp;connected";
+		if (state.get(State.values.driver) != null) {
+			str = state.get(State.values.driver) + "&nbsp;connected";
 		}
 		str += " stream " + state.get(State.values.stream);
 		messageGrabber("connected to subsystem", "connection " + str);
 		Util.log("grabber signed in from " + grabber.getRemoteAddress(), this);
-		if (state.getBoolean(State.values.driverstream)) {
+		
+		if (state.get(State.values.driverstream).equals(driverstreamstate.mic.toString())) {
 			grabberPlayPlayer(1);
 			messageGrabber("playerbroadcast", "1");
 		}
@@ -195,17 +245,15 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode=state.get(State.values.videosoundmode.name());
-		if (videosoundmode == null) { 
-			videosoundmode="high";  
-			if (Settings.os.equals("linux")) { // TODO: or motion/sound activity threshold enabled
-				videosoundmode="low";
-			}
-		}
+		String videosoundmode=state.get(State.values.videosoundmode);
+		if (videosoundmode == null)	videosoundmode=VIDEOSOUNDMODEHIGH;  
+		
 		setGrabberVideoSoundMode(videosoundmode);
+		Util.systemCall(System.getenv("RED5_HOME")+"/flashsymlink.sh");		
+	}
 
-		docker = new AutoDock(this, grabber, comport);
-		loginRecords.setApplication(this);
+	public void killGrabber() {
+		if (settings.getBoolean(ManualSettings.useflash)) Util.systemCall("pkill chrome");    // TODO: use PID
 	}
  
 	/** */
@@ -213,98 +261,126 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 
-		// must be blocking search of all ports, but only once!
-		// Discovery discovery = 
-		// TODO; new............
-		new Discovery();
-		comport = new ArduinoPrime(this);//discovery.getMotors(this); 
-		
-		state.set(State.values.httpPort, settings.readRed5Setting("http.port"));
-		state.set(State.values.muteOnROVmove, settings.getBoolean(GUISettings.muteonrovmove));
+		comport = new ArduinoPrime(this);   // note: blocking
+		powerport = new ArduinoPower(this); // note: blocking
+
+		state.set(State.values.httpport, settings.readRed5Setting("http.port"));
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
-		
+
+		if (!settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED.toString()))
+			commandServer = new TelnetServer(this);
+
 		if (settings.getBoolean(ManualSettings.developer.name())) {
-			
-			openNIRead = new developer.OpenNIRead(this);
-			// developing 
-			// developer.MotionTracker.getReference().setApp(this);
-
+			openNIRead = new developer.depth.OpenNIRead();
+			scanUtils = new developer.depth.ScanUtils();
 		}
-			
-		
-		if ( ! settings.readSetting(ManualSettings.commandport).equals(Settings.DISABLED))
-			commandServer = new oculusPrime.TelnetServer(this);
-		
-		if (UpdateFTP.configured()) new developer.UpdateFTP();
 
-		Util.setSystemVolume(settings.getInteger(GUISettings.volume), this);
+		if (!state.get(values.osarch).equals(ARM)) {
+			try {
+				System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+			} catch (UnsatisfiedLinkError e) {
+				Util.log("opencv native lib not available", this);
+			}
+		}
+
+		if (settings.getBoolean(GUISettings.navigation)) {
+			navigation = new developer.Navigation(this);
+			navigation.runAnyActiveRoute();
+		}
+
+		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
-		grabberInitialize();
-				
-		new SystemWatchdog();
-		Util.debug("initialize done", this);
+		if (state.get(values.osarch).equals(ARM))
+			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if (!settings.getBoolean(ManualSettings.useflash))
+			state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else
+			state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
+		grabberInitialize();
+		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
+		docker = new AutoDock(this, comport, powerport);
+
+		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
+		Util.updateExternalIPAddress();
+		Util.updateLocalIPAddress();
+
+		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
+		//else {
+		Util.setJettyTelnetPort();
+		Util.updateJetty();		 
+		
+		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+		
+		watchdog = new SystemWatchdog(this);
+
+		Util.debug("application initialize done", this);
+		
 	}
 
 	private void grabberInitialize() {
-		if (settings.getBoolean(GUISettings.skipsetup)) {
-			grabber_launch();
-		} else {
-			initialize_launch();
+
+		// non flash, no gui
+		if (!settings.getBoolean(ManualSettings.useflash)) {
+			video = new Video(this);
+			if (!settings.getBoolean(GUISettings.skipsetup)) {
+				if (settings.readSetting("user0") == null) {
+					String p = "oculus" + salt + "robot"; // default
+					String encryptedPassword = passwordEncryptor.encryptPassword(p);
+					settings.newSetting("user0", "oculus");
+					settings.newSetting("pass0", encryptedPassword);
+				}
+			}
+			return;
 		}
+
+		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");
+		else initialize_launch();
 	}
 
 	public void initialize_launch() {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
-					// stream = null;
-					String address = "127.0.0.1:" + state.get(State.values.httpPort);
-					if (Settings.os.equals("linux")) {
-						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
-					}
-					else { // win
-						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculusPrime/initialize.html");
-					}
+					String address = "127.0.0.1:" + state.get(State.values.httpport);
+
+//					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
+					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/initialize.html");
+
 				} catch (Exception e) {
-					e.printStackTrace();
+					Util.printError(e);
 				}
 			}
 		}).start();
 	}
 
-	public void grabber_launch() {
+	public void grabber_launch(final String str) {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
 
 					// stream = "stop";
-					String address = "127.0.0.1:" + state.get(State.values.httpPort);
-					if (Settings.os.equals("linux")) {
-						Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
-					}
-					else { // win
-						Runtime.getRuntime().exec("cmd.exe /c start http://" + address + "/oculusPrime/server.html");
-					}
+					String address = "127.0.0.1:" + state.get(State.values.httpport);
+//					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
+					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html"+str);
 
 				} catch (Exception e) {
-					e.printStackTrace();
+					Util.printError(e);
 				}
 			}
 		}).start();
 	}
 
-	/** */
+	/**
+	 * called by remote flash
+	 * */
 	public void playersignin() {		
 		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode="high"; // windows, default
-		if (Settings.os.equals("linux")) {
-			videosoundmode="low";
-		}
+		String videosoundmode=VIDEOSOUNDMODELOW;
 
-		if (player != null) {
+		if (player != null) { // pending connection
 			pendingplayer = Red5.getConnectionLocal();
 			pendingplayerisnull = false;
 
@@ -316,32 +392,32 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 					str += " storecookie " + authtoken;
 					authtoken =  null;
 				}
-				str += " someonealreadydriving " + state.get(State.values.driver.name());
+				str += " someonealreadydriving " + state.get(State.values.driver);
 
 				// this has to be last to above variables are already set in java script
 				sc.invoke("message", new Object[] { null, "green", "multiple", str });
 				str = state.get(State.values.pendinguserconnected) + " pending connection from: "
 						+ pendingplayer.getRemoteAddress();
 				
-				Util.log("playersignin(): " + str);
+				Util.log("playersignin(): " + str,this);
 				messageGrabber(str, null);
 				sc.invoke("videoSoundMode", new Object[] { videosoundmode });
 			}
-		} else {
+		} else { // driver connected
 			player = Red5.getConnectionLocal();
-			state.set(State.values.driver.name(), state.get(State.values.pendinguserconnected));
+			state.set(State.values.driver, state.get(State.values.pendinguserconnected));
 			state.delete(State.values.pendinguserconnected);
-			String str = "connection connected user " + state.get(State.values.driver.name());
+			String str = "connection connected user " + state.get(values.driver);
 			if (authtoken != null) {
 				str += " storecookie " + authtoken;
 				authtoken = null;
 			}
 			str += " streamsettings " + streamSettings();
-			messageplayer(state.get(State.values.driver.name()) + " connected to OCULUS", "multiple", str);
+			messageplayer(state.get(State.values.driver) + " connected to OCULUS PRIME", "multiple", str);
 			initialstatuscalled = false;
 			
-			str = state.get(State.values.driver.name()) + " connected from: " + player.getRemoteAddress();
-			messageGrabber(str, "connection " + state.get(State.values.driver.name()) + "&nbsp;connected");
+			str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
+			messageGrabber(str, "connection " + state.get(State.values.driver) + "&nbsp;connected");
 			Util.log("playersignin(), " + str, this);
 			loginRecords.beDriver();
 			
@@ -353,30 +429,19 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			sc.invoke("videoSoundMode", new Object[] { videosoundmode });
 			Util.log("player video sound mode = "+videosoundmode, this);
 			
-			state.delete(State.values.controlsinverted);
+//			state.delete(State.values.controlsinverted);
+			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
 		}
 	}
 
-
-//	public void dockGrab() {
-//		if (grabber instanceof IServiceCapableConnection) {
-//			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-//			sc.invoke("dockgrab", new Object[] { 0, 0, "find" });
-//			state.set(oculus.State.values.dockgrabbusy.name(), true);
-//		}
-//	}
+	public void driverCallServer(PlayerCommands fn, String str) {
+		playerCallServer(fn, str, true);
+	}
 
 	/**
-	 * distribute commands from pla
-	 * 
-	 * @param fn
-	 *            is the function to call
-	 * 
-	 * @param str
-	 *            is the parameter to pass onto the function
-	 */
-	public void playerCallServer(final String fn, final String str) {
-//		Util.debug("from player flash: "+fn+", "+str, this); 
+	 * called by remote flash
+	 * */
+	public void playerCallServer(String fn, String str) {
 		
 		if (fn == null) return;
 		if (fn.equals("")) return;
@@ -389,18 +454,15 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			messageplayer("error: unknown command, "+fn,null,null);
 			return;
 		}
-		if (cmd != null) playerCallServer(cmd, str);	
+		if (cmd != null) playerCallServer(cmd, str, false);	
+	}
+	
+	public void playerCallServer(PlayerCommands fn, String str) {
+		playerCallServer(fn, str, false);
 	}
 
-	/**
-	 * distribute commands from player
-	 * 
-	 * @param fn
-	 *            to call in flash player [file name].swf
-	 * @param str
-	 *            is the argument string to pass along
-	 */
-	public void playerCallServer(final PlayerCommands fn, final String str) {
+	@SuppressWarnings("incomplete-switch")
+	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
 			if ( ! loginRecords.isAdmin()){ 
@@ -409,36 +471,69 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 		}
 			
-		if(fn != PlayerCommands.statuscheck) state.put(State.values.lastusercommand, System.currentTimeMillis()); 
+		// skip telnet ping broadcast
+		if(fn != PlayerCommands.statuscheck) state.set(State.values.lastusercommand, System.currentTimeMillis());
 		
 		String[] cmd = null;
 		if(str!=null) cmd = str.split(" ");
 
 		switch (fn) {
-		case chat: chat(str) ;return;
-		case beapassenger: beAPassenger(str);return;
-		case assumecontrol: assumeControl(str); return;
+			case chat: chat(str) ;return;
+			case beapassenger: beAPassenger(str);return;
+			case assumecontrol: assumeControl(str); return;
 		}
 		
 		// must be driver/non-passenger for all commands below 
-		if(!passengerOverride){
-			if (Red5.getConnectionLocal() != player && player != null) {
-				Util.log("passenger, command dropped: " + fn.toString(), this);
-				return;
-			}
+
+		if (Red5.getConnectionLocal() != player && player != null && !passengerOverride) {
+			Util.log("passenger, command dropped: " + fn.toString(), this);
+			return;
 		}
 		
 		switch (fn) {
 	
-		case battstats: messageplayer(null,"battery",state.get(State.values.batterylife)); break; // comport.updateBatteryLevel(); break;
-		case cameracommand: comport.camCommand(ArduinoPrime.cameramove.valueOf(str));break;
+		case move: {
+
+			if (settings.getBoolean(GUISettings.navigation)) navigation.navdockactive = false;
+
+			if (state.exists(State.values.navigationroute) && !passengerOverride && 
+					str.equals(ArduinoPrime.direction.stop.toString())) {
+				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
+				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
+						navigation.routestarttime, null, state.get(values.navigationroute),
+						navigation.consecutiveroute, 0);
+				navigation.cancelAllRoutes();
+			}
+			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
+				Navigation.goalCancel();
+				messageplayer("navigation goal cancelled by stop", null, null);
+			}
+
+			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
+				
+			move(str); 
+			break;
+		}
+
+		case battstats: messageplayer(state.get(State.values.batteryinfo), "battery", state.get(State.values.batterylife)); break; 
+		case cameracommand: 
+			if (state.getBoolean(State.values.autodocking)) {
+				messageplayer("command dropped, autodocking", null, null);
+				return;
+			}
+			comport.camCommand(ArduinoPrime.cameramove.valueOf(str));
+			break;
+//		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
+		case camtilt: comport.camtilt(Integer.parseInt(str)); break;
 		case getdrivingsettings:getDrivingSettings();break;
-		case motionenabletoggle:motionEnableToggle();break;
 		case drivingsettingsupdate:drivingSettingsUpdate(str);break;
+		case getemailsettings: getEmailSettings(); break;
+		case emailsettingsupdate: emailSettingsUpdate(str); break;
+		case motionenabletoggle:motionEnableToggle();break;
 		case clicksteer:clickSteer(str);break;
-		case streamsettingscustom:streamSettingsCustom(str);break;
+		case streamsettingscustom: streamSettingsCustom(str);break;
 		case streamsettingsset:streamSettingsSet(str);break;
-		case playerexit: appDisconnect(player); break;
+		case driverexit: appDisconnect(player); break;
 		case playerbroadcast: playerBroadCast(str); break;
 		case password_update: account("password_update", str); break;
 		case new_user_add: account("new_user_add", str); break;
@@ -448,34 +543,61 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		case extrauser_password_update: account("extrauser_password_update", str); break;
 		case username_update: account("username_update", str); break;
 		case disconnectotherconnections: disconnectOtherConnections(); break;
-//		case monitor: monitor(str); break;
 		case showlog: showlog(str); break;
-		case dockgrab: docker.dockGrab("start",0,0); break;
-		case publish: publish(str); break;
+		case publish: publish(streamstate.valueOf(str)); break;
+		case record: video.record(str); break; // record [true | false]
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
+		case redock: watchdog.redock(str); break;
+
 		case restart: restart(); break;
+		case powershutdown: powerport.shutdown(); break;
+		case reboot: reboot(); break;
+		case systemshutdown: powerdown(); break;
+
 		case softwareupdate: softwareUpdate(str); break;
-		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
-		case shutdown: quit(); break;
+//		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
+		case quitserver: shutdownApplication(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
-		case help: messageplayer(PlayerCommands.help(str),null,null); break;
-		case framegrabtofile: FrameGrabHTTP.saveToFile(str); break;
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
 		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
-		case settings: messageplayer(settings.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
-		case dockgrabtest: docker.dockGrab("test", 0, 0); break;
-//		case digitalread: comport.digitalRead(Integer.parseInt(str)); break;
-//		case analogwrite: comport.AnalogWrite(Integer.parseInt(str)); break;
-		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str);
-		case move: move(str); break;
+		case dockgrab: 
+			if (str!=null) if (str.equals(AutoDock.HIGHRES)) docker.lowres = false;
+			docker.dockGrab(AutoDock.dockgrabmodes.start, 0, 0);
+			docker.lowres = true;
+			break;
+		case dockgrabtest:
+			if (str.equals(AutoDock.HIGHRES)) docker.lowres = false; // ?
+			docker.dockGrab(AutoDock.dockgrabmodes.test, 0, 0);
+			docker.lowres = true; // ?
+			break;
+		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
 		case nudge: nudge(str); break;
 		
+		case state: 
+			String s[] = str.split(" ");
+			if (s.length == 2) { // two args
+				if (s[0].equals("delete")) state.delete(s[1]); 
+				else state.set(s[0], s[1]); 
+			}
+			else if (s.length > 2) { // 2nd arg has spaces
+				String stateval = "";
+				for (int i=1; i<s.length; i++) stateval += s[i]+" ";
+				state.set(s[0], stateval.trim());
+			}
+			else {  
+				if (s[0].matches("\\S+")) { // one arg 
+					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
+				} else {  // no args
+					messageplayer("<state> "+state.toString(), null, null);
+				} 
+			}
+			break;
+	
 		case writesetting:
-			Util.log("setting: " + str);
 			if (settings.readSetting(cmd[0]) == null) {
 				settings.newSetting(cmd[0], cmd[1]);
 				messageplayer("new setting: " + cmd[1], null, null);
@@ -485,13 +607,18 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}
 			settings.writeFile();
 			break;
+			
+		case readsetting:
+			messageplayer("setting "+cmd[0]+" "+settings.readSetting(cmd[0]),null,null);
+			break;
 
-		case speedset:
-			comport.speedset(ArduinoPrime.speeds.valueOf(str));
+		case speed:
+			comport.speedset(str);
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
 
-		case slide:
+		case left:
+		case right:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
 				messageplayer("motion disabled", "motion", "disabled");
 				break;
@@ -501,11 +628,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				break;
 			}
 			moveMacroCancel();
-			comport.slide(ArduinoPrime.direction.valueOf(str));
-			messageplayer("command received: " + fn + str, null, null);
+			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Integer.parseInt(str));
+			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"&deg;", "motion", "moving");
 			break;
 			
-		case rotate:
+		case forward:
+		case backward:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
 				messageplayer("motion disabled", "motion", "disabled");
 				break;
@@ -515,35 +643,43 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				break;
 			}
 			moveMacroCancel();
-			comport.rotate(ArduinoPrime.direction.valueOf(cmd[0]), Integer.parseInt(cmd[1]));
-			messageplayer("rotate: " + cmd[0]+ " "+cmd[1], "motion", "moving");
+			comport.movedistance(ArduinoPrime.direction.valueOf(fn.toString()),Double.parseDouble(str));
+			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
+			break;
+
+		case arcmove:
+			if (!state.getBoolean(values.motionenabled) || state.getBoolean(values.autodocking)) return;
+			moveMacroCancel();
+			String[] metersdegrees = str.split(" ");
+			comport.arcmove(Double.parseDouble(metersdegrees[0]), Integer.parseInt(metersdegrees[1]));
 			break;
 			
+		case odometrystart:	 	comport.odometryStart(); break;
+		case odometryreport: 	comport.odometryReport(); break;
+		case odometrystop: 		comport.odometryStop(); break;
+			
+		case lefttimed: comport.turnLeft(Integer.parseInt(str)); break;
+		case righttimed: comport.turnRight(Integer.parseInt(str)); break;
+		case forwardtimed: comport.goForward(Integer.parseInt(str)); break;
+		
 		case systemcall:
-			Util.log("received: " + str);
+			Util.log("received: " + str,this);
 			messageplayer("system command received", null, null);
 			Util.systemCall(str);
 			break;
 
-		case relaunchgrabber:
-			grabber_launch();
-			messageplayer("relaunching grabber", null, null);
+		case serverbrowser:
+			grabber_launch(str);
 			break;
 
 		case docklineposupdate:
-			settings.writeSettings("vidctroffset", str);
+			settings.writeSettings(GUISettings.vidctroffset, str);
 			messageplayer("vidctroffset set to : " + str, null, null);
 			break;
 
-		case arduinoecho:
-			if (str.equalsIgnoreCase("true"))comport.setEcho(true);
-			else comport.setEcho(false);
-			messageplayer("echo set to: " + str, null, null);
-			break;
-
-		case arduinoreset:
+		case motorsreset:
 			comport.reset();
-			messageplayer("resetting arduinoculus", null, null);
+			messageplayer("resetting malg board", null, null);
 			break;
 
 		case speech:
@@ -553,59 +689,222 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			break;
 		
 		case setsystemvolume:
-			Util.setSystemVolume(Integer.parseInt(str), this);
+			Util.setSystemVolume(Integer.parseInt(str));
 			messageplayer("ROV volume set to "+str+"%", null, null); 
 			state.set(State.values.volume, str);
 			break;		
 			
 		case opennisensor:
-			if(str.equals("on")) { openNIRead.startDepthCam(); }
-			else { openNIRead.stopDepthCam(); }			
+			if(str.equals("on")) { 
+				if (openNIRead.startDepthCam())
+					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
+				else  messageplayer("roslaunch already running, abort", null, null);
+			}
+			else { 
+				openNIRead.stopDepthCam(); 
+				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
+			}			
 			messageplayer("openNI camera "+str, null, null);
 			break;
-			
+
 		case videosoundmode:
 			setGrabberVideoSoundMode(str);
-			messageplayer("video/sound mode set to: "+str, null, null);
 			break;
 		
-		case pushtotalktoggle:
-			settings.writeSettings("pushtotalk", str);
-			messageplayer("self mic push T to talk "+str, null, null);
+		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
+		case spotlight: 
+			comport.setSpotLightBrightness(Integer.parseInt(str));
+			messageplayer("spotlight brightness set to "+str+"%", "light", str);		
+			break;
+		case floodlight: 
+			comport.floodLight(Integer.parseInt(str));  
+			messageplayer("floodLight brightness set to "+str+"%", "floodlight", str);
+			break;
+		case fwdflood:
+			comport.fwdflood(Integer.parseInt(str));  
+			messageplayer("forward floodLight brightness set to "+str+"%", "fwdflood", str);
+			break;
+			
+		case autodock:
+			docker.autoDock(str); 
+			break;
+		case getlightlevel:
+			docker.getLightLevel(); break;
+		case dock:
+			docker.dock();
+			break;
+		case strobeflash:
+			String mode = "on";
+			int duration = 0;
+			int intensity = 0;
+			if (str != null) {
+				String[] STR = str.split(" ");
+				mode = STR[0];
+				if (STR.length >= 3) {
+					duration = Integer.parseInt(STR[1]);
+					intensity = Integer.parseInt(STR[2]);
+				}
+			}
+			comport.strobeflash(mode, duration, intensity);
+			messageplayer("strobeflash "+str, null, null);
+			break;
+
+		case powerreset:
+			messageplayer("resetting power board", null, null);
+			powerport.reset();
+			break;
+			
+		case powercommand:
+			messageplayer("powercommand: "+str, null, null);
+			powerport.powercommand(str);
+			break;
+
+		case malgcommand:
+				messageplayer("malgcommand: "+str, null, null);
+				comport.malgcommand(str);
+				break;
+
+		case erroracknowledged:
+			if (str.equals("true")) {
+				Util.log("power error acknowledged",this);
+				Util.log("power error acknowledged","Application_power");
+				
+				if (watchdog.powererrorwarningonly) { 
+					powerport.clearWarningErrors(); 
+					watchdog.lastpowererrornotify = null; 
+				}
+			}
+			else { 
+				Util.log("power error purposefully dismissed",this);
+			}
+			break;
+			
+		case block:
+			banlist.addBlockedFile(str);
+			break;
+			
+		case unblock:
+			banlist.removeblockedFile(str);
+			break;
+
+		case roslaunch:
+			if (Ros.launch(str))
+				messageplayer("roslaunch "+str+".launch", null, null);
+			else
+				messageplayer("roslaunch already running", null, null);
 			break;
 		
-		case state: 
-			String s[] = str.split(" ");
-			if (s.length == 2) { state.set(s[0], s[1]); }
-			else {  
-				if (s[0].matches("\\S+")) { 
-					messageplayer("<state> "+s[0]+" "+state.get(s[0]), null, null); 
-				} else { 
-					messageplayer("<state> "+state.toString(), null, null);
-				} 
+		case savewaypoints:
+			Ros.savewaypoints(str);
+			messageplayer("waypoints saved", null, null);
+			break;
+			
+		case gotowaypoint:
+			if (navigation != null) navigation.gotoWaypoint(str);
+			break;
+		
+		case startnav:
+			if (navigation != null) navigation.startNavigation(); 
+			break;
+		
+		case stopnav:
+			if (navigation != null) navigation.stopNavigation();
+			break;
+		
+		case gotodock:
+			if (navigation != null) navigation.dock(); 
+			break;
+			
+		case saveroute: 
+			if (navigation != null) navigation.saveRoute(str);
+			messageplayer("route saved", null, null);
+			break;
+			
+		case runroute:
+			if (navigation != null) {
+				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
+						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
+				navigation.runRoute(str);
 			}
 			break;
 
-		//TODO: lights on second usb port hold over 
-		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
-		case spotlight: comport.setSpotLightBrightness(Integer.parseInt(str)); break;
+		case cancelroute:
+			if (navigation != null && state.exists(values.navigationroute)) {
+				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
+						navigation.routestarttime, null, state.get(values.navigationroute),
+						navigation.consecutiveroute, 0);
+				navigation.cancelAllRoutes();
+			}
+			break;
+
+		case startmapping:
+			if (navigation != null) navigation.startMapping();
+			break;
+
+		case savemap:
+			if (navigation != null) navigation.saveMap();
+			break;
+
+		case clearmap: Mapper.clearMap();
+			break;
+
+		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
+		case motiondetectcancel: state.delete(State.values.motiondetect); break;
+		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
+		case sounddetect: video.sounddetect(str); break;
+		case objectdetect: new OpenCVObjectDetect(this).detectGo(str); break;
+		case objectdetectcancel: state.delete(values.objectdetect); break;
+		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
+
+		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		case log: Util.log("log: "+str, this); break;
+		case settings: messageplayer(settings.toString(), null, null); break;
 		
-		case floodlight: comport.floodLight(str); break;
-		
+		case cpu: 
+			String cpu = String.valueOf(Util.getCPU());
+			if(cpu != null) state.set(values.cpu, cpu);
+			break;
+		case waitforcpu: watchdog.waitForCpuThread();  break;
+
+		// dev tool only
+		case error:
+			try {
+				state.set(values.roscurrentgoal, "");
+				messageplayer("*"+state.get(values.roscurrentgoal)+"*", null, null);
+			} catch (Exception e)  { Util.printError(e); }
+			break;
+
+		case jpgstream:
+			if (str== null) str="";
+			if (str.equals(streamstate.stop.toString())) {
+				state.delete(values.jpgstream);
+				break;
+			}
+			if (str.equals("")) str = AutoDock.HIGHRES;
+			new OpenCVUtils(this).jpgStream(str);
+//			opencvutils.jpgStream(str);
+			break;
 			
-		//TODO: 	
-		case autodock:
-			Util.debug("playerCallServer(): autodock: " + str, this);
-			docker.autoDock(str); 
+		case deletelogs:
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			Util.deleteLogFiles();
 			break;
-		
-		case dock:
-			Util.debug("playerCallServer(): dock: " + str, this);
-//			if(str.equals("undock")) docker.undock();
-			if(str.equals("dock")) docker.dock();
+			
+		case archivelogs: 
+//			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+//				Util.log("archiving busy, must be docked, skipping.. ", null);
+//				break;
+//			}
+			Util.archiveLogs();
 			break;
-		
-		
+
+		case streammode: // TODO: testing ffmpeg/avconv streaming
+			grabberSetStream(str);
+			break;
+
 		}
 	}
 
@@ -642,54 +941,61 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	/**
 	 * distribute commands from grabber
 	 * 
-	 * @param fn
+	 * @param cmd
 	 *            is the function to call in xxxxxx.swf ???
 	 * @param str
 	 *            is the parameters to pass on to the function.
 	 */
+	@SuppressWarnings("incomplete-switch")
 	public void grabberCallServer(final grabberCommands cmd, final String str) {
-		
+
 		switch (cmd) {
-		case streammode:
-			grabberSetStream(str);
-			break;
-		case saveandlaunch:
-			saveAndLaunch(str);
-			break;
-		case populatesettings:
-			populateSettings();
-			break;
-		case systemcall:
-			Util.systemCall(str);
-			break;
-		case chat:
-			chat(str);
-			break;
-		case dockgrabbed: 
-			docker.autoDock("dockgrabbed " + str);
-			state.set(State.values.dockgrabbusy.name(), false);
-			break;
-		case autodock: 
-			docker.autoDock(str);
-			break;
-		case factoryreset:
-			factoryReset();
-			break;
-		case restart:
-			restart();
-			break;
-		case shutdown:
-			quit();
-			break;
-		case streamactivitydetected:
-			streamActivityDetected(str);
-			break;
+			case streammode:
+				grabberSetStream(str);
+				break;
+			case saveandlaunch:
+				saveAndLaunch(str);
+				break;
+			case populatesettings:
+				populateSettings();
+				break;
+			case systemcall:
+				Util.systemCall(str);
+				break;
+			case chat:
+				chat(str);
+				break;
+			case dockgrabbed:
+				docker.autoDock("dockgrabbed " + str);
+				state.set(State.values.dockgrabbusy.name(), false);
+				break;
+			case autodock:
+				docker.autoDock(str);
+				break;
+			case factoryreset:
+				factoryReset();
+				break;
+			case restart:
+				restart();
+				break;
+			case shutdown:
+				shutdownApplication();
+				break;
+			case streamactivitydetected:
+				streamActivityDetected(str);
+				break;
 		}
 	}
 
+	/**
+	 * set state and message all connected clients with stream status
+	 * @param str
+	 */
 	private void grabberSetStream(String str) {
-		final String stream = str;
 		state.set(State.values.stream, str);
+		if (!settings.getBoolean(ManualSettings.useflash) && str.equals(streamstate.camandmic.toString()))
+			str = str+"_2";
+		final String stream = str;
 
 		messageGrabber("streaming " + stream, "stream " + stream);
 		Util.log("streaming " + stream, this);
@@ -697,26 +1003,29 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			public void run() {
 				try {
 					Thread.sleep(STREAM_CONNECT_DELAY);
+//					if (stream.equals(streamstate.camandmic)); Thread.sleep(STREAM_CONNECT_DELAY*2); // longer delay required doesn't help
 					Collection<Set<IConnection>> concollection = getConnections();
 					for (Set<IConnection> cc : concollection) {
 						for (IConnection con : cc) {
 							if (con instanceof IServiceCapableConnection
 									&& con != grabber
 									&& !(con == pendingplayer && !pendingplayerisnull)) {
-								IServiceCapableConnection n = (IServiceCapableConnection) con;
+								IServiceCapableConnection n = (IServiceCapableConnection) con; // all CLIENTS
 								n.invoke("message", new Object[] { "streaming " + stream, "green", "stream", stream });
 								Util.debug("message all players: streaming " + stream +" stream " +stream,this);
 							}
 						}
 					}
 				} catch (Exception e) {
-					e.printStackTrace();
+					Util.printError(e);
 				}
 			}
 		}).start();
 	}
 
 	private void setGrabberVideoSoundMode(String str) {
+
+		if (!settings.getBoolean(ManualSettings.useflash)) return;
 		
 		if (state.getBoolean(State.values.autodocking.name())) {
 			messageplayer("command dropped, autodocking", null, null);
@@ -727,14 +1036,19 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			messageplayer("stream control unavailable, server may be in setup mode", null, null);
 			return;
 		}
-		
+
+		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
+		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
+		if (!(grabber instanceof IServiceCapableConnection))
+			Util.log("setGrabberVideoSoundMode() error grabber reload timeout", this);
+
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-		sc.invoke("videoSoundMode", new Object[] { str });
-		state.set(State.values.videosoundmode.name(), str);
-		Util.log("grabber video sound mode = "+str, this);
+		sc.invoke("videoSoundMode", new Object[]{str});
+		state.set(State.values.videosoundmode, str);
+		Util.log("grabber video sound mode = " + str, this);
 	}
 	
-	public void publish(String str) {
+	public void publish(streamstate mode) {
 		
 		if (state.getBoolean(State.values.autodocking.name())) {
 			messageplayer("command dropped, autodocking", null, null);
@@ -746,133 +1060,193 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			return;
 		}
 
+		if (state.get(State.values.record) == null)
+			state.set(State.values.record, Application.streamstate.stop.toString());
+
+		// if recording and mode changing, kill recording
+		if (state.exists(values.stream)) {
+			if (!mode.equals(streamstate.valueOf(state.get(values.stream))) && !state.get(values.record).equals(streamstate.stop.toString()))
+				video.record(Settings.FALSE);
+		}
+
+		ArduinoPrime.checkIfInverted();
+
+		String current = settings.readSetting(GUISettings.vset);
+		String vals[] = (settings.readSetting(current)).split("_");
+		int width = Integer.parseInt(vals[0]);
+		int height = Integer.parseInt(vals[1]);
+		int fps = Integer.parseInt(vals[2]);
+		int quality = Integer.parseInt(vals[3]);
+
+		if (!settings.getBoolean(ManualSettings.useflash)) {
+			video.publish(mode, width, height, fps);
+			return;
+		}
+
+		// flash
 		try {
 			// commands: camandmic camera mic stop
-			if (grabber instanceof IServiceCapableConnection) {
-				IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-				String current = settings.readSetting("vset");
-				String vals[] = (settings.readSetting(current)).split("_");
-				int width = Integer.parseInt(vals[0]);
-				int height = Integer.parseInt(vals[1]);
-				int fps = Integer.parseInt(vals[2]);
-				int quality = Integer.parseInt(vals[3]);
-				sc.invoke("publish", new Object[] { str, width, height, fps, quality });
-				messageplayer("command received: publish " + str, null, null);
-				Util.log("publish: " + str, this);
-			}
+
+			long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
+			while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
+			if (!(grabber instanceof IServiceCapableConnection))
+				Util.log("publish() error grabber reload timeout", this);
+			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
+			sc.invoke("publish", new Object[] { mode.toString(), width, height, fps, quality });
+			messageplayer("command received: publish " + mode.toString(), null, null);
+			Util.log("publish: " + mode.toString(), this);
+
 		} catch (NumberFormatException e) {
-			Util.log("publish() " + e.getMessage());
-			e.printStackTrace();
+			Util.log("publish() error " + e.getMessage(),this);
+			Util.printError(e);
 		}
-		
-		state.delete(State.values.controlsinverted);
+
+
 	}
 
-	public void muteROVMic() {
-		String stream = state.get(State.values.stream);
-		if (grabber == null) return;
-		if (stream == null) return;
-		if (grabber instanceof IServiceCapableConnection
-				&& (stream.equals("camandmic") || stream.equals("mic"))) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("muteROVMic", new Object[] {});
-		}
-	}
+//	private void muteROVMicOnMoveToggle() {
+//		if (settings.getBoolean(GUISettings.muteonrovmove)) {
+////			state.set(State.values.muteOnROVmove, false);
+//			settings.writeSettings(GUISettings.muteonrovmove.toString(), "false");
+//			messageplayer("mute ROV onmove off", null, null);
+//		} else {
+////			state.set(State.values.muteOnROVmove, true);
+//			settings.writeSettings(GUISettings.muteonrovmove.toString(), "true");
+//			messageplayer("mute ROV onmove on", null, null);
+//		}
+//	}
 
-	public void unmuteROVMic() {
-		String stream = state.get(State.values.stream);
-		if (grabber == null) return;
-		if (stream == null) return;
-		if (grabber instanceof IServiceCapableConnection
-				&& (stream.equals("camandmic") || stream.equals("mic"))) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("unmuteROVMic", new Object[] {});
-		}
-	}
-
-	private void muteROVMicOnMoveToggle() {
-		if (state.getBoolean(State.values.muteOnROVmove)) {
-			state.set(State.values.muteOnROVmove, false);
-			settings.writeSettings("muteonrovmove", "false");
-			messageplayer("mute ROV onmove off", null, null);
-		} else {
-			state.set(State.values.muteOnROVmove, true);
-			settings.writeSettings("muteonrovmove", "true");
-			messageplayer("mute ROV onmove on", null, null);
-		}
+	public boolean frameGrab() {
+		return frameGrab("");
 	}
 
 	/**  */
-	public boolean frameGrab() {
+	public boolean frameGrab(String res) {
 
 		 if(state.getBoolean(State.values.framegrabbusy.name()) || 
-				 !(state.get(State.values.stream).equals("camera") || 
-						 state.get(State.values.stream).equals("camandmic"))) {
-			 messageplayer("stream unavailable or framegrab busy, command dropped", null, null);
+				 !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
+						 state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
+			 messageplayer("stream unavailable or framegrab busy", null, null);
 			 return false;
 		 }
 
-		if (grabber instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("framegrab", new Object[] {});
-			state.set(State.values.framegrabbusy.name(), true);
+		if (settings.getBoolean(ManualSettings.useflash)) {
+			if (grabber instanceof IServiceCapableConnection) {
+				IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
+				if (res.equals(AutoDock.LOWRES)) sc.invoke("framegrabMedium", new Object[]{});
+				else sc.invoke("framegrab", new Object[]{});
+				state.set(State.values.framegrabbusy.name(), true);
+			}
 		}
+		else video.framegrab(res);
+
+//		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
 		return true;
 	}
 
-	/** */
-	public void frameGrabbed(ByteArray _RAWBitmapImage) { // , final String
-															// filename) {
-		/*
-		// Use functionality in org.red5.io.amf3.ByteArray to get parameters of
-		// the ByteArray
-		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
-		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
-													// into a standard Java
-													// array of bytes
-		byte c[] = new byte[BWholeSize];
-		_RAWBitmapImage.readBytes(c);
+	/**
+	 * for compatibility with legacy grabber swfs
+	 */
+//	public void frameGrabbed() {
+//		String current = settings.readSetting(GUISettings.vset);
+//		String vals[] = (settings.readSetting(current)).split("_");
+//		int width = Integer.parseInt(vals[0]);
+//		int height = Integer.parseInt(vals[1]);
+//		frameGrabbed(width, height);
+//	}
 
-		// Transform the byte array into a java buffered image
-		ByteArrayInputStream db = new ByteArrayInputStream(c);
-
-		if (BCurrentlyAvailable > 0) {
-			// System.out.println("The byte Array currently has "
-			// + BCurrentlyAvailable + " bytes. The Buffer has " +
-			// db.available());
-			try {
-				BufferedImage JavaImage = ImageIO.read(db);
-				// Now lets try and write the buffered image out to a file
-				if (JavaImage != null) {
-					// If you sent a jpeg to the server, just change PNG to JPEG
-					// and Red5ScreenShot.png to .jpeg
-					ImageIO.write(JavaImage, "JPEG", new File(Settings.framefile));
-					if (emailgrab) {
-						emailgrab = false;
-						new developer.SendMail("Oculus Screen Shot",
-								"image attached", Settings.framefile, this);
-					}
-				}
-			} catch (IOException e) {
-				//log.info("Save_ScreenShot: Writing of screenshot failed " + e);
-				System.out.println("OCULUS: IO Error " + e);
+	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file
+	 * linux only for now
+	 **/
+	public void frameGrabbed(int width, int height) {
+	
+		try {
+			
+			// read file into bytebuffer
+			FileInputStream file = new FileInputStream("/run/shm/oculusPrimeFlashSO/framegrab.sol");
+			FileChannel ch = file.getChannel();
+			int size = (int) ch.size();
+			ByteBuffer frameData = ByteBuffer.allocate( size );
+			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
+			ch.close();
+			file.close();
+			
+//			int width=640;
+//			int height=480;
+			
+			if (settings.readSetting(GUISettings.vset).equals("vmed") || 
+					settings.readSetting(GUISettings.vset).equals("vlow")) {  // failed, switch to highres if avail and try again 
+				width=320;
+				height=240;
 			}
-		}
-		*/
-		int BCurrentlyAvailable = _RAWBitmapImage.bytesAvailable();
-		int BWholeSize = _RAWBitmapImage.length(); // Put the Red5 ByteArray
-													// into a standard Java
-													// array of bytes
-		byte c[] = new byte[BWholeSize];
-		_RAWBitmapImage.readBytes(c);
-		if (BCurrentlyAvailable > 0) {
-			state.set(State.values.framegrabbusy.name(), false);
-//			FrameGrabHTTP.img = c;
-//			AuthGrab.img = c;
-			framegrabimg = c;
-		}
-	}
+			
+//			int headersize = 1228843 - (640*480*4);
+			int headersize = size - (width*height*4)-1;
 
+			frameData.position(headersize); // skip past header
+
+			boolean invalid = true;
+			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			for(int y=0; y<height; y++) {
+				for (int x=0; x<width; x++) {
+					int rgb = frameData.getInt();    // argb ok for png only
+					if (rgb != 0) invalid = false;
+					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					processedImage.setRGB(x, y, rgb);
+				}
+			}
+
+			if (invalid) Util.log("error, framegrab invalid", this);
+			
+			state.set(State.values.framegrabbusy.name(), false);
+
+			
+		} catch (Exception e) {  Util.printError(e);  }
+
+//		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
+
+	}
+	
+	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
+	 * linux only for now
+	 **/
+	public void mediumFrameGrabbed() {
+		try {
+			
+			// read file into bytebuffer
+			FileInputStream file = new FileInputStream("/run/shm/oculusPrimeFlashSO/framegrabMedium.sol");
+			FileChannel ch = file.getChannel();
+			int size = (int) ch.size();
+			ByteBuffer frameData = ByteBuffer.allocate( size );
+			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
+			ch.close();
+			file.close();
+
+			int width = 320;
+			int height = 240;
+//			int headersize = 307248 - (width*height*4);
+			int headersize = size - (width*height*4) -1;
+			frameData.position(headersize); // skip past header
+
+			boolean invalid = true;
+			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			for(int y=0; y<height; y++) {
+				for (int x=0; x<width; x++) {
+					int rgb = frameData.getInt();    // argb ok for png only
+					if (rgb != 0) invalid = false;
+					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
+					processedImage.setRGB(x, y, rgb);
+				}
+			}
+			if (invalid) Util.log("error, framegrab empty", this);
+
+			state.set(State.values.framegrabbusy.name(), false);
+			
+		} catch (Exception e) {			Util.printError(e);		}
+
+//		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
+	}
+	
 	public void messageplayer(String str, String status, String value) {
 		
 		if (player instanceof IServiceCapableConnection) {
@@ -902,34 +1276,52 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
 			sc.invoke("playerfunction", new Object[] { fn, params });
 		}
-		if(commandServer!=null) {
-			commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " javascript function: " + fn + " "+ params);
-		}
+//		if(commandServer!=null) {
+//			commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " javascript function: " + fn + " "+ params);
+//		}
 	}
 
 	public void saySpeech(String str) {
-//		if (Settings.os.equals("linux")) {
-//			messageplayer("unsupported in linux",null,null);
-//			return;
-//		}
-		//Speech speech = new Speech();   // DONT initialize each time here, takes too long
+
 		Util.debug("SPEECH sayspeech: "+str, this);
-		if (Settings.os.equals("linux")) {
-			try {
-				String strarr[] = {"espeak",str};
-				Runtime.getRuntime().exec(strarr);
-			} catch (IOException e) { e.printStackTrace(); }
-		}
-		else { speech.mluv(str); }
 		
+		try {
+			String strarr[] = {"espeak",str};
+			Runtime.getRuntime().exec(strarr);
+		} catch (IOException e) { Util.printError(e); }
+	
+	}
+
+	private void getEmailSettings() {
+		String str = settings.readSetting(GUISettings.email_smtp_server) + " "
+				+ settings.readSetting(GUISettings.email_smtp_port) + " "
+				+ settings.readSetting(GUISettings.email_username) + " "
+				+ settings.readSetting(GUISettings.email_password) + " " // display as dots
+				+ settings.readSetting(GUISettings.email_from_address) + " "
+				+ settings.readSetting(GUISettings.email_to_address);
+
+		sendplayerfunction("emailsettingsdisplay", str);
+	}
+
+	private void emailSettingsUpdate(String str) {
+		String s[] = str.split(" ");
+		settings.writeSettings(GUISettings.email_smtp_server, s[0]);
+		settings.writeSettings(GUISettings.email_smtp_port, s[1]);
+		settings.writeSettings(GUISettings.email_username, s[2]);
+		settings.writeSettings(GUISettings.email_password, s[3]);
+		settings.writeSettings(GUISettings.email_from_address, s[4]);
+		settings.writeSettings(GUISettings.email_to_address, s[5]);
+		messageplayer("email settings updated", null, null);
 	}
 
 	private void getDrivingSettings() {
 		if (loginRecords.isAdmin()) {
 			String str = comport.speedslow + " " + comport.speedmed + " "
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
-					+ " " + comport.clicknudgemomentummult+ " " + comport.maxclickcam
-					+ " " + comport.fullrotationdelay;
+					+ " " + comport.maxclickcam
+					+ " " + comport.fullrotationdelay + " " + comport.onemeterdelay + " " 
+					+ settings.readSetting(GUISettings.steeringcomp.name()) + " "
+					+ ArduinoPrime.CAM_HORIZ + " " + ArduinoPrime.CAM_REVERSE;
 			sendplayerfunction("drivingsettingsdisplay", str);
 		}
 	}
@@ -938,29 +1330,37 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if (loginRecords.isAdmin()) {
 			String comps[] = str.split(" "); 
 			comport.speedslow = Integer.parseInt(comps[0]);
-			settings.writeSettings("speedslow", Integer.toString(comport.speedslow));
+			settings.writeSettings(GUISettings.speedslow, Integer.toString(comport.speedslow));
 			
 			comport.speedmed = Integer.parseInt(comps[1]);
-			settings.writeSettings("speedmed", Integer.toString(comport.speedmed));
+			settings.writeSettings(GUISettings.speedmed, Integer.toString(comport.speedmed));
 			
 			comport.nudgedelay = Integer.parseInt(comps[2]);
-			settings.writeSettings("nudgedelay", Integer.toString(comport.nudgedelay));
+			settings.writeSettings(GUISettings.nudgedelay, Integer.toString(comport.nudgedelay));
 			
 			comport.maxclicknudgedelay = Integer.parseInt(comps[3]);
-			settings.writeSettings("maxclicknudgedelay", Integer.toString(comport.maxclicknudgedelay));
+			settings.writeSettings(GUISettings.maxclicknudgedelay, Integer.toString(comport.maxclicknudgedelay));
 			
-			comport.clicknudgemomentummult = Double.parseDouble(comps[4]);
-			settings.writeSettings("clicknudgemomentummult", Double.toString(comport.clicknudgemomentummult));
+			comport.maxclickcam = Integer.parseInt(comps[4]);
+			settings.writeSettings(GUISettings.maxclickcam,Integer.toString(comport.maxclickcam));
 			
-			comport.maxclickcam = Integer.parseInt(comps[5]);
-			settings.writeSettings("maxclickcam",Integer.toString(comport.maxclickcam));
+			comport.fullrotationdelay = Integer.parseInt(comps[5]);
+			settings.writeSettings(GUISettings.fullrotationdelay, Integer.toString(comport.fullrotationdelay));
+
+			comport.onemeterdelay = Integer.parseInt(comps[6]);
+			settings.writeSettings(GUISettings.onemeterdelay, Integer.toString(comport.onemeterdelay));
 			
-			comport.fullrotationdelay = Integer.parseInt(comps[6]);
-			settings.writeSettings(GUISettings.fullrotationdelay.name(), Integer.toString(comport.fullrotationdelay));
+			comport.setSteeringComp(comps[7]);
+			settings.writeSettings(GUISettings.steeringcomp, comps[7]);
+			
+			comport.setCameraStops(Integer.parseInt(comps[8]), Integer.parseInt(comps[9]));
 
 			String s = comport.speedslow + " " + comport.speedmed + " " 
 					+ comport.nudgedelay + " " + comport.maxclicknudgedelay
-					+ " " + comport.clicknudgemomentummult;
+					+ " " + comport.maxclickcam
+					+ " " + comport.fullrotationdelay 
+					+ " " + comport.onemeterdelay +  " "  + comport.steeringcomp + " "
+					+ ArduinoPrime.CAM_HORIZ + " " + ArduinoPrime.CAM_REVERSE;
 			
 			messageplayer("driving settings set to: " + s, null, null);
 		}
@@ -973,17 +1373,15 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private void moveMacroCancel() {
 		if (state.getBoolean(State.values.docking.name())) {
 			String str = "";
-            if (!state.equals(State.values.dockstatus.name(), AutoDock.DOCKED)) {
+            if (!state.equals(State.values.dockstatus, AutoDock.DOCKED)) {
                 state.set(State.values.dockstatus, AutoDock.UNDOCKED);
                 str += "dock " + AutoDock.UNDOCKED;
             }
 			messageplayer("docking cancelled", "multiple", str);
 			state.set(State.values.docking, false);
+//			powerport.manualSetBatteryUnDocked();
 		}
 		
-		// if (state.getBoolean(State.values.sliding) 
-		// TODO: just call it, let port class check it's local 		
-		comport.slidecancel();
 	}
 
 	private void statusCheck(String s) {
@@ -1001,152 +1399,175 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				if (!state.getBoolean(State.values.motionenabled)) mov = "DISABLED";
 				if (state.getBoolean(State.values.moving)) mov = "MOVING";
 				str += " speed " + spd + " cameratilt " + state.get(State.values.cameratilt) + " motion " + mov;
+				str += " light " + state.get(State.values.spotlightbrightness);
+				str += " floodlight " + state.get(State.values.floodlightlevel);
+
 			}
 
-			str += " vidctroffset " + settings.readSetting("vidctroffset");
+			str += " vidctroffset " + settings.readSetting(GUISettings.vidctroffset);
 			str += " rovvolume " + settings.readSetting(GUISettings.volume);
-			str += " stream " + state.get(State.values.stream) + " selfstream stop";
-			str += " pushtotalk " + settings.readSetting("pushtotalk");
+			str += " stream " + state.get(State.values.stream);
+			if (!state.get(values.driverstream).equals(driverstreamstate.disabled.toString()))
+				str += " selfstream " + state.get(State.values.driverstream);
+//			str += " pushtotalk " + settings.readSetting("pushtotalk");
 			
 			if (loginRecords.isAdmin()) str += " admin true";
 			
 			if (state.get(State.values.dockstatus) != null) str += " dock "+ state.get(State.values.dockstatus);
 			
-			// TODO: maybe no longer uses two port classes
-			// if(AbstractArduinoComm.lightsAvailable()){
-				str += " light " + state.get(State.values.spotlightbrightness);
-				str += " floodlight " + state.get(State.values.floodlighton);
-				// Util.debug("SPOTLIGHT *** " + state.get(State.values.spotlightbrightness), this);
-			// }
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
+			if (settings.getBoolean(GUISettings.navigation)) str += " navigation true";
 
 			String videoScale = settings.readSetting("videoscale");
 			if (videoScale != null) str += " videoscale " + videoScale;
 
 			str += " battery " + state.get(State.values.batterylife);
+
+			if (state.exists(values.record)) str += " record " + state.get(values.record);
 			
 			messageplayer("status check received", "multiple", str.trim());
 
-		} else {
+		} else { 
 			if (s.equals("battcheck")) { 
-				String str = "battery "+state.get(State.values.batterylife);
-				messageplayer("status check received", "multiple", str);
-			} else { 
+				messageplayer("status check received", "battery", state.get(State.values.batterylife));
+			} else { // ping only
 				messageplayer("status check received",null, null); 
 			}
 		}
 	}
 
 	private void streamSettingsCustom(String str) {
-		settings.writeSettings("vset", "vcustom");
-		settings.writeSettings("vcustom", str);
+		settings.writeSettings(GUISettings.vset, "vcustom");
+		settings.writeSettings(GUISettings.vcustom, str);
 		String s = "custom stream set to: " + str;
-		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
-			publish(state.get(State.values.stream));
+		if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+				!state.getBoolean(State.values.autodocking)) {
+			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
-		Util.log("stream changed to " + str);
+		Util.log("stream changed to " + str,this);
 	}
 
 	private void streamSettingsSet(String str) {
-		Util.debug("streamSettingsSet: "+str, this);
-		settings.writeSettings("vset", "v" + str);
+		settings.writeSettings(GUISettings.vset, "v" + str);
 		String s = "stream set to: " + str;
-		if (!state.get(State.values.stream).equals("stop") && !state.getBoolean(State.values.autodocking)) {
-			publish(state.get(State.values.stream));
+		if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
+				!state.getBoolean(State.values.autodocking)) {
+			publish(streamstate.valueOf(state.get(State.values.stream).toString()));
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
-		Util.log("stream changed to " + str);
+		Util.log("stream changed to " + str,this);
 	}
 
 	private String streamSettings() {
 		String result = "";
 		result += settings.readSetting("vset") + "_";
-		result += settings.readSetting("vlow") + "_"
-				+ settings.readSetting("vmed") + "_";
-		result += settings.readSetting("vhigh") + "_"
-				+ settings.readSetting("vfull") + "_";
+		result += settings.readSetting("vlow") + "_" + settings.readSetting("vmed") + "_";
+		result += settings.readSetting("vhigh") + "_" + settings.readSetting("vfull") + "_";
 		result += settings.readSetting("vcustom");
 		return result;
 	}
 
 	public void restart() {
-//		if (Settings.os.equals("linux")) { 
-//			messageplayer("unsupported in linux",null,null);
-//			messageGrabber("unsupported in linux", null);
-//			return;
-//		}
-
-		messageplayer("restarting server application", null, null);
-		messageGrabber("restarting server application", null);
-		if(commandServer!=null) { commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); }
-		File f;
-//		f = new File(System.getenv("RED5_HOME") + "\\restart"); // windows
-		f = new File(Settings.redhome + Settings.sep + "restart"); // windows & linux
-		try {
-			if (!f.exists()) {
+		messageplayer("restarting server application", null, null);	
+		
+		// write file as restart flag for script
+		File f = new File(Settings.redhome + Util.sep + "restart");
+		if (!f.exists()){
+			try {
 				f.createNewFile();
+			} catch (IOException e) {
+				Util.printError(e);
 			}
-			if (Settings.os.equals("linux")) {
-				Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
-			}
-			else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
-			
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
+		
+		shutdownApplication();
 	}
 	
-	public void quit() { 
-		messageplayer("server shutting down",null,null);
-		if(commandServer!=null) { commandServer.sendToGroup(TelnetServer.TELNETTAG+" shutdown"); }
-		try {
-			if (Settings.os.equalsIgnoreCase("linux")) {
-				Runtime.getRuntime().exec(Settings.redhome+Settings.sep+"red5-shutdown.sh");
+	public  void reboot() {
+		Util.log("rebooting system", this);
+		PowerLogger.append("rebooting system", this);
+		powerport.writeStatusToEeprom();
+		killGrabber(); // prevents error dialog on chrome startup
+
+		if (navigation != null) { // TODO: << condition required?
+			if (state.exists(values.odomlinearpwm)) {
+				settings.writeSettings(ManualSettings.odomlinearpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
 			}
-			else { Runtime.getRuntime().exec("red5-shutdown.bat"); }
-		} catch (Exception e) { e.printStackTrace(); }
+			if (state.exists(values.odomturnpwm)) {
+				settings.writeSettings(ManualSettings.odomturnpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			}
+		}
+
+		Util.delay(1000);
+//		if (!state.get(values.osarch).equals(ARM)) {
+//			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+//		}
+//		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+
 	}
 
-//	public void monitor(String str) {
-//		// uses nircmd.exe from http://www.nirsoft.net/utils/nircmd.html
-////		if (Settings.os.equals("linux")) {
-////			// messageplayer("unsupported in linux",null,null);
-////			return;
-////		}
-//		messageplayer("monitor " + str, null, null);
-//		str = str.trim();
-//		try {
-//
-//			if (str.equals("on")) {
-//				if (Settings.os.equals("linux")) {
-//					str = "xset -display :0 dpms force on";
-//					Runtime.getRuntime().exec(str);
-//					str = "gnome-screensaver-command -d";
-//				}
-//				else { str = "cmd.exe /c start monitoron.bat"; }
-//			} else {
-//				if (Settings.os.equals("linux")) {
-//					str = "xset -display :0 dpms force off";
-//				}
-//				else { str = "nircmdc.exe monitor async_off"; }
-//			}
-//			Runtime.getRuntime().exec(str);
-//			
-//		} catch (Exception e) { e.printStackTrace(); }
-//	}
+	public void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
+		Util.log("powering down system", this);
+		PowerLogger.append("powering down system", this);
+		powerport.writeStatusToEeprom();
+		killGrabber(); // prevents error dialog on chrome startup
+		Util.delay(1000);
+//		if (!state.get(values.osarch).equals(ARM)) {
+//			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+//		}
+//		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
+		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+
+	}
+
+	public void shutdownApplication() {
+		
+		Util.log("shutting down application", this);
+		PowerLogger.append("shutting down application", this);
+
+		if(commandServer!=null) {
+			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
+			commandServer.close();
+		}
+		
+		if (powerport.isConnected()) powerport.writeStatusToEeprom();
+		PowerLogger.close();
+		
+		if (navigation != null) {
+			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+				navigation.stopNavigation();
+
+			if (state.exists(values.odomlinearpwm)) {
+				settings.writeSettings(ManualSettings.odomlinearpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			}
+			if (state.exists(values.odomturnpwm)) {
+				settings.writeSettings(ManualSettings.odomturnpwm,
+						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			}
+		}
+
+		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
+
+		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
+	}
 
 	public void move(final String str) {
 
-		if (str.equals("stop")) {
+		if (str.equals(ArduinoPrime.direction.stop.name())) {
 			if (state.getBoolean(State.values.autodocking))
-				docker.autoDock("cancel");
+				docker.autoDockCancel();
 
 			comport.stopGoing();
 			moveMacroCancel();
+
 			message("command received: " + str, "motion", "STOPPED");
 			return;
 		}
@@ -1156,7 +1577,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			return;
 		}
 		
-		if (str.equals("forward")) {
+		if (str.equals(ArduinoPrime.direction.forward.toString())) {
 			if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
 			comport.goForward();
 		}
@@ -1170,10 +1591,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		
 		ArduinoPrime.direction dir = ArduinoPrime.direction.valueOf(str);
 		switch (dir) {
-	
-		case backward: comport.goBackward(); break;
-		case right: comport.turnRight(); break;
-		case left: comport.turnLeft(); 
+			case backward: comport.goBackward(); break;
+			case right: comport.turnRight(); break;
+			case left: comport.turnLeft();
+			default: break; 
 		}
 	
 		messageplayer("command received: " + str, "motion", "MOVING");
@@ -1193,7 +1614,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 
 		comport.nudge(ArduinoPrime.direction.valueOf(str));
-		messageplayer("command received: nudge" + str, null, null);
+		messageplayer("command received: nudge " + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
 	}
 
@@ -1206,12 +1627,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			messageplayer("motion enabled", "motion", "enabled");
 		}
 	}
-
 	
 	private void clickSteer(String str) {
 		
-		Util.debug("+++ clickSteer(): " + str, this);
-
 		if (str == null) return;
 		
 		if (!state.getBoolean(State.values.motionenabled)) {
@@ -1229,9 +1647,8 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		comport.clickSteer(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]));
 	}
 
-	/** */
 	public void messageGrabber(String str, String status) {
-		Util.debug("TO grabber flash: "+str+", "+status, this);  
+		Util.debug("TO grabber flash: " + str + ", " + status, this);
 
 		if (grabber instanceof IServiceCapableConnection) {
 			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
@@ -1295,7 +1712,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		String str = "connection connected streamsettings " + streamSettings();
 		messageplayer(state.get(State.values.driver) + " connected to OCULUS", "multiple", str);
 		str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
-		Util.log("assumeControl(), " + str);
+		Util.log("assumeControl(), " + str,this);
 		messageGrabber(str, null);
 		initialstatuscalled = false;
 		pendingplayerisnull = true;
@@ -1312,7 +1729,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		pendingplayerisnull = true;
 		String str = user + " added as passenger";
 		messageplayer(str, null, null);
-		Util.log(str);
+		Util.log(str,this);
 		messageGrabber(str, null);
 		if (!stream.equals("stop")) {
 			Collection<Set<IConnection>> concollection = getConnections();
@@ -1328,42 +1745,103 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		loginRecords.bePassenger(user);
 		
 		if (settings.getBoolean(GUISettings.loginnotify)) {
-			saySpeech("passenger lawg inn " + user);
+			saySpeech("passenger lawg inn f" + user);
 		}
 	}
 
-	private void playerBroadCast(String str) {
+	/**
+	 * Broadcast remote web client microphone through robot speaker
+	 * @param str mode (stop, mic, pending)
+	 * 
+	 * need to reload webcam capture webpage on robot, and remote web page to enable 
+	 * enhanced mic, then reload both again when turning off mic
+	 * 
+	 * reload grabber, restart video stream if necessary
+	 * wait
+	 * reload remote client
+	 * 
+	 */
+	private void playerBroadCast(final String str) {
 		if (player instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) player;
-			if (!str.equals("off")) {
-				String vals[] = (settings.readSetting("vself")).split("_");
-				int width = Integer.parseInt(vals[0]);
-				int height = Integer.parseInt(vals[1]);
-				int fps = Integer.parseInt(vals[2]);
-				int quality = Integer.parseInt(vals[3]);
-				boolean pushtotalk = settings.getBoolean(GUISettings.pushtotalk);
-				sc.invoke("publish", new Object[] { str, width, height, fps, quality, pushtotalk });
+			if (str.equals(driverstreamstate.mic.toString())) { // player mic
+				
+				if (state.get(State.values.driverstream).equals(driverstreamstate.mic.toString())) return;
+				
+				String vals[] = "320_240_8_85".split("_"); // TODO: nuke this, for audio only 
+				final int width = Integer.parseInt(vals[0]);
+				final int height = Integer.parseInt(vals[1]);
+				final int fps = Integer.parseInt(vals[2]);
+				final int quality = Integer.parseInt(vals[3]);
+
+				final streamstate mode = streamstate.valueOf(state.get(State.values.stream));
+				state.set(State.values.driverstream,  driverstreamstate.pending.toString());
+				
 				new Thread(new Runnable() {
 					public void run() {
 						try {
+							messageplayer("starting self mic, reloading page", null, null);
+
+							// reload grabber page with enhanced mic
+							messageGrabber("loadpage", "server.html?broadcast"); // reload page
 							Thread.sleep(STREAM_CONNECT_DELAY);
+							// restart stream if necessary
+							if (!mode.equals(streamstate.stop)) { 
+								publish(mode); 
+								Thread.sleep(STREAM_CONNECT_DELAY);
+							}
+														
+							// reload driver page with enhanced mic
+							messageplayer(null, "loadpage","?broadcast");
+							Thread.sleep(STREAM_CONNECT_DELAY*3);
+							
+							// start driver mic
+							IServiceCapableConnection sc = (IServiceCapableConnection) player;
+							sc.invoke("publish", new Object[] { str, width, height, fps, quality, false });
+							state.set(State.values.driverstream, driverstreamstate.mic.toString());
+							Thread.sleep(50);
+							messageplayer("self mic on", "selfstream",state.get(State.values.driverstream));
+							Thread.sleep(STREAM_CONNECT_DELAY);
+							grabberPlayPlayer(1);
+							
+							
 						} catch (Exception e) {
-							e.printStackTrace();
+							Util.printError(e);
 						}
-						grabberPlayPlayer(1);
-						state.set(State.values.driverstream, true);
 					}
 				}).start();
-//				if (str.equals("camera") || str.equals("camandmic")) {
-//					monitor("on");
-//					Util.debug("monitor on", this);
-//				}
-				Util.log("OCULUS: player broadcast start", this);
-			} else {
-				sc.invoke("publish", new Object[] { "stop", null, null, null,null,null });
-				grabberPlayPlayer(0);
-				state.set(State.values.driverstream, false);
-				Util.log("OCULUS: player broadcast stop",this);
+				
+			} else { // player broadcast stop/off
+				
+				if (state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())) return;
+
+				final streamstate mode = streamstate.valueOf(state.get(State.values.stream));
+				state.set(State.values.driverstream,  driverstreamstate.pending.toString());
+				
+				new Thread(new Runnable() {
+					public void run() {
+						try {
+
+							messageplayer("stopping self mic, reloading page", null, null);
+							
+							messageGrabber("loadpage", "server.html"); // reload page normal mic
+							Thread.sleep(STREAM_CONNECT_DELAY);
+							// restart stream if necessary
+							if (!mode.equals(streamstate.stop)) { 
+								publish(mode); 
+								Thread.sleep(STREAM_CONNECT_DELAY);
+							}
+							
+							messageplayer(null, "loadpage","?");
+							Thread.sleep(STREAM_CONNECT_DELAY);
+							state.set(State.values.driverstream, driverstreamstate.stop.toString());
+							messageplayer("self mic off", "selfstream",state.get(State.values.driverstream));
+
+				
+						} catch (Exception e) {
+							Util.printError(e);
+						}
+					}
+				}).start();
 			}
 		}
 	}
@@ -1563,7 +2041,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				}
 			}
 		}
-		Util.log("chat: " + str);
+		Util.log("chat: " + str,this);
 		messageGrabber("<CHAT>" + str, null);
 		if(str!=null) if (commandServer != null) { 
 			str = str.replaceAll("</?i>", "");
@@ -1574,12 +2052,12 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 	private void showlog(String str) {
 		int lines = 100; //default	
 		if (!str.equals("")) { lines = Integer.parseInt(str); }
-		String header = "latest "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
+		String header = "last "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
 		sendplayerfunction("showserverlog", header + Util.tail(lines));
 	}
 
 	private void saveAndLaunch(String str) {
-		Util.log("saveandlaunch: " + str);
+		Util.log("saveandlaunch: " + str,this);
 		String message = "";
 		Boolean oktoadd = true;
 		Boolean restartrequired = false;
@@ -1666,15 +2144,10 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		}
 
 		if (oktoadd) {
-			// skipsetup
-			if (skipsetup != null) {
-				settings.writeSettings("skipsetup", skipsetup);
-			}
-
+			if (skipsetup != null) settings.writeSettings(GUISettings.skipsetup, skipsetup);
 			message = "launch server";
 			if (restartrequired) {
 				message = "shutdown";
-				// admin = true;
 				restart();
 			}
 		}
@@ -1683,42 +2156,15 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 	/** */
 	private void populateSettings() {
-		settings.writeSettings("skipsetup", "no");
+		settings.writeSettings(GUISettings.skipsetup, Settings.FALSE);
 		String result = "populatevalues ";
 
-		// username
 		String str = settings.readSetting("user0");
 		if(str != null) result += "username " + str + " ";
 
-		// commport
-		if(ArduinoPrime.motorsAvailable()) result += "comport " + settings.readSetting(ManualSettings.serialport) + " ";
-		else result += "comport nil ";
-		
-		// TODO: 
-		// lights
-		
-		// if(ArduinoPrime.motorsAvailable()) result += "lightport " + settings.readSetting(ManualSettings.lightport) + " ";
-		result += "lightport nil ";
-
-		
-		// law and wan
-		String lan = state.get(State.values.localaddress);
-		if(lan == null) result += "lanaddress error ";
-		else result += "lanaddress " + lan + " ";
-
-		String wan = state.get(State.values.externaladdress);
-		if(wan == null) result += "wanaddress error ";
-		else result += "wanaddress " + wan + " ";
-
-		// http port
-		result += "httpport " + settings.readRed5Setting("http.port") + " ";
-
-		// rtmp port
-		result += "rtmpport " + settings.readRed5Setting("rtmp.port") + " ";
-
 		messageGrabber(result, null);
 		
-		Util.log("___populate settings: " + result, this);
+		Util.log("populate settings: " + result, this);
 		
 	}
 
@@ -1727,9 +2173,9 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		if (str.equals("check")) {
 			messageplayer("checking for new software...", null, null);
 			Updater updater = new Updater();
-			int currver = updater.getCurrentVersion();
+			double currver = updater.getCurrentVersion();
 			String fileurl = updater.checkForUpdateFile();
-			int newver = updater.versionNum(fileurl);
+			double newver = updater.versionNum(fileurl);
 			if (newver > currver) {
 				String message = "New version available: v." + newver + "\n";
 				if (currver == -1) {
@@ -1750,19 +2196,19 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 				public void run() {
 					Updater up = new Updater();
 					final String fileurl = up.checkForUpdateFile();
-					Util.log("downloading url: " + fileurl);
+					Util.log("downloading url: " + fileurl,this);
 					Downloader dl = new Downloader();
 					if (dl.FileDownload(fileurl, "update.zip", "download")) {
 						messageplayer("update download complete, unzipping...",
 								null, null);
 
 						// this is a blocking call
-						if (dl.unzipFolder("download"+Settings.sep+"update.zip", "webapps"))
+						if (dl.unzipFolder("download"+Util.sep+"update.zip", "webapps"))
 							messageplayer("done.", "softwareupdate",
 									"downloadcomplete");
 
 						// not needed now is unpacked
-						dl.deleteDir(new File(Settings.redhome+Settings.sep+"download"));
+						dl.deleteDir(new File(Settings.redhome+Util.sep+"download"));
 
 					} else {
 						messageplayer("update download failed", null, null);
@@ -1771,7 +2217,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 			}).start();
 		}
 		if (str.equals("versiononly")) {
-			int currver = new Updater().getCurrentVersion();
+			double currver = new Updater().getCurrentVersion();
 			String msg = "";
 			if (currver == -1)
 				msg = "version unknown";
@@ -1783,7 +2229,7 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 
 	public void factoryReset() {
 
-		final String backup = "conf"+Settings.sep+"backup_oculus_settings.txt";
+		final String backup = "conf"+Util.sep+"backup_oculus_settings.txt";
 
 		// backup
 		new File(Settings.settingsfile).renameTo(new File(backup));
@@ -1794,94 +2240,77 @@ public class Application extends MultiThreadedApplicationAdapter implements Obse
 		restart();
 	}
 	
-	private void setStreamActivityThreshold(String str) { 
-		String stream = state.get(State.values.stream);
+	private void setStreamActivityThreshold(String str) {
+
+
+
 		String val[] = str.split("\\D+");
 		if (val.length != 2) { return; } 
 		Integer videoThreshold = Integer.parseInt(val[0]);
 		Integer audioThreshold = Integer.parseInt(val[1]);
-		// Util.debug("threshold vals: "+videoThreshold+","+audioThreshold, this);
-		state.set(State.values.streamActivityThreshold.name(), str);
+
+		String stream = state.get(State.values.stream);
+		state.delete(State.values.streamactivity);
+		state.set(State.values.streamactivitythreshold, str);
 		
 		if (videoThreshold != 0 || audioThreshold != 0) {
-			if (state.get(State.values.videosoundmode.name()).equals("high")) {
-				setGrabberVideoSoundMode("low"); // videosoundmode needs to be low to for activity threshold to work
+			if (state.get(State.values.videosoundmode).equals(VIDEOSOUNDMODEHIGH)) {
+				setGrabberVideoSoundMode(VIDEOSOUNDMODELOW); // videosoundmode needs to be low to for activity threshold to work
 				if (stream != null) {
-					if (!stream.equals("stop")) { // if stream already running,
-						publish(stream); // restart, in low mode
+					if (!stream.equals(streamstate.stop.toString())) { // if stream already running,
+						publish(streamstate.valueOf(stream)); // restart, in low mode
 					}
 				}
 			}
 			
 			if (stream != null) { 
-				if (stream.equals("stop")) {
-					if (audioThreshold == 0 && videoThreshold > 0) { publish("camera"); }
-					else if (audioThreshold > 0 && videoThreshold == 0) { publish("mic"); }
-					else { publish("camandmic"); }
+				if (stream.equals(streamstate.stop.toString())) {
+					if (audioThreshold == 0 && videoThreshold != 0) { publish(streamstate.camera); }
+					else if (audioThreshold != 0 && videoThreshold == 0) { publish(streamstate.mic); }
+					else { publish(streamstate.camandmic); }
 				}
 			}
-			state.set(State.values.streamActivityThresholdEnabled.name(), System.currentTimeMillis());
+			state.set(State.values.streamactivityenabled.name(), System.currentTimeMillis());
 		}
-		else { 
-			state.delete(State.values.streamActivityThresholdEnabled);
-			state.delete(State.values.streamActivityThreshold);
+		else { // 0 0, disable streamActivityDetected()
+			state.delete(State.values.streamactivityenabled);
+			state.delete(State.values.streamactivitythreshold);
 		}
 
+		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
+		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
+		if (!(grabber instanceof IServiceCapableConnection))
+			Util.log("setStreamActivityThreshold() error grabber reload timeout", this);
+
 		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-		sc.invoke("setActivityThreshold", new Object[] { videoThreshold, audioThreshold });
-		messageplayer("stream activity set to: "+str, null, null);
+		sc.invoke("setActivityThreshold", new Object[]{videoThreshold, audioThreshold});
+		messageplayer("stream activity set to: " + str, null, null);
 
 	}
 	
 	private void streamActivityDetected(String str) {
-		if (System.currentTimeMillis() > state.getLong(State.values.streamActivityThresholdEnabled) + 5000.0) { 
+		if (! state.exists(State.values.streamactivityenabled)) return;
+
+		// to catch false audio detect on driver login... TODO: find root cause, not just this patch
+		if (str.split(" ")[0].equals("audio")) { // note: video deprecated
+			int audiodetected = Integer.valueOf(str.split(" ")[1]);
+			int audiothreshold = Integer.valueOf(state.get(values.streamactivitythreshold).split(" ")[1]);
+//			Util.log(audiodetected+ " "+audiothreshold, this);
+			if (audiodetected < audiothreshold) {
+				setStreamActivityThreshold(state.get(values.streamactivitythreshold)); // restarts stream
+				return;
+			}
+		}
+
+		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) {
 			messageplayer("streamactivity: "+str, "streamactivity", str);
 			setStreamActivityThreshold("0 0"); // disable
+			state.set(State.values.streamactivity, str); // needs to be after disable, method deletes state val
 		}
 	}
 
-	@Override
-	public void updated(String key) {
-		
-		// Util.debug("updated(): " + key, this);
-		
-		if(key.equals(State.values.cameratilt.name())){
-			if(state.getInteger(State.values.cameratilt) > (ArduinoPrime.CAM_MAX /2) 
-					&! state.getBoolean(State.values.controlsinverted)){
-				IServiceCapableConnection sc = (IServiceCapableConnection) player;
-				sc.invoke("flipVideo", new Object[] { true });
-				state.set(State.values.controlsinverted, true);
-				messageplayer("inverting video and controls", null,null);
-			}
-			if(state.getInteger(State.values.cameratilt) < (ArduinoPrime.CAM_MAX /2) && 
-					state.getBoolean(State.values.controlsinverted)){
-				IServiceCapableConnection sc = (IServiceCapableConnection) player;
-				sc.invoke("flipVideo", new Object[] { false });
-				//state.set(State.values.controlsinverted, false);
-				state.delete(State.values.controlsinverted);
-				messageplayer("un-inverting video and controls", null,null);
-			}
-		}
-		
-		if(key.equals(State.values.batterylife.name())){
-			if(state.getDouble(key) > LOW_BATTERY_THRESHOLD){
-				messageplayer("danger low battery, find the dock.. ", null, null);
-			}
-		}
-		
-		if(key.equals(State.values.docking.name())){
-			if(state.getBoolean(State.values.docking)){
-				state.set(State.values.dockstatus, AutoDock.DOCKING);
-				message("docking initiated", "multiple", "speed fast motion moving dock docking");
-			}
-		}
-		
-		if(key.equals(State.values.dockstatus.name())){
-			if(state.equals(State.values.dockstatus, AutoDock.DOCKING)){
-				message("docking initiated", "multiple", "speed fast motion moving dock docking");
-			}
-		}
-	}
+
+
 }
 
 

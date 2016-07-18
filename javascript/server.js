@@ -14,8 +14,8 @@ function initialize_loaded() {
 
 function flashloaded() {
 	if (!initialize) { setTimeout("reload();", reloadinterval); }
-	setTimeout("callServer('checkforbattery','init')",2000);
-	setTimeout("callServer('checkforbattery','ispresent')",7000);
+//	setTimeout("callServer('checkforbattery','init')",2000);
+//	setTimeout("callServer('checkforbattery','ispresent')",7000);
 	openxmlhttp("rtmpPortRequest",rtmpPortReturned);
 }
 
@@ -96,9 +96,10 @@ function message(message,status) {
 		stream = b[1]; 
 	}
 	if (message=="shutdown") { shutdownwindow(); } 
-	if (message=="playing player stream") { screensize("full"); }
-	if (message=="player stream stopped") { screensize("reduced"); }
+//	if (message=="playing player stream") { screensize("full"); }
+//	if (message=="player stream stopped") { screensize("reduced"); }
 	if (status != null && !initialize) { setstatus(status); } 
+	if (message=="loadpage") { window.open(status,'_self'); }
 }
 
 function setstatus(status) {
@@ -145,37 +146,10 @@ function saveandlaunch() {
 		str += "user " + user + " password " + pass + " ";  
 	}
 	
-	//battery
-//	if (document.getElementById("battery").checked) { str += "battery yes "; }
-//	else { str += "battery no "; }
-
-	//httpport
-	s = document.getElementById("httpport").value;
-	if (s=="") { 
-		message += "http port is blank ";
-		oktosend = false; 
-	}
-	else { str += "httpport "+s+" "; }
-	
-	//rtmpport
-	s = document.getElementById("rtmpport").value;
-	if (s=="") { 
-		message += "rtmp port is blank ";
-		oktosend = false; 
-	}
-	else { str += "rtmpport "+s+" "; }	
-	
 	//skipsetup
-	if (document.getElementById("skipsetup").checked) {str += "skipsetup yes "; }
-	else { str += "skipsetup no "; }
-	
-	//TODO: Brad
-	//if (document.getElementById("developer").checked) {str += "developer "; }
-	//if (document.getElementById("holdservo").checked) {str += "holdservo "; }
-	//if (document.getElementById("loginnotify").checked) {str += "loginnotify "; }
-	//if (document.getElementById("sonarconnected").checked) {str += "sonarconnected "; }
+	if (document.getElementById("skipsetup").checked) {str += "skipsetup true "; }
+	else { str += "skipsetup false "; }
 
-	
 	if (msg != "") { message(msg); }
 	if (oktosend) {
 		message("submitting info",null);
@@ -266,7 +240,14 @@ function restart() {
 }
 
 function shutdownwindow() {
-	window.open('about:blank','_self');
+//	window.open('about:blank','_self');
+//	self.close();
+//	window.open('blank.html','_self');
+
+	document.title = "closed";
+	document.body.innerHTML = "";
+	
+//	document.open();
 }
 
 function chat() {

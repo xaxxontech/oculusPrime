@@ -1,16 +1,31 @@
 package developer.image;
 
+import oculusPrime.Settings;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
+import java.io.IOException;
+import java.net.URL;
 
 public class ImageUtils {
 	
 	public final int matrixres = 10;
-	private int imgaverage;
-	
+	public int imgaverage;
+
 	public ImageUtils() {}
+
+	public static BufferedImage getImageFromStream() {
+		BufferedImage img = null;
+		try {
+            img = ImageIO.read(new URL("http://127.0.0.1:5080/oculusPrime/frameGrabHTTP"));
+//			img = ImageIO.read(new URL("http://192.168.0.107:5080/oculusPrime/frameGrabHTTP"));
+		} catch (IOException e) { e.printStackTrace(); }
+		return img;
+	}
 	
 	public int[] convertToGrey(BufferedImage img) { // convert image to 8bit greyscale int array
 		int[] pixelRGB = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
@@ -52,7 +67,6 @@ public class ImageUtils {
 		int yy;
 		int runningttl;
 		for (int x = 0; x < width; x += matrixres) {			
-			//TODO: finished to here
 			for (int y=0; y<height; y+=matrixres) {
 				
 				runningttl = 0;
@@ -158,4 +172,92 @@ public class ImageUtils {
         return img;
 	}
 	
+	public int[] convertToBW(int[] greypxls) {
+		int[] bwpxls = new int[greypxls.length];
+		int threshold = imgaverage;
+		for (int i=0; i<greypxls.length; i++) {
+			if (greypxls[i] < threshold) { bwpxls[i] = 0; }
+			else { bwpxls[i] = 255; }
+		}
+		return bwpxls;
+	}
+
+	public int[] middleMass(int[] bwpxls, int width, int height, int sensitivty) {
+		int[] ctrxy = new int[2];
+		int xavg = (width/2) * width*height; // ctr
+		int yavg = (height/2) * width*height; // ctr
+
+		for(int y=0; y<height; y++) {
+			for (int x=0; x<width; x++) {
+				if (bwpxls[x + y*width] != 0) { 
+					xavg += (x-(width/2))*sensitivty;
+					yavg += (y-(height/2))*sensitivty;
+				}
+
+			}
+		}
+		
+		ctrxy[0]= xavg /(width*height);
+		ctrxy[1]= yavg /(width*height);
+		return ctrxy;
+	}
+	
+	public int[] middleMassGrey(int[] greypxls, int width, int height) {
+		int[] restultxy = new int[2];
+		
+		// find intensity ctr and average for each row
+		int[] rowavg = new int[height];
+		int[] rowxpos = new int[height];
+		for(int y=0; y<height; y++) {
+			int avg = 0;
+			int max = 0;
+			int offset = 0;
+			for (int x=0; x<width; x++) {
+				int p = greypxls[x + y*width];
+				offset += (x-(width/2))*p;
+				if (p>max) { max = p; }
+				avg += p;
+			}
+			rowavg[y] = avg/width;
+			rowxpos[y] = (width/2)+(offset/max);
+		}
+		
+		// find weighted average of all rows for single x
+		int xavg=0;
+		for(int y=0; y<height; y++) {
+			
+		}
+		
+		restultxy[0]= 0;
+		restultxy[1]= 0;
+		return restultxy;
+	}
+
+//	/*
+	public static BufferedImage toBufferedImageOfType(BufferedImage original, int type) {
+		if (original == null) {
+			throw new IllegalArgumentException("original == null");
+		}
+
+		// Don't convert if it already has correct type
+		if (original.getType() == type) {
+			return original;
+		}
+
+		// Create a buffered image
+		BufferedImage image = new BufferedImage(original.getWidth(), original.getHeight(), type);
+
+		// Draw the image onto the new buffer
+		Graphics2D g = image.createGraphics();
+		try {
+			g.setComposite(AlphaComposite.Src);
+			g.drawImage(original, 0, 0, null);
+		}
+		finally {
+			g.dispose();
+		}
+
+		return image;
+	}
+//	*/
 }

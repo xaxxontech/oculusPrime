@@ -108,9 +108,7 @@ public class FTP {
             }
         }
 
-        //
         // write to file on host 
-        // 
         sendLine("STOR " + filename);
         Socket dataSocket = new Socket(ip, port);
         
@@ -118,7 +116,7 @@ public class FTP {
         
         response = readLine();
         if (!response.startsWith("150 ")) {
-            throw new IOException("bad perms to send the file");
+            Util.log("bad perms to send the file", this);
         }
 
         BufferedOutputStream output = new BufferedOutputStream(dataSocket.getOutputStream());
@@ -126,6 +124,7 @@ public class FTP {
         
         output.flush();
         output.close();
+        dataSocket.close();
 
         response = readLine();
         return response.startsWith("226 ");
@@ -135,7 +134,6 @@ public class FTP {
      * Set binary mode for sending binary files.
      */
     public synchronized boolean bin() throws IOException {
-
         sendLine("TYPE I");
         return (readLine().startsWith("200 "));
     }
@@ -144,7 +142,6 @@ public class FTP {
      * Use ASCII mode 
      */
     public synchronized boolean ascii() throws IOException {
-
         sendLine("TYPE A");
         return (readLine().startsWith("200 "));
     }
@@ -153,7 +150,6 @@ public class FTP {
      * Use ASCII mode 
      */
     public synchronized boolean pasv() throws IOException {
-    	  
     	sendLine("PASV");
         String response = readLine();
          

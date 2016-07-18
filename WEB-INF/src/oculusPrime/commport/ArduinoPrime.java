@@ -1,187 +1,333 @@
 package oculusPrime.commport;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.ArrayList;
+import java.util.List;
 
-import oculusPrime.Application;
-import oculusPrime.AutoDock;
-import oculusPrime.GUISettings;
-import oculusPrime.ManualSettings;
-import oculusPrime.Settings;
-import oculusPrime.State;
-import oculusPrime.Util;
-import gnu.io.CommPortIdentifier;
-import gnu.io.SerialPort;
-import gnu.io.SerialPortEvent;
-import gnu.io.SerialPortEventListener;
+import developer.Ros;
+import jssc.SerialPort;
+import jssc.SerialPortEvent;
+import jssc.SerialPortException;
+import jssc.SerialPortList;
+import oculusPrime.*;
+import developer.depth.Mapper;
 
 /**
- *  Communicate with the motors and lights on one arduino and battery board 
+ *  Communicate with the MALG board 
  */
-public class ArduinoPrime  implements SerialPortEventListener {
+public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
-	// toggle to see bytes sent in log 
-	public static final boolean DEBUGGING = true;
-	
-	public enum direction { stop, right, left, forward, backward };
-	public enum cameramove { stop, up, down, horiz, upabit, downabit, frontstop, rearstop };
-	public enum speeds { slow, med, fast }; // better motors, maybe add speeds? 
+	public enum direction { stop, right, left, forward, backward, unknown, arcright, arcleft };
+	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
+	public enum speeds { slow, med, fast };  
+	public enum mode { on, off };
 
-	public static final long DEAD_TIME_OUT = 30000;
-	public static final long WATCHDOG_DELAY = 5000;	
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.128; // trailing zeros ignored!
+	public static final long DEAD_TIME_OUT = 20000;
+	public static final int WATCHDOG_DELAY = 8000;
+	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
 	public static final long DOCKING_DELAY = 1000;
-	public static final int SETUP = 2000;
+	public static final int DEVICEHANDSHAKEDELAY = 2000;
+	public static final int BAUD = 115200;
+	public static final long ALLOW_FOR_RESET = 10000;
+	public static final int FIRMWARE_TIMED_OFFSET = 10;
 	
 	public static final byte STOP = 's';
 	public static final byte FORWARD = 'f';
 	public static final byte BACKWARD = 'b';
 	public static final byte LEFT = 'l';
 	public static final byte RIGHT = 'r';
-	public static final byte ECHO = 'e';
+	public static final byte LEFTTIMED = 'z';
+	public static final byte RIGHTTIMED = 'e';
+	public static final byte FORWARDTIMED = 't';
+	public static final byte BACKWARDTIMED = 'u';
+	public static final byte HARD_STOP = 'h'; // TODO: unused
 	
-	public static final byte FLOOD_LIGHT_LEVEL = 'p'; 
-	public static final byte SPOT_LIGHT_LEVEL = 'o';
+	public static final byte FLOOD_LIGHT_LEVEL = 'o'; 
+	public static final byte SPOT_LIGHT_LEVEL = 'p';
+	public static final byte FWDFLOOD_LIGHT_LEVEL = 'q';
 		
 	public static final byte CAM = 'v';
-	public static final byte FIND_HOME_TILT = 'm';
-	public static final byte HOME_TILT_FRONT = 't';
-	public static final byte HOME_TILT_REAR = 'z';
+	public static final byte CAMRELEASE = 'w';
+	public static final byte CAMHORIZSET = 'm';
 	public static final byte GET_PRODUCT = 'x';
 	public static final byte GET_VERSION = 'y';
-	public static final byte[] ECHO_ON = { 'e', '1' };
-	public static final byte[] ECHO_OFF = { 'e', '0' };
+	public static final byte ODOMETRY_START = 'i';
+	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
+	public static final byte ODOMETRY_REPORT = 'k';
+	public static final byte PING = 'c';
 		
-	public static final int CAM_HORIZ = 19; // degrees (CAD measures 19)
-	public static final int CAM_MAX = 219; // degrees (CAD measures 211)
-	public static final int CAM_MIN = 0; // degrees
-	public static final int CAM_NUDGE = 5; // degrees
-	public static final long CAM_NUDGE_DELAY = 100; 
-	public static final int CAM_EXTRA_FOR_CALIBRATE = 90; // degrees
+	public static final int CAM_NUDGE = 3; // degrees
+	public static final long CAM_SMOOTH_DELAY = 50;
+	public static final long CAM_RELEASE_DELAY = 500;
+	public static final String FIRMWARE_ID = "malg";
+	public static final int LINEAR_STOP_DELAY = 750;
+	public static final int TURNING_STOP_DELAY = 500;
 
-	private static final int MAX_ATTEMPTS = 5; // how many tries before giving up looking
-	
-	// check if board has replied with correct firmware. 
-	private boolean verified = false;
+	private static final long STROBEFLASH_MAX = 5000; //strobe timeout
+	public static final int ACCEL_DELAY = 75;
+	private static final int COMP_DELAY = 500;
 
 	protected long lastSent = System.currentTimeMillis();
 	protected long lastRead = System.currentTimeMillis();
-	protected State state = State.getReference();
+	protected long lastReset = System.currentTimeMillis();
+	protected static State state = State.getReference();
 	protected Application application = null;
-	protected SerialPort serialPort = null;	
-	protected String version = null;
-	protected OutputStream out = null;
-	protected InputStream in = null;
 	
 	protected static Settings settings = Settings.getReference();
-	protected final String portName = settings.readSetting(ManualSettings.serialport);
-	protected final String firmware = settings.readSetting(ManualSettings.firmware);
 	
+	protected SerialPort serialPort = null;
 	// data buffer 
-	protected byte[] buffer = new byte[32];
+	protected byte[] buffer = new byte[256];
 	protected int buffSize = 0;
-	
+	private double firmwareversion = 0;
+
 	// thread safety 
 	protected volatile boolean isconnected = false;
-	public volatile boolean sliding = false;
+	private volatile long currentMoveID;
+	protected volatile long currentCamMoveID;
+
+//	private boolean invertswap = false;
 	
 	// tracking motor moves 
-	private static Timer cameraTimer = null;
-	
+	private volatile double lastodomangle = 0; // degrees
+	private volatile int lastodomlinear = 0; // mm
+	private volatile double arcodomcomp = 1;
+	private volatile Boolean odometryBroadCasting = false; // thread alive flag
+
 	// take from settings 
-	public double clicknudgemomentummult = settings.getDouble(GUISettings.clicknudgemomentummult);	
+	private static final double clicknudgemomentummult = 0.25;	
 	public int maxclicknudgedelay = settings.getInteger(GUISettings.maxclicknudgedelay);
 	public int speedslow = settings.getInteger(GUISettings.speedslow);
 	public int speedmed = settings.getInteger(GUISettings.speedmed);
 	public int nudgedelay = settings.getInteger(GUISettings.nudgedelay);
 	public int maxclickcam = settings.getInteger(GUISettings.maxclickcam);
 	public int fullrotationdelay = settings.getInteger(GUISettings.fullrotationdelay);
+	public int onemeterdelay = settings.getInteger(GUISettings.onemeterdelay);
+	public int steeringcomp = 0;
+	
+	public static int CAM_HORIZ = settings.getInteger(GUISettings.camhoriz); 
+	public static int CAM_REVERSE = settings.getInteger(GUISettings.camreverse);;
+	public static int CAM_MAX; 
+	public static int CAM_MIN;
 	
     private static final int TURNBOOST = 25; 
-	public int speedfast = 255;
-	public int turnspeed = 255;
-		
+	public static final int speedfast = 255;
+	public static final Double METERSPERSEC = 0.33;
+	public static final Double DEGPERMS = 0.0857;
+//		degperms = 0.0857 # turnspeed
+
+	private volatile List<Byte> commandList = new ArrayList<>();
+	private volatile boolean commandlock = false;
+	private CommandSender cs;
+
+	private int timeddelay;
+
 	public ArduinoPrime(Application app) {	
 		
-		Util.log("............ starting up: " + settings.readSetting(ManualSettings.attempts), this);
-	
 		application = app;	
-		state.put(State.values.motorspeed, speedmed);
-		state.put(State.values.movingforward, false);
-		state.put(State.values.moving, false);
-		state.put(State.values.motionenabled, true);
+		state.set(State.values.motorspeed, speedfast);
+		state.set(State.values.movingforward, false);
+		state.set(State.values.moving, false);
+		state.set(State.values.motionenabled, true);
 		
-		state.put(State.values.floodlighton, false);
-		state.put(State.values.spotlightbrightness, 0);
+		state.set(State.values.floodlightlevel, 0);
+		state.set(State.values.spotlightbrightness, 0);
 		
-		if(motorsAvailable()){
+		setSteeringComp(settings.readSetting(GUISettings.steeringcomp));
+		state.set(State.values.direction, direction.stop.name()); // .toString());
+
+		state.set(State.values.odomturnpwm, settings.readSetting(ManualSettings.odomturnpwm.name()));
+		state.set(State.values.odomlinearpwm, settings.readSetting(ManualSettings.odomlinearpwm.name()));
+		state.set(State.values.odomupdated, false);
+		
+		setCameraStops(CAM_HORIZ, CAM_REVERSE);
+
+		if(!settings.readSetting(ManualSettings.motorport).equals(Settings.DISABLED)) {
+			connect();
+			cs = new CommandSender();
+			cs.start();
+			checkFirmWareVersion();
+		}
+		initialize();
+		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
+		new WatchDog().start();
+	}
+	
+	public void initialize() {
+		Util.debug("initialize", this);
+		lastRead = System.currentTimeMillis();
+		lastReset = lastRead;		
+		new Thread(new Runnable() {
+			public void run() {
+				Util.delay(10000);  // arduino takes 10 sec to reach full power?
+				if(isconnected) strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
+			}
+		}).start();
+	}
+	
+	/** inner class to check if getting responses in timely manor */
+	public class WatchDog extends Thread {
+		oculusPrime.State state = oculusPrime.State.getReference();
+		
+		public WatchDog() {
+			this.setDaemon(true);
+		}
+
+		public void run() {
 			
-			Util.log("............ attempting to connect", this);
+//			Util.delay(Util.ONE_MINUTE);
 			
-			new Thread(new Runnable() {
-				public void run() {
-					connect();
-					Util.delay(SETUP);
-					if(isconnected){
-						
-						Util.log("Connected to port: " + serialPort, this);
-						
-						sendCommand(FIND_HOME_TILT);
-						sendCommand(new byte[]{CAM, (byte) CAM_HORIZ});
-						state.set(State.values.cameratilt, CAM_HORIZ);
-					}
-				}
-			}).start();
-			
-			/* be sure */
-			new Thread(new Runnable() {
-				public void run() {
-					Util.delay(SETUP*3);
-					
-					if(isconnected){ 
-						Util.log(".....checking firmware is valid", this);
-						if( ! verified){
-							Util.log("WARN: firmware is not responding, restarting", this);
-							settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-							settings.incrementSettings(ManualSettings.attempts);
-							application.restart();
+			while (true) {
+				long now = System.currentTimeMillis();
+				
+//				if (now - lastReset > RESET_DELAY && isconnected) Util.debug(FIRMWARE_ID+" PCB past reset delay", this);
+				
+				if (now - lastReset > RESET_DELAY &&
+						state.get(oculusPrime.State.values.dockstatus).equals(AutoDock.DOCKED) &&
+						!state.getBoolean(oculusPrime.State.values.autodocking) &&
+						state.get(oculusPrime.State.values.driver) == null && isconnected &&
+						state.getInteger(oculusPrime.State.values.telnetusers) == 0 &&
+						commandList.size() == 0 &&
+						!state.getBoolean(oculusPrime.State.values.moving)) {
+
+					if (settings.getBoolean(GUISettings.navigation)) {
+						if (state.exists(oculusPrime.State.values.navigationroute) && (
+								state.get(oculusPrime.State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()) ||
+										state.get(oculusPrime.State.values.navsystemstatus).equals(Ros.navsystemstate.starting.toString()))) {
+							Util.delay(WATCHDOG_DELAY);
+							continue;
 						}
-					} else {
-						Util.log("WARN: firmware failed to connect", this);
-						settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
+						if (state.exists(oculusPrime.State.values.nextroutetime)) {
+							if (state.getLong(oculusPrime.State.values.nextroutetime.toString()) - System.currentTimeMillis() < Util.TWO_MINUTES) {
+								Util.delay(WATCHDOG_DELAY);
+								continue;
+							}
+						}
 					}
+
+					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
+					Util.delay(10000); // allow time for camera to return to horiz, if reset right after docking
+					lastReset = now;
+					reset();
 				}
-			}).start(); 
+
+				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
+					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
+					Util.log(FIRMWARE_ID + " PCB timeout, attempting reset", this);
+					lastRead = now;
+					reset();
+				}
+				
+//				if (now - lastSent > WATCHDOG_DELAY && isconnected)  sendCommand(PING);			
+				sendCommand(PING); // expect "" response
+
+				Util.delay(WATCHDOG_DELAY);
+			}		
 		}
 	}
-	
-	public static boolean motorsAvailable(){
-		final String motors = settings.readSetting(ManualSettings.serialport); 
-		if(motors == null) return false;
-		if(motors.equals(Discovery.params.disabled.name())) return false;
-		if(motors.equals(Discovery.params.discovery.name())) return false;
-		
-		return true;
+
+	private void checkFirmWareVersion() {
+		if (!isconnected) return;
+
+		firmwareversion = 0;
+		sendCommand(GET_VERSION);
+		long start = System.currentTimeMillis();
+		while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000) { Util.delay(100);  }
+		if (firmwareversion == 0) {
+			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
+			Util.log("error, "+msg, this);
+			state.set(State.values.guinotify, msg);
+			return;
+		}
+		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
+				String msg = "current power firmware: "+firmwareversion+
+						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+//				state.set(State.values.guinotify, msg);
+				Util.log(msg, this);
+				return;
+			}
+
+			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
+			String port = state.get(State.values.motorport); // disconnect() nukes this state value
+			disconnect();
+
+			// TODO: do update here, blocking
+			Updater.updateFirmware(FIRMWARE_ID, FIRMWARE_VERSION_REQUIRED, port);
+
+			connect();
+			if (cs.isAlive())  Util.log("error, CommmandSender still alive", this);
+			cs = new CommandSender();
+			cs.start();
+
+			// check if successful
+			firmwareversion = 0;
+			sendCommand(GET_VERSION);
+			start = System.currentTimeMillis();
+			while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000)  { Util.delay(100); }
+			if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+				String msg = "unable to update " + FIRMWARE_ID + " firmware to version "+FIRMWARE_VERSION_REQUIRED;
+				Util.log("error, "+msg, this);
+				state.set(State.values.guinotify, msg);
+			}
+		}
 	}
 
-	public void floodLight(String string) {
-		// TODo .......MUST FIXo
-		Util.debug("........ setSpotLightBrightness: " + string, this);
-		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, 0});
-		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte)55});
-		sendCommand(new byte[]{ FLOOD_LIGHT_LEVEL, (byte) 255});
+	public void floodLight(int target) {
+		state.set(State.values.floodlightlevel, target);
 
+		target = target * 255 / 100;
+		sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)target});
+	}
+	
+	public void fwdflood(int target) {
+		state.set(State.values.fwdfloodlevel, target);
+
+		target = target * 255 / 100;
+		sendCommand(new byte[]{FWDFLOOD_LIGHT_LEVEL, (byte)target});
 	}
 	
 	public void setSpotLightBrightness(int target){
-		
-		Util.debug("........ setSpotLightBrightness: " + target, this);
-		
-		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
 		state.set(State.values.spotlightbrightness, target);
-		application.message("spotlight brightness set to "+target+"%", "light", Integer.toString(target));
+		
+		target = target * 255 / 100;
+		sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)target});
+
+	}
+	
+	public void strobeflash(String mode, long d, int i) {
+		if (d==0) d=STROBEFLASH_MAX;
+		final long duration = d;
+		if (i==0) i=100;
+		final int intensity = i * 255 / 100;
+		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString()) && !state.getBoolean(State.values.strobeflashon)) {
+			state.set(State.values.strobeflashon, true);
+			final long strobestarted = System.currentTimeMillis();
+			new Thread(new Runnable() {
+				public void run() {
+					try {
+						while (state.getBoolean(State.values.strobeflashon)) {
+							if (System.currentTimeMillis() - strobestarted > STROBEFLASH_MAX || 
+									System.currentTimeMillis() - strobestarted > duration) {
+								state.set(State.values.strobeflashon, false);
+							}
+							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)0});
+							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)intensity});
+							Thread.sleep(50);
+							sendCommand(new byte[]{SPOT_LIGHT_LEVEL, (byte)intensity});
+							sendCommand(new byte[]{FLOOD_LIGHT_LEVEL, (byte)0});
+							Thread.sleep(50);
+							
+						}
+						Thread.sleep(50);
+						setSpotLightBrightness(state.getInteger(State.values.spotlightbrightness));
+						floodLight(state.getInteger(State.values.floodlightlevel));
+					} catch (Exception e) { } }
+			}).start();
+		}
+		if (mode.equalsIgnoreCase(ArduinoPrime.mode.off.toString())) {
+			state.set(State.values.strobeflashon, false);
+		}
 	}
 
 	/** respond to feedback from the device  */	
@@ -189,412 +335,1070 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		String response = "";
 		for (int i = 0; i < buffSize; i++)
 			response += (char) buffer[i];
+
+		if (!state.getBoolean(State.values.odometry)) Util.debug("serial in: " + response, this);
 		
-		if(ArduinoPrime.DEBUGGING) Util.debug("serial in: " + response, this);
-		
-		if(response.equals("reset")) {
-			isconnected = true;
-			version = null;
-			sendCommand(GET_PRODUCT);
-			Util.delay(300);
-			sendCommand(GET_VERSION); // check is correct board! 
-		} 
-		
-		if(response.startsWith("id:")){ 
-			
-			String product = response.substring(response.lastIndexOf(":")+1).trim();
-			if(product.equals( firmware )){
-				
-				Util.debug("verified: " + response, this);
-				settings.writeSettings(ManualSettings.attempts.name(), "0");
-				verified = true;
-				
-			} else {
-				
-				Util.log("WARN: wrong firmware type in settings, restart needed", this);
-				
-				if(settings.getInteger(ManualSettings.attempts) > MAX_ATTEMPTS) {
-					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.disabled.name());
-				} else {
-					settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-				}
-				
-				settings.incrementSettings(ManualSettings.attempts);
-				application.restart();
-			}
-		}
+//		if(response.equals("reset")) {
+//			sendCommand(GET_VERSION);
+//			Util.debug(FIRMWARE_ID+" "+response, this);
+//		}
 		
 		if(response.startsWith("version:")) {
-			version = response.substring(response.indexOf("version:") + 8, response.length());
-			application.message(this.getClass().getName() + " version: " + version, null, null);		
-		} 
+			String versionstr = response.substring(response.indexOf("version:") + 8, response.length());
+			Util.log(FIRMWARE_ID + " firmware version: "+versionstr, this);
+			firmwareversion = Double.valueOf(versionstr);
+		}
 	
-		// TODO: use battery pass through 
-		if(response.equals(AutoDock.DOCKED)){
-			
-			Util.debug("docked: " + response ,this);
-					
-			state.set(State.values.batterycharging, true);
-			state.put(State.values.dockstatus, AutoDock.DOCKED);
-			application.message(null, "dock", AutoDock.DOCKED);	
-			if (state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, false);
-		}
-			
-		if(response.equals(AutoDock.UNDOCKED)){
-			
-			Util.debug("docked: " + response ,this);
-			
-			state.set(State.values.batterycharging, false);
-			state.put(State.values.dockstatus, AutoDock.UNDOCKED);
-			if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
-			
-			application.message(null, "dock", AutoDock.UNDOCKED );
-		}
+		String[] s = response.split(" ");
 
-		if(response.startsWith("battery")){
+		if (s[0].equals("moved")) {
+			lastodomlinear = (int) (Double.parseDouble(s[1]) * Math.PI * settings.getInteger(ManualSettings.wheeldiameter));
+			if (state.get(State.values.direction).equals(direction.arcleft.toString()) ||
+					state.get(State.values.direction).equals(direction.arcright.toString()))
+				lastodomlinear *= arcodomcomp;
+
+			lastodomangle = Double.parseDouble(s[2]);
+			lastodomangle *= settings.getDouble(ManualSettings.gyrocomp.toString());
 			
-			String level = response.split(" ")[1];
-			state.put(State.values.batterylife, level); // TODO: don't store the volts in state, just the value? +"V");
+			state.set(State.values.distanceangle, lastodomlinear +" "+lastodomangle); //millimeters, degrees
+			state.set(State.values.odomupdated, true);
+//			state.set(State.values.lastodomreceived, System.currentTimeMillis());
+			
+			// testing only ----------------
+			if (settings.getBoolean(ManualSettings.developer.name())) {
+				if (Application.openNIRead.depthCamGenerating) {
+					if (!state.exists(State.values.distanceanglettl.toString())) {
+						state.set(State.values.distanceanglettl, "0 0");
+					}
+					
+					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+					dttl += lastodomlinear;
+					attl += lastodomangle;
+					String dattl = dttl+" "+attl;
+					state.set(State.values.distanceanglettl,dattl);
+				}
+			}
+			// end of testing only ----------------
+
 		}
-		
-		if(response.startsWith("tiltpos")) {
-			String position = response.split(" ")[1];
-			state.set(State.values.cameratilt, position);
-			application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) 
+			state.set(State.values.direction, direction.stop.toString());
+		else if (s[0].equals("stopdetectfail")) {
+//			if (settings.getBoolean(ManualSettings.debugenabled))
+//				application.message("FIRMWARE STOP DETECT FAIL", null, null);
+				Util.debug("FIRMWARE STOP DETECT FAIL", this);
+			if (state.getBoolean(State.values.stopbetweenmoves)) 
+				state.set(State.values.direction, direction.stop.toString());
 		}
 	}
 
-	public void connect() {
+	/**
+	 * port query and connect 
+	 */
+	private void connect() {
+		isconnected = false;
+		
 		try {
 
-			serialPort = (SerialPort) CommPortIdentifier.getPortIdentifier(portName).open(ArduinoPrime.class.getName(), SETUP);
-			serialPort.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+	    	String[] portNames = SerialPortList.getPortNames();
+	        if (portNames.length == 0) return;
+	        
+	        String otherdevice = "";
+	        if (state.exists(State.values.powerport)) 
+	        	otherdevice = state.get(State.values.powerport);
+	        
+	        for (int i=0; i<portNames.length; i++) {
+				if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
 
-			// open streams
-			out = serialPort.getOutputStream();
-			in = serialPort.getInputStream();
+        			Util.log("querying port "+portNames[i], this);
+        			
+        			serialPort = new SerialPort(portNames[i]);
+        			serialPort.openPort();
+        			serialPort.setParams(BAUD, 8, 1, 0);
+        			Thread.sleep(DEVICEHANDSHAKEDELAY);
+        			serialPort.readBytes(); // clear serial buffer
+        			
+        			serialPort.writeBytes(new byte[]{GET_PRODUCT, 13}); // query device
+        			Thread.sleep(100); // some delay is required
+					byte[] buffer = serialPort.readBytes();
+        			
+        			if (buffer == null) break;
+        			
+        			String device = new String();
+        			for (int n=0; n<buffer.length; n++) {
+        				if((int)buffer[n] == 13 || (int)buffer[n] == 10) { break; }
+        				if(Character.isLetter((char) buffer[n]))
+        					device += (char) buffer[n];
+        			}
+        			
+        			if (device.length() == 0) break;
+        			Util.debug(device+" "+portNames[i], this);
+    				if (device.trim().startsWith("id")) device = device.substring(2, device.length());
+    				Util.debug(device+" "+portNames[i], this);
+    				
+    				if (device.equals(FIRMWARE_ID)) {
+    					
+    					Util.log("malg connected to "+portNames[i], this);
+    					
+    					isconnected = true;
+    					state.set(State.values.motorport, portNames[i]);
+    		            serialPort.addEventListener(this, SerialPort.MASK_RXCHAR);//Add SerialPortEventListener
+    					break; // don't read any more ports, time consuming
+    				}
+    				serialPort.closePort();
+	        	}
+	        }
 
-			// register for serial events
-			serialPort.addEventListener(this);
-			serialPort.notifyOnDataAvailable(true);
-
-		} catch (Exception e) {
-			
+		} catch (Exception e) {	
 			Util.log("can't connect to port: " + e.getMessage(), this);
-			settings.writeSettings(ManualSettings.serialport.name(), Discovery.params.discovery.name());
-			settings.incrementSettings(ManualSettings.attempts);
-			application.restart();
-			
 		}
+			
 	}
 
 	public boolean isConnected() {
 		return isconnected;
 	}
 
-	/** */
-	public void manageInput(){
+	/** utility for macros requiring movement
+	 *  BLOCKING
+	 * 	return true if connected, if not, wait for up to 10 seconds
+	 * @return   boolean isconnected
+	 */
+	public boolean checkisConnectedBlocking() {
+		if (isconnected) return true;
+		Util.log("malg not connected, waiting for reset", this);
+		long start = System.currentTimeMillis();
+		while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+			Util.delay(50);
+		if (isconnected) return true;
+		Util.log("malg not connected", this);
+		return false;
+	}
+
+	public void serialEvent(SerialPortEvent event) {
+		if (!event.isRXCHAR())  return;
+
 		try {
-			byte[] input = new byte[32];
-			int read = in.read(input);
-			for (int j = 0; j < read; j++) {
-				// print() or println() from arduino code
+			byte[] input = serialPort.readBytes();
+			for (int j = 0; j < input.length; j++) {
 				if ((input[j] == '>') || (input[j] == 13) || (input[j] == 10)) {
-					// do what ever is in buffer
 					if (buffSize > 0) execute();
 					buffSize = 0; // reset
-					// track input from arduino
-					lastRead = System.currentTimeMillis();
-				} else if (input[j] == '<') {
-					// start of message
+					lastRead = System.currentTimeMillis(); 	// last command from board
+
+				}else if (input[j] == '<') {  // start of message
 					buffSize = 0;
 				} else {
-					// buffer until ready to parse
-					buffer[buffSize++] = input[j];
+					buffer[buffSize++] = input[j];   // buffer until ready to parse
 				}
 			}
-		} catch (IOException e) {
-			System.out.println("event : " + e.getMessage());
+			
+		} catch (SerialPortException e) {
+			e.printStackTrace();
 		}
-	}
 		
-	public void serialEvent(SerialPortEvent event) {
-		if (event.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
-			manageInput();
-		}
 	}
 
-	public long getWriteDelta() {
-		return System.currentTimeMillis() - lastSent;
-	}
-	
-	public String getVersion() {
-		return version;
-	}
-	
-	public long getReadDelta() {
-		return System.currentTimeMillis() - lastRead;
-	}
-
-	
-	public void setEcho(boolean update) {
-		if (update) sendCommand(ECHO_ON);
-		else sendCommand(ECHO_OFF);
-	}
-
-	
 	public void reset() {
-		if (isconnected) {
-			new Thread(new Runnable() {
-				public void run() {
-					disconnect();
-					connect();
-				}
-			}).start();
-		}
+		new Thread(new Runnable() {
+			public void run() {
+			Util.log("resetting MALG board", this);
+			disconnect();
+			connect();
+			if (cs.isAlive()) {
+				Util.log("error, CommmandSender still alive", this);
+//				return;
+			}
+			cs = new CommandSender();
+			cs.start();
+			initialize();
+			}
+		}).start();
 	}
 
 	/** shutdown serial port */
 	protected void disconnect() {
 		try {
-			if(in!=null) in.close();
-			if(out!=null) out.close();
 			isconnected = false;
-			version = null;
+			serialPort.closePort();
+			state.delete(State.values.motorport);
 		} catch (Exception e) {
-			Util.log("disconnect(): " + e.getMessage(), this);
+			Util.log("error in disconnect(): " + e.getMessage(), this);
 		}
-		if(serialPort!=null) serialPort.close();
 	}
 
 	/**
 	 * Send a multiple byte command to send the device
 	 * 
-	 * @param command
+	 * @param cmd
 	 *            is a byte array of messages to send
 	 */
 	public void sendCommand(byte[] cmd) {
 
-		if (!isconnected) return;
-		
-		if(DEBUGGING) {
-			String text = "sendCommand(): " + (char)cmd[0] + " ";
-			for(int i = 1 ; i < cmd.length ; i++) 
-				text += (byte)cmd[i] + " ";
-			
-			Util.debug(text, this);
-		}
-		
 		if (state.getBoolean(State.values.controlsinverted)) {
 			switch (cmd[0]) {
-			case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
-			case ArduinoPrime.BACKWARD: cmd[0]=ArduinoPrime.FORWARD; break;
-			case ArduinoPrime.LEFT: cmd[0]=ArduinoPrime.RIGHT; break;
-			case ArduinoPrime.RIGHT: cmd[0]=ArduinoPrime.LEFT; 
+				case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
+				case ArduinoPrime.BACKWARD: cmd[0]=ArduinoPrime.FORWARD; break;
+				case ArduinoPrime.LEFT: cmd[0]=ArduinoPrime.RIGHT; break;
+				case ArduinoPrime.RIGHT: cmd[0]=ArduinoPrime.LEFT; break;
+				case ArduinoPrime.RIGHTTIMED: cmd[0]=ArduinoPrime.LEFTTIMED; break;
+				case ArduinoPrime.LEFTTIMED: cmd[0]=ArduinoPrime.RIGHTTIMED; break;
+				case ArduinoPrime.FORWARDTIMED: cmd[0]=ArduinoPrime.BACKWARDTIMED; break;
+				case ArduinoPrime.BACKWARDTIMED: cmd[0]=ArduinoPrime.FORWARDTIMED;
 			}
 		}
 		
-		final byte[] command = cmd;
-		new Thread(new Runnable() {
-			public void run() {
-				try {
+		/*
+		if(settings.getBoolean(ManualSettings.debugenabled)) {
+			String text = "sendCommand(): " + (char)cmd[0] + " ";
+			for(int i = 1 ; i < cmd.length ; i++) 
+				text += ((byte)cmd[i] & 0xFF) + " ";  // & 0xFF converts to unsigned byte
+			
+			Util.log("DEBUG: "+ text, this);
+		}   // */
 
-					// send
-					out.write(command);
-		
-					// end of command
-					out.write(13);
-		
-				} catch (Exception e) {
-					reset();
-					Util.log("OCULUS: sendCommand(), " + e.getMessage(), this);
-				}
-			}
-		}).start();
-		
-		// track last write
-		lastSent = System.currentTimeMillis();
+		int n = 0;
+		while (commandlock) {
+			Util.delay(1);
+			n++;
+		}
+
+		commandlock = true;
+		if (n!=0) Util.log("error, commandlock true for "+n+"ms", this);
+		for (byte b : cmd) {
+			if (b==10) b=11;
+			else if (b==13) b=12;
+			commandList.add(b);
+		}
+		commandList.add((byte) 13); // EOL
+		commandlock = false;
+
 	}
 	
 	
-	public void sendCommand(final byte cmd){
+	public void sendCommand(byte cmd){
 		sendCommand(new byte[]{cmd});
 	}
 
-	public void goForward() {
-		sendCommand(new byte[] { FORWARD, (byte) state.getInteger(State.values.motorspeed) });
-		state.put(State.values.moving, true);
-		state.put(State.values.movingforward, true);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
+
+	/** inner class to send commands to port in sequential order */
+	private class CommandSender extends Thread {
+
+		public CommandSender() {
+			this.setDaemon(true);
+		}
+
+		public void run() {
+
+			while (isconnected) {
+				if (commandList.size() > 1 &! commandlock) { // >1 because NL required
+
+//					if (!isconnected) {
+//						Util.log("error, not connected", this); // TODO: not needed (never see this)
+//						Util.delay(1);
+//						continue;
+//					}
+
+					if (commandList.size() > 15) { // buffer in firmware is now 32 (was 8) AVR is 64?
+						commandList.clear();
+						Util.log("error, command stack up, all dropped", this);
+						Util.delay(1);
+						continue;
+					}
+
+					int EOLindex = commandList.indexOf((byte) 13);
+					if (EOLindex == -1) {
+//						String str = "";
+//						for (int i = 0; i < commandList.size(); i++) str += String.valueOf((int) commandList.get(i)) + ", ";
+//						Util.log("error, warning no EOL char: "+str, this); // nuke this, triggers sometimes as expected
+						Util.delay(1);
+						continue;
+					}
+
+					// in case of multiple EOL chars, read only up to 1st
+					byte c[] = new byte[EOLindex+1];
+					try {
+						for (int i = 0; i <= EOLindex; i++) {
+							c[i] = commandList.get(0);
+							commandList.remove(0);
+						}
+					}  catch (Exception e) {
+						Util.log("sendCommand() error, dropped, continuing: ", this); // , attempting reset", this);
+						Util.printError(e);
+//						commandList.clear(); // TODO: Testing removal
+						Util.delay(1);
+						continue;
+					}
+
+					try {
+						// track last write
+						lastSent = System.currentTimeMillis();
+						serialPort.writeBytes(c); // writing as array ensures goes at baud rate?
+
+					} catch (Exception e) {
+						Util.log("sendCommand() error", this); // , attempting reset", this);
+						Util.printError(e);
+					}
+
+				}
+
+				Util.delay(1);
+
+			}
+
+			Util.log("thread exit, not connected", this);
+		}
+	}
+
+	public void goForward() { goForward(0); }
+
+	/**
+	 *
+	 * @param delay stop after delay ms (timed by firmware). If 0, continuous motion
+	 *
+	 */
+	public void goForward(final int delay) {
+		
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+		
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+				
+			if ( !state.get(State.values.direction).equals(direction.stop.toString())  &&
+					!state.get(State.values.direction).equals(direction.forward.toString())) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+
+				new Thread(new Runnable() {public void run() {
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
+					if (currentMoveID == moveID)  goForward();
+					
+				} }).start();
+				
+				return;
+			}
+		}
+
+		state.set(State.values.moving, true);
+		state.set(State.values.movingforward, true);
+		
+		int speed1 = (int) voltsComp((double) speedslow);
+		if (speed1 > 255) { speed1 = 255; }
+		
+//		int speed2= state.getInteger(State.values.motorspeed);
+		
+		int speed2;
+		if (state.exists(State.values.odomlinearmpms.toString())) {
+			speed2 = state.getInteger(State.values.odomlinearpwm); 
+			tracklinearrate(moveID);
+		}
+		else speed2= state.getInteger(State.values.motorspeed);
+
+		if (speed2<speed1) { 		// voltcomp on slow speed only
+			speed2 = (int) voltsComp((double) speed2);
+			if (speed2 > 255) { speed2 = 255; }
+		}
+		
+		// no full speed when on dock voltage
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed2==speedfast) {
+			speed2 = speedmed;
+		}
+
+		if (delay != 0) timeddelay = delay + FIRMWARE_TIMED_OFFSET;
+
+		// if already moving forward, go full speed and exit
+		if (state.get(State.values.direction).equals(direction.forward.toString()) ) {
+			int[] comp = applyComp(speed2); 
+			int L, R;
+			L = comp[0];
+			R = comp[1];
+
+			if (delay == 0)
+				sendCommand(new byte[]{FORWARD, (byte) R, (byte) L});
+			else {
+				byte d1 = (byte) ((timeddelay >> 8) & 0xff);
+				byte d2 = (byte) (timeddelay & 0xff);
+				sendCommand(new byte[]{FORWARDTIMED, (byte) R, (byte) L, d1, d2});
+			}
+			return;
+		}
+
+		// always start slow, un-comped
+		if (delay == 0)
+			sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
+		else {
+			int d = timeddelay;
+			if (d > ACCEL_DELAY) d = ACCEL_DELAY;
+
+			byte d1 = (byte) ((d >> 8) & 0xff);
+			byte d2 = (byte) (d & 0xff);
+			sendCommand(new byte[]{ FORWARDTIMED, (byte) speed1, (byte) speed1, d1, d2});
+			if (timeddelay <= ACCEL_DELAY) return;
+		}
+
+		final int spd = speed2;
+
+		// start accel to full speed after short ACCEL_DELAY, no comp (because initial comp causes considerable drift)
+		if (speed2 > speed1) { 
+			new Thread(new Runnable() {
+				public void run() {
+					
+					Util.delay(ACCEL_DELAY);
+					
+					if (currentMoveID != moveID)  return;
+
+					// actual speed, un-comped
+					if (delay==0)
+						sendCommand(new byte[] { FORWARD, (byte) spd, (byte) spd});
+					else {
+						int d = timeddelay;
+
+						if (steeringcomp != 0 && d > COMP_DELAY)  d = COMP_DELAY-ACCEL_DELAY;
+
+						byte d1 = (byte) ((d >> 8) & 0xff);
+						byte d2 = (byte) (d & 0xff);
+						sendCommand(new byte[]{ FORWARDTIMED, (byte) spd, (byte) spd, d1, d2});
+						timeddelay -= COMP_DELAY;
+					}
+
+				} 
+			}).start();
+		}
+
+		if (delay != 0) if (timeddelay <= COMP_DELAY) return;
+
+		// apply comp only when up to full speed
+		if (steeringcomp != 0) {  
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(COMP_DELAY);
+
+					int[] comp = applyComp(spd); // actual speed, comped
+					int L,R;
+					L = comp[0];
+					R = comp[1];
+					if (currentMoveID != moveID)  return;
+					if (delay==0)
+						sendCommand(new byte[] { FORWARD, (byte) R, (byte) L});
+					else {
+						int d = timeddelay-ACCEL_DELAY;
+						byte d1 = (byte) ((d >> 8) & 0xff);
+						byte d2 = (byte) (d & 0xff);
+						sendCommand(new byte[]{ FORWARDTIMED, (byte) spd, (byte) spd, d1, d2});
+					}
+					
+				} 
+			}).start();
+		}
+		
+		state.set(State.values.direction, direction.forward.toString());
+	}
+	
+	private int[] applyComp(int spd) {
+		int A = spd;
+		int B = spd;
+		int comp = (int) ((double) steeringcomp * Math.pow((double) spd/(double) speedfast, 2.0));
+		
+		if (state.getBoolean(State.values.controlsinverted)) {
+			if (steeringcomp < 0) A += comp; // left motor reduced
+			else if (steeringcomp > 0) B -= comp; // right motor reduced
+		}
+		else {
+			if (steeringcomp < 0) B += comp; // right motor reduced
+			else if (steeringcomp > 0) A -= comp; // left motor reduced
+		}
+		return new int[] {A, B};  // reverse L&R for backwards
 	}
 
 	public void goBackward() {
-		sendCommand(new byte[] { BACKWARD, (byte) state.getInteger(State.values.motorspeed) });
-		state.put(State.values.moving, true);
-		state.put(State.values.movingforward, false);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
-	}
-
-	public void turnRight() {
-		int tmpspeed = turnspeed;
-		int boost = TURNBOOST;
-		int speed = state.getInteger(State.values.motorspeed);
-		if (speed < turnspeed && (speed + boost) < speedfast)
-			tmpspeed = speed + boost;
-
-		sendCommand(new byte[] { RIGHT, (byte) tmpspeed });
-		state.put(State.values.moving, true);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
-	}
-
-	public void turnLeft() {
-		int tmpspeed = turnspeed;
-		int boost = TURNBOOST;
-		int speed = state.getInteger(State.values.motorspeed);
-		if (speed < turnspeed && (speed + boost) < speedfast)
-			tmpspeed = speed + boost;
-
-		sendCommand(new byte[] { LEFT, (byte) tmpspeed });
-		state.put(State.values.moving, true);
-		if (state.getBoolean(State.values.muteOnROVmove)) application.muteROVMic();
-	}
 	
-	private class cameraUpTask extends TimerTask {
-		@Override
-		public void run(){
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
 			
-			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) + CAM_NUDGE);
-			
-			if (state.getInteger(State.values.cameratilt) >= CAM_MAX) {
-				cameraTimer.cancel();
-				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
-				state.set(State.values.cameratilt, CAM_MAX);
+			if ( !state.get(State.values.direction).equals(direction.stop.toString()) &&
+					!state.get(State.values.direction).equals(direction.backward.toString())) {
+
+				stopGoing();
+				currentMoveID = moveID;
+				
+				new Thread(new Runnable() {public void run() {
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
+					if (currentMoveID == moveID)  goBackward();
+					
+				} }).start();
+				
 				return;
 			}
-		
-			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
 		}
-	}
-	
-	private class cameraDownTask extends TimerTask {
-		@Override
-		public void run(){
-			
-			state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - CAM_NUDGE);
-			
-			if (state.getInteger(State.values.cameratilt) <= CAM_MIN) {
-				cameraTimer.cancel();
-				sendCommand(new byte[] { HOME_TILT_FRONT }); // calibrate
-				state.set(State.values.cameratilt, CAM_MIN);
-				return;
-			}
-	
-			sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
-		}
-	}
-	
-	public void camCommand(cameramove move){ 
 
-		Util.debug("camCommand(): " + move, this);
+		state.set(State.values.moving, true);
+		state.set(State.values.movingforward, false);
+//		if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
 		
-		if (state.getBoolean(State.values.autodocking)) {
-			application.messageplayer("command dropped, autodocking", null, null);
+		
+		int speed1 = (int) voltsComp((double) speedslow);
+		if (speed1 > 255) { speed1 = 255; }
+		
+//		int speed2= state.getInteger(State.values.motorspeed);
+		int speed2;
+		if (state.exists(State.values.odomlinearmpms.toString())) {
+			speed2 = state.getInteger(State.values.odomlinearpwm); 
+			tracklinearrate(moveID);
+		}
+		else speed2= state.getInteger(State.values.motorspeed);
+	
+		if (speed2<speed1) { 		// voltcomp on slow speed only
+			speed2 = (int) voltsComp((double) speed2);
+			if (speed2 > 255) { speed2 = 255; }
+		}
+		
+		// no full speed when on dock voltage
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed2==speedfast) {
+			speed2 = speedmed;
+		}
+		
+//		application.gyroport.sendCommand(BACKWARD);
+
+		if (state.get(State.values.direction).equals(direction.backward.toString()) ) { 
+			int[] comp = applyComp(speed2); // apply comp now that up to speed
+			int L = comp[1];
+			int R = comp[0];
+			sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});
 			return;
 		}
 		
-		if (state.getBoolean(State.values.controlsinverted)) {
-			switch (move) {
-			case up: move=cameramove.down; break;
-			case down: move=cameramove.up; break;
-			case upabit: move=cameramove.downabit; break;
-			case downabit: move=cameramove.upabit; break; 
+		// send un-comped forward command to get wheels moving, helps drive straighter
+		sendCommand(new byte[] { BACKWARD, (byte) speed1, (byte) speed1});
+		final int spd = speed2;
+
+		if (speed2 > speed1) { 
+			new Thread(new Runnable() {
+				public void run() {
+					
+					Util.delay(ACCEL_DELAY);
+					
+					if (currentMoveID != moveID)  return;
+
+					// actual speed, un-comped
+					sendCommand(new byte[] { BACKWARD, (byte) spd, (byte) spd});
+
+				} 
+			}).start();
+		}
+		
+		if (steeringcomp != 0) {  
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay(COMP_DELAY); 
+
+
+					int[] comp = applyComp(spd); // apply comp now that up to speed
+					int L = comp[1];
+					int R = comp[0];
+					if (currentMoveID != moveID)  return;
+					sendCommand(new byte[] { BACKWARD, (byte) R, (byte) L});
+					
+				} 
+			}).start();
+		}
+		state.set(State.values.direction, direction.backward.toString()); // now go
+	}
+
+	public void turnRight() {
+		turnRight(0);
+	}
+	
+	public void turnRight(int delay) {
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+			
+			if ( !(state.get(State.values.direction).equals(direction.right.toString()) ||
+				state.get(State.values.direction).equals(direction.stop.toString()) ) ) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+
+				new Thread(new Runnable() {public void run() {
+					
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
+					if (currentMoveID == moveID)  turnRight();
+					
+				} }).start();
+				
+				return;
 			}
+		}
+
+		state.set(State.values.direction, direction.right.toString()); // now go
+		
+		int tmpspeed;
+		if (state.exists(State.values.odomturndpms.toString())) {
+			tmpspeed = state.getInteger(State.values.odomturnpwm); 
+			trackturnrate(moveID);
+		}
+		else tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
+		
+		if (tmpspeed > 255) tmpspeed = 255;
+		
+		if (delay==0) {
+			sendCommand(new byte[] { RIGHT, (byte) tmpspeed, (byte) tmpspeed });
+			state.set(State.values.moving, true);
+//			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+		}
+		else {
+        	byte d1 = (byte) ((delay >> 8) & 0xff);
+			byte d2 = (byte) (delay & 0xff);
+			sendCommand(new byte[] { RIGHTTIMED, (byte) tmpspeed, (byte) tmpspeed, (byte) d1, (byte) d2});
+		}
+	}
+
+	public void turnLeft() {
+		turnLeft(0);
+	}
+	
+	/**
+	 * Turn Left
+	 * @param delay milliseconds, then stop (timed directly by firmware). If 0, continuous movement
+	 */
+	public void turnLeft(int delay) {
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+		
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+			
+			if ( !(state.get(State.values.direction).equals(direction.left.toString()) ||
+				state.get(State.values.direction).equals(direction.stop.toString()) ) ) {
+			
+				stopGoing();
+				currentMoveID = moveID;
+
+				new Thread(new Runnable() {public void run() {
+					
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
+					if (currentMoveID == moveID)  turnLeft();
+					
+				} }).start();
+				
+				return;
+			}
+		}	
+		
+		state.set(State.values.direction, direction.left.toString()); // now go
+		
+		int tmpspeed;
+		if (state.exists(State.values.odomturndpms.toString())) {
+			tmpspeed = state.getInteger(State.values.odomturnpwm);
+			trackturnrate(moveID);
+		}
+		else tmpspeed = state.getInteger(State.values.motorspeed) + TURNBOOST;
+		
+		if (tmpspeed > 255) tmpspeed = 255;
+		
+		if (delay==0) {
+			sendCommand(new byte[] { LEFT, (byte) tmpspeed, (byte) tmpspeed });
+			state.set(State.values.moving, true);
+//			if (settings.getBoolean(GUISettings.muteonrovmove))  application.muteROVMic();
+		}
+		else {
+        	byte d1 = (byte) ((delay >> 8) & 0xff);
+			byte d2 = (byte) (delay & 0xff);
+			sendCommand(new byte[] { LEFTTIMED, (byte) tmpspeed, (byte) tmpspeed, d1, d2});
+		}
+
+	}
+	
+	// secondspertwopi=4.2
+	// secondsper 360 deg = 4.2
+	// degrees per second = 360/4.2 = 85.714
+	// degrees per ms = 0.0857 state odomturndpms 0.0857   state odomturnpwm 150
+	// state odometrybroadcast 250      odometrystart
+	
+	/*
+	 * to start:
+	 * state odomturndpms 0.0857
+	 * state odometrybroadcast 250
+	 * odometrystart
+	 * 
+	 * monitor with:
+	 * state odomturnpwm 
+	 * state odomlinearpwm
+	 * 
+	 * state odomlinearmpms
+	 * state odomturndpms
+	 */
+	private void trackturnrate(final long moveID) {
+		
+		new Thread(new Runnable() {public void run() {
+			final long turnstart = System.currentTimeMillis();
+			long start = turnstart;
+			final double tolerance = state.getDouble(State.values.odomturndpms.toString())*0.08;
+			final int pwmincr = 5;
+			final int accel = 500;
+			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
+
+			while (currentMoveID == moveID)  {
+
+				if (state.getBoolean(State.values.odomupdated)) {
+					state.set(State.values.odomupdated, false);
+					
+					long now = System.currentTimeMillis();
+					if (now - turnstart < accel) {
+						start = now;
+						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
+					}
+					
+					double rate = Math.abs(lastodomangle)/(now - start);
+
+					int currentpwm = state.getInteger(State.values.odomturnpwm);
+					int newpwm = currentpwm;
+
+					if (rate > targetrate + tolerance) {
+						newpwm = currentpwm - pwmincr;
+						if (newpwm < speedslow) newpwm = speedslow;
+					}
+					else if (rate < targetrate - tolerance) {
+						newpwm = currentpwm + pwmincr;
+						if (newpwm > 255) newpwm = 255;
+					}
+//					else // within tolerance, kill thread to save cpu
+//						break;
+
+					byte dir = 0;
+
+					// modify speed
+					state.set(State.values.odomturnpwm, newpwm);
+					if ( state.get(State.values.direction).equals(direction.left.toString()))
+						dir = LEFT;
+					else if ( state.get(State.values.direction).equals(direction.right.toString())) // extra thread safe
+						dir = RIGHT;
+
+					if (currentMoveID == moveID && dir != 0 ) // extra thread safe
+						sendCommand(new byte[] { dir, (byte) newpwm, (byte) newpwm });
+					else break;
+
+					start = now;
+					
+				}
+				Util.delay(1);
+
+			}
+
+			floorFrictionCheck();
+
+		} }).start();
+		
+	}
+
+	private void floorFrictionCheck() {
+		if (!settings.getBoolean(ManualSettings.usearcmoves))  return;
+		// 	measured carpet = 195pwm (volts comped 0.0857degrees per ms  12.04 battery volts)
+		// no carpet = pwm 110-140
+		boolean rosarcmove = state.getBoolean(State.values.rosarcmove);
+		if (unVoltsComp(state.getInteger(State.values.odomturnpwm)) > settings.getInteger(ManualSettings.arcpwmthreshold))
+			{ if (rosarcmove) state.set(State.values.rosarcmove, false); }
+		else { if (!rosarcmove) state.set(State.values.rosarcmove, true); }
+	}
+	
+	// example target rate = 3.2m/s = 0.00032 m/ms
+	/*
+	 * to start:
+	 * state odomlinearmpms 0.00032
+	 * state odometrybroadcast 250
+	 * odometrystart
+	 * 
+	 * monitor with:
+	 * state odomlinearpwm
+	 */
+	private void tracklinearrate(final long moveID) {
+		
+		new Thread(new Runnable() {public void run() {
+			final long linearstart = System.currentTimeMillis();
+			long start = linearstart;
+			final double tolerance = state.getDouble(State.values.odomlinearmpms.toString()) * 0.05; //0.000015625; //  meters per ms --- 5% of target speed 0.32m/s (0.00032
+			final int pwmincr = 10;
+			final int accel = 480; // TODO: try lowering this, kind of useless for small linear moves during rosnav
+			final double targetrate = state.getDouble(State.values.odomlinearmpms.toString());
+			
+			while (currentMoveID == moveID)  {
+
+				if (state.getBoolean(State.values.odomupdated)) {
+					state.set(State.values.odomupdated, false);
+					
+					long now = System.currentTimeMillis();
+					if (now - linearstart < accel) {
+						start = now;
+						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
+					}
+					
+					double meters = lastodomlinear/1000.0;
+					double rate = Math.abs(meters)/(now - start); // m per ms
+
+					int currentpwm = state.getInteger(State.values.odomlinearpwm);
+					int newpwm = currentpwm;
+
+					if (rate > targetrate + tolerance) {
+						newpwm = currentpwm - pwmincr;
+						if (newpwm < speedslow) newpwm = speedslow;
+					}
+					else if (rate < targetrate - tolerance) {
+						newpwm = currentpwm + pwmincr;
+						if (newpwm > 255) newpwm = 255;
+					}
+//					else // within tolerance, kill thread (save cpu)
+//						break;
+					
+					//modify speed
+					state.set(State.values.odomlinearpwm, newpwm);
+
+					int[] comp = applyComp(newpwm); // steering comp
+					int L = 0;
+					int R = 0;
+					byte dir = 0;
+
+					
+					if ( state.get(State.values.direction).equals(direction.forward.toString())) {
+						dir = FORWARD;
+						L = comp[0];
+						R = comp[1];
+					} else if ( state.get(State.values.direction).equals(direction.backward.toString())){ // extra thread safe
+						dir = BACKWARD;
+						L = comp[1];
+						R = comp[0];
+					}
+
+					if (currentMoveID == moveID && dir != 0) // extra thread safe
+						sendCommand(new byte[] { dir, (byte) R, (byte) L});
+					else break;
+					
+					start = now;
+				}
+
+				Util.delay(1);
+
+			}
+		} }).start();
+		
+	}
+
+	/** @param str command character followed by nothing or integers between 0-255 */
+	public void malgcommand(String str) {
+		String s[] = str.split(" ");
+		if (s.length == 0) return;
+		byte[] cmd = new byte[s.length];
+		cmd[0] = s[0].getBytes()[0];
+		for (int i = 1; i<s.length; i++ ) {
+			cmd[i] = (byte) ((int) Integer.valueOf(s[i]));
+		}
+
+		sendCommand(cmd);
+	}
+
+	
+	public void camCommand(cameramove move){
+		
+		// no camera moves in reverse except horiz, which cancels reverse mode
+		if (state.getBoolean(State.values.controlsinverted) && !move.equals(cameramove.horiz)) {
+			return;
 		}
 		
 		int position;
 		
+		currentCamMoveID = System.nanoTime();
+		
 		switch (move) {
 		
-			case stop: 
-				if(cameraTimer != null) cameraTimer.cancel();
-				cameraTimer = null;
-				return;
+			case stop:
+				camRelease(currentCamMoveID);
+				break;
 				
 			case up:  
-				cameraTimer = new java.util.Timer();  
-				cameraTimer.scheduleAtFixedRate(new cameraUpTask(), 0, CAM_NUDGE_DELAY);
-				return;
+				cameraToPosition(CAM_MAX, currentCamMoveID);
+				break;
 			
-			case down:  
-				cameraTimer = new java.util.Timer();  
-				cameraTimer.scheduleAtFixedRate(new cameraDownTask(), 0, CAM_NUDGE_DELAY);
-				return;
+			case down:
+				cameraToPosition(CAM_MIN, currentCamMoveID);
+				break;
 			
-			case horiz: 
-				sendCommand(new byte[] { CAM, (byte) CAM_HORIZ });
-				state.set(State.values.cameratilt, CAM_HORIZ);
-				return;
+			case horiz:
+				cameraToPosition(CAM_HORIZ, currentCamMoveID);
+				break;
 			
 			case downabit: 
-				position= state.getInteger(State.values.cameratilt) - CAM_NUDGE*2;
-				if (position <= CAM_MIN) { 
+				position= state.getInteger(State.values.cameratilt) + CAM_NUDGE*3;
+				if (position >= CAM_MIN) { 
 					position = CAM_MIN;
-					sendCommand(new byte[] { HOME_TILT_FRONT }); //calibrate 
 				}
-				else {  sendCommand(new byte[] { CAM, (byte) position }); }
-				state.set(State.values.cameratilt, position);
-				return; 
+				cameraToPosition(position, currentCamMoveID);
+				break;
 			
 			case upabit: 
-				position = state.getInteger(State.values.cameratilt) + CAM_NUDGE*2;
-				if (position >= CAM_MAX) { 
+				position = state.getInteger(State.values.cameratilt) - CAM_NUDGE*3;
+				if (position <= CAM_MAX) { 
 					position = CAM_MAX;
-					sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX }); //calibrate
 				}
-				else { sendCommand(new byte[] { CAM, (byte) position }); }
-				state.set(State.values.cameratilt, position);
-				return;
+				cameraToPosition(position, currentCamMoveID);
+				break;
+
+			case rearstop:   // deprecated, same as reverse
 				
-			case frontstop:  
-				sendCommand(new byte[] { HOME_TILT_FRONT });
-				state.set(State.values.cameratilt, CAM_MIN);
-				return;
-				
-			case rearstop: 
-				sendCommand(new byte[] { HOME_TILT_REAR, (byte) CAM_MAX });
-				state.set(State.values.cameratilt, CAM_MAX);
-				return;
+			case reverse:
+				cameraToPosition(CAM_REVERSE, currentCamMoveID);
+				break;
 		}
 	
 	}
 	
+//	public void cameraToPosition(int position) { // max movement speed
+//		sendCommand(new byte[] { CAM, (byte) position} );
+//		long camMoveID = System.nanoTime();
+//		currentCamMoveID = camMoveID;
+//		camRelease(camMoveID);
+//		state.set(State.values.cameratilt, position);
+//		return;
+//	}
 
-	public void speedset(final speeds update) {
-		
-		Util.debug("speedset(): " + update, this);
-		
-		switch (update) {
-		case slow: state.put(State.values.motorspeed, speedslow); break;
-		case med: state.put(State.values.motorspeed, speedmed); break;
-		case fast: state.put(State.values.motorspeed, speedfast); break;
+	public void camtilt(int position) {
+		currentCamMoveID = System.nanoTime();
+		cameraToPosition(position, currentCamMoveID);
+	}
+
+	// handle *all* camera movement
+	private void cameraToPosition(final int goalposition, final long camMoveID) {
+		if (state.getInteger(State.values.cameratilt) == goalposition) {
+			camRelease(camMoveID);
+			return;
+		}
+
+		// determine direction
+		boolean temp = false; // down
+		if (state.getInteger(State.values.cameratilt) > goalposition)  temp = true;  // up
+		final boolean up = temp;
+
+		new Thread(new Runnable() {
+			public void run() {
+
+				while (camMoveID == currentCamMoveID) {
+
+					// check if reached goal
+					int currentpos = state.getInteger(State.values.cameratilt);
+					if ( (up && currentpos <= goalposition) || (!up && currentpos >= goalposition) ) { // position reached, stop
+						camRelease(camMoveID);
+						break;
+					}
+
+					// check if inverted
+					checkIfInverted();
+
+					// define new position
+					int newposition;
+					if (up) {
+						newposition = currentpos - CAM_NUDGE;
+						if (newposition <= goalposition)  newposition = goalposition;
+
+					}
+					else { // down
+						newposition = currentpos + CAM_NUDGE;
+						if (newposition >= goalposition)  newposition = goalposition;
+					}
+					state.set(State.values.cameratilt, newposition);
+
+					// move cam
+					sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });
+
+					Util.delay(CAM_SMOOTH_DELAY);
+				}
+
+				if (camMoveID == currentCamMoveID) {
+					application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+				}
+
+			}
+
+		}).start();
+	}
+
+	public static void  checkIfInverted() {
+		int currentpos = state.getInteger(State.values.cameratilt);
+		if (Math.abs(currentpos - CAM_REVERSE) < 5) {
+			if (!state.getBoolean(State.values.controlsinverted))
+				state.set(State.values.controlsinverted, true);
+		} else {
+			if (state.getBoolean(State.values.controlsinverted))
+				state.set(State.values.controlsinverted, false);
 		}
 	}
 
+	private void camRelease(final long camMoveID) {
+		new Thread(new Runnable() {
+			public void run() {				
+				Util.delay(CAM_RELEASE_DELAY);
+				if (camMoveID == currentCamMoveID) {
+					application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
+					sendCommand(CAMRELEASE);  
+				}
+			}
+				
+		}).start();
+	}
+
+	public void speedset(String str) { // final speeds update
+		
+	    try { // check for integer
+	        Integer.parseInt(str); 
+	        state.set(State.values.motorspeed, Integer.parseInt(str));
+	    } catch(NumberFormatException e) {  // not integer
+			final speeds update = speeds.valueOf(str);
+			
+			switch (update) {
+				case slow: state.set(State.values.motorspeed, speedslow); break;
+				case med: state.set(State.values.motorspeed, speedmed); break;
+				case fast: state.set(State.values.motorspeed, speedfast); break;
+			}
+	    }
+
+	}
+
+	@SuppressWarnings("incomplete-switch")
 	public void nudge(final direction dir) {
 		
-		Util.debug("nudge(): " + dir, this);
+		if (settings.getBoolean(ManualSettings.developer.name())) {
+			if (Application.openNIRead.depthCamGenerating ) {
+				switch (dir) {
+				case right:
+				case left:  rotate(dir, 15); break;
+				case forward: 
+				case backward: movedistance(dir, 0.4); break;
+				}
+				return;
+			}
+		}
 		
 		new Thread(new Runnable() {
 			public void run() {
 				
 				int n = nudgedelay;
+				boolean movingforward = state.getBoolean(State.values.movingforward);
 				
 				switch (dir) {
 				case right: turnRight(); break;
 				case left: turnLeft(); break;
 				case forward: 
 					goForward();
-					state.put(State.values.movingforward, false);
+					state.set(State.values.movingforward, false);
 					n *= 4; 
 					break;
 				case backward:
@@ -602,9 +1406,20 @@ public class ArduinoPrime  implements SerialPortEventListener {
 					n *= 4;
 				}
 				
-				Util.delay(n);
+				if (!state.exists(State.values.odomturndpms.toString())) { // normal
+					Util.delay((int) voltsComp(n));
+				} 
+				else { // continuous comp using gyro
+					if (movingforward && (dir.equals(direction.right) || dir.equals(direction.left))) {
+						long stopwaiting = System.currentTimeMillis()+LINEAR_STOP_DELAY;
+						while( System.currentTimeMillis() < stopwaiting &&
+								state.get(State.values.direction).equals(direction.forward.toString())  ) {  Util.delay(1);  } // wait for stop
+					}
+					Util.delay((long) (12.5 / state.getDouble(State.values.odomturndpms.toString())) );
+					if (movingforward)  state.set(State.values.movingforward, true);
+				}
 
-				if (state.getBoolean(State.values.movingforward)) goForward();
+				if (movingforward) goForward();
 				else stopGoing();
 				
 			}
@@ -613,122 +1428,392 @@ public class ArduinoPrime  implements SerialPortEventListener {
 
 	public void rotate(final direction dir, final int degrees) {
 		new Thread(new Runnable() {
+			@SuppressWarnings("incomplete-switch")
 			public void run() {
 				
-				final int tempspeed = state.getInteger(State.values.motorspeed);
-				state.put(State.values.motorspeed, speedfast);
+				int tempspeed = state.getInteger(State.values.motorspeed);
+				state.set(State.values.motorspeed, speedfast);
 				
-				int n = fullrotationdelay * degrees / 360;
+				
+				if (settings.getBoolean(ManualSettings.developer.name())) {
+					if (Application.openNIRead.depthCamGenerating) { // openni
+						short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
+						if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
+						if (!state.getBoolean(State.values.odometry)) odometryStart();
+						state.delete(State.values.distanceanglettl);
+					}
+					
+				}
 				
 				switch (dir) {
 					case right: turnRight(); break;
 					case left: turnLeft(); 
 				}
 				
-				Util.delay(n);
+				if (!state.exists(State.values.odomturndpms.toString())) { // normal
+					double n = fullrotationdelay * degrees / 360;
+					Util.delay((int) voltsComp(n));
+				} 
+				else { // continuous comp using gyro
+					Util.delay((long) (degrees / state.getDouble(State.values.odomturndpms.toString())) );
+				}
 
 				stopGoing();
-				state.put(State.values.motorspeed, tempspeed);
-				application.message(null, "motion", "stopped");
+				
+				String msg = "";
+				if (settings.getBoolean(ManualSettings.developer.name())) {
+
+					if (Application.openNIRead.depthCamGenerating) { // openni 
+						Util.delay(500); // allow for slow to stop
+						short[] depthFrameAfter = Application.openNIRead.readFullFrame();
+
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						Mapper.addMove(depthFrameAfter, 0, angle);
+						msg += "angle moved via gyro: "+angle;
+					}
+
+				}
+				
+				if (msg.equals("")) msg = null;
+				state.set(State.values.motorspeed, tempspeed);
+				application.message(msg, "motion", "stopped");
 				
 			}
 		}).start();
 	}
 	
-	public void slide(final direction dir){
-		
-		Util.debug("slide(): " + dir, this);
-		
-		if (sliding == false) {
-			sliding = true;
-			
-			new Thread(new Runnable() {
-				public void run() {
-					try {	
-						
-						final int tempspeed = state.getInteger(State.values.motorspeed);
-						final int distance = 300;
-						final int turntime = 500;
-						
-						state.put(State.values.motorspeed, speedfast);
-						
-						switch (dir) {
-						case right: turnLeft(); break;
-						case left: turnRight(); break;
-						}
+	public void movedistance(final direction dir, final double meters) {
+		new Thread(new Runnable() {
+			public void run() {
 				
-						Thread.sleep(turntime);
-						
-						if (sliding == true) {
-							goBackward();
-							Thread.sleep(distance);
-							
-							if (sliding == true) {
-								
-								switch (dir) {
-								case right: turnRight();
-								case left: turnLeft();
-								}	
-									
-								Thread.sleep(turntime);
-							 
-								if (sliding == true) {
-									goForward();
-									Thread.sleep(distance);
-									if (sliding == true) {
-										stopGoing();
-										sliding = false;
-										state.put(State.values.motorspeed, tempspeed);
-									}
-								}
+				final int tempspeed = state.getInteger(State.values.motorspeed);
+				state.set(State.values.motorspeed, speedfast);
+				
+				
+				// openni
+				short[] depthFrameBefore = null;
+				short[] depthFrameAfter = null;
+				
+				// stereo
+				short[][] cellsBefore = null;
+				short[][] cellsAfter = null;
+
+				String currentdirection = state.get(State.values.direction);
+				
+				switch (dir) {
+					case forward:
+
+						// openni, experimental
+						if (settings.getBoolean(ManualSettings.developer.name())) {
+							if (Application.openNIRead.depthCamGenerating) {   // openni
+								depthFrameBefore = Application.openNIRead.readFullFrame();	
+								if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
+	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+	        					state.delete(State.values.distanceanglettl);
 							}
 						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
+
+                        goForward(); 
+						break;
+						
+					case backward:
+
+						// openni, experimental
+						if (settings.getBoolean(ManualSettings.developer.name())) {
+							if (Application.openNIRead.depthCamGenerating) {  // openni
+								depthFrameAfter = Application.openNIRead.readFullFrame();						
+								if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
+	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+	        					state.delete(State.values.distanceanglettl);
+							}
+
+						}
+                        
+						goBackward();
+						break;
 				}
-			}).start();
-		}
+
+//				state.block(State.values.direction, direction.forward.toString(), 1000); // wait for goForward ID to be assigned
+//				long moveID = currentMoveID;
+
+//				long moveID = 0;
+//				if (currentdirection.equals(direction.forward.toString())) moveID = currentMoveID;
+
+				if (!state.exists(State.values.odomlinearmpms.toString())) { // normal
+					double n = onemeterdelay * meters;
+					Util.delay((int) voltsComp(n));
+				} 
+				else { // continuous comp using gyro
+					Util.delay((long) (meters / state.getDouble(State.values.odomlinearmpms.toString())));
+				}
+
+//				if (currentdirection.equals(direction.forward.toString()))
+//					if (currentCamMoveID != moveID) return;
+
+				stopGoing();
+				
+				String msg = null;
+
+				// openni, experimental
+				if (settings.getBoolean(ManualSettings.developer.name())) {
+
+					if (depthFrameBefore != null) { // went forward, openni
+						Util.delay(750); // allow for slow to stop
+	
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						
+						depthFrameAfter = Application.openNIRead.readFullFrame();
+						
+	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+						msg = "distance moved d: "+distance+", angle:"+angle;
+						Mapper.addMove(depthFrameAfter, distance, angle);
+					}
+					else if (depthFrameAfter != null) { // went backward, openni
+						Util.delay(750);
+						
+						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(10); } //wait TODO: add timer
+						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
+						
+						depthFrameBefore = Application.openNIRead.readFullFrame();
+						
+	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+						msg = "distance moved d: "+distance+", angle:"+angle;
+						Mapper.addMove(depthFrameBefore, distance, angle);
+					}
+
+				}
+				
+				state.set(State.values.motorspeed, tempspeed);
+				application.message(msg, "motion", "stopped");
+				
+			}
+		}).start();
 	}
 
-	public void slidecancel() {
-		if (sliding == true) sliding = false;
+	public void arcmove(final double arclengthmeters, final int angledegrees) {
+
+		if (arclengthmeters ==0) return;
+
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+
+		if (state.getBoolean(State.values.stopbetweenmoves)) {
+
+			Boolean reversing = false;
+			if ((state.get(State.values.direction).equals(direction.forward.toString()) && arclengthmeters < 0) ||
+					(state.get(State.values.direction).equals(direction.backward.toString()) && arclengthmeters > 1) )
+				reversing = true;
+
+			// stop only if turning-in-place or reversing
+			if ( (!state.get(State.values.direction).equals(direction.stop.toString())  &&
+					!state.get(State.values.direction).equals(direction.arcleft.toString()) &&
+					!state.get(State.values.direction).equals(direction.arcright.toString()) ) ||
+					reversing
+					) {
+
+				stopGoing();
+				currentMoveID = moveID;
+
+				new Thread(new Runnable() {public void run() {
+					long stopwaiting = System.currentTimeMillis()+1000;
+					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
+							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
+					if (currentMoveID == moveID)  arcmove(arclengthmeters, angledegrees);
+
+				} }).start();
+
+				return;
+			}
+		}
+
+		final int degreespermeter = (int) (Math.abs(angledegrees/arclengthmeters));
+
+//		if (degreespermeter < 6) {
+//			if (!state.get(State.values.direction).equals(direction.stop.toString()))
+//				state.set(State.values.direction, direction.forward.toString()); // to skip stopbetweenmoves and accel
+//			movedistance(direction.forward, arclengthmeters);
+//			return;
+//		}
+
+		state.set(State.values.moving, true);
+
+		// go straight and exit if only slight arc
+		if (degreespermeter < 6) {
+
+			if (!state.exists(State.values.odomlinearmpms.toString())) { // assumed no odometry
+				if (arclengthmeters > 0)
+					movedistance(direction.forward, arclengthmeters);
+				else movedistance(direction.backward, arclengthmeters);
+				return;
+			}
+
+			// odometry running
+			int speed = state.getInteger(State.values.odomlinearpwm);
+			tracklinearrate(moveID);
+			speed = (int) voltsComp((double) speed);
+			if (speed > 255) speed = 255;
+			int[] comp = applyComp(speed);
+			int L, R;
+
+			if (arclengthmeters > 0) { //forwards
+				L = comp[0];
+				R = comp[1];
+				sendCommand(new byte[]{FORWARD, (byte) R, (byte) L});
+				state.set(State.values.direction, direction.forward.toString());
+			} else { // backwards
+				L = comp[1];
+				R = comp[0];
+				sendCommand(new byte[]{BACKWARD, (byte) R, (byte) L});
+				state.set(State.values.direction, direction.backward.toString());
+			}
+
+			new Thread(new Runnable() {
+				public void run() {
+					Util.delay((long) Math.abs(arclengthmeters / state.getDouble(State.values.odomlinearmpms.toString())));
+					if (moveID == currentMoveID) stopGoing();
+				}
+			}).start();
+
+			return;
+		}
+			
+		new Thread(new Runnable() {
+			public void run() {
+
+				double angleradians = Math.toRadians(Math.abs(angledegrees));
+				double radius = arclengthmeters/angleradians;
+
+				final int degreespermetermin = 6; // pwm 100
+				final int degreespermetermax = 70; // pwm 25
+				final int minpwmarc = 25; // non-comped
+
+				int rate = degreespermeter;
+				if (rate > degreespermetermax) rate = degreespermetermax;
+				if (rate < degreespermetermin) rate = degreespermetermin; // shouldn't be needed, filtered at top
+				int pwm;
+				if (rate >  40)
+					pwm = (int) (minpwmarc + (degreespermetermax-rate)*0.6); // linear, not that accurate! TODO: bulge bottom end of range
+				else
+					pwm = (int) (41 + (41-rate)*1.928);
+
+				// TODO: make arcmovecomp auto-adjusting
+				pwm = (int) (voltsComp(pwm) * settings.getDouble(ManualSettings.arcmovecomp.toString()));
+
+				if (angledegrees < 0) { // right, apply comp to left wheel TODO: double check comp direction!!
+					state.set(State.values.direction, direction.arcright.toString());
+					arcodomcomp = Math.abs(arclengthmeters / ((radius-0.13)*angleradians));
+					int spd = speedfast;
+					if (steeringcomp < 0) spd += steeringcomp;
+					if (arclengthmeters > 0) // forwards
+						sendCommand(new byte[] { FORWARD, (byte) spd, (byte) pwm});
+					else sendCommand(new byte[] { BACKWARD, (byte) pwm, (byte) spd}); // backwards
+				}
+				else { // left
+					state.set(State.values.direction, direction.arcleft.toString());
+					arcodomcomp = Math.abs(arclengthmeters / ((radius+0.13)*angleradians));
+					int spd = speedfast;
+					if (steeringcomp > 0) spd -= steeringcomp;
+					if (arclengthmeters > 0) //forwards
+						sendCommand(new byte[] { FORWARD, (byte) pwm, (byte) spd});
+					else sendCommand(new byte[] { BACKWARD, (byte) spd, (byte) pwm}); // backwards
+				}
+
+//				arcodomcomp *= 0.98; // 1.015;
+
+				// sanity check
+				if (arcodomcomp > 1.3) {
+					Util.debug("error, whacky arcodomcomp: "+arcodomcomp, this);
+					arcodomcomp = 1.3;
+				}
+				else if (arcodomcomp < 0.7) {
+					Util.debug("error, whacky arcodomcomp: "+arcodomcomp, this);
+					arcodomcomp = 0.7;
+				}
+
+				Util.delay((long) (Math.abs(arclengthmeters/0.32*1000)));
+
+				// end of thread
+				if (currentMoveID == moveID)  stopGoing();
+
+			}
+		}).start();
+	}
+
+	
+	/**
+	 * compensates timer (or pwm values) for drooping system voltage
+	 * @param n original milliseconds
+	 * @return modified (typically extended) milliseconds
+	 */
+	public double voltsComp(double n) {
+		double volts = 12.0; // default
+		final double nominalvolts = 12.0;
+		final double exponent = 1.6;
+
+		if (state.exists(State.values.batteryvolts.toString())) {
+			if (Math.abs(state.getDouble(State.values.batteryvolts.toString()) - volts) > 2) // sanity check
+				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.batteryvolts), this);
+			else  volts = Double.parseDouble(state.get(State.values.batteryvolts));
+		}
+		
+		n = n * Math.pow(nominalvolts/volts, exponent);
+		return n;
+	}
+
+	public double unVoltsComp(double n) {
+		double volts = 12.0;
+		final double nominalvolts = 12.0;
+		final double exponent = 1.6;
+
+		if (state.exists(State.values.batteryvolts.toString())) {
+			if (Math.abs(state.getDouble(State.values.batteryvolts.toString()) - volts) > 2) // sanity check
+				Util.log("error state:battvolts beyond expected range! "+state.get(State.values.batteryvolts), this);
+			else  volts = Double.parseDouble(state.get(State.values.batteryvolts));
+		}
+
+		n = n / Math.pow(nominalvolts/volts, exponent);
+		return n;
+	}
+
+	public void setInitialOdomPWM() {
+		state.set(State.values.odomturnpwm,
+				(int) voltsComp(Double.parseDouble(settings.readSetting(ManualSettings.odomturnpwm.name())) ) );
+		state.set(State.values.odomlinearpwm,
+				(int) voltsComp(Double.parseDouble(settings.readSetting(ManualSettings.odomlinearpwm.name()))));
+	}
+
+	public void delayWithVoltsComp(int n) {
+		int delay = (int) voltsComp((double) n);
+		Util.delay(delay);
 	}
 
 	public void clickSteer(final int x, int y) {
-		
-		Util.debug("__clickSteer(): " + x, this);
-		
-		if (state.getBoolean(State.values.controlsinverted)) {
-			y=-y;
-		}
-		
 		clickCam(y);
-		clickNudge(x);
+		clickNudge(x, false);
 	}
 
-	private void clickNudge(final Integer x) {
+	public void clickNudge(final int x, final boolean firmwaretimed) {
 		
-		Util.debug("__clickNudge(): " + "x: " + x, this);
-		
-		//TODO:  unsure of this 
 		final double mult = Math.pow(((320.0 - (Math.abs(x))) / 320.0), 3)* clicknudgemomentummult + 1.0;
 		final int clicknudgedelay = (int) ((maxclicknudgedelay * (Math.abs(x)) / 320) * mult);
-		
-		Util.debug("__clickNudge() n: "+clicknudgemomentummult+" mult: "+mult+" clicknudgedelay-after: "+clicknudgedelay, this);
 		
 		new Thread(new Runnable() {	
 			public void run() {
 				try {
 					
 					final int tempspeed = state.getInteger(State.values.motorspeed);
-					state.put(State.values.motorspeed, speedfast);
+					state.set(State.values.motorspeed, speedfast);
+
+					int delay = 0;
+					if (firmwaretimed) delay = clicknudgedelay+FIRMWARE_TIMED_OFFSET;
 					
-					if (x > 0) turnRight();
-					else turnLeft();
+					if (x > 0) turnRight(delay);
+					else turnLeft(delay);
 					
-					Thread.sleep(clicknudgedelay);
-					state.put(State.values.motorspeed, tempspeed);
+					Util.delay((int) voltsComp(clicknudgedelay));
+					state.set(State.values.motorspeed, tempspeed);
 					
 					if (state.getBoolean(State.values.movingforward)) goForward();
 					else stopGoing();
@@ -740,28 +1825,117 @@ public class ArduinoPrime  implements SerialPortEventListener {
 		}).start();
 	
 	}
+	
 	public void stopGoing() {
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+
+		state.set(State.values.moving, false);
+		state.set(State.values.movingforward, false);
+
+		// needs deaccel!
+//		if (state.getBoolean(State.values.stopbetweenmoves)) sendCommand(HARD_STOP);
+//		else sendCommand(STOP);
+		
 		sendCommand(STOP);
-		state.put(State.values.moving, false);
-		state.put(State.values.movingforward, false);
-		if (state.getBoolean(State.values.muteOnROVmove) && state.getBoolean(State.values.moving)) application.unmuteROVMic();
+		
+//		if (!state.getBoolean(State.values.stopbetweenmoves)) { // firmware can call stop when odometry running
+		if (!state.getBoolean(State.values.odometry)) { // firmware can call stop when odometry running
+			state.set(State.values.direction, direction.stop.toString());
+		}
+		else {
+			new Thread(new Runnable() {public void run() {
+				Util.delay(1000);
+				if (currentMoveID == moveID)  {
+					state.set(State.values.direction, direction.stop.toString());
+				}
+				
+			} }).start();
+		}
 	}
 	
 	private void clickCam(final Integer y) {
+		if (state.getBoolean(State.values.autodocking)) return;
 		
-		Util.debug("___clickCam(): " + "y: " + y, this);
-		
-		Integer n = maxclickcam * y / 240;  
-		state.set(State.values.cameratilt, state.getInteger(State.values.cameratilt) - n);
-		
-		// range check 
-		if (state.getInteger(State.values.cameratilt) < CAM_MIN) state.set(State.values.cameratilt, CAM_MIN);
-		if (state.getInteger(State.values.cameratilt) > CAM_MAX) state.set(State.values.cameratilt, CAM_MAX);
-		
-		application.messageplayer(null, "cameratilt", state.get(State.values.cameratilt));
-		sendCommand(new byte[] { CAM, (byte) state.getInteger(State.values.cameratilt) });	
-		
+		int n = maxclickcam * y / 240;
+		n = state.getInteger(State.values.cameratilt) +n;
+
+		if (n > CAM_MIN) { n= CAM_MIN; }
+		if (n < CAM_MAX) { n= CAM_MAX; }
+//		if (n == 13 || n== 10) { n=12; }
+//		sendCommand(new byte[] { CAM, (byte) n });
+//		long camMoveID = System.nanoTime();
+//		currentCamMoveID = camMoveID;
+//		camRelease(camMoveID);
+//		state.set(State.values.cameratilt, n);
+		camtilt(n);
 	}
+	
+	public void setSteeringComp(String str) {
+		if (str.contains("L")) { // left is negative
+			steeringcomp = Integer.parseInt(str.replaceAll("\\D", "")) * -1;
+		}
+		else { steeringcomp = Integer.parseInt(str.replaceAll("\\D", "")); }
+		steeringcomp = (int) ((double) steeringcomp * 255/100);
+	}
+	
+	public void odometryStart() {
+		state.set(State.values.odometry, true);
+		sendCommand(ODOMETRY_START);
+		state.delete(State.values.distanceangle);
+		state.set(State.values.stopbetweenmoves, true);
+		state.set(State.values.odomlinearmpms, METERSPERSEC / 1000);
+		state.set(State.values.odomturndpms, DEGPERMS);
+		state.set(State.values.motorspeed, state.get(State.values.odomlinearpwm));
+
+		if (state.exists(State.values.odometrybroadcast.toString()) && !odometryBroadCasting) {
+			new Thread(new Runnable() {public void run() {
+
+				odometryBroadCasting = true;
+
+				while (state.exists(State.values.odometrybroadcast.toString()) &&
+						state.exists(State.values.odometry.toString())) {
+					if (state.getBoolean(State.values.odometry) &&
+							state.getLong(State.values.odometrybroadcast) > 0 ) {
+						Util.delay(state.getLong(State.values.odometrybroadcast));
+						odometryReport();
+					}
+					else  break;
+				}
+
+				odometryBroadCasting = false;
+			} }).start();
+		}
+	}
+
+	public void odometryStop() {
+		state.set(State.values.odometry, false);
+		sendCommand(ODOMETRY_STOP_AND_REPORT);
+		state.set(State.values.stopbetweenmoves, false);
+		state.delete(State.values.odomturndpms);
+		state.delete(State.values.odomlinearmpms);
+	}
+	
+	public void odometryReport() {
+		sendCommand(ODOMETRY_REPORT);
+	}
+
+	public void setCameraStops(int h, int r) {
+		if (h != CAM_HORIZ) {
+			settings.writeSettings(GUISettings.camhoriz.name(), h);
+			sendCommand(new byte[] { CAMHORIZSET,  (byte) h }); // writes to eeprom for horiz-on-reset
+			CAM_HORIZ = h;
+		}
+		if (r != CAM_REVERSE) {
+			settings.writeSettings(GUISettings.camreverse.name(), r);
+			CAM_REVERSE = r;
+		}
+		
+		double servoResolutionComp =  (CAM_REVERSE - CAM_HORIZ)/68.0;
+		CAM_MAX = (int) (CAM_HORIZ - 45 * servoResolutionComp); 
+		CAM_MIN = (int) (CAM_HORIZ + 25 * servoResolutionComp); // 100;
+	}
+	
 
 }
 

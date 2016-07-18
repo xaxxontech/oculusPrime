@@ -7,33 +7,22 @@ public class LoginRecords {
 
 	public static final String PASSENGER = "passenger";
 	public static final String DRIVER = "driver";
-//	public static final int MAX_RECORDS = 50;
 	
-	public static Vector<Record> list = new Vector<Record>();
-	public static State state = State.getReference();
-	public static Settings settings = Settings.getReference();
 	private static Application app = null; 
+	public static Vector<Record> list = new Vector<Record>();
+	public static Settings settings = Settings.getReference();
+	public static State state = State.getReference();
 	
-	public LoginRecords(){}
-	
-	public void setApplication(Application a) {
-		app = a;
-	}
+	public LoginRecords(Application a) { app = a; }
 	
 	public void beDriver() { 
-		
 		list.add(new Record(state.get(State.values.driver), DRIVER)); 
 		state.set(State.values.logintime, System.currentTimeMillis());
-
 		Util.debug("beDriver(): " + state.get(State.values.driver), this);
-		
-//		if(list.size()>MAX_RECORDS) list.remove(0); // push out oldest 
 	}
 	
-	public void bePassenger(String user) {		
-	
+	public void bePassenger(String user) {			
 		list.add(new Record(user, PASSENGER)); 
-//		if(list.size()>MAX_RECORDS) list.remove(0); // push out oldest
 		Util.debug("bePassenger(): " + user, this);
 	}
 	
@@ -47,7 +36,6 @@ public class LoginRecords {
 		return admin.equals(user.toLowerCase());
 	}
 	
-	
 	public void signoutDriver() {
 		
 		// try all instances
@@ -59,23 +47,8 @@ public class LoginRecords {
 		}
 		
 		state.delete(State.values.driver);
-		
-//		if(list.size() > MAX_RECORDS) list.remove(0);
-
 	}
 	
-	/** @return the number of users waiting in line */
-	private int getNumPassengers() {
-		int passengers = 0;
-		for (int i = 0; i < list.size(); i++){
-			Record rec = list.get(i);
-			if(rec.getRole().equals(PASSENGER))
-				passengers++;
-		}
-
-		return passengers;
-	}
-
 	/** @return the number of users */
 	public int getActive() {
 		int active = 0;
@@ -88,36 +61,7 @@ public class LoginRecords {
 		return active;
 	}
 	
-//	/** @return a list of user names waiting in line */
-//	public String[] getPassengerList() {
-//		String[] passengers = new String[getPassengers()];
-//		for (int i = 0; i < list.size(); i++){
-//			Record rec = list.get(i);
-//			if(rec.isActive() && rec.getRole().equals(PASSENGER))
-//				passengers[i] = rec.getUser();
-//		}
-//
-//		return passengers;
-//	}
-	
-//	/** @return a list of user names */
-//	public String[] getActiveList() {
-//		String[] passengers = new String[getActive()];
-//		for (int i = 0; i < list.size(); i++){
-//			Record rec = list.get(i);
-//			if(rec.isActive())
-//				passengers[i] = rec.getUser();
-//		}
-//
-//		return passengers;
-//	}
-
-//	public int size() {
-//		return list.size();
-//	}
-
 	public String toString() {
-
 		String str = "RTMP users login records:<br>";
 		if (list.isEmpty()) return null;
 		for (int i = 0; i < list.size(); i++)
@@ -126,9 +70,7 @@ public class LoginRecords {
 		return str;
 	}
 	
-	/** 
-	 * @return list of connected users 
-	 */
+	/** @return list of connected users */
 	public String who() {
 		String result = "";
 		result += "active RTMP users: " + getActive()+"<br>" ;
@@ -140,16 +82,14 @@ public class LoginRecords {
 			}
 		}
 		if (app.commandServer!=null) {
-			result+="telnet connections: "+app.commandServer.printers.size(); 
+			result+="telnet connections: "+state.get(State.values.telnetusers); // +app.commandServer.printers.size();
 		}
 
 		return result;
 	}
-
-	/**
-	 * store each record in an object 
-	 */
-	private class Record {
+	
+	/** store each record in an object */
+	class Record {
 
 		private long timein = System.currentTimeMillis();
 		private long timeout = 0;
@@ -159,10 +99,6 @@ public class LoginRecords {
 		Record(String usr, String role){
 			this.user = usr;
 			this.role = role;
-		}
-
-		public String getUser() {
-			return user;
 		}
 		
 		public String getRole() {
@@ -187,8 +123,8 @@ public class LoginRecords {
 		public void logout() {
 			if(timeout==0){
 				timeout = System.currentTimeMillis();
-				Util.debug("logged out : " + toString(), this);
-			} else Util.log("error: trying to logout twice", this);	
+				Util.debug(toString(), this);
+			} // else Util.log("error: trying to logout twice", this);	
 		}
 	}
 }

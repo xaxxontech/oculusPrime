@@ -1,34 +1,68 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Properties;
+import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
+
+import developer.Ros.navsystemstate;
 
 public class State {
 	
 	public enum values{ 
-		motionenabled, moving, movingforward, // motors
-		dockgrabbusy, docking, dockstatus, autodocking, dockxsize,  dockslope, dockxpos, dockypos,  // dock 
-		floodlighton, spotlightbrightness, // lights
-		driver, logintime, pendinguserconnected,  // rtmp users
-		boottime, localaddress, externaladdress, httpPort, // system
-		streamActivityThresholdEnabled, streamActivityThreshold, videosoundmode, stream, driverstream, //audio video
-		muteOnROVmove, volume, framegrabbusy, //audio video
-		batterycharging, batterylife, // battery
 		
-		cameratilt, motorspeed, lastusercommand, controlsinverted, // NEW! 
+		motionenabled, moving, movingforward, motorport, cameratilt, motorspeed,   // motors
+
+		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics,   // dock
+
+		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel,  // lights
+
+		driver, logintime, pendinguserconnected, telnetusers,  // users
 		
-		centerpoint; // experimental, xiton distance reading
-	};
+		videosoundmode, stream, driverstream, volume,  // audio video
+		framegrabbusy, controlsinverted, lightlevel,
+		streamactivitythreshold, streamactivity,
+		motiondetect, objectdetect, streamactivityenabled, jpgstream,
+		writingframegrabs, record, sounddetect,// undocumented
+
+		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
+		powererror, forceundock,
+		redockifweakconnection, // undocumented
+
+
+		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
+		localaddress, externaladdress, ssid, guinotify,
+		osarch,
+		waitingforcpu, // to be documented
+
+		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
+		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
+
+		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
+		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
+		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
+		navigationrouteid, nextroutetime, roswaypoint,
+		rosarcmove, // to be documented
+
+	}
+
+	/** not to be broadcast over telnet channel when updated, to reduce chatter */
+	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived, redockifweakconnection }
 	
-	/** throw error, or warning only, is trying to input of read any of these keys in the state object */
-	public enum booleanValues{ moving, movingforward, autodocking, docking, batterycharging, framegrabbusy, dockgrabbusy, motionenabled, 
-		floodlighton, driverstream, muteOnROVmove, controlsinverted };
-
+	/** @return true if given command is in the sub-set */
+	public static boolean isNonTelnetBroadCast(final String str) {
+		try { nonTelnetBroadcast.valueOf(str); } catch (Exception e) {return false;}
+		return true; 
+	}
+	
 	public static final int ERROR = -1;
-
+	
 	/** notify these on change events */
 	public Vector<Observer> observers = new Vector<Observer>();
 	
@@ -42,36 +76,23 @@ public class State {
 		return singleton;
 	}
 
-	/** private constructor for this singleton class */
 	private State() {
-		props.put(values.boottime.name(), String.valueOf(System.currentTimeMillis()));
-		props.put(values.localaddress.name(), Util.getLocalAddress());
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				String ip = null; 
-				while(ip==null){
-					ip = Util.getExternalIPAddress();
-					if(ip!=null)
-						State.getReference().set(values.externaladdress.name(), ip);
-					else Util.delay(500); // TODO: is this dangerous, cause a hang if fails??  
-				}
-			}
-		}).start();
+		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
+		props.put(values.telnetusers.name(), "0");
+		getLinuxUptime();
 	}
-	 
 	
-	public Properties getProperties(){
-		return (Properties) props.clone();
-	}
-
-	/** */
 	public void addObserver(Observer obs){
 		observers.add(obs);
 	}
 	
+	@SuppressWarnings("unchecked")
+	public HashMap<String, String> getState(){
+		return (HashMap<String, String>) props.clone();
+	}
+	
 	/** test for string equality. any nulls will return false */ 
-	public boolean equals(final String a, final String b){
+	private boolean equals(final String a, final String b){
 		String aa = get(a);
 		if(aa==null) return false; 
 		if(b==null) return false; 
@@ -84,126 +105,73 @@ public class State {
 	public boolean equals(State.values value, String b) {
 		return equals(value.name(), b);
 	}
-	
-	
-	/** */
-//	public String dump(){
-////		System.out.println("state number of listeners: " + observers.size());
-////		for(int i = 0 ; i < observers.size() ; i++) 
-////			System.out.println(i + " " + observers.get(i).getClass().getName() + "\n");
-////		
-////		try {
-////			Set<String> keys = props.keySet();
-////			for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
-////				String key = i.next();
-////				System.out.println( key + "<> " + props.get(key));
-////			}
-////			
-////		} catch (Exception e) {
-////			Util.log(e.getLocalizedMessage(), this);
-////		}
-//		return
-//	}
-	
-	/** */
+
 	@Override
-	public String toString(){	
+	public String toString(){
 		String str = "";
-		Set<String> keys = props.keySet();
-		for(Iterator<String> i = keys.iterator(); i.hasNext(); ){
-			String key = i.next();
-			str += (key + " " + props.get(key) + "<br>");
+		final Set<String> keys = props.keySet();
+		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
+			final String key = i.next();
+			str += (key + " " + props.get(key) + "<br>"); 
 		}
 		return str;
 	}
 	
-//	public boolean block(final values member, final boolean target, int timeout){
-//		return block(member, Boolean.valueOf(target), timeout);
-//	}
+	public boolean equals(values a, navsystemstate b) {
+		return equals(a.name(), b.name());
+	}
 	
-	/** */
+	/**
+	 * block until timeout or until member == target
+	 * 
+	 * @param member state key
+	 * @param target block until timeout or until member == target
+	 * @param timeout is the ms to wait before giving up 
+	 * @return true if the member was set to the target in less than the given timeout 
+	 */
 	public boolean block(final values member, final String target, int timeout){
 		
 		long start = System.currentTimeMillis();
 		String current = null;
 		while(true){
 			
-			// keep checking 
 			current = get(member); 
-			
 			if(current!=null){
 				if(target.equals(current)) return true;
 				if(target.startsWith(current)) return true;
 			}
-				
-			//
-			// TODO: FIX with a call back?? 
-			//
-			Util.delay(10);
+	
+			Util.delay(1); // no higher, used by motion, odometry
 			if (System.currentTimeMillis()-start > timeout){ 
 				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}
-	}
-
-	public boolean isBoolean(final String text){
-		Object[] list = booleanValues.values();
-		for(int i = 0 ; i < list.length ; i++)
-			if(list[i].toString().equals(text)) 
-				return true;
-		
-		return false;
-	}
+	} 
 	
 	/** Put a name/value pair into the configuration */
-	public synchronized void set(final String key, final String value) {
+	synchronized void set(final String key, final String value) {
 		
-		if(key==null) return;
-		if(value==null) return;
-		
-		// avoid unnecessary state updates
-		/*if(get(key).equals(value)){
-			Util.log("WARN: adding a state value that is NOT in the enum!", this);
-			return;
-		}*/
-		
-		// TODO: enforce these checks with fatal error ?
-		try {
-			values.valueOf(key);
-		} catch (Exception e) {
-			Util.log("DANGEROUS: adding a state value that is NOT in the enum!", this);
+		if(key==null) {
+			Util.log("set() null key!", this);
 			return;
 		}
-			
-		// TODO: enforce these checks with fatal error ?
-		if(isBoolean(key)){
-			if( ! (value.equals("true") || value.equals("false"))){
-				Util.log("DANGEROUS: can't add because is a boolean type: " + key + " = " + value, this);
-				return;
-			}
+		if(value==null) {
+			Util.log("set() use delete() instead", this);
+			Util.log("set() null valu for key: " + key, this);
+			return;
 		}
-		
+
 		try {
 			props.put(key.trim(), value.trim());
 		} catch (Exception e) {
-			e.printStackTrace();
+			Util.printError(e);
 		}
-		
-		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());	
-	}
 
-	/** Put a name/value pair into the config */
-	public void set(final String key, final long value) {
-		set(key, Long.toString(value));
+		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());
 	}
 	
-	public String get(values key){
-		return get(key.name());
-	}
-	
-	/** */
-	public synchronized String get(final String key) {
+	synchronized String get(final String key) {
 
 		String ans = null;
 		try {
@@ -218,40 +186,30 @@ public class State {
 		return ans;
 	}
 
-
-	/** */
-	public boolean getBoolean(ManualSettings setting) {
-		return getBoolean(setting);
+	public void set(final String key, final long value) {
+		set(key, Long.toString(value));
 	}
-
 	
-	/** */
+	public String get(values key){
+		return get(key.name());
+	}
+	
+	/** true returns true, anything else returns false */
 	public boolean getBoolean(String key) {
 		
 		boolean value = false;
-		
-		if( ! isBoolean(key)){ // TODO: testing .... 
-			Util.log("___DANGEROUS: asking for a NON-boolean type: " + key + " = " + value, this);
-			///return false;
-		}
 		
 		try {
 
 			value = Boolean.parseBoolean(get(key));
 
 		} catch (Exception e) {
-			if(key.equals("yes")) { // TODO: testing .... 
-				Util.log("____DANGEROUS: using _yes_ for a boolean: " + key + " = " + value, this);
-				return true;
-			}
-			else return false;
+			return false;
 		}
 
 		return value;
 	}
 
-	
-	/** */
 	public int getInteger(final String key) {
 
 		String ans = null;
@@ -269,8 +227,6 @@ public class State {
 		return value;
 	}
 	
-	
-	/** */
 	public long getLong(final String key) {
 
 		String ans = null;
@@ -288,42 +244,44 @@ public class State {
 		return value;
 	}
 	
-	/** @return the ms since last boot */
+	/** @return the ms since last app start */
 	public long getUpTime(){
-		return System.currentTimeMillis() - getLong(values.boottime.name());
+		return System.currentTimeMillis() - getLong(values.javastartup);
 	}
 	
 	/** @return the ms since last user log in */
 	public long getLoginSince(){
-		return System.currentTimeMillis() - getLong(values.logintime.name());
+		return System.currentTimeMillis() - getLong(values.logintime);
 	}
 
-	/** */
 	public synchronized void set(String key, boolean b) {
 		if(b) set(key, "true");
 		else set(key, "false");
 	}
 	
-	/** */
+	public synchronized boolean exists(values key) {
+		return props.containsKey(key.toString().trim());
+	}
+	
 	public synchronized boolean exists(String key) {
-		return props.containsKey(key);
+		return props.containsKey(key.trim());
 	}
-
-	/** */ 
-	public synchronized void delete(String key) {
-		props.remove(key);
-		for(int i = 0 ; i < observers.size() ; i++)
-			observers.get(i).updated(key);	
+	
+	synchronized void delete(String key) {
+		if(!exists(key)) return;
+		if(props.containsKey(key)) props.remove(key);
+		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);	
+		Util.debug("delete: " + key, this);
 	}
-
+	
+	public void delete(values key) {
+		if(exists(key)) delete(key.name());
+	}
+	
 	public void set(values key, values value) {
 		set(key.name(), value.name());
 	}
-
-	public void delete(values key) {
-		delete(key.name());
-	}
-
+	
 	public int getInteger(values key) {
 		return getInteger(key.name());
 	}
@@ -348,28 +306,18 @@ public class State {
 		set(key.name(), value);
 	}
 
-	public void put(values value, String str) {
-		set(value.name(), str);
+	public void set(values key, double d) {
+		set(key.name(), String.valueOf(d));
 	}
-
-	public void put(values value, int b) {
-		put(value, String.valueOf(b));
-	}
-
-	public void put(values value, boolean b) {
-		put(value, String.valueOf(b));
-	}
-
+	
 	public void delete(PlayerCommands cmd) {
 		delete(cmd.name());
 	}
-
-	public void put(values value, long b) {
-		put(value, String.valueOf(b));
-	}
-
+	
 	public double getDouble(String key) {
 		double value = ERROR;
+		
+		if(get(key) == null) return value;
 		
 		try {
 			value = Double.valueOf(get(key));
@@ -380,5 +328,56 @@ public class State {
 		return value;
 	}
 
+	public double getDouble(values key) {
+		return getDouble(key.name());
+	}
+
+	private void getLinuxUptime(){
+		new Thread(new Runnable() {
+			@Override
+			public void run() {	
+				try {
+					
+					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
+					String line = procReader.readLine();
+					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
+					set(values.linuxboot, date.getTime());
+					
+				} catch (Exception e) {
+					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
+				}										
+			}
+		}).start();
+	}
 	
+	/*
+	public String dumpFile(){	
+		return dumpFile(" no message ");
+	}
+	
+	
+	public String dumpFile(final String msg) {
+		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
+
+		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
+		Util.log("State.dumpFile() file created: "+dump.getAbsolutePath(), this);
+		
+		try {
+			FileWriter fw = new FileWriter(dump);	
+			fw.append("# "+ new Date().toString() + " " + msg +"\r\n");
+			final Set<String> keys = props.keySet();
+			for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
+				final String key = i.next();
+				fw.append(key + " " + props.get(key) + "\r\n"); 
+			}
+			fw.append("# state history \r\n");
+			Vector<String> snap = Util.history;
+			for(int i = 0; i < snap.size() ; i++) fw.append(snap.get(i)+"\r\n");
+			fw.close();
+
+		} catch (Exception e) { Util.printError(e); }
+	
+		return dump.getAbsolutePath();
+	}*/
 }

@@ -1,31 +1,35 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<!--  9/30/2010 11:08pm -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+		"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"-->
+		<!--"http://www.w3.org/TR/html4/loose.dtd">-->
 <html>
 <head>
-<title>Oculus ROV</title>
+<title>Oculus Prime</title>
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Cache-Control" Content="no-cache">
 <meta http-equiv="Expires" content="-1">
 <style type="text/css">
 html, body {height: 100%;}
-body { background-color: #262626; } /* 202020 262626 background-image: url(images/bg_gradient.gif);  
-	background-repeat: repeat-y; background-position: center; } */
+body { background-color: #151515; } 
 body, p, ol, ul, td, tr {
 font-family: verdana, arial, helvetica, sans-serif;
-font-size:   13px;
-line-height: 18px; 
-color: #9096cd; /* #cccccc; */
+font-size:   14px;
+line-height: 20px; 
+color: #aaaaaa;
 padding: 0px; margin: 0px;}
 TABLE {   border: 0px; border-collapse: collapse; padding: 0px }
 TR { border: 0px; }
 TD  { border: 0px; }
-a { color: #4c56fe; background-color: transparent; text-decoration: none; }
-a:link { color: #4c56fe; background-color: transparent; text-decoration: none; }
-a:visited { color: #4c56fe; background-color: transparent; text-decoration: none; }
-a:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
-.keycmds { color: #777777; font-size: 11px; }
+a { color: #cccccc; background-color: transparent; text-decoration: none; }
+a:link { color: #cccccc; background-color: transparent; text-decoration: none; }
+a:visited { color: #cccccc; background-color: transparent; text-decoration: none; }
+a:hover { color: #ffffff; background-color: #333333; text-decoration: none; } /* #0711AF */
+select  { background-color: #cccccc; color: #000000; border: 1px solid #666666; padding-left: 3px;
+	margin-bottom: 1px; margin-top: 1px; font-size: 14px; }
+.keycmds { color: #666666; font-size: 11px; }
 .status { font-size: 11px; line-height: 15px; text-transform: uppercase}
 .status_title { font-size: 11px; line-height: 18px; text-transform: uppercase; color: #28872f;   }
+.status_info { color: #28872f; } /* 28872f 45F239 */
 .status_unknown { font-size: 11px; line-height: 15px; color: #666666; text-transform: lowercase;}
 .crosshair { border: 2px solid #61f383; 	filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; line-height: 0px}
 .videocursor { border: 1px solid #45F239; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; line-height: 0px}
@@ -34,32 +38,39 @@ a:hover { color: #ffffff; background-color: transparent; text-decoration: none; 
 	filter:alpha(opacity=60); opacity: 0.60; -moz-opacity:0.60; width: 1px }
 .docklineright { border-left: 1px dotted yellow; filter:alpha(opacity=40); opacity: 0.40; -moz-opacity:0.40; }
 .overlay { background-color: #000000; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; }
-.steering_button { width: 38px; height: 40px; }
-.blackbg { color: #4c56fe; background-color: transparent; text-decoration: none; }
-.blackbg:link { color: #4c56fe; background-color: transparent; text-decoration: none; }
-.blackbg:visited { color: #4c56fe; background-color: transparent; text-decoration: none; }
-.blackbg:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
+.steering_button { width: 38px; height: 40px; cursor: pointer; }
+.blackbg { color: #eeeeee; background-color: transparent; text-decoration: none; white-space: nowrap;}
+.blackbg:link { color: #eeeeee; background-color: transparent; text-decoration: none; white-space: nowrap;}
+.blackbg:visited { color: #eeeeee; background-color: transparent; text-decoration: none; white-space: nowrap;}
+.blackbg:hover { color: #ffffff; background-color: #555555; text-decoration: none; white-space: nowrap;} 
 .boxcolor { background-color: #1b1b1b; }
-.boxbg { color: #4c56fe; background-color: transparent; text-decoration: none; }
-.boxbg:link { color: #4c56fe; background-color: transparent; text-decoration: none; }
-.boxbg:visited { color: #4c56fe; background-color: transparent; text-decoration: none; }
+.boxbg { color: #cccccc; background-color: transparent; text-decoration: none; }
+.boxbg:link { color: #cccccc; background-color: transparent; text-decoration: none; }
+.boxbg:visited { color: #cccccc; background-color: transparent; text-decoration: none; }
 .boxbg:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
 .dkbluelink:link { color: #484fcd; background-color: transparent; text-decoration: none; }
 .dkbluelink:visited { color: #484fcd; background-color: transparent; text-decoration: none; }
 .dkbluelink:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
-.inputbox { background-color: #262626; color: #ffffff; border: 1px solid #666666;}
-.cancelbox { border: 1px solid #4c56fe; padding-left: 3px; padding-right: 3px }
-.messagebox {  font-size: 13px; line-height: 16px; }
+.inputbox { background-color: #151515; color: #ffffff; border: 1px solid #666666; padding-left: 3px;
+	margin-bottom: 1px; margin-top: 1px; font-size: 14px; }
+/* .cancelbox { border: 1px solid #cccccc; padding-left: 3px; padding-right: 3px } */
+.cancelbox { color: #000000; background-color: #cccccc; padding-left: 3px; padding-right: 3px }
+.zoombutton { color: #cccccc; background-color: transparent; text-decoration: none; }
+.zoombutton:hover { color: #ffffff; background-color: #666666; text-decoration: none; } /* #0711AF */
+.messagebox {  font-size: 13px; line-height: 16px; word-wrap: break-word; }
 .menu { color: #999999; }
-.cambutton { color: #434bd2; cursor: pointer; background-repeat: no-repeat; background-position: center; height: 22px} /* 484fcd */
+.cambutton { color: #cccccc; cursor: pointer; background-repeat: no-repeat; background-position: center; height: 26px} /* 484fcd */
 .facebox { border: 2px solid #4c56fe; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; line-height: 0px}
-.popupmenu_underlay { background-color: #20246d; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; } /* 20246d 2d2f5f */
-.popupcontents { background-color: #171900; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; }
+.popupmenu_underlay { background-color: #404040; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; } /* 20246d 2d2f5f */
+.popupcontents { background-color: #111111; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; }
 .mousecontrolshighlitebox { width: 38px; height: 40px; z-index: -1}
 .forwardhighlitebox { width: 38px; height: 40px; z-index: -1; }
 .grey { color: #666666; }
+.slider { color: #cccccc; background-color: #111111; height: 26px; text-align: center; cursor: pointer; }
+.wpaction { color: #ffffff; background-color: #555555; padding-left: 3px; padding-right: 3px }
 </style>
 <script src="javascript/client.js" type="text/javascript"></script>
+<script src="javascript/map.js" type="text/javascript"></script>
 <script src="flash/AC_OETags.js" type="text/javascript"></script>
 <script type="text/javascript">
 <!--
@@ -78,24 +89,31 @@ var requiredRevision = 0;
 <body id="thebody" onkeydown= "keyBoardPressed(event);" onkeyup = "keyBoardReleased(event);" 
 onload="loaded();" onunload="playerexit();" onresize="browserwindowresized();">
 
-<table width="100%"><tr><td id="topgap" style="height: 30px"> </td></tr></table>
+<table><tr><td style="height: 8px"></td></tr></table>
 
-<!-- visible page div -->
-<div id="visiblepagediv">  
+<!--  base_popup_menu -->
+<div id="main_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; "></div>
+<div id="main_menu_over" >  <!-- main_menu_over div -->
+<div id="main_menu_topbar" style="line-height: 18px; cursor: move;"
+onmouseover="maintopbar('overpending');" onmouseout="maintopbar('out');"
+onmousedown="popupmenu('main', 'move');" > &nbsp; </div>
+<div id="main_menu_contents"  style="padding: 4px; padding-left: 0px;"> <!-- main_menu_contents div -->
 
 <table id="maintable" align="center" ><tr valign="top">
-<td style="padding-left: 5px">
-<table><tr><td id="topgap" style="height: 10px"> </td></tr></table>
-<div style="padding-left: 0px">
-<a class="dkbluelink" id="mainmenulink" href="javascript: mainmenu('mainmenulink');" >
-&nbsp; <img src="images/wrench.gif" border=0 style="vertical-align: middle;"><br>
-MENU</a><br>
-</div></td>
+<td style="padding-left: 5px; padding-top: 10px;">
+<div id="mainmenulink" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="mainmenu('mainmenulink');"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+class="cambutton" 
+style="width: 28px; height: 32px; background-image: url(images/wrench.png);">
+</div>
+
+</td>
 <td style="padding-left: 5px;">
 
 <table><tr valign="top"><td style="text-align: right">
 <div id="video" style="position: relative; z-index: 0; width: 640px; height: 480px;">
-<script language="JavaScript" type="text/javascript">
+<script type="text/javascript">
 
 // Version check based upon the values defined in globals
 var hasRequestedVersion = DetectFlashVer(requiredMajorVersion, requiredMinorVersion, requiredRevision);
@@ -131,30 +149,8 @@ if (hasRequestedVersion) {
 				"pluginspage", "http://www.adobe.com/go/getflashplayer"
 		);
   }
- </script>
- <!-- 
-<noscript>
-  	<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"
-			id="oculusPrime_player" width="100%" height="100%" 
-			codebase="http://fpdownload.macromedia.com/get/flashplayer/current/swflash.cab">
-			<param name="movie" value="flash/oculusPrime_player.swf" >
-			<param name="quality" value="high" >
-			<param name="bgcolor" value="#869ca7" >
-			<param name="allowScriptAccess" value="sameDomain" >
-			<param name="wmode" value="transparent" >
-			<embed src="flash/oculusPrime_player.swf" quality="high" bgcolor="#869ca7"
-				width="100%" height="100%" name="oculusPrime_player" align="middle"
-				play="true"
-				loop="false"
-				quality="high"
-				wmode="transparent"
-				allowScriptAccess="sameDomain"
-				type="application/x-shockwave-flash"
-				pluginspage="http://www.adobe.com/go/getflashplayer">
-			</embed>
-	</object>
-</noscript>
--->
+</script>
+
 </div>
 </td>
 
@@ -162,59 +158,61 @@ if (hasRequestedVersion) {
 
 <div style="line-height: 15px; padding-left: 7px; padding-top: 10px">
 <span class="status_title" id="connection_title">uplink<span class="grey">:</span>
-<span class="status" id="connection_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="connection_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="lag_title">ping<span class="grey">:</span>
-<span class="status" id="lag_status" style="color: #45F239; background-color: #262626;
+<span class="status" id="lag_status" style="color: #45F239; background-color: #151515;
 text-transform: none;">
 <span class="status_unknown">unknown</span></span>
 <span id="pingcountmeter" style="color: green"></span>&nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="motion_title">motion<span class="grey">:</span>
-<span class="status" id="motion_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="motion_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="stream_title">
 rov stream<span class="grey">:</span>
-<span class="status" id="stream_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="stream_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
+<div id="self_stream_status" style="display: none">
 <span class="status_title" id="selfstream_title">self stream<span class="grey">:</span>
-<span class="status" id="selfstream_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="selfstream_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
+</div>
 
 <span class="status_title" id="speed_title">speed<span class="grey">:</span>
-<span class="status" id="speed_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="speed_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="cameratilt_title">camera tilt<span class="grey">:</span>
-<span class="status" id="cameratilt_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="cameratilt_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="battery_title">battery<span class="grey">:</span>
-<span class="status" id="battery_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="battery_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="dock_title">dock<span class="grey">:</span>
-<span class="status" id="dock_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="dock_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="keyboard_title">keyboard input<span class="grey">:</span>
-<span class="status" id="keyboard_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="keyboard_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">enabled</span></span>
 &nbsp; &nbsp;</span><br>
 
 <span class="status_title" id="user_title">user<span class="grey">:</span>
-<span class="status" id="user_status" style="color: #45F239; background-color: #262626">
+<span class="status" id="user_status" style="color: #45F239; background-color: #151515">
 <span class="status_unknown">unknown</span></span>
 &nbsp; &nbsp;</span><br>
 </div>
@@ -228,30 +226,37 @@ MENU <img src="images/wrench.gif" border=0 style="vertical-align: middle;"></a><
 
 <div style="padding-left: 3px; width: 195px">
 <table style="background-image: url('images/steering_icons.png'); background-repeat: no-repeat;
-background-position: top; width: 190px; height: 200px; background-color: transparent">
+background-position: bottom; width: 190px; height: 200px; background-color: transparent">
+
+<tr><td colspan="5" style="text-align: center; height: 18px; line-height: 15px; 
+font-size: 11px; "
+id="steering_textbox"> </td></tr>
+<tr><td colspan="5" class="keycmds" style="text-align: center; height: 20px;
+padding-bottom: 5px"
+id="steeringkeytextbox"> </td></tr>
 
 <tr>
 <td class="steering_button" id="camera up" onmouseover="steeringmouseover(this.id, 'R')" 
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button" > </td>
+<td> </td>
 <td class="steering_button" id="camera horizontal" onmouseover="steeringmouseover(this.id, 'F')" 
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button" > </td>
+<td> </td>
 <td class="steering_button" id="camera down" onmouseover="steeringmouseover(this.id, 'V')" 
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
 </tr><tr>
-<td class="steering_button"> </td>
-<td class="steering_button"> </td>
+<td> </td>
+<td> </td>
 <td class="steering_button" id="forward" onmouseover="steeringmouseover(this.id, 'UP&uarr; arrow or W'); "
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);">  </td>
-<td class="steering_button" id="nudge forward" onmouseover="steeringmouseover(this.id)" 
+<td class="steering_button" id="nudge forward" onmouseover="steeringmouseover(this.id, 'T')" 
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button"> </td>
+<td> </td>
 </tr><tr>
 <td class="steering_button" id="nudge left" onmouseover="steeringmouseover(this.id, 'A')"
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
@@ -269,38 +274,29 @@ onmouseup="steeringmouseup(this.id);"> </td>
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
 </tr><tr>
-<td class="steering_button" id="slide left" onmouseover="steeringmouseover(this.id)"
-onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
-onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button"> </td>
+<td> </td>
+<td> </td>
 <td class="steering_button" id="backward" onmouseover="steeringmouseover(this.id,'DOWN&darr; arrow or X')"
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button" id="nudge backward" onmouseover="steeringmouseover(this.id)"
+<td class="steering_button" id="nudge backward" onmouseover="steeringmouseover(this.id, 'B')"
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button" id="slide right" onmouseover="steeringmouseover(this.id)"
-onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
-onmouseup="steeringmouseup(this.id);"> </td>
+<td> </td>
 </tr><tr>
 <td class="steering_button" id="speed slow" onmouseover="steeringmouseover(this.id,'1')"
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button"> </td>
+<td> </td>
 <td class="steering_button" id="speed medium" onmouseover="steeringmouseover(this.id,'2')"
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
-<td class="steering_button"> </td>
+<td> </td>
 <td class="steering_button" id="speed fast" onmouseover="steeringmouseover(this.id,'3')"
 onmouseout="steeringmouseout(this.id);" onmousedown="steeringmousedown(this.id);" 
 onmouseup="steeringmouseup(this.id);"> </td>
 </tr>
-<tr><td colspan="5" style="text-align: center; height: 12px; line-height: 12px; 
-font-size: 11px; background-color: #262626; padding-top: 5px"
-id="steering_textbox"> </td></tr>
-<tr><td colspan="5" class="keycmds" style="text-align: center; height: 18px;
-background-color: #262626;"
-id="steeringkeytextbox"> </td></tr>
+
 </table>
 </div>
 
@@ -309,8 +305,8 @@ id="steeringkeytextbox"> </td></tr>
 <!--  message box/command log -->
 <table><tr><td style="height: 7px"></td></tr></table>
 <table><tr valign="top">
-<td  style="padding-right: 10px">
-<div class="boxcolor" id="messageboxcontainer" style="height: 90px; width: 300px; 
+<td  style="padding-right: 35px">
+<div class="boxcolor" id="messageboxcontainer" style="height: 104px; width: 300px; 
 overflow: hidden; padding-left: 5px;"
 onmouseover = "this.style.overflow = 'auto';" 
 onmouseout="this.style.overflow = 'hidden';">
@@ -323,106 +319,94 @@ onmouseout="document.getElementById('messageboxcontainer').style.overflow = 'hid
 </td>
 
 <!--  bottom menu area  -->
-<td style="padding-right: 8px; text-align: center">
-<div class="cambutton" onmouseover="camiconbutton('over','camandmic');"
-onmouseout="camiconbutton('out','camandmic');"
-onclick="camiconbutton('click','camandmic');"
-style="background-image: url(images/cammic.gif);"> &nbsp;
-</div>
-<div class="cambutton" onmouseover="camiconbutton('over','camera');"
-onmouseout="camiconbutton('out','camera');"
-onclick="camiconbutton('click','camera');"
-style="background-image: url(images/cam_icon.gif);"> &nbsp;
-</div>
-<div class="cambutton" onmouseover="camiconbutton('over','mic');"
-onmouseout="camiconbutton('out','mic');"
-onclick="camiconbutton('click','mic');"
-style="background-image: url(images/mic_icon.gif);"> &nbsp;
-</div>
-<div class="cambutton" onmouseover="camiconbutton('over','pubstop');"
-onmouseout="camiconbutton('out','pubstop');"
-onclick="camiconbutton('click','pubstop');"
-style="background-image: url(images/cammicoff.gif); width: 37px;"> &nbsp;
-</div>
-</td>
-<td style="padding-right: 20px">
-<div class="cambutton" id="camandmic" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-<span style="font-variant: small-caps;">rov</span>
-cam/mic ON</div>
-<div class="cambutton" id="camera" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-<span style="font-variant: small-caps;">rov</span>
-cam ON</div>
-<div class="cambutton" id="mic" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-<span style="font-variant: small-caps;">rov</span>
-mic ON</div>
-<div class="cambutton" id="pubstop" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-<span style="font-variant: small-caps;">rov</span>
-cam/mic OFF</div>
-</td>
+<td style="padding-right: 8px;">
 
-<td style="padding-right: 8px; text-align: center">
-<div class="cambutton" onmouseover="camiconbutton('over','broadcast_camandmic');"
-onmouseout="camiconbutton('out','broadcast_camandmic');"
-onclick="camiconbutton('click','broadcast_camandmic');"
-style="background-image: url(images/tvface_mic.gif); width: 37px;"> &nbsp;
+<div id="camera" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 52px; background-image: url(images/cam_icon.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">cam ON</td>
+</tr></table>
 </div>
-<div class="cambutton" onmouseover="camiconbutton('over','broadcast_camera');"
-onmouseout="camiconbutton('out','broadcast_camera');"
-onclick="camiconbutton('click','broadcast_camera');"
-style="background-image: url(images/tvface.gif); width: 37px;"> &nbsp;
+<div id="camandmic" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 52px; background-image: url(images/cammic.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">cam/mic ON</td>
+</tr></table>
 </div>
-<div class="cambutton" onmouseover="camiconbutton('over','broadcast_mic');"
-onmouseout="camiconbutton('out','broadcast_mic');"
-onclick="camiconbutton('click','broadcast_mic');"
-style="background-image: url(images/mic_icon.gif); width: 37px;"> &nbsp;
+<div id="mic" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 52px; background-image: url(images/mic_right.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px; 3px">mic ON</td>
+</tr></table>
 </div>
-<div class="cambutton" onmouseover="camiconbutton('over','broadcast_off');"
-onmouseout="camiconbutton('out','broadcast_off');"
-onclick="camiconbutton('click','broadcast_off');"
-style="background-image: url(images/tvface_mic_off.gif); width: 37px;"> &nbsp;
-</div>
-</td>
-<td style="padding-right: 20px">
-<div class="cambutton" id="broadcast_camandmic" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-self cam/mic ON</div>
-<div class="cambutton" id="broadcast_camera" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-self cam ON</div>
-<div class="cambutton" id="broadcast_mic" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-self mic ON</div>
-<div class="cambutton" id="broadcast_off" onmouseover="camiconbutton('over',this.id);" 
-onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);">
-self cam/mic OFF</div>
-</td>
-
-<td>
-<a class="dkbluelink" id="docklink" href="javascript: autodock('start');" style="line-height: 22px"><img src="images/charge.gif" border=0" style="vertical-align: bottom"> dock</a><br>
-<!-- 
-<a class="dkbluelink" href="javascript: dock('undock');" style="line-height: 22px">
-<img src="images/chargeoff.gif" border=0" style="vertical-align: bottom"> un-dock</a><br>
- -->
-<div>
-<div id="speakchatlinks" style="line-height: 22px"><img src="images/bubble.gif" border=0" style="vertical-align: bottom">
-<a class="dkbluelink" href="javascript: speakchat('show','chatbox');">text</a>
-<span style="font-size: 11px; color: #343fff">/</span>
-<a class="dkbluelink" href="javascript: speakchat('show','speechbox');">speak</a></div>
+<div id="pubstop" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 52px; background-image: url(images/cammicoff.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">cam/mic OFF</td>
+</tr></table>
 </div>
 
-<a class="dkbluelink" href="javascript: logout();"  style="line-height: 22px"><img src="images/x.gif" border=0" style="vertical-align: bottom"> logout</a><br>
+</td>
+<td style="padding-right: 8px;">
+
+<div id="docklink" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="autodock('start');"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 27px; background-image: url(images/charge.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">dock</td>
+</tr></table>
+</div>
+<div id="selfstream_controls" style="display: none">
+<div id="broadcast_mic" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 27px; background-image: url(images/mic_icon.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">self mic ON</td>
+</tr></table>
+</div>
+<div id="broadcast_off" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="camiconbutton('click',this.id);"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 27px; background-image: url(images/mic_off.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">self mic OFF</td>
+</tr></table>
+</div>
+</div> <!-- end of div selfstream_controls -->
+<div id="speakchatlinks" class="cambutton" onmouseover="camiconbutton('over',this.id);" 
+onmouseout="camiconbutton('out',this.id);" onclick="speakchat('show','speechbox');"
+onmousedown="camiconbutton('down',this.id);" onmouseup="camiconbutton('up',this.id);" 
+style="padding-left: 3px; padding-right: 3px">
+<table><tr valign="middle">
+<td class="cambutton" style="width: 27px; background-image: url(images/bubble.png);"> &nbsp; </td>
+<td  class="cambutton" style="padding-left: 10px">speech</td>
+</tr></table>
+</div>
+
 </td>
 
 </tr></table>
  
 </td></tr></table>
-
-
-</div><!-- ** end of visible page div ** -->
+</div><!-- ** end of main_menu_contents div ** -->
+</div><!-- ** end of main_menu_over div ** -->
 
 
 
@@ -450,13 +434,15 @@ border-top: none; border-left: none; border-bottom: none; width:1px"></div>
 border-top: none; border-right: none; border-left: none; height: 1px;"></div>
 <div id="videocursor_right" class="videocursor" style="position: absolute; display: none; 
 border-top: none; border-right: none; border-left: none; height: 1px;"></div>
-<canvas id="videocursor_ctr" width="50" height="50" style="display:none; position: absolute"></canvas> 
-<div id="videocursor_ctr_html4" class="videocursor" style="width: 48px; height: 48px; display: none;
+<!--  <canvas id="videocursor_ctr" width="50" height="50" style="display:none; position: absolute"></canvas> --> 
+<div id="videocursor_ctr_html4" class="videocursor" style="width: 30px; height: 30px; display: none;
 position: absolute"> </div>
 
+<!-- facebox (used for autodocklock) -->
 <div id="facebox" class="facebox" style="display: none; position: absolute;"> </div>
 
-<div id="mousecontrolshighlitebox" class="mousecontrolshighlitebox" style="display: none; position: absolute;"> </div>
+<div id="mousecontrolshighlitebox" class="mousecontrolshighlitebox" style="display: none; 
+position: absolute; "> </div>
 <div id="forwardhighlitebox" class="forwardhighlitebox" style="display: none; position: absolute;"> </div>
 
 <!-- video overlay invisible -->
@@ -467,23 +453,25 @@ filter:alpha(opacity=0); opacity: 0.0; -moz-opacity:0.0; line-height: 0px"></div
 <img id="videologo" src="images/eye.gif" width="640" height="480" 
 style="position: absolute; display: none; z-index: 4" alt="">
 
-<!-- popoutbox -->
-<div id="popoutbox_under" class="overlay" style="position: absolute; display: none;"></div>
-<div id="speechbox" style="position: absolute; display: none;">
-<span style="font-size: 11px">speak</span>
+<!-- speechbox -->
+<div id="speechbox" style="position: absolute; display: none; padding: 4px; padding-left: 7px">
 <input id="speechbox_input" onblur="javascript: speakchat('hide','speechbox');" type="text"  
 onKeyPress="if (keypress(event)==13) { speech(); }" 
 class="inputbox" style="width: 150px; background-color: #000000;">
-<a class="cancelbox" href="">X</a>
-<a class="cancelbox" href="" onmousedown="speech();">&radic;</a>
+<a class="blackbg" href="">
+<span class="cancelbox"><b>X</b></span></a>&thinsp;
+<a class="blackbg" href="" onmousedown="speech();">
+<span class="cancelbox">&#x2714;</span></a>
 </div>
-<div id="chatbox" style="position: absolute; display: none;">
-<span style="font-size: 11px">text</span>
-<input id="chatbox_input" onblur="javascript: speakchat('hide','chatbox');" type="text"  
-onKeyPress="if (keypress(event)==13) { chat(); }" 
-class="inputbox" style="width: 150px; background-color: #000000;">
-<a class="cancelbox" href="">X</a>
-<a class="cancelbox" href="" onmousedown="chat();">&radic;</a>
+
+<!--  hidden windows -->
+
+<!--  aux_popup_menu -->
+<div id="aux_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="aux_menu_over" style="position: absolute; display: none; z-index: 5;">
+<div id="aux_menu_topbar" style="line-height: 18px; cursor: move;"
+onmousedown="popupmenu('aux', 'move');" > &nbsp; </div>
+<div id="aux_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
 </div>
 
 <!--  context_popup_menu -->
@@ -494,311 +482,452 @@ onmousedown="popupmenu('context', 'move');" > &nbsp; </div>
 <div id="context_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
 </div>
 
+<!--  rosmap_popup_menu -->
+<div id="rosmap_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="rosmap_menu_over" style="position: absolute; display: none; z-index: 5; overflow: hidden">
+<div id="rosmap_menu_topbar" style="line-height: 18px; cursor: move; "
+onmousedown="popupmenu('rosmap', 'move');" > &nbsp; </div>
+<div id="rosmap_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+<div style="height: 0px; position: relative; top: -20px; text-align: right"
+onmousedown="popupmenusize('rosmap', event);" >
+<span id="rosmap_menu_resizehandle" class="popupmenu_underlay" style="font-size: 20px; padding-left: 5px; 
+padding-right: 0px; cursor: move; color: #cccccc;  "> &#x2798; </span>   <!-- &#x2798 -->
+</div>
+</div>
+<div id="rosmap_menu_hiddencontents" style="display: none;">
+<div id="rosmapheader">
+
+<a class="blackbg" href= "javascript: popupmenu('rosmap', 'close');">
+<span class="cancelbox"><b>X</b></span> CLOSE</a> 
+&nbsp; &nbsp; 
+<span class="zoombutton" 
+style="cursor: pointer" onmousedown="rosmapzoom(-1);" onmouseup="rosmapzoom(0);" onmouseout="rosmapzoom(0);"
+><span class="cancelbox" style="padding-left: 7px; padding-right: 7px"
+><b>-</b></span> ZO</span><span class="zoombutton" 
+style="cursor: pointer" onmousedown="rosmapzoom(1);" onmouseup="rosmapzoom(0);" onmouseout="rosmapzoom(0);"
+>OM <span class="cancelbox" style="padding-left: 5px; padding-right: 5px"><b>+</b></span></span>
+&nbsp; &nbsp; 
+<a class="blackbg" href="javascript: rosmaparrow('position');">
+<span class="cancelbox" ><b>&#x2798;</b></span> POSITION</a>
+&nbsp; &nbsp; 
+<a class="blackbg" href="javascript: rosmaparrow('goalpose');">
+<span class="cancelbox" ><b>&#x2798;</b></span> SET GOAL</a>
+&nbsp; &nbsp; 
+<a class="blackbg"  
+href="javascript: mainmenu('menulink'); waypointsmenu();">
+waypoints</a> 
+
+
+<table><tr><td style="height: 6px"></td></tr></table>
+<div id="rosmapinfobar" style="height: 22px"> </div>
+
+</div>
+</div>
+
 <!--  menu_popup_menu -->
 <div id="menu_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
 <div id="menu_menu_over" style="position: absolute; display: none; z-index: 5;">
 <div id="menu_menu_topbar" style="line-height: 18px; cursor: move; "
 onmousedown="popupmenu('menu', 'move');" > &nbsp; </div>
-<div id="menu_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+<div id="menu_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px; "></div>
 </div>
+
+<!--  error_popup_menu -->
+<div id="error_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="error_menu_over" style="position: absolute; display: none; z-index: 5;">
+<div id="error_menu_topbar" style="line-height: 18px; cursor: move;"
+onmousedown="popupmenu('error', 'move');" > &nbsp; </div>
+<div id="error_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+</div>
+
+<!--  end of hidden windows -->
 
 <!--  main menu -->
 <div id="main_menu" style="display: none;">
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-<span class="cancelbox">X</span> CLOSE</a>
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 	
-<span style="font-variant: small-caps">rov</span> video settings:<br>
+video settings:<br>
 
 <span id="low_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('low');">low</a>
-<span id="low_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="low_specs" style="font-size: 11px; color: #666666;"></span><br>
 
 <span id="med_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('med');">medium</a>
-<span id="med_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="med_specs" style="font-size: 11px; color: #666666;"></span><br>
 
 <span id="high_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('high');">high</a>
-<span id="high_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="high_specs" style="font-size: 11px; color: #666666;"></span><br>
 
+<div style="display: none">
 <span id="full_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('full');">full</a>
-<span id="full_specs" style="font-size: 11px; color: #666666;"></span><br/>
+<span id="full_specs" style="font-size: 11px; color: #666666;"></span><br>
+</div>
 
 <span id="custom_bull" style="visibility: hidden; color: #ffffff"> &bull; </span>
 <a class="blackbg" href="javascript: streamset('custom');">custom</a>
 <span id="custom_specs" style="font-size: 11px; color: #666666;"></span>&nbsp;<a 
-class="blackbg" href="javascript: streamset('setcustom');">change</a>
-<br/>
+class="blackbg" href="javascript: streamset('setcustom');">change</a> &gt;
+<br>
+<a id="recordlink" class="blackbg" href="javascript: callServer('record','true');">record</a>
 <table><tr><td style="height: 5px"></td></tr></table>
 
-<div id="rovvolumecontrol"></div>
-<div id="lightcontrol" style="display: none"></div>
+<table><tr>
+<td style="padding-right: 5px;padding-bottom: 2px;">volume: </td><td id="rovvolumecontrol"
+style="padding-bottom: 4px;"></td><td></td>
+</tr><tr>
+<td style="padding-right: 5px;">spotlight: </td><td id="spotlightcontrol"
+style="padding-bottom: 4px;"></td><td></td>
+</tr><tr>
+<td style="padding-right: 5px;">dock light: </td><td id="floodlightcontrol"></td>
+<td style="padding-left: 25px">
+<a class="blackbg" style="cursor: pointer;" onmousedown="callServer('strobeflash','on')"
+onmouseup="callServer('strobeflash','off')">strobeflash</a><br>
+</td>
+</tr></table>
+
 <table><tr><td style='height: 11px'></td></tr></table>
 
-<a class="blackbg" href="javascript: battStats();">battery status refresh</a><br>
-<a class="blackbg" href="javascript: clicksteer('');">click steer on/off</a><br>
-<a class="blackbg" href="javascript: hiddenmessageboxShow();">command log full</a><br>
-<a class="blackbg" href="javascript: motionenabletoggle();">motion enable/disable</a><br>
-
 </div>
+
+<!-- various window contents -->
 
 <!-- main menu admin -->
 <div id = "main_menu_admin" style="display: none;">
-<table><tr><td style="height: 7px"></td></tr></table>
+	<div id="navigationmenu" style="display: none">
+		<a class="blackbg"
+		   href="javascript: navigationmenu(); ">
+			navigation</a> &gt;
+	</div>
 <a class="blackbg" 
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;calibration_settings&quot;).innerHTML);">
-settings/calibration</a><br>
+settings/calibration</a> &gt;<br>
 <a class="blackbg" 
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;account_settings&quot;).innerHTML);">
-accounts</a><br>
+accounts</a> &gt;<br>
 <a class="blackbg" 
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;server_commands&quot;).innerHTML);">
-server menu</a><br>
+server</a> &gt;<br>
 <a class="blackbg" 
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;advanced_menu&quot;).innerHTML);">
-advanced menu</a><br>
+advanced</a> &gt;<br>
 <div id="developermenu" style="display: none"> 
 <a class="blackbg"  
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;developer_menu&quot;).innerHTML);">
-developer menu</a>
-</div>
-<a class="blackbg" href="http://www.xaxxon.com/docs/view?f=contents" target="_blank">online help</a><br>
+developer</a> &gt;
 </div>
 
-<!--  main menu developer link -->
+<table><tr><td style='height: 11px'></td></tr></table>
+
+<a class="blackbg" href="javascript: logout();">logout</a><br>
+</div>
+
+<!--  main menu developer link (??) -->
 
 
 <!-- main menu non-admin -->
 <div id = "main_menu_nonadmin" style="display: none;">
+
+<a class="blackbg" href="javascript: chatdivShow();">chat</a><span 
+id="chatdiv" style="display: none">:<br>&nbsp;
+<input id="chatbox_input" class="inputbox" type="text" size="30" 
+onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515'; chatdivHide();"
+onKeyPress="if (keypress(event)==13) { chat(); }">
+<a class="blackbg" href="javascript: chatdivHide();">
+<span class="cancelbox"><b>X</b></span></a>&thinsp;
+<a class="blackbg" href="javascript: chat();" onmousedown="chat();">
+<span class="cancelbox">&#x2714;</span></a>
+</span><br>
+
 <a class="blackbg" href="javascript: account('change_password');">change password</a><br>
-<a class="blackbg" href="http://www.xaxxon.com/docs/view?f=contents" target="_blank">online help</a><br>
+<a class="blackbg" href="javascript: logout();">logout</a><br>
 </div> 
 
 <!-- custom stream settings (ROV) -->
 <div id="customstreamsettings" style="display: none; ">
 <a class="blackbg" href= "javascript: mainmenu()">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Custom stream settings:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 width <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="vwidth" type="text" size="4" >
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vwidth" type="text" size="4" >
 height <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="vheight" type="text" size="4" ><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vheight" type="text" size="4" ><br>
 fps <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="vfps" type="text" size="4" >
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vfps" type="text" size="4" >
 quality <span style="font-size: 11px; color: #777777">(1-100)</span> 
 <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="vquality" type="text" size="4" >
-<div><a class="blackbg" href="javascript: streamset('customupdate');">
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="vquality" type="text" size="4" >
+<div>
 <table><tr><td style="height: 7px"></td></tr></table>
-<span class="cancelbox">&radic;</span> send values</a> </div>
+<a class="blackbg" href="javascript: streamset('customupdate');">
+<span class="cancelbox">&#x2714;</span> send values</a> </div>
 </div>
 
 <!-- calibration settings -->
 <div id="calibration_settings" style="display: none">
 <a class="blackbg" href= "javascript: mainmenu()"> 
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Settings and Calibration:
 <table><tr><td style="height: 7px"></td></tr></table>
-<a class="blackbg" href="javascript: drivingsettings('on');">driving settings</a><br>
-<a class="blackbg" href="javascript: tiltcontrols('on');">camera settings</a><br>
-<a class="blackbg" href="javascript: docklinecalibrate('start');">calibrate dock line</a><br>
+<a class="blackbg" href="javascript: drivingsettings();">motor settings</a> &gt;<br>
+<a class="blackbg" href="javascript: emailsettings();">email settings</a> &gt;<br>
 <a class="blackbg" href="javascript: autodock('calibrate');">calibrate auto-dock</a><br>
-<a class="blackbg" href="javascript: muteROVonmovetoggle();">mute 
-<span style="font-variant: smallcaps;">ROV</span> when moving on/off</a><br>
-<a class="blackbg" href="javascript: pushtotalktoggle();">self mic push T to talk on/off</a><br>
+<a class="blackbg" href="javascript: docklinecalibrate('start');">manual dock guide</a><br>
+login notify <a class="blackbg" href="javascript: writesetting('loginnotify true');">on</a> / 
+<a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br>
+reboot every 48 hrs <span style="font-size: 11px">(requires server restart)</span>
+<a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
+<a class="blackbg" href="javascript: writesetting('reboot false');">no</a><br>
+attempt auto re-dock if required
+<a class="blackbg" href="javascript: if (confirm(&quot;this will enable unexpected robot movement\nare you sure?&quot;)) {
+writesetting('redock true'); }">yes</a> /
+<a class="blackbg" href="javascript: writesetting('redock false');">no</a><br>
+
+enable navigation menu <span style="font-size: 11px">(requires server restart)</span>
+	<a class="blackbg" href="javascript: writesetting('navigation true');">enable</a> /
+<a class="blackbg" href="javascript: writesetting('navigation false');">disable</a><br>
+
+enable telnet on port 4444 <span style="font-size: 11px">(requires server restart)</span>
+<a class="blackbg" href="javascript: writesetting('telnetport 4444');">enable</a> /
+<a class="blackbg" href="javascript: writesetting('telnetport disabled');">disable</a><br>
+
+	<a class="blackbg" href="javascript: saveopenwindowpositions();">save window positions</a><br>
+<a class="blackbg" href="javascript: defaultwindowpositions();">default window positions</a>
+<span style="font-size: 11px">(requires browser page refresh)</span><br>
 </div>
 
 <!-- driving settings -->
 <div id="drivingsettings" style="display: none;">
 <a class="blackbg" 
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;calibration_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Driving settings:
+Wheel Motor Settings:
 <table><tr><td style="height: 7px"></td></tr></table>
-<div style="white-space: nowrap">speed offsets: slow <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="slowoffset" type="text" size="4" >
+<div style="white-space: nowrap">speed &nbsp; &nbsp; slow <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="slowoffset" type="text" size="4" >
 med <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="medoffset" type="text" size="4" ></div>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="medoffset" type="text" size="4" ></div>
+
+steering comp <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="steeringcomp" type="text" size="4" >
+(format: L/R% eg. &quot;L5&quot;) <br>
+
 nudge delay ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="nudgedelay" type="text" size="4" ><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="nudgedelay" type="text" size="4" ><br>
 
 full rotation fast ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="fullrotationdelay" type="text" size="4" ><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="fullrotationdelay" type="text" size="4" ><br>
+
+one meter forward fast ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="onemeterdelay" type="text" size="4" ><br>
 
 max clicksteer horiz ms <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="maxclicknudgedelay" type="text" size="4" >
-momentum x<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="clicknudgemomentummult" type="text" size="4" ><br>
-max clicksteer tilt angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="maxclickcam" type="text" size="4" >
-(0-128, - left, + right)
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="maxclicknudgedelay" type="text" size="4" ><br>
+
+<table><tr><td style="height: 10px"></td></tr></table>
+Camera Tilt Servo Settings:
+<table><tr><td style="height: 7px"></td></tr></table>
+max clicksteer vertical angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="maxclickcam" type="text" size="4" ><br>
+
+camera tilt horizontal position: <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="camhorizpos" type="text" size="4" ><br>
+
+camera tilt reverse position: <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="camreversepos" type="text" size="4" ><br>
+
+test tilt position: <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="tilttestposition" type="text" size="4" >
+<a class="blackbg" href="javascript: tilttest();">go</a>
+
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: drivingsettingssend();">
-<span class="cancelbox">&radic;</span> send values</a> &nbsp;
+<span class="cancelbox">&#x2714;</span> send values</a> &nbsp;
 </div>
 
-<!-- camera tilt settings TODO: nuke this -->
-<div id="tiltcontrols" style="display: none;">
+<!-- email settings -->
+<div id="emailsettings" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;calibration_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Camera settings:
+Email Settings:
 <table><tr><td style="height: 7px"></td></tr></table>
-tilt power brakes <a class="blackbg" href="javascript: holdservo('true');">on</a> / 
-<a class="blackbg" href="javascript: holdservo('false');">off</a><br> 
-test at position: <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"" id="tilttestposition" type="text" size="4" >
-<a class="blackbg" href="javascript: tilttest();">go</a>
-<table><tr><td style="height: 10px"></td></tr></table>
-video scale
-<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"" id="vidscale" type="text" size="4" >%
-<br>Camera tilt settings:<br>
-horiz position <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"" id="camhoriz" type="text" size="4" >
-<span style="white-space: nowrap">max angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="cammax" type="text" size="4" ></span><br>
-min angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="cammin" type="text" size="4" >
-<br>
-<!-- 
-max clicksteer angle <input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';" id="maxclickcam" type="text" size="4" >
- -->
-<table><tr><td style="height: 7px"></td></tr></table>
-<a class="blackbg" href="javascript: tiltsettingssend();">
-<span class="cancelbox">&radic;</span> send values</a> &nbsp;
 
+smtp server
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_smtp_server" type="text" size="25" ><br>
+
+smtp port
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_smtp_port" type="text" size="4" ><br>
+
+smtp server user name
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_username" type="text" size="15" ><br>
+
+smtp server password
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_password" type="password" size="15" ><br>
+
+default From address
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_from_address" type="text" size="25" ><br>
+
+default To address
+<input class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';" id="email_to_address" type="text" size="25" ><br>
+
+<table><tr><td style="height: 7px"></td></tr></table>
+<a class="blackbg" href="javascript: emailsettingssend();">
+<span class="cancelbox">&#x2714;</span> send values</a> &nbsp;
 </div>
 
 <!--  account settings -->
 <div id="account_settings" style="display: none;">
 <a class="blackbg" href= "javascript: mainmenu()"> 
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Account settings:<br>
+Account Settings:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
-<a class="blackbg" href="javascript: account('change_username');">change username</a><br>
-<a class="blackbg" href="javascript: account('change_password');">change password</a><br>
-<a class="blackbg" href="javascript: account('add_user');">add extra user</a><br>
-<a class="blackbg" href="javascript: account('change_extra_pass');">change extra user password</a><br>
-<a class="blackbg" href="javascript: account('delete_user');">delete extra user</a><br>
-<a class="blackbg" href="javascript: disconnectOtherConnections();">eliminate any passengers</a><br>
+<a class="blackbg" href="javascript: account('change_username');">change username</a> &gt;<br> 
+<a class="blackbg" href="javascript: account('change_password');">change password</a> &gt;<br>
+<a class="blackbg" href="javascript: account('add_user');">add extra user</a> &gt;<br>
+<a class="blackbg" href="javascript: account('change_extra_pass');">change extra user password</a> &gt;<br>
+<a class="blackbg" href="javascript: account('delete_user');">delete extra user</a> &gt;<br>
+
+<table><tr><td style='height: 11px'></td></tr></table>
+
+<a class="blackbg" href="javascript: disconnectOtherConnections();">eliminate any passengers</a> <br>
+
+<a class="blackbg" href="javascript: chatdivShow();">chat</a><span 
+id="chatdiv" style="display: none">:<br>&nbsp;
+<input id="chatbox_input" class="inputbox" type="text" size="30" 
+onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515'; chatdivHide();"
+onKeyPress="if (keypress(event)==13) { chat(); }">
+<a class="blackbg" href="javascript: chatdivHide();">
+<span class="cancelbox"><b>X</b></span></a>&thinsp;
+<a class="blackbg" href="javascript: chat();" onmousedown="chat();">
+<span class="cancelbox">&#x2714;</span></a>
+</span><br>
 </div>
 
 <!-- change username -->
 <div id="changeusername" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;account_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Change username:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
-username: <span id="user_name2" style="color: #45F239; text-transform: uppercase;"></span><br/>
+username: <span id="user_name2" style="color: #45F239; text-transform: uppercase;"></span><br>
 new name: <input id="usernamechanged" class="inputbox" type="text" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br/>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 current password: <input id="usernamechangedpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br/>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: account('username_update');">
-<span class="cancelbox">&radic;</span> update</a> &nbsp;
+<span class="cancelbox">&#x2714;</span> update</a> &nbsp;
 </div>
 
 <!-- change password admin-->
 <div id="changepassword_admin" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;account_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Change password:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 username: <span id="user_name" style="color: #45F239; text-transform: uppercase;"></span><br>
-new password: <input id="userpass" class="inputbox" type="password" name="password"size="10" 
+new password: <input id="userpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 re-enter new password: <input id="userpass_again" class="inputbox" type="password" name="password" size="10"
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 <a class="blackbg" href="javascript: account('password_update');">
 <table><tr><td style="height: 7px"></td></tr></table>
-<span class="cancelbox">&radic;</span> update</a> &nbsp;
+<span class="cancelbox">&#x2714;</span> update</a> &nbsp;
 </div>
 
 <!-- change password non admin-->
 <div id="changepassword_nonadmin" style="display: none;">
 <a class="blackbg" href= "javascript: mainmenu()"> 
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Change password:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 username: <span id="user_name_nonadmin" style="color: #45F239; text-transform: uppercase;"></span><br>
-new password: <input id="userpass" class="inputbox" type="password" name="password"size="10" 
+new password: <input id="userpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 re-enter new password: <input id="userpass_again" class="inputbox" type="password" name="password" size="10"
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: account('password_update');">
-<span class="cancelbox">&radic;</span> update</a> &nbsp;
+<span class="cancelbox">&#x2714;</span> update</a> &nbsp;
 </div>
 
 <!-- add user -->
 <div id="adduser" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;account_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Add new user<br/>
+Add new user<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 username: <input id="newusername" class="inputbox" type="text" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
-new password: <input id="newuserpass" class="inputbox" type="password" name="password"size="10" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
+new password: <input id="newuserpass" class="inputbox" type="password" name="password" size="10" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 re-enter new password: <input id="newuserpass_again" class="inputbox" type="password" name="password" size="10"
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626';"><br>
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: account('newuser_add');">
-<span class="cancelbox">&radic;</span> update</a> &nbsp;
+<span class="cancelbox">&#x2714;</span> update</a> &nbsp;
 </div>
 
 <!-- change extra password -->
 <div id="changeextrapassword" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;account_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Select user to change password:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
@@ -809,98 +938,253 @@ Select user to change password:<br>
 <div id="deleteuser" style="display: none;">
 <a class="blackbg"
 href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;account_settings&quot;).innerHTML);">
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Delete user:
 <table><tr><td style="height: 7px"></td></tr></table>
 <div id="deluserlist"></div>
-
 </div>
 
 <!-- server commands -->
 <div id="server_commands" style="display: none;">
 <a class="blackbg" href= "javascript: mainmenu()"> 
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
 Server Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: softwareupdate('version','');">software version</a><br>
 <a class="blackbg" href="javascript: softwareupdate('check','');">check for software update</a><br>
-<a class="blackbg" href="javascript: systemcall('shutdown -s -f -t 01','y');">shutdown</a><br>
-<a class="blackbg" href="javascript: systemcall('shutdown -r -f -t 01','y')">reboot</a><br>
-<a class="blackbg" href="javascript: restart();">restart server</a><br>
 <a class="blackbg" href="javascript: serverlog();">server log</a><br>
-reboot every 48 hrs <span style="font-size: 11px">(requires server restart)</span>
-<a class="blackbg" href="javascript: writesetting('reboot true');">yes</a> / 
-<a class="blackbg" href="javascript: writesetting('reboot false');">no</a>
+<a class="blackbg" href="javascript: restart(); ">restart server application</a><br>
+<a class="blackbg" href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
+	callServer('reboot',''); }">reboot</a><br>
+<a class="blackbg" href="javascript: if (confirm(&quot;power down\nare you sure?&quot;)) {
+	callServer('powershutdown',''); }">power down</a><br>
+<a class="blackbg" href="network" target="_blank">network</a><br>
 
-<br> 
-
-<a class="blackbg" href="javascript: relaunchgrabber();">relaunch server browser page</a><br>
 </div>
 
 <!--  advanced menu -->
 <div id="advanced_menu" style="display: none">
 <a class="blackbg" href= "javascript: mainmenu()"> 
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Advanced menu:<br>
+Advanced Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 
-<a class="blackbg" href="javascript: oculuscommanddivShow();">oculus text command</a><span 
-id="oculuscommanddiv" style="display: none">:<br>&nbsp;
+<a class="blackbg" href="javascript: oculuscommanddivShow();"
+onmouseover="document.getElementById('steering_textbox').innerHTML = 'TELNET COMMAND'.toUpperCase();
+			document.getElementById('steeringkeytextbox').innerHTML = 'C';"
+onmouseout="document.getElementById('steering_textbox').innerHTML = '';
+			document.getElementById('steeringkeytextbox').innerHTML = '';"
+>telnet text command</a><span id="oculuscommanddiv" style="display: none">:<br>&nbsp;
 <input id="oculuscommand" class="inputbox" type="text" size="30" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626'; oculuscommanddivHide();"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515'; oculuscommanddivHide();"
 onKeyPress="if (keypress(event)==13) { oculuscommandgo(); }">
-<a class="cancelbox" href="javascript: oculuscommanddivHide();">X</a>
-<a class="cancelbox" href="javascript: oculuscommandgo();" onmousedown="oculuscommandgo();">&radic;</a>
-</span><br/>
+<a class="blackbg" href="javascript: oculuscommanddivHide();">
+<span class="cancelbox"><b>X</b></span></a>&thinsp;
+<a class="blackbg" href="javascript: oculuscommandgo();" onmousedown="oculuscommandgo();">
+<span class="cancelbox">&#x2714;</span></a>
+</span><br>
 
-firmware echo <a class="blackbg" href="javascript: arduinoEcho('true');">on</a> / 
-<a class="blackbg" href="javascript: arduinoEcho('false');">off</a><br> 
-<a class="blackbg" href="javascript: arduinoReset();">reset arduinoculus board</a><br>
-login notify <a class="blackbg" href="javascript: writesetting('loginnotify true');">on</a> / 
-<a class="blackbg" href="javascript: writesetting('loginnotify false');">off</a><br> 
-<a class="blackbg" href="javascript: relaunchgrabber();">relaunch server browser page</a><br>
+<a class="blackbg" href="javascript: battStats();">power info</a><br>
+<a class="blackbg" href="javascript: hiddenmessageboxShow();">command log full</a><br>
 
 <a class="blackbg" href="javascript: usersyscommanddivShow();">system command</a><span 
 id="usersyscommanddiv" style="display: none">:<br>&nbsp;
 <input id="usersyscommand" class="inputbox" type="text" size="30" 
 onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
-onblur="keyboard('enable'); this.style.backgroundColor='#262626'; usersyscommanddivHide();"
+onblur="keyboard('enable'); this.style.backgroundColor='#151515'; usersyscommanddivHide();"
 onKeyPress="if (keypress(event)==13) { systemcall('',''); }">
-<a class="cancelbox" href="javascript: usersyscommanddivHide();">X</a>
-<a class="cancelbox" href="javascript: systemcall('','');" onmousedown="systemcall('','');">&radic;</a>
-</span><br/>
+<a class="blackbg" href="javascript: usersyscommanddivHide();">
+<span class="cancelbox"><b>X</b></span></a>&thinsp;
+<a class="blackbg" href="javascript: systemcall('','');" onmousedown="systemcall('','');">
+<span class="cancelbox">&#x2714;</span></a>
+</span><br>
 
+
+<a class="blackbg" href="javascript: motionenabletoggle();">motion enable/disable</a><br>
+<a class="blackbg" href="javascript: clicksteer('');">crosshairs on/off</a><br>
 <a class="blackbg" href="frameGrabHTTP" target="_blank">frame grab</a><br> 
+<a class="blackbg" href="rss.xml" target="_blank">rss feed</a><br>
+<a class="blackbg" href="streams/" target="_blank">recordings</a><br>
+
+motion detect demo <a class="blackbg"
+href="javascript: callServer('motiondetectstream', ''); imgOverVideo('on');">on</a> /
+<a class="blackbg"
+href="javascript: callServer('state', 'delete motiondetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
+human detect demo <a class="blackbg"
+href="javascript: callServer('objectdetectstream', 'human'); imgOverVideo('on');">on</a> /
+<a class="blackbg"
+href="javascript: callServer('state', 'delete objectdetect'); imgOverVideo('off'); publish('stop')">off</a><br>
+
 
 </div>
 
 <!-- developer menu -->
 <div id="developer_menu" style="display: none">
 <a class="blackbg" href= "javascript: mainmenu()"> 
-<span class="cancelbox">&larr;</span> BACK</a>
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
-&nbsp; <span class="cancelbox">X</span> CLOSE</a>
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
 <table><tr><td style="height: 10px"></td></tr></table>
-Developer menu:<br>
+Developer Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
 primesense sensor <a class="blackbg" href="javascript: radar('init');">on</a> / 
 <a class="blackbg" href="javascript: radar('shutdown');">off</a><br> 
 radar view <a class="blackbg" href="javascript: radar('on');">on</a> / 
 <a class="blackbg" href="javascript: radar('off');">off</a><br> 
+depth view <a class="blackbg" href="javascript: depthView('depthFrame');">on</a> / 
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>
+floor plane view <a class="blackbg" href="javascript: depthView('floorPlane');">on</a> / 
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>  
+floor plane top view <a class="blackbg" href="javascript: depthView('floorPlaneTop');">on</a> / 
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>  
+<a class="blackbg" href="frameGrabHTTP?mode=map" target="_blank">map</a><br>
+ <a class="blackbg" href="javascript: callServer('clearmap','');">clear map</a><br>
 
 processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> / 
-<a class="blackbg" href="javascript: processedImg('close');">off</a><br> 
+<a class="blackbg" href="javascript: processedImg('close');">off</a><br>
 
+jpg stream <a class="blackbg" href="javascript: imgOverVideo('on');">on</a> /
+<a class="blackbg" href="javascript: imgOverVideo('off');">off</a><br>
+
+<a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
+
+	<!--
+    stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> /
+    <a class="blackbg" href="javascript: callServer('stereo','off');">off</a><br>
+    stereo depth feed <a class="blackbg" href="javascript: depthView('stereo');">on</a> /
+    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
+    stereo top view <a class="blackbg" href="javascript: depthView('stereotop');">on</a> /
+    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
+    left camera feed <a class="blackbg" href="javascript: depthView('stereoleft');">on</a> /
+    <a class="blackbg" href="javascript: depthView('off');">off</a><br>
+     -->
+ 
+</div>
+
+<!--  navigation_menu -->
+<div id="navigation_menu" style="display: none">
+<a class="blackbg" href= "javascript: mainmenu()"> 
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Navigation Menu:<br>
+<table><tr><td style="height: 7px"></td></tr></table>
+<span class="status_info">System <span id="navsystemstatus">STOPPED</span></span><br>
+<div id="activeroutediv" class="status_info" style="display: none"> </div>
+<br>
+
+<a class="blackbg" href="javascript: callServer('startnav','');">start navigation</a><br>
+<a class="blackbg" href="javascript: callServer('stopnav','');">stop navigation</a><br>
+<a class="blackbg" href="javascript: rosmap();">map</a><br>
+
+<table><tr><td style="height: 10px"></td></tr></table>
+
+<!--<div>set waypoint:</div>-->
+<a class="blackbg" href="javascript: setwaypoint(null);">waypoint at current position</a><br>
+<a class="blackbg" href="javascript: rosmaparrow('waypoint');">waypoint drop arrow</a><br>
+<!--<a class="blackbg" href="javascript: mapshowwaypoints = true;">show waypoints</a><br>-->
+<!--<a class="blackbg" href="javascript: mapshowwaypoints = false;">hide waypoints</a><br>-->
+<a class="blackbg"
+href="javascript: waypointstoggle();">toggle waypoints on/off</a><br>
+<a class="blackbg" href="javascript: waypointsmenu();">waypoints</a> &gt;<br>
+<a class="blackbg" href="javascript: routesmenu();">routes</a> &gt;<br>
+
+<table><tr><td style="height: 10px"></td></tr></table>
+
+<a class="blackbg" href="javascript: callServer('startmapping','');">start mapping</a><br>
+<a class="blackbg" href="javascript: if (confirm('Create backup and save new map\n are you sure?'))
+{ callServer('savemap',''); }">save new map</a><br>
+<a class="blackbg" href="javascript: if (confirm('Shutting down mapping, save new map first')){callServer('stopnav','');}">stop mapping</a><br>
+
+<a class="blackbg" href="frameGrabHTTP?mode=rosmapdownload" target="_blank">download map to edit</a><br>
+<div>
+<a class="blackbg" href="javascript:uploadrosmapdivshow();" >upload edited map</a><span id="uploadrosmapdiv"
+style="display: none;">:
+<form target="upload_frame" action="frameGrabHTTP?mode=rosmapupload" method="post" enctype="multipart/form-data">
+<input id="rosmapupload" name="file" class="inputbox" type="file" size="30"
+	   onchange="if (confirm('Create backup and upload new map\n are you sure?')) { this.form.submit() } uploadrosmapdivhide();" />
+<!--<input type="submit" value="Upload" />-->
+<a class="blackbg" href="javascript: uploadrosmapdivhide();">
+	<span class="cancelbox"><b>X</b></span></a>&thinsp;
+</form>
+</span></div>
+
+<table><tr><td style="height: 7px"></td></tr></table>
+follower mode <a class="blackbg" href="javascript: callServer('roslaunch','follower');">on</a> /
+<a class="blackbg" href="javascript: systemcall('pkill roslaunch','');">off</a><br>
+
+	<table><tr><td style="height: 10px"></td></tr></table>
+
+<a class="blackbg" href="navigationlog/index.html" target="_blank">navigation log</a><br>
+
+</div>
+
+<!-- waypoints_menu -->
+<div id="waypoints_menu" style="display: none;">
+<a class="blackbg"
+href="javascript: navigationmenu();">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+
+<a class="blackbg" href="javascript: setwaypoint(null);">waypoint at current position</a><br>
+<a class="blackbg" href="javascript: rosmaparrow('waypoint');">waypoint drop arrow</a><br>
+<table><tr><td style="height: 10px"></td></tr></table>
+
+	Waypoints:
+<table><tr><td style="height: 5px"></td></tr></table>
+<div id="waypointslist"></div>
+</div>
+
+<!--  routes menu -->
+<div id="routes_menu" style="display: none;">
+<a class="blackbg"
+href="javascript: navigationmenu();">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Route List:
+<table><tr><td style="height: 10px"></td></tr></table>
+<div id="routeslist">no routes defined</div>
+<br>
+<a class="blackbg" href="javascript: editroute('', routesxml);">create new</a>  &gt;<br>
+</div>
+
+<!-- edit route menu -->
+<div id="edit_route_menu" style="display: none;">
+<a class="blackbg"
+href="javascript: routesmenu();">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Route Editor:
+<table><tr><td style="height: 10px"></td></tr></table>
+Name:
+<input id="routename" type="text" size="10" onKeyPress="if (keypress(event)==13) { routesave(); }"
+class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';">
+&nbsp; &nbsp;
+Minutes between runs:
+<input id="routeminbetween" type="text" size="4" onKeyPress="if (keypress(event)==13) { routesave(); }"
+class="inputbox" onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';">
+
+<div id="edit_route_contents" style="line-height: 23px;"></div>
 </div>
 
 <!--  overlay -->
@@ -914,7 +1198,7 @@ style="position: absolute; z-index: 8;left: 0px; top: 0px; width: 100%;">
 <td>
 
 <!--  overlaydefault -->
-<div id="overlaydefault" style="padding-top: 150px;">COMMUNICATING WITH <span style="font-size: 16px">OCULUS</span>...</div>
+<div id="overlaydefault" style="padding-top: 150px; font-size: 16px">LOADING...</div>
 
 <!--  login -->
 <div id="login" style="display: none; line-height: 25px; padding-top: 150px;">
@@ -922,12 +1206,12 @@ Login:<br>
 <table><tr>
 <td>username: </td>
 <td><input id="user" type="text" size="10" onKeyPress="if (keypress(event)==13) { loginsend(); }"
-class="inputbox" onfocus="this.style.backgroundColor='#000000';" onblur="this.style.backgroundColor='#262626';"></td>
+class="inputbox" onfocus="this.style.backgroundColor='#000000';" onblur="this.style.backgroundColor='#151515';"></td>
 <tr><td colspan="2" style="height: 3px"></td></tr>
 <tr>
 <td>password:</td>
-<td><input id="pass" type="password" name="password"size="10" onKeyPress="if (keypress(event)==13) { loginsend(); }"
-class="inputbox" onfocus="this.style.backgroundColor='#000000';" onblur="this.style.backgroundColor='#262626';"></td>
+<td><input id="pass" type="password" name="password" size="10" onKeyPress="if (keypress(event)==13) { loginsend(); }"
+class="inputbox" onfocus="this.style.backgroundColor='#000000';" onblur="this.style.backgroundColor='#151515';"></td>
 </tr></table> 
 
 <input type="checkbox" id="user_remember" name="user_remember" value="remember" checked="checked"> remember me<br>
@@ -943,63 +1227,37 @@ Choose action:<br>
 <a class="blackbg" href="javascript: logout();">logout</a>
 </div>
 
+</td></tr></table>
+
+
 <!--  hidden message box container --> 
-<div id="hiddenmessageboxcontainer" style="display: none; padding-top: 20px">
+<div id="hiddenmessageboxcontainer" style="display: none; padding-top: 20px; padding-left: 25px">
 <a class="blackbg" href= "javascript: overlay('off');">
-<span class="cancelbox">X</span> CLOSE</a>
-<div id="hiddenmessagebox" style="width: 500px; padding-top: 10px;"> </div>
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div id="hiddenmessagebox" style="padding-top: 10px;"> </div>
 <br>
 </div>
 
 <!-- extra stuff container -->
-<div id="extrastuffcontainer" style="display: none; padding-top: 20px;">
+<div id="extrastuffcontainer" style="display: none; padding-top: 20px; ; padding-left: 25px">
 <a class="blackbg" href= "javascript: overlay('off');">
-<span class="cancelbox">X</span> CLOSE</a>
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
 <div id="extrastuffbox" style="padding-top: 10px;"> </div>
 <br>
 </div>
 
-<!--  advanced menubox -->
-<div id="advancedmenubox" style="display: none; width: 650px; padding-top: 20px;">
-<a class="blackbg" href= "javascript: overlay('off');">
-<span class="cancelbox">X</span> CLOSE</a>
-<table><tr><td style="height: 10px"></td></tr></table>
-<table ><tr valign="top"><td style="padding-left: 10px;">
-
-
-<!-- admin menu -->
-<div class="menu" id="admin_menu" style="display: none;">
-
-
-<table><tr><td style="height: 7px"></td></tr></table>
-
-<table><tr><td style="height: 7px"></td></tr></table>
-<div class="menu" style="padding-left: 10px">
-
-
-</div>
-<table><tr><td style="height: 7px"></td></tr></table>
-
-</div> <!-- end of admin menu -->
-
-</td><td style="padding-left: 10px">
-<div class="menu" id="extendedsettingsbox" style="display: none; line-height: 22px"></div>
-
-</td>
-</tr></table>
-</div> <!--  end of admin commands box -->
-
-</td></tr></table>
 </div> <!--  end of overlaycontents -->
 
-<div style="position: fixed; bottom: 5px; right: 5px; z-index: -1; padding-left: 5px;">
-
-<img src="images/oculus_corner_logo.gif" alt="">
-
-</div>
+<!-- logo -->
  
+<div style="position: fixed; bottom: 5px; right: 5px; z-index: -1; padding-left: 5px;">
+<img src="images/oculus_corner_logo.gif" alt="">  
+</div>
+
+<iframe id="upload_frame" name="upload_frame" style="display: none"></iframe>
+
 <!--  debugbox -->
-<div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px"></div>
+<div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px; display: none; "></div>
 
 </body>
 </html>
