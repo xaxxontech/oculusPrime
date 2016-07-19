@@ -8,32 +8,21 @@ public class LoginRecords {
 	public static final String PASSENGER = "passenger";
 	public static final String DRIVER = "driver";
 	
-//	static final int MAX_HISTORY = 50;
-//	private Vector<String> history = new Vector<String>();
-	
+	private static Application app = null; 
 	public static Vector<Record> list = new Vector<Record>();
 	public static Settings settings = Settings.getReference();
 	public static State state = State.getReference();
-	private static Application app = null; 
 	
-	public LoginRecords(Application a) {
-		app = a;
-	}
+	public LoginRecords(Application a) { app = a; }
 	
 	public void beDriver() { 
-		
 		list.add(new Record(state.get(State.values.driver), DRIVER)); 
 		state.set(State.values.logintime, System.currentTimeMillis());
-
 		Util.debug("beDriver(): " + state.get(State.values.driver), this);
-		
-//		if(list.size()>MAX_RECORDS) list.remove(0); // push out oldest 
 	}
 	
-	public void bePassenger(String user) {		
-	
+	public void bePassenger(String user) {			
 		list.add(new Record(user, PASSENGER)); 
-//		if(list.size()>MAX_RECORDS) list.remove(0); // push out oldest
 		Util.debug("bePassenger(): " + user, this);
 	}
 	
@@ -47,7 +36,6 @@ public class LoginRecords {
 		return admin.equals(user.toLowerCase());
 	}
 	
-	
 	public void signoutDriver() {
 		
 		// try all instances
@@ -59,23 +47,8 @@ public class LoginRecords {
 		}
 		
 		state.delete(State.values.driver);
-		
-//		if(list.size() > MAX_RECORDS) list.remove(0);
-
 	}
 	
-	/** @return the number of users waiting in line 
-	private int getNumPassengers() {
-		int passengers = 0;
-		for (int i = 0; i < list.size(); i++){
-			Record rec = list.get(i);
-			if(rec.getRole().equals(PASSENGER))
-				passengers++;
-		}
-
-		return passengers;
-	}*/
-
 	/** @return the number of users */
 	public int getActive() {
 		int active = 0;
@@ -89,7 +62,6 @@ public class LoginRecords {
 	}
 	
 	public String toString() {
-
 		String str = "RTMP users login records:<br>";
 		if (list.isEmpty()) return null;
 		for (int i = 0; i < list.size(); i++)
@@ -98,9 +70,7 @@ public class LoginRecords {
 		return str;
 	}
 	
-	/** 
-	 * @return list of connected users 
-	 */
+	/** @return list of connected users */
 	public String who() {
 		String result = "";
 		result += "active RTMP users: " + getActive()+"<br>" ;
@@ -117,21 +87,9 @@ public class LoginRecords {
 
 		return result;
 	}
-
-	/*
-	public String tail(int lines){
-		int i = 0;
-		StringBuffer str = new StringBuffer();
-	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
-		return str.toString();
-	}*/
 	
-	
-	/**
-	 * store each record in an object 
-	 */
-	private class Record {
+	/** store each record in an object */
+	class Record {
 
 		private long timein = System.currentTimeMillis();
 		private long timeout = 0;

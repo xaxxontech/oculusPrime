@@ -45,7 +45,8 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		rosarcmove, routeoverdue, recoveryrotation, // to be documented
+		
+		rosarcmove, routeoverdue, recoveryrotation, waitingforcpu, sounddetect, // to be documented
 
 	}
 

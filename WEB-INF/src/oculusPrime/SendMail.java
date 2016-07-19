@@ -126,24 +126,12 @@ public class SendMail {
 		props.put("mail.smtp.starttls.enable", "true");
 		props.put("mail.smtp.starttls.enable", "true");
 
-	//	Session mailSession = Session.getDefaultInstance(props);
-/*
-		Properties properties = new Properties();
-		properties.put("mail.smtp.host", host);
-		properties.put("mail.smtp.port", port);
-		properties.put("mail.smtp.auth", "true");
-		properties.put("mail.smtp.starttls.enable", "true");
-		if(!userName.equals("disabled")) properties.put("mail.user", userName);
-		if(!password.equals("disabled")) properties.put("mail.password", password);
-*/
-		
 		Authenticator auth = new Authenticator() {
 			public PasswordAuthentication getPasswordAuthentication() {
 				return new PasswordAuthentication(username, password);
 			}
 		};
 
-//		Transport transport = mailSession.getTransport("smtp");
 		Session session = Session.getInstance(props, auth);
 		Message msg = new MimeMessage(session);
 

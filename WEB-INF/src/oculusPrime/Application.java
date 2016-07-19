@@ -16,6 +16,7 @@ import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
+import org.red5.server.stream.ClientBroadcastStream;
 
 import developer.Navigation;
 import developer.NavigationLog;
@@ -28,7 +29,6 @@ import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
-import org.red5.server.stream.ClientBroadcastStream;
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -58,7 +58,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private IConnection pendingplayer = null;
 	private SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
-	private Video video = null;
+	public Video video = null;
 
 	public ArduinoPrime comport = null;
 	public ArduinoPower powerport = null;
@@ -548,7 +548,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: record(str); break;
+		case record: video.record(str); break; // record [true | false]
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 
@@ -853,7 +853,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
-
+		case sounddetect: video.sounddetect(str); break;
 		case objectdetect: new OpenCVObjectDetect(this).detectGo(str); break;
 		case objectdetectcancel: state.delete(values.objectdetect); break;
 		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
@@ -866,6 +866,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
 			break;
+		case waitforcpu: watchdog.waitForCpuThread();  break;
 
 		// dev tool only
 		case error:
@@ -886,9 +887,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 		
-		case deletelogs: Util.deleteLogFiles(); break;
-		case archivelogs: Util.manageLogs(); break;
+		case deletelogs:
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			Util.deleteLogFiles();
+			break;
 			
+		case archivelogs: 
+//			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+//				Util.log("archiving busy, must be docked, skipping.. ", null);
+//				break;
+//			}
+			Util.archiveLogs();
+			break;
+
 		case streammode: // TODO: testing ffmpeg/avconv streaming
 			grabberSetStream(str);
 			break;
@@ -972,7 +986,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			case streamactivitydetected:
 				streamActivityDetected(str);
 				break;
-
 		}
 	}
 
@@ -1055,7 +1068,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// if recording and mode changing, kill recording
 		if (state.exists(values.stream)) {
 			if (!mode.equals(streamstate.valueOf(state.get(values.stream))) && !state.get(values.record).equals(streamstate.stop.toString()))
-				record(Settings.FALSE);
+				video.record(Settings.FALSE);
 		}
 
 		ArduinoPrime.checkIfInverted();
@@ -2241,13 +2254,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 		restart();
 	}
 	
-	private void setStreamActivityThreshold(String str) { 
-		String stream = state.get(State.values.stream);
+	private void setStreamActivityThreshold(String str) {
+
+
+
 		String val[] = str.split("\\D+");
 		if (val.length != 2) { return; } 
 		Integer videoThreshold = Integer.parseInt(val[0]);
 		Integer audioThreshold = Integer.parseInt(val[1]);
 
+		String stream = state.get(State.values.stream);
 		state.delete(State.values.streamactivity);
 		state.set(State.values.streamactivitythreshold, str);
 		
@@ -2413,5 +2429,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 }
+
 
 

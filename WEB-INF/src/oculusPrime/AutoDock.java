@@ -162,7 +162,7 @@ public class AutoDock {
 
 //									comport.rotate(ArduinoPrime.direction.left, 180);
 
-									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + comport.FIRMWARE_TIMED_OFFSET);
+									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + ArduinoPrime.FIRMWARE_TIMED_OFFSET);
 									String tmpspeed = state.get(State.values.motorspeed);
 									comport.speedset(ArduinoPrime.speeds.fast.toString());
 									comport.turnLeft((int) d);
@@ -332,14 +332,23 @@ public class AutoDock {
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
 							dockattempts ++;
 
+							// backup a bit
 							comport.speedset(ArduinoPrime.speeds.fast.toString());
 							comport.goBackward();
-							try {
-								comport.delayWithVoltsComp(800);
-								comport.stopGoing();
-								Thread.sleep(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate							
-							} catch (InterruptedException e) { e.printStackTrace(); }
-							
+							comport.delayWithVoltsComp(250);
+							comport.stopGoing();
+							Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
+							// turn slightly! // TODO: direction should be determined by last slope
+							comport.clickNudge((imgwidth / 4) * rescomp, true); // true=firmware timed
+							comport.delayWithVoltsComp(allowforClickSteer);
+
+							// backup some more
+							comport.goBackward();
+							comport.delayWithVoltsComp(500);
+							comport.stopGoing();
+							Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+
 							dockGrab(dockgrabmodes.start, 0, 0);
 							state.set(State.values.autodocking, true);
 							autodockingcamctr = false;
@@ -593,7 +602,7 @@ public class AutoDock {
 			}
 			else if (w * h >= s2) { // right in close, centering camera only, backup and try again if position wrong
 
-				if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 10) {
+				if ((Math.abs(x - dockx) > 3) && autodockctrattempts <= 7) { // TODO: limit was 10
 					autodockctrattempts++;
 
 					int minimum_clicksteerMovement = (int) (0.035*imgwidth); //pixels out of 320 //TODO: this will vary with floor type, make settable

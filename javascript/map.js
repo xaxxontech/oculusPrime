@@ -1441,14 +1441,26 @@ function waypointactionaddnew(routenum, waypointnum, id) {
 			waypointDeleteAnyActionsNamed(waypoint, "motion");
 			waypointDeleteAnyActionsNamed(waypoint, "photo");
 		}
-		else if (actiontext == "not detect") waypointDeleteAllButLastAction(waypoint, senseactions);
+		else if (actiontext == "not detect") {
+			waypointDeleteAllButLastAction(waypoint, senseactions);
+			waypointDeleteAnyActionsNamed(waypoint, "rotate");
+		}
 		else if (actiontext == "photo") {
 			waypointDeleteAnyActionsNamed(waypoint, "rotate");
 			waypointDeleteAnyActionsNamed(waypoint, "human");
 			waypointDeleteAnyActionsNamed(waypoint, "motion");
 			waypointDeleteAnyActionsNamed(waypoint, "sound");
 		}
-		else if (actiontext == "rotate") waypointDeleteAnyActionsNamed(waypoint, "photo");
+		else if (actiontext == "rotate") {
+			waypointDeleteAnyActionsNamed(waypoint, "not detect");
+			waypointDeleteAnyActionsNamed(waypoint, "photo");
+		}
+		else if (actiontext == "sound") {
+			 waypointDeleteAnyActionsNamed(waypoint, "record video");
+			 waypointDeleteAnyActionsNamed(waypoint, "photo");
+		 }
+			 
+		else if (actiontext == "record video")  waypointDeleteAnyActionsNamed(waypoint, "sound");
 		
 		// check for existing 'not detect', if so nuke any existing sense actions
 		if (senseactions.indexOf(actiontext) != -1) {

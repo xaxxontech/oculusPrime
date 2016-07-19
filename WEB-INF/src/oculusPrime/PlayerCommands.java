@@ -9,6 +9,7 @@ public enum PlayerCommands {
     
     // operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu,
+	waitforcpu, // undocumented
     
     //user, accounts
     who, chat, disconnectotherconnections, driverexit, loginrecords, messageclients,  
@@ -52,21 +53,22 @@ public enum PlayerCommands {
 	objectdetect, objectdetectcancel,
 	motiondetect, motiondetectcancel,
 	// undocumented:
-	objectdetectstream, motiondetectstream,
+	objectdetectstream, motiondetectstream, sounddetect,
 
 	// un-categorized
 	speech, serverbrowser, email, state, rssadd,
-    
-	// undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, 
-    archivelogs, deletelogs,
     
     // experimental (undocumented)
     opennisensor, clearmap, error, resetroutedata,
 
     // deprecated (kept for mobile client compatibility, undocumented)
-    spotlightsetbrightness, ;
-	
+    spotlightsetbrightness, 
+    
+    // undocumented    
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, archivelogs, deletelogs 
+    
+    ;
+
 	// sub-set that are restricted to "user0"
 	public enum AdminCommands {
 		docklineposupdate, autodockcalibrate, getemailsettings, emailsettingsupdate,

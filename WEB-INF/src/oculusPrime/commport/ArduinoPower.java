@@ -392,8 +392,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!s[1].contains(",")) {
 				int e = Integer.parseInt(s[1]);
 				if (IGNORE_ERROR.contains(e) && !state.exists(State.values.powererror.toString())) {
-					if (e != ERROR_NO_BATTERY_CONNECTED)
+					if (e != ERROR_NO_BATTERY_CONNECTED) {
+						state.set(State.values.batterylife, "NOT_CONNECTED");
 						sendCommand(CLEARALLWARNINGERRORS);
+					}
 					Util.log("Power warning "+e+", "+pwrerr.get(e)+", cleared", this); 
 					PowerLogger.append("Power warning "+e+", "+pwrerr.get(e)+", cleared", this);
 					return;

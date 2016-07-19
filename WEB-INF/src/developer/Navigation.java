@@ -817,7 +817,6 @@ public class Navigation implements Observer {
 						state.set(State.values.rosgoalstatus, "error");
 					}
 					
-					// failed, try next waypoint
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						
 						NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname, wpname, name);
@@ -861,7 +860,8 @@ public class Navigation implements Observer {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					
 					// TODO: send alert?
-					NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock");
+					// NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock");
+					// navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
 
 					// cancelRoute(id);
 					// try docking one more time, sending alert if fail
@@ -1091,7 +1091,7 @@ public class Navigation implements Observer {
 		}
 
 		String recordlink = null;
-		if (record)  recordlink = app.record(Settings.TRUE); // start recording
+		if (record)  recordlink = app.video.record(Settings.TRUE); // start recording
 
 		long waypointstart = System.currentTimeMillis();
 		long delay = 10000;
@@ -1113,7 +1113,8 @@ public class Navigation implements Observer {
 
 			// enable sound detection
 			if (sound) {
-				app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
+				if (!settings.getBoolean(ManualSettings.useflash))   app.video.sounddetect(Settings.TRUE);
+				else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 " + settings.readSetting(ManualSettings.soundthreshold));
 			}
 
@@ -1213,8 +1214,11 @@ public class Navigation implements Observer {
 					app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 				if (state.exists(State.values.objectdetect))
 					app.driverCallServer(PlayerCommands.objectdetectcancel, null);
-				if (state.exists(State.values.streamactivityenabled))
-					app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+				if (sound) {
+					if (!settings.getBoolean(ManualSettings.useflash))   // app.video.sounddetect(Settings.FALSE);
+						app.driverCallServer(PlayerCommands.sounddetect, Settings.FALSE);
+					else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+				}
 
 				break; // go to next waypoint, stop if rotating
 			}
@@ -1224,8 +1228,11 @@ public class Navigation implements Observer {
 				app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 			if (state.exists(State.values.objectdetect))
 				app.driverCallServer(PlayerCommands.objectdetectcancel, null);
-			if (state.exists(State.values.streamactivityenabled))
-				app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+			if (sound) {
+				if (!settings.getBoolean(ManualSettings.useflash))   // app.video.sounddetect(Settings.FALSE);
+					app.driverCallServer(PlayerCommands.sounddetect, Settings.FALSE);
+				else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+			}
 
 			// ALERT if not detect
 			if (notdetect) {
@@ -1296,6 +1303,10 @@ public class Navigation implements Observer {
 			}
 			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
 			app.record(Settings.FALSE); // stop recording
+
+//TODO:			navlog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg, routestarttime, wpname, state.get(State.values.navigationroute), consecutiveroute, 0);
+			app.video.record(Settings.FALSE); // stop recording
+
 		}
 
 		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());

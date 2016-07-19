@@ -10,8 +10,10 @@ public class Settings {
 
 	public final static String redhome = System.getenv("RED5_HOME");
 	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";	
-	public final static String framefolder = redhome + Util.sep+"webapps/oculusPrime/framegrabs";
+	public final static String appsubdir = "webapps/oculusPrime";
 	public final static String streamfolder = redhome + Util.sep+"webapps/oculusPrime/streams/";
+	public final static String framefolder = redhome+Util.sep+appsubdir+"/framegrabs";
+	public final static String streamsfolder = redhome+Util.sep+appsubdir+"/streams";
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
 	public final static String archivefolder = redhome+Util.sep+"archive";
 	public final static String logfolder = redhome+Util.sep+"log";
@@ -504,9 +506,9 @@ public class Settings {
 		return getBoolean(key.name());
 	}
 
-	public double getDouble(GUISettings setting) {
-		return getDouble(setting.name());
-	}
+	public double getDouble(GUISettings setting) { return getDouble(setting.name()); }
+
+	public double getDouble(ManualSettings setting) { return getDouble(setting.name()); }
 
 	public long getLong(ManualSettings setting) { return Long.valueOf(readSetting(setting)); }
 
