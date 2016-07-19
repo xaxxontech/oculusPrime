@@ -83,7 +83,7 @@ public class TelnetServer implements Observer {
 				try {
 					str = in.readLine();
 				} catch (Exception e) {
-					Util.debug("readLine(): " + e.getMessage(), this);
+					// Util.debug("readLine(): " + e.getMessage(), this);
 					break;
 				}
 

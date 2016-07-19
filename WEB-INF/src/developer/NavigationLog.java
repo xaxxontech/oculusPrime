@@ -38,13 +38,12 @@ public class NavigationLog {
     private static volatile boolean newItemBusy = false;
     
     // use if only needing to write a simple message 
-    public static void /*synchronized*/ newItem(final String status, final String msg){
+    public static void newItem(final String status, final String msg){
     	newItem(status, msg, State.getReference().get(values.roscurrentgoal), State.getReference().get(values.navigationroute));
     }
     
     public static synchronized void newItem(final String status, final String msg, final String waypoint, final String routename){ 
         new Thread(new Runnable() { public void run() {
-        	
             long timeout = System.currentTimeMillis() + 5000;
             while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
             if (newItemBusy) {
@@ -54,13 +53,11 @@ public class NavigationLog {
 
             newItemBusy = true;
 
-
             String id=String.valueOf(System.nanoTime());
             String str="<div id='"+id+"' ";
 
             if (status.equals(VIDEOSTATUS)) str += "class='"+PHOTOSTATUS.toLowerCase()+"' ";
-            else
-                str += "class='"+status.toLowerCase()+"' ";
+            else str += "class='"+status.toLowerCase()+"' ";
 
             str += "onclick=\"clicked(this.id);\" ";
             str += ">"+Util.getTime() + PIPE;
@@ -101,7 +98,7 @@ public class NavigationLog {
             	str += "Route distance: " + Util.formatFloat(Navigation.routemillimeters/(double)1000, 2) + " meters <br>\n";
             
             if(Navigation.rotations > 0 && !status.equals(INFOSTATUS.toString())) 
-            		str += "Recovery Rotations: " + Navigation.rotations; 
+            	str += "Recovery Rotations: " + Navigation.rotations; 
             
             str += "</div>\n";
             writeFile(str);

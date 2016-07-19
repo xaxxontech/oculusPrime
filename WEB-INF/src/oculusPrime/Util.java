@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
@@ -16,9 +15,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.Vector;
 
@@ -32,6 +29,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+
 import developer.NavigationLog;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
@@ -46,7 +44,7 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
-	public static final int MIN_FILE_COUNT = 25;  
+
 	public static final int MAX_HISTORY = 40;
 	public static final int PRECISION = 1;	
 	
@@ -148,35 +146,6 @@ public class Util {
 		}
 	}
 
-	/*
-	public static boolean copyfile(String srFile, String dtFile) {
-		try {
-			
-			File f1 = new File(srFile);
-			File f2 = new File(dtFile);
-			InputStream in = new FileInputStream(f1);
-
-			// Append
-			OutputStream out = new FileOutputStream(f2, true);
-
-			byte[] buf = new byte[1024];
-			int len;
-			while ((len = in.read(buf)) > 0) {
-				out.write(buf, 0, len);
-			}
-			in.close();
-			out.close();
-
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-			return false;
-		}
-
-		// file copied
-		return true;
-	}
-	*/
-	
 	/**
 	 * Run the given text string as a command on the host computer. 
 	 * 
@@ -347,9 +316,7 @@ public class Util {
 			transformer.transform(new DOMSource(doc), new StreamResult(writer));
 			output = writer.getBuffer().toString().replaceAll("\n|\r", "");
 		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		catch (Exception e) {printError(e);}
 		return output;
 	}
 
@@ -408,158 +375,6 @@ public class Util {
 		return percent;
 	}
 
-	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
-	/*
-	public static String getCPUTop(){
-		try {
-
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 5 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			return procReader.readLine();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return null;
-	}	
-	
-	public static boolean testHTTP(){
-		
-		final String ext = State.getReference().get(values.externaladdress); 
-		final String http = State.getReference().get(State.values.httpport);
-		final String url = "http://"+ext+":"+ http +"/oculusPrime";
-		
-		if(ext == null || http == null) return false;
-	
-		try {
-			
-			log("testPortForwarding(): "+url, "testHTTP()");
-			URLConnection connection = (URLConnection) new URL(url).openConnection();
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-			log("testPortForwarding(): "+procReader.readLine(), "testHTTP()");
-
-		} catch (Exception e) {
-			 log("testPortForwarding(): failed: " + url, "testHTTP()");
-			return false;
-		}
-		
-		return true;
-	}
-	
-	public static boolean testTelnetRouter(){			
-		try {
-
-			// "127.0.0.1"; //
-			final String port = Settings.getReference().readSetting(GUISettings.telnetport);
-			final String ext =State.getReference().get(values.externaladdress);
-			log("...telnet test: " +ext +" "+ port, null);
-			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + port);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			
-			String line = procReader.readLine();
-			if(line.toLowerCase().contains("trying")){
-				line = procReader.readLine();
-				if(line.toLowerCase().contains("connected")){
-					log("telnet test pass...", null);
-					return true;
-				}
-			}
-		} catch (Exception e) {
-			log("telnet test fail..."+e.getLocalizedMessage(), null);
-			return false;
-		}
-		log("telnet test fail...", null);
-		return false;
-	}
-	
-
-	public static boolean testRTMP(){	
-		try {
-
-			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //	
-			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
-
-			log("testRTMP(): http = " +ext, null);
-			
-			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + rtmp);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-			String line = procReader.readLine();
-			log("testRTMP(): " + line, null);
-			line = procReader.readLine();
-			log("testRTMP():" + line, null);
-			log("testRTMP(): process exit value = " + proc.exitValue(), null);
-			
-			if(line == null) return false;
-			else if(line.contains("Connected")) return true;
-			
-		} catch (Exception e) {
-			return false;
-		}
-		
-		return true;
-	}
-	
-	public static String getJavaStatus(){
-		
-		if(redPID==null) return "jetty not running";
-		
-		String line = null;
-		try {
-			
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ redPID +"/stat")));
-			line = reader.readLine();
-			reader.close();
-			log("getJavaStatus:" + line, null);
-					
-		} catch (Exception e) {
-			printError(e);
-		}
-		
-		return line;
-	}
-	
-	public static String getRed5PID(){	
-		
-		if(redPID!=null) return redPID;
-		
-		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
-		
-		Process proc = null;
-		try { 
-			proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-		} catch (Exception e) {
-			Util.log("getRed5PID(): "+ e.getMessage(), null);
-			return null;
-		}  
-		
-		String line = null;
-		String[] tokens = null;
-		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-		
-		try {
-			while ((line = procReader.readLine()) != null){
-				if(line.contains("red5")) {
-					tokens = line.split(" ");
-					for(int i = 1 ; i < tokens.length ; i++) {
-						if(tokens[i].trim().length() > 0) {
-							if(redPID==null) redPID = tokens[i].trim();							
-						}
-					}
-				}	
-			}
-		} catch (IOException e) {
-			Util.log("getRed5PID(): ", e.getMessage());
-		}
-
-		return redPID;
-	}	
-	*/
-	
 	public static String pingWIFI(final String addr){
 		if(addr==null) return null;	
 		String[] cmd = new String[]{"ping", "-c1", "-W1", addr};
@@ -668,23 +483,11 @@ public class Util {
 		return wdev;
 	}
 
-
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
-
 			State state = State.getReference();
-
-//  --- changed: updated only called on ssid change from non null
-//			if(state.exists(values.externaladdress)) {
-//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
-//					return;
-//				}
-//			}
-
 			try {
-
+				
 				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
 				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 
@@ -703,46 +506,6 @@ public class Util {
 		} }).start();
 	}
 
-	/*
-	public static String getJettyPID(){	
-		
-	//	if(jettyPID!=null) return jettyPID;
-		
-		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
-		
-		Process proc = null;
-		try { 
-			proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-		} catch (Exception e) {
-			Util.log("getJettyPID(): "+ e.getMessage(), null);
-			return null;
-		}  
-		
-		String line = null;
-		String[] tokens = null;
-		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-		
-		try {
-			while ((line = procReader.readLine()) != null){
-				if(line.contains("start.jar")) {
-					tokens = line.split(" ");
-					if(tokens[0].equals("root"))
-					for(int i = 1 ; i < tokens.length ; i++) {
-						if(tokens[i].trim().length() > 0) {
-							if(jettyPID==null) jettyPID = tokens[i].trim();							
-						}
-					}
-				}	
-			}
-		} catch (IOException e) {
-			Util.log("getJettyPID(): ", e.getMessage());
-		}
-
-		return jettyPID;
-	}	
-	*/
-	
 	public static void setJettyTelnetPort() {
 		new Thread(new Runnable() { public void run() {
 			Settings settings = Settings.getReference();
@@ -783,12 +546,7 @@ public class Util {
 	}
 
 	public static void deleteLogFiles(){
-		
-		if(archivePID()){ 
-			log("deleteLogFiles(): busy, skipping.. ", null);
-			return;
-		}
-		
+	
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
 			if( ! State.getReference().equals(values.dockstatus, AutoDock.DOCKED)){
 				log("deleteLogFiles(): reboot required and must be docked, skipping.. ", null);
@@ -799,22 +557,11 @@ public class Util {
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) files[i].delete();
-	       // else appendUserMessage("logs folder contains sub folders!");
-	    }
-
-		files = new File(Settings.streamfolder).listFiles();
-	    for (int i = 0; i < files.length; i++){
-	       if (files[i].isFile()) files[i].delete();
-	       // else appendUserMessage("logs folder contains sub folders!");
 	    }
 	    
-		files = new File(Settings.framefolder).listFiles();
-	    for (int i = 0; i < files.length; i++){
-	       if (files[i].isFile()) files[i].delete();
-	       // else appendUserMessage("logs folder contains sub folders!");
-	    }
-	    
-	   deleteROS();
+	    truncStaleAudioVideo();		
+		truncStaleFrames();
+		deleteROS();
 	}
 	
 	public static void truncStaleAudioVideo(){
@@ -832,6 +579,7 @@ public class Util {
 	
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
+		debug("truncStaleFrames: files found = " + files.length);
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
@@ -852,203 +600,34 @@ public class Util {
 		} catch (Exception e){return false;};
 		return false;
 	}
-	
-	public static void truncStaleArchive(){
-		File[] files  = new File(Settings.archivefolder).listFiles();
-		debug("truncStaleArchive(): " + files.length + " files in folder");
-		sortFiles(files);
-        for (int i = 4; i < files.length; i++){
-			if (files[i].isFile()){
-				debug("truncStaleArchive(): " + files[i].getName() + "  was deleted");
-				files[i].delete();
-	        }
-		} 
-	}
-	
-	public static void truncState(){
-		File[] files  = new File(Settings.logfolder).listFiles(new stateFilter());	
-		debug("truncState(): " + files.length + " files in folder");
-		if(files.length < MIN_FILE_COUNT) return;
-		sortFiles(files); 
-        for (int i = MIN_FILE_COUNT; i < files.length; i++){
-			if (files[i].isFile()){
-				debug("truncState(): " + files[i].getName() + " was deleted");
-				files[i].delete();
-	        }
-		} 
-	}
-	 
-	public static class stateFilter implements FilenameFilter{
-        @Override
-        public boolean accept(File dir, String name) {
-            return name.contains("state");
-        }
-	 }
-	 
-	private static void sortFiles(File[] files) {
-		Arrays.sort(files, new Comparator<File>(){
-			public int compare( File f1, File f2){
-                long result = f2.lastModified() - f1.lastModified();
-                if( result > 0 ){ return 1;
-                } else if( result < 0 ){ return -1;
-                } else return 0;
-            }
-        });	
-	}
 
-	public static String archiveLogs(){
-		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " log "
-				+ NavigationLog.navigationlogpath + " " + Settings.settingsfile};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static String archiveImages(){
-		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.framefolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static String archiveStreams(){
-		final String path = "./archive" + sep + "vid_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.streamfolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	/* not needed? we have this in log folder already..
-	public static String archiveROS(){
-		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static String archiveAll(String[] files){
-		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar";
-		String args = "  " + NavigationLog.navigationlogpath + " ";
-		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + args};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
-		}}).start();
-		return path;
-	}*/
-	
-	public static void archiveFiles(final String fname, final String[] files){
-		String args = "";
-		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
-		log("file created: " + fname, null);
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
-		}}).start();
-	}
-	
-	public static void compressFiles(final String fname, final String[] files){
-		
-		if(archivePID()){ 
-			log("compressFiles(): busy, skipping.. ", null);
-			return;
-		}
-		
-		String args = "";
-		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
-		log("file created: " + fname, null);
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
-		}}).start();
-	}
-	
-	public static boolean archivePID(){ 
-		Process proc = null;
-		String line = null;
-		try { 
-			proc = Runtime.getRuntime().exec( new String[]{ "/bin/sh", "-c", "ps -a" });
-			proc.waitFor();
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
-			while ((line = procReader.readLine()) != null){
-				if(line.contains("tar") || line.contains("zip")){
-					Util.debug("archivePID(): found: " + line);
-					return true;
-				}
-			}
-		} catch (Exception e){return false;};
-		
-		return false;
-	}
-	
-	public static void manageLogs(){
-		
-		if(archivePID()){ 
-			log("manageLogs(): busy, skipping.. ", null);
-			return;
-		}
-		
+	public static void archiveLogs(){
 		new Thread(new Runnable() { public void run() {
 			try {
-		
-				long start = System.currentTimeMillis();
-				appendUserMessage("log files being archived");
-				
-				String images = archiveImages();
-				log("manageLogs(): log file: " + images, null);	
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + images, null);
-				
-				String logs = archiveLogs();
-				log("manageLogs(): log file: " + logs, null);
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + logs, null);
-
-				String stream = archiveStreams();
-				log("manageLogs(): log file: " + stream, null);	
-				if(waitForArchive()) log("manageLogs(): **corrupt** log file: " + stream, null);
-				
-				waitForArchive();
-				log("manageLogs(): done archiving: " +(System.currentTimeMillis() - start)/1000 + " seconds", null);
-				appendUserMessage(", archiving complete");
-				
-				truncStaleAudioVideo();		
-				truncStaleArchive();
-				truncStaleFrames();
-				truncState();
-			
+				// appendUserMessage("log files being archived");
+				// truncStaleAudioVideo();		
+				// truncStaleFrames();
+				zipLogFile();
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
- 
-	public static boolean waitForArchive(){
-		if(archivePID()){ 
-			long start = System.currentTimeMillis();
-			for(;;){
-				if(archivePID()){
-					delay(5000);
-					debug("waitForArchive(): seconds: " + (System.currentTimeMillis() - start)/1000);
-					if((System.currentTimeMillis() - start) > TEN_MINUTES){
-						log("waitForArchive(): timout: " + (System.currentTimeMillis() - start)/1000, null);
-						break;
-					}
-				} else break;
-			}
-			debug("waitForArchive(): exit: " + (System.currentTimeMillis() - start)/1000 + " seconds");
-		}
+
+	private static void zipLogFile(){	
+		new Thread(new Runnable() { public void run() {
+			new File("./log/archive").mkdir();
+			final String path = "./log/archive/log_" + System.currentTimeMillis() + ".tar";
+			String names = "";
+			File[] files = new File(Settings.logfolder).listFiles();
+		    for (int i = 0; i < files.length; i++)
+		       if (files[i].isFile()) names += "./log/"+files[i].getName() + " ";
+		    
+			names = names.trim();
+			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names +
+				" " + "webapps" + Util.sep + "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html"};
 		
-		return archivePID();
+			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
+
+		}}).start();
 	}
 	
 	public static Vector<File> walk(String path, Vector<File> allfiles){
@@ -1086,6 +665,20 @@ public class Util {
 	}
 
 	public static long countMbytes(final String path){ 
+		if( ! new File(path).exists()) return 0;
+		File root = new File( path );
+	    File[] list = root.listFiles();
+		long total = 0;
+		for(int i = 0 ; i < list.length-1 ; i++) {
+			total += list[i].length();
+			// Util.log("total = " + total + " " + list[i].getPath(), null);;
+		}
+		
+		return total / (1000*1000);
+	 }
+	
+	public static long countAllMbytes(final String path){ 
+		if( ! new File(path).exists()) return 0;
 		Vector<File> f = new Vector<>();
 		f = walk(path, f);
 		long total = 0;
@@ -1179,8 +772,6 @@ public class Util {
 		} catch (Exception e){ rosinfor = "0.00"; }
 		
 		return rosinfor;
-	}
-	
+	}	
 }
-
 

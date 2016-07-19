@@ -835,7 +835,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case runroute:
 			if (navigation != null) {
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user");
+				state.set(State.values.navigationroute, str);
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user ==== ");
 				navigation.runRoute(str);
 			}
 			break;

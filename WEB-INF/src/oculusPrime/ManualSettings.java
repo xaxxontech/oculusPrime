@@ -30,7 +30,7 @@ public enum ManualSettings {
 		config.setProperty(useflash.name(), Settings.TRUE);
 		config.setProperty(arcmovecomp.name(), "0.8");
 		config.setProperty(usearcmoves.name(), Settings.TRUE);
-//		config.setProperty(restarted.name(), "0");
+		config.setProperty(restarted.name(), "0");
 		config.setProperty(arcpwmthreshold.name(), "150");
 		config.setProperty(redockifweakconnection.name(), Settings.TRUE);   // TODO: undocumented
 		config.setProperty(useflash.name(), Settings.TRUE); // TODO: undocumented

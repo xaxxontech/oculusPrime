@@ -301,7 +301,6 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
 			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
-			// do 180 deg turn
 			app.driverCallServer(PlayerCommands.left, "180");
 			Util.delay(app.comport.fullrotationdelay/2 + 4000);  // tried changing this to 4000, didn't help
 
@@ -860,7 +859,7 @@ public class Navigation implements Observer {
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					
 					// TODO: send alert?
-					// NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock");
+					NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock");
 					// navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
 
 					// cancelRoute(id);
@@ -926,7 +925,7 @@ public class Navigation implements Observer {
 
 	private void undockandlocalize() { // blocking
 		state.set(State.values.motionenabled, true);
-		double distance = 1.5;
+		double distance = 1.0;
 		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
 		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString())) + 2000);
 
@@ -1304,7 +1303,9 @@ public class Navigation implements Observer {
 			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
 			app.record(Settings.FALSE); // stop recording
 
-//TODO:			navlog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg, routestarttime, wpname, state.get(State.values.navigationroute), consecutiveroute, 0);
+//TODO:			
+			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg); 
+			// , routestarttime, wpname, state.get(State.values.navigationroute), consecutiveroute, 0);
 			app.video.record(Settings.FALSE); // stop recording
 
 		}
