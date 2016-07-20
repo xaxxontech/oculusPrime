@@ -5,9 +5,7 @@ import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Locale;
-import java.util.Set;
 import java.util.Vector;
 
 import developer.Ros.navsystemstate;
@@ -71,33 +69,40 @@ public class State {
 	/** properties object to hold configuration */
 	private HashMap<String, String> props = new HashMap<String, String>(); 
 	
-	public static State getReference() {
-		return singleton;
-	}
+	public static State getReference(){ return singleton; }
 
+	@SuppressWarnings("unchecked")
+	public HashMap<String, String> getState(){ return (HashMap<String, String>) props.clone(); }
+	
 	private State() {
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
 		props.put(values.telnetusers.name(), "0");
 		getLinuxUptime();
 	}
 	
-	@SuppressWarnings("unchecked")
-	public HashMap<String, String> getState(){
-		return (HashMap<String, String>) props.clone();
+	@Override
+	public String toString(){
+		String str = "";
+		final java.util.Set<String> keys = props.keySet();
+		for(final java.util.Iterator<String> i = keys.iterator(); i.hasNext(); ){
+			final String key = i.next();
+			str += (key + " " + props.get(key) + "<br>\n"); 
+		}
+		return str;
 	}
 	
-	public void getLinuxUptime(){
+	/** @return the ms since last app start */
+	public long getUpTime(){ return System.currentTimeMillis() - getLong(values.javastartup); }
+	private void getLinuxUptime(){
 		new Thread(new Runnable() {
 			@Override
 			public void run() {	
 				try {
-					
 					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
 					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
 					String line = procReader.readLine();
 					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
 					set(values.linuxboot, date.getTime());
-					
 				} catch (Exception e) {
 					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
 				}										
@@ -105,103 +110,8 @@ public class State {
 		}).start();
 	}
 	
-	public void addObserver(Observer obs){
-		observers.add(obs);
-	}
-	
-	/** test for string equality. any nulls will return false */ 
-	private boolean equals(final String a, final String b){
-		String aa = get(a);
-		if(aa==null) return false; 
-		if(b==null) return false; 
-		if(aa.equals("")) return false;
-		if(b.equals("")) return false;
-		
-		return aa.equalsIgnoreCase(b);
-	}
-	
-	public boolean equals(State.values value, String b) {
-		return equals(value.name(), b);
-	}
-
-	@Override
-	public String toString(){
-		String str = "";
-		final Set<String> keys = props.keySet();
-		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
-			final String key = i.next();
-			str += (key + " " + props.get(key) + "<br>"); 
-		}
-		return str;
-	}
-	
-	public boolean equals(values a, navsystemstate b) {
-		return equals(a.name(), b.name());
-	}
-	
-	public String toHTML(){ 
-		StringBuffer str = new StringBuffer("<table>"); 
-		Set<String> keys = props.keySet();
-		for(Iterator<String> i = keys.iterator(); i.hasNext();){
-			try {
-				if( !i.hasNext()) break;
-				
-				String key = i.next();
-				if(key.equals(values.rosamcl.name())) key = i.next();
-				if(key.equals(values.rosglobalpath.name())) key = i.next();
-				if(key.equals(values.rosmapinfo.name())) key = i.next();
-				if(key.equals(values.rosscan.name())) key = i.next();
-				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<tr><td><b>" + key + "</b><td> " + props.get(key));
-
-				if( !i.hasNext()) break;
-				
-				key = i.next();
-				if(key.equals(values.rosamcl.name())) key = i.next();
-				if(key.equals(values.rosglobalpath.name())) key = i.next();
-				if(key.equals(values.rosmapinfo.name())) key = i.next();
-				if(key.equals(values.rosscan.name())) key = i.next();
-				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<td><b>" + key + "</b><td> " + props.get(key));
-				
-				if( !i.hasNext()) break;
-				
-				key = i.next();
-				if(key.equals(values.rosamcl.name())) key = i.next();
-				if(key.equals(values.rosglobalpath.name())) key = i.next();
-				if(key.equals(values.rosmapinfo.name())) key = i.next();
-				if(key.equals(values.rosscan.name())) key = i.next();
-				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
-				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<td><b>" + key + "</b><td> " + props.get(key));
-			} catch (Exception e) {
-				break;
-			}
-		}
-			
-		if(props.containsKey(values.rosmapwaypoints.name())) {
-			String names = "";
-			String[] way =  props.get(values.rosmapwaypoints.name()).split(",");
-			for(int i = 0 ; i < way.length ; i++) 
-				if(way[i].matches("[a-zA-Z]+"))
-					names += way[i].trim() + ", "; 
-					
-			str.append("<tr><td><b>rosmapwaypoints</b><td colspan=\"9\"> " + names + " </tr> \r");
-		}
-	
-		if(props.containsKey(values.rosamcl.name())) 
-			str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
-	
-		if(props.containsKey(values.batteryinfo.name())) 
-			str.append("<tr><td colspan=\"9\"><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
-		
-		str.append("<tr><td colspan=\"9\"><b>NULL:</b>");
-		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
-		str.append("</table>\n");
-		return str.toString();
-	}
+	/** register class for call backs */ 
+	public void addObserver(Observer obs){ observers.add(obs); }
 	
 	/**
 	 * block until timeout or until member == target
@@ -212,7 +122,6 @@ public class State {
 	 * @return true if the member was set to the target in less than the given timeout 
 	 */
 	public boolean block(final values member, final String target, int timeout){
-		
 		long start = System.currentTimeMillis();
 		String current = null;
 		while(true){
@@ -231,116 +140,108 @@ public class State {
 		}
 	} 
 	
-	/** Put a name/value pair into the configuration */
-	synchronized void set(final String key, final String value) {
+	/** test for string equality. any nulls will return false */ 
+	public boolean equals(State.values value, String b){ return equals(value.name(), b); }
+	public boolean equals(values a, navsystemstate b){ return equals(a.name(), b.name()); }
+	private boolean equals(final String a, final String b){
+		String aa = get(a);
+		if(aa==null) return false; 
+		if(b==null) return false; 
+		if(aa.equals("")) return false;
+		if(b.equals("")) return false;
+		
+		return aa.equalsIgnoreCase(b);
+	}
+	
+	/** Put a name/value pair into the configuration */	
+	public void set(values key, long data){ set(key.name(), data); }
+	public void set(values key, String value){ set(key.name(), value); }	
+	public void set(values key, boolean value){ set(key.name(), value); }
+	public void set(values key, double d){ set(key.name(), String.valueOf(d)); }
+	public void set(values key, values value){ set(key.name(), value.name()); }
+	public void set(final String key, final long value){ set(key, Long.toString(value)); }
+	
+	public synchronized void set(String key, boolean b){
+		if(b) set(key, "true");
+		else set(key, "false");
+	}
+	
+	public synchronized void set(final String key, final String value) {
 		
 		if(key==null) {
 			Util.log("set() null key!", this);
 			return;
 		}
 		if(value==null) {
-			Util.log("set() use delete() instead", this);
-			Util.log("set() null valu for key: " + key, this);
+			Util.log("set("+key+", null): is dangerous and ignored.. use delete()", this);
 			return;
 		}
 
 		try {
 			props.put(key.trim(), value.trim());
 		} catch (Exception e) {
-			e.printStackTrace();
+			Util.printError(e);
 		}
 
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key.trim());
 	}
 	
-	synchronized String get(final String key) {
+	/** get as different types  */
+	public int getInteger(values key){ return getInteger(key.name());}
+	public long getLong(values key){ return getLong(key.name());}
+	public double getDouble(values key){ return getDouble(key.name()); }
+	public String get(values key){ return get(key.name()); }	
 
+	public synchronized String get(final String key) {
 		String ans = null;
 		try {
-
 			ans = props.get(key.trim());
-
-		} catch (Exception e) {
-			System.err.println(e.getStackTrace());
-			return null;
-		}
-
+		} catch (Exception e){}
 		return ans;
 	}
-
-	public void set(final String key, final long value) {
-		set(key, Long.toString(value));
-	}
 	
-	public String get(values key){
-		return get(key.name());
-	}
-	
-	/** true returns true, anything else returns false */
-	public boolean getBoolean(String key) {
-		
-		boolean value = false;
-		
+	public double getDouble(String key) {
+		double value = ERROR;
 		try {
-
+			value = Double.valueOf(get(key));
+		} catch(Exception e){}
+		return value;
+	}
+	
+	/** true returns true, anything else returns false */	
+	public boolean getBoolean(values key){ return getBoolean(key.name()); }
+	public boolean getBoolean(String key) {
+		boolean value = false;
+		try {
 			value = Boolean.parseBoolean(get(key));
-
-		} catch (Exception e) {
-			return false;
-		}
-
+		} catch (Exception e){}
 		return value;
 	}
 
 	public int getInteger(final String key) {
-
-		String ans = null;
 		int value = ERROR;
-
-		try {
-
-			ans = get(key);
-			value = Integer.parseInt(ans);
-
-		} catch (Exception e) {
-			return ERROR;
-		}
-
+		try { value = Integer.parseInt(get(key)); } catch (Exception e){}
 		return value;
 	}
 	
 	public long getLong(final String key) {
-
-		String ans = null;
 		long value = ERROR;
-
-		try {
-
-			ans = get(key);
-			value = Long.parseLong(ans);
-
-		} catch (Exception e) {
-			return ERROR;
-		}
-
+		try { value = Long.parseLong(get(key)); } catch (Exception e){}
 		return value;
 	}
 	
-	/** @return the ms since last app start */
-	public long getUpTime(){
-		return System.currentTimeMillis() - getLong(values.javastartup);
+	/** remove */ 
+	public void delete(PlayerCommands cmd){ delete(cmd.name()); }
+	public void delete(values key){ delete(key.name()); }
+	public synchronized void delete(String key) {	
+		// Util.debug("delete(): String key = " + key, this);
+		if(props.containsKey(key)){
+			props.remove(key); // delete it then notify all registered classes 
+			for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);
+		}
 	}
 	
-	/** @return the ms since last user log in */
-	public long getLoginSince(){
-		return System.currentTimeMillis() - getLong(values.logintime);
-	}
-
-	public synchronized void set(String key, boolean b) {
-		if(b) set(key, "true");
-		else set(key, "false");
-	}
-	
+	/** check if in state */ 
 	public synchronized boolean exists(values key) {
 		return props.containsKey(key.toString().trim());
 	}
@@ -348,77 +249,7 @@ public class State {
 	public synchronized boolean exists(String key) {
 		return props.containsKey(key.trim());
 	}
-	
-	synchronized void delete(String key) {
 		
-		// Util.log("delete: " + key, this);
-		
-		if( ! props.containsKey(key)) return;
-		
-		props.remove(key);
-		for(int i = 0 ; i < observers.size() ; i++)
-			observers.get(i).updated(key);	
-	}
-	
-	public void delete(values key) {
-		// Util.log("delete: " + key, this);
-		if(exists(key)) delete(key.name());
-	}
-	
-	public void set(values key, values value) {
-		
-		set(key.name(), value.name());
-	}
-	
-	public int getInteger(values key) {
-		return getInteger(key.name());
-	}
-	
-	public long getLong(values key){
-		return getLong(key.name());
-	}
-	
-	public boolean getBoolean(values key){
-		return getBoolean(key.name());
-	}
-	
-	public void set(values key, long data){
-		set(key.name(), data);
-	}
-	
-	public void set(values key, String value){
-		set(key.name(), value);
-	}
-	
-	public void set(values key, boolean value){
-		set(key.name(), value);
-	}
-
-	public void set(values key, double d) {
-		set(key.name(), String.valueOf(d));
-	}
-	
-	public void delete(PlayerCommands cmd) {
-		delete(cmd.name());
-	}
-	
-	public double getDouble(String key) {
-		double value = ERROR;
-		
-		if(get(key) == null) return value;
-		
-		try {
-			value = Double.valueOf(get(key));
-		} catch (NumberFormatException e) {
-			Util.log("getDouble(): " + e.getMessage(), this);
-		}
-		
-		return value;
-	}
-
-	public double getDouble(values key) {
-		return getDouble(key.name());
-	}
 
 	/*
 	public String dumpFile(){	

@@ -91,25 +91,25 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String delay = null;	
 		String action = null;
 		String route = null;
-		String member = null;
+//		String member = null;
 		
 		try {
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
 			action = request.getParameter("action");
 			route = request.getParameter("route");
-			member = request.getParameter("member");
+//			member = request.getParameter("member");
 		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
-		if(action != null && app != null && member != null){
-			if(action.equals("delete")){
-				Util.log("doGet: detete state member: " + member, this);
-				state.delete(member);
-				action = null;
-			}
-		}
+//		if(action != null && app != null && member != null){
+//			if(action.equals("delete")){
+//				Util.log("doGet: detete state member: " + member, this);
+//				state.delete(member);
+//				action = null;
+//			}
+//		}
 		
 		if(action != null && app != null){
 
@@ -136,7 +136,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				new Thread(new Runnable() { public void run() {
 					StringBuffer text = new StringBuffer();
 					text.append("\n\r-- " + new Date() + " --\n");
-					text.append(Util.tail(100).replaceAll("<br>", "\n"));
+					text.append(Util.tail(999).replaceAll("<br>", "\n"));
 					text.append("\n\r -- state history --\n");
 					text.append(getHistory() + "\n\r");
 					text.append("\n\r -- state values -- \n");

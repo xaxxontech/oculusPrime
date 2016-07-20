@@ -56,17 +56,15 @@ public class Navigation implements Observer {
 	public static int rotations = 0;
 	private boolean failed = false;
 	
-//	public NavigationLog navlog; // make static
-
 	/** Constructor */
 
 	public Navigation(Application a) {
+		app = a;
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
-//		navlog = new NavigationLog();
+		Util.log("ros dir = " + Ros.rospackagedir, this);
 		state.addObserver(this);
-		app = a;
 	}	
 	
 	@Override
@@ -860,16 +858,15 @@ public class Navigation implements Observer {
 					
 					// TODO: send alert?
 					NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock");
-					// navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
-
+					
 					// cancelRoute(id);
 					// try docking one more time, sending alert if fail
-					Util.log("calling redock()", this);
 					stopNavigation();
+					Util.log("navigation is off, trying redock()", this);
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 			
-					if (!delayToNextRoute(navroute, name, id)) return;
+					if(!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
 			
@@ -877,6 +874,7 @@ public class Navigation implements Observer {
 				if( /*!(overdue*/ rotations == 0 && !failed){
 					
 					int seconds = (int)((System.currentTimeMillis()-routestarttime)/1000);
+				
 					Util.log("["+ name + "] estimated: " + estimatedmeters + " meters: " +
 							Util.formatFloat((double)routemillimeters/(double)1000) + 
 							" delta: " + Math.abs(estimatedmeters - routemillimeters/1000) + " meters ", this);
@@ -885,26 +883,24 @@ public class Navigation implements Observer {
 							+ " delta: " + Math.abs(estimatedtime - seconds) + " seconds ", this);
 					
 					if(estimatedtime == 0 && estimatedmeters > 0){
-						Util.log("route estimate is zero, meters = " + estimatedmeters, this);
+						// Util.log("route estimate is zero, meters = " + estimatedmeters, this);
 						updateRouteEstimatess(name, seconds, ((estimatedmeters*1000 + routemillimeters/1000)/2));
 					} 
 					
 					if(estimatedmeters == 0 && estimatedtime > 0){
-						Util.log("route estimated distance is zero, seconds = " + seconds, this);
+						// Util.log("route estimated distance is zero, seconds = " + seconds, this);
 						updateRouteEstimatess(name, ((estimatedtime + seconds)/2), routemillimeters);
 					} 
 					
 					if(estimatedmeters > 0 && estimatedtime > 0){
-						Util.log("route distance and time greater zero.. compute average", this);
+						// Util.log("route distance and time greater zero.. compute average", this);
 						updateRouteEstimatess(name, ((estimatedtime + seconds)/2),((estimatedmeters*1000 + routemillimeters)/2));
 					} 
 					
 					if(estimatedmeters == 0 && estimatedtime == 0){
-						Util.log("route distance and time are zero, use these values", this);
+						// Util.log("route distance and time are zero, use these values", this);
 						updateRouteEstimatess(name, seconds, estimatedmeters + routemillimeters);
-					}	
-					
-					Util.debug("route xml updated: " + getRouteTimeEstimate(name) + " seconds " + getRouteDistanceEstimate(name) + " meters ", this);
+					}						
 				}
 									
 				if(failed) updateRouteStats(state.get(State.values.navigationroute), getRouteCount(name)+1, getRouteFails(name)+1);
@@ -1286,8 +1282,7 @@ public class Navigation implements Observer {
 			if (!settings.getBoolean(ManualSettings.useflash))
 				navlogmsg += "<br><a href='" + recordlink + "_audio.flv' target='_blank'>Audio</a>";
 			String msg = "[Oculus Prime Video] ";
-			msg += navlogmsg+", time: "+
-					Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
+			msg += navlogmsg+", time: "+Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
 
 			if (email) {
 				String emailto = settings.readSetting(GUISettings.email_to_address);
@@ -1302,12 +1297,6 @@ public class Navigation implements Observer {
 			}
 			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
 			app.record(Settings.FALSE); // stop recording
-
-//TODO:			
-			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg); 
-			// , routestarttime, wpname, state.get(State.values.navigationroute), consecutiveroute, 0);
-			app.video.record(Settings.FALSE); // stop recording
-
 		}
 
 		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());

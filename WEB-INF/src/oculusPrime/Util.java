@@ -45,7 +45,7 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
 
-	public static final int MAX_HISTORY = 40;
+	public static final int MAX_HISTORY = 30;
 	public static final int PRECISION = 1;	
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -170,7 +170,7 @@ public class Util {
 //			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			printError(e);
 		}
 	}	
 
@@ -623,7 +623,7 @@ public class Util {
 		    
 			names = names.trim();
 			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names +
-				" " + "webapps" + Util.sep + "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html"};
+				" " + "./webapps" + Util.sep + "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html"};
 		
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 
@@ -717,7 +717,8 @@ public class Util {
 		}
 		
 		appendUserMessage("ros purge, reboot required");
-		
+		Settings.getReference().writeSettings(ManualSettings.restarted, "0");
+
 		new Thread(new Runnable() { public void run() {
 			try {
 				String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder};

@@ -315,12 +315,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateJetty();		 
 			
 		watchdog = new SystemWatchdog(this);
-		// Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 		
 		if (settings.getBoolean(ManualSettings.developer.name()) && state.equals(values.dockstatus, AutoDock.UNDOCKED)){
 			new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
 			watchdog.redock("Oculus Prime rebooted undocked");
-			// if(navigation != null) navigation.dock();
+			if(navigation != null) navigation.dock();
 		}
 		
 		Util.debug("application initialize done", this);
@@ -789,10 +789,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case roslaunch:
-			if (Ros.launch(str))
-				messageplayer("roslaunch "+str+".launch", null, null);
-			else
-				messageplayer("roslaunch already running", null, null);
+			if (Ros.launch(str)) messageplayer("roslaunch "+str+".launch", null, null);
+			else messageplayer("roslaunch already running", null, null);
 			break;
 		
 		case savewaypoints:
@@ -814,6 +812,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		case gotodock:
 			if (navigation != null) {
+				state.set(State.values.navigationroute, str);
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route canceled by user, returning to dock");
 				navigation.dock(); 
 			}
@@ -836,13 +835,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				state.set(State.values.navigationroute, str);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user ==== ");
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user");
 				navigation.runRoute(str);
 			}
 			break;
 
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
+				state.set(State.values.navigationroute, str);
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled");
 				navigation.cancelAllRoutes();
 			}
