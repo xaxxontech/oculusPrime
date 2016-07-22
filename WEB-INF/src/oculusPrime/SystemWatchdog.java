@@ -112,7 +112,8 @@ public class SystemWatchdog implements Observer {
 				if (!state.exists(State.values.driver) &&
 						System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN &&
 						redocking == false &&
-						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 35 && // was 10%
+						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", ""))
+								< ArduinoPower.LOWBATTPERCENTAGE &&
 						state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						settings.getBoolean(GUISettings.redock)
 						) {

@@ -1,7 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-		"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<!--<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"-->
-		<!--"http://www.w3.org/TR/html4/loose.dtd">-->
+<!DOCTYPE html>
 <html>
 <head>
 <title>Oculus Prime</title>
@@ -482,6 +479,14 @@ onmousedown="popupmenu('context', 'move');" > &nbsp; </div>
 <div id="context_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
 </div>
 
+<!--  radar_popup_menu -->
+<div id="radar_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
+<div id="radar_menu_over" style="position: absolute; display: none; z-index: 5;">
+<div id="radar_menu_topbar" style="line-height: 18px; cursor: move;"
+	 onmousedown="popupmenu('radar', 'move');" > &nbsp; </div>
+<div id="radar_menu_contents"  class="popupcontents" style="padding: 10px; padding-top: 7px;"></div>
+</div>
+
 <!--  rosmap_popup_menu -->
 <div id="rosmap_menu_under" class="popupmenu_underlay" style="position: absolute; display: none; z-index: 5;"></div>
 <div id="rosmap_menu_over" style="position: absolute; display: none; z-index: 5; overflow: hidden">
@@ -496,7 +501,6 @@ padding-right: 0px; cursor: move; color: #cccccc;  "> &#x2798; </span>   <!-- &#
 </div>
 <div id="rosmap_menu_hiddencontents" style="display: none;">
 <div id="rosmapheader">
-
 <a class="blackbg" href= "javascript: popupmenu('rosmap', 'close');">
 <span class="cancelbox"><b>X</b></span> CLOSE</a> 
 &nbsp; &nbsp; 
@@ -1038,14 +1042,16 @@ href="javascript: callServer('state', 'delete objectdetect'); imgOverVideo('off'
 <table><tr><td style="height: 10px"></td></tr></table>
 Developer Menu:<br>
 <table><tr><td style="height: 7px"></td></tr></table>
-primesense sensor <a class="blackbg" href="javascript: radar('init');">on</a> / 
+depth camera <a class="blackbg" href="javascript: radar('init');">on</a> /
 <a class="blackbg" href="javascript: radar('shutdown');">off</a><br> 
 radar view <a class="blackbg" href="javascript: radar('on');">on</a> / 
 <a class="blackbg" href="javascript: radar('off');">off</a><br> 
 depth view <a class="blackbg" href="javascript: depthView('depthFrame');">on</a> / 
 <a class="blackbg" href="javascript: depthView('off');">off</a><br>
 floor plane view <a class="blackbg" href="javascript: depthView('floorPlane');">on</a> / 
-<a class="blackbg" href="javascript: depthView('off');">off</a><br>  
+<a class="blackbg" href="javascript: depthView('off');">off</a><br>
+
+<!--
 floor plane top view <a class="blackbg" href="javascript: depthView('floorPlaneTop');">on</a> / 
 <a class="blackbg" href="javascript: depthView('off');">off</a><br>  
 <a class="blackbg" href="frameGrabHTTP?mode=map" target="_blank">map</a><br>
@@ -1056,8 +1062,12 @@ processed image <a class="blackbg" href="javascript: processedImg('load');">load
 
 jpg stream <a class="blackbg" href="javascript: imgOverVideo('on');">on</a> /
 <a class="blackbg" href="javascript: imgOverVideo('off');">off</a><br>
+-->
 
-<a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
+	processed image <a class="blackbg" href="javascript: processedImg('load');">load</a> /
+	<a class="blackbg" href="javascript: processedImg('close');">off</a><br>
+
+	<a class="blackbg" href="dashboard" target="_blank">dashboard</a><br>
 
 	<!--
     stereo cameras <a class="blackbg" href="javascript: callServer('stereo','on');">on</a> /

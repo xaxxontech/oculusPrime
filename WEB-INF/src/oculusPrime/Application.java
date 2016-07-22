@@ -324,9 +324,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	private void grabberInitialize() {
 
+		video = new Video(this);
+
 		// non flash, no gui
 		if (!settings.getBoolean(ManualSettings.useflash)) {
-			video = new Video(this);
+			video.initAvconv();
 			if (!settings.getBoolean(GUISettings.skipsetup)) {
 				if (settings.readSetting("user0") == null) {
 					String p = "oculus" + salt + "robot"; // default
@@ -698,13 +700,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case opennisensor:
 			if(str.equals("on")) { 
-				if (openNIRead.startDepthCam())
-					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
-				else  messageplayer("roslaunch already running, abort", null, null);
+				if (openNIRead.startDepthCam()) {
+//					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
+				 }
+				else
+						messageplayer("roslaunch already running, abort", null, null);
 			}
 			else { 
 				openNIRead.stopDepthCam(); 
-				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
+//				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
 			}			
 			messageplayer("openNI camera "+str, null, null);
 			break;

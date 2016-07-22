@@ -71,7 +71,7 @@ var pingcountertimer;
 var pushtotalk;
 var lastcommand; 
 var maintopbarTimer = null;
-var subwindows = ["aux", "context", "menu", "main", "rosmap"];  // purposely skipped "error" window
+var subwindows = ["aux", "context", "menu", "main", "rosmap", "radar"];  // purposely skipped "error" window
 var windowpos = [null, null, null, null]; // needs same length as above
 var oculusPrimeplayerSWF;
 var recordmode = streammode;
@@ -2575,6 +2575,7 @@ if (!Array.prototype.indexOf) {
  */
 
 var radartimer = null;
+var depthviewtimer = null;
 
 
 function radar(mode) {
@@ -2588,9 +2589,10 @@ function radar(mode) {
 		var xy = findpos(v);
 		var x = xy[0]+v.offsetWidth;
 		var y=xy[1];
-		var str ="<div style='height: 320px; line-height: 10px;'>";
-		str +="<img id='radarimg' src='frameGrabHTTP?mode=radar' alt='' onload='radarrepeat();' width='240' height='320'>";
-//		str +="<img id='radarimg' alt='' width='240' height='320'>";
+		var str ="<a href='javascript: radar(&quot;off&quot;);'>"
+		str += "<span class='cancelbox'><b>X</b></span> CLOSE</a><br>"
+		str +="<div style='height: 320px; line-height: 10px;'>";
+		str +="<img id='radarimg' src='frameGrabHTTP?mode=radar' alt='' onload='radarrepeat();' style='width: 240px'; height: 320px'>";
 		str += "<div style='position: relative; top: -184px; left: 17px; width: 50px;'>2.0</div>";
 		str += "<div style='position: relative; top: -194px; left: 200px; width: 50px;'>2.0</div>";
 		str += "<div style='position: relative; top: -114px; left: 55px; width: 50px;'>1.0</div>";
@@ -2600,10 +2602,10 @@ function radar(mode) {
 		str += "<div style='position: relative; top: -70px; left: 107px; width: 75px;'>";
 		str +="<span style='background-color: #666666; color: #000000;'>ROV</span></div>";
 		str += "</div>"
-		popupmenu('aux', 'show', x, y, str, 240, 1, 0);
+		popupmenu('radar', 'show', x, y, str, 240, 1, 0);
 	}
 	if (mode=="off") {
-		popupmenu("aux", "close");
+		popupmenu("radar", "close");
 	}
 	if (mode=="shutdown") { 
 		callServer("opennisensor", "off");
@@ -2638,11 +2640,8 @@ function processedImg(mode) {
 		str +=	"' alt='' width='320' height='240'>";
 		str += "</div>"
 		popupmenu('context', 'show', x, y, str, 320, 0, 0);
-	//	radarimagereload();
 	}
 	if (mode=="close") {
-//		lagtimer = new Date().getTime(); // has to be *after* message()
-		// document.getElementById("radarimg").src="";
 		popupmenu("context", "close");
 	}
 
@@ -2670,7 +2669,9 @@ function depthView(mode) {
 		var x = xy[0]+v.offsetWidth;
 		var y=xy[1];
 		src = "frameGrabHTTP?mode="+mode;
-		var str ="<img id='depthImg' src='"+src+"' alt='' ";
+		var str = "<a href='javascript: depthView(&quot;off&quot;);'>"
+		str += "<span class='cancelbox'><b>X</b></span> CLOSE</a><br>"
+		str +="<img id='depthImg' src='"+src+"' alt='' ";
 		str +="onload='depthViewRepeat(&quot;"+mode+"&quot;);' "
 		str += "width='"+w+"' height='"+h+"'>"
 		popupmenu('aux', 'show', x, y, str, w, 1, 0);
@@ -2680,13 +2681,14 @@ function depthView(mode) {
 }
 
 function depthViewRepeat(mode) {
-	clearTimeout(radartimer);
-	radartimer = setTimeout("depthViewImgReload('"+mode+"');", 50);
+	clearTimeout(depthviewtimer);
+	depthviewtimer = setTimeout("depthViewImgReload('"+mode+"');", 50);
 }
 
 function depthViewImgReload(mode) {
-	radartimer = null;
+	depthviewtimer = null;
 	var img = document.getElementById('depthImg');
+	if (img==null) return;
 	img.src = "frameGrabHTTP?mode="+mode+"&date="+new Date().getTime();
 	img.onload = function() { depthViewRepeat(mode); }
 }

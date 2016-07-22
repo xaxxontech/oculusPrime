@@ -49,6 +49,10 @@ public class Video {
 
     public Video(Application a) {
         app = a;
+
+    }
+
+    public void initAvconv() {
         state.set(State.values.stream, Application.streamstate.stop.toString());
         setAudioDevice();
         if (state.get(State.values.osarch).equals(Application.ARM)) {
