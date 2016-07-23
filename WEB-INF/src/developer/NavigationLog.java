@@ -106,6 +106,21 @@ public class NavigationLog {
         } }).start();
     }
 
+    public static synchronized void newItem(final String msg){ 
+        new Thread(new Runnable() { public void run() {
+            long timeout = System.currentTimeMillis() + 5000;
+            while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
+            if (newItemBusy) {
+                Util.log("error, newitembusy timed out", this);
+                return;
+            }
+            newItemBusy = true;;
+            String str = "<div class=\"message\">" +Util.getTime() + PIPE + msg + "</div>\n";
+            writeFile(str);
+            newItemBusy = false;
+        } }).start();
+    }
+    
     private static void writeFile(String newitem) {
         File file = new File(navigationlogpath);
         new File(file.getParentFile().getAbsolutePath()).mkdirs(); // make sure folder exists, returns if exists
@@ -175,6 +190,7 @@ public class NavigationLog {
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
         str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #d3a6e0; padding-bottom: 3px}\n";
+        str += ".message {background-color: #e1e1ea; padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; border-top: 1px solid #ffffff; }";
 
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";

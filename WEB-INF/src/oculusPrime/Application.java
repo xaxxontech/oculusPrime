@@ -304,6 +304,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		if (state.get(values.osarch).equals(ARM))
 			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
@@ -315,14 +316,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateJetty();		 
 			
 		watchdog = new SystemWatchdog(this);
-		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
-		
-		if (settings.getBoolean(ManualSettings.developer.name()) && state.equals(values.dockstatus, AutoDock.UNDOCKED)){
-			new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
-			watchdog.redock("Oculus Prime rebooted undocked");
-			if(navigation != null) navigation.dock();
+		if (settings.getBoolean(ManualSettings.developer.name()) && state.equals(values.dockstatus, AutoDock.UNDOCKED)){	
+			/// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
+			NavigationLog.newItem(".. robot needs help finding home, trying redock!");
+			watchdog.redock("robot needs help finding home, trying redock!");
 		}
 		
+		if(settings.getBoolean(ManualSettings.developer.name())) // developer warning to reboot 
+			NavigationLog.newItem("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			
+		Util.debug("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 		Util.debug("application initialize done", this);
 	}
 
@@ -811,39 +814,41 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case gotodock:
-			if (navigation != null) {
-				state.set(State.values.navigationroute, str);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route canceled by user, returning to dock");
+			if (navigation != null){
+				NavigationLog.newItem("Route canceled by user, returning to dock");
 				navigation.dock(); 
 			}
 			break;
 			
 		case saveroute: 
-			if (navigation != null) navigation.saveRoute(str);
-			messageplayer("route saved", null, null);
+			if (navigation != null){
+				navigation.saveRoute(str);
+				messageplayer("route saved", null, null);
+			}
 			break;
 		
 		case resetroutedata: 
 			// TODO: TESTING... 
 			if( ! settings.getBoolean(ManualSettings.developer.name())) break;
-			NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route status for "+str);
-			messageplayer("User reset route status for "+str, null, null);
+			
+			NavigationLog.newItem("User reset route info for: "+str);
+			messageplayer("User reset route status for: "+str, null, null);
+			
 			Navigation.updateRouteEstimatess(str, 0, 0);
 			Navigation.updateRouteStats(str, 0, 0);
 			break;
 			
 		case runroute:
-			if (navigation != null) {
+			if (navigation != null && str != null){
 				state.set(State.values.navigationroute, str);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route activated by user");
+				NavigationLog.newItem("Route: " + str + " activated by user");
 				navigation.runRoute(str);
 			}
 			break;
 
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
-				state.set(State.values.navigationroute, str);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled");
+				NavigationLog.newItem("All routes cancelled by user");
 				navigation.cancelAllRoutes();
 			}
 			break;

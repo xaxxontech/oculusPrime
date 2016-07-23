@@ -29,8 +29,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 27;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "7"; 
+	private static final int MAX_STATE_HISTORY = 32;
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "9"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -82,7 +82,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		
 		if( ! settings.getBoolean(ManualSettings.developer.name())){
-			Util.log("not in developer mode: "+request.getRemoteAddr(), this);
+			Util.log("dangerous.. not in developer mode: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
@@ -119,6 +119,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("stoprec")) app.driverCallServer(PlayerCommands.record, "false");
 			if(action.equalsIgnoreCase("camon")) app.driverCallServer(PlayerCommands.publish, "camera");
 			if(action.equalsIgnoreCase("camoff")) app.driverCallServer(PlayerCommands.publish, "stop");
+			if(action.equalsIgnoreCase("motor")) app.driverCallServer(PlayerCommands.motorsreset, null);
+			if(action.equalsIgnoreCase("power")) app.driverCallServer(PlayerCommands.powerreset, null);
 			
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify); 
 			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
@@ -326,10 +328,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	public String toDashboard(final String url){
 		
-		String motor = " not connected"; 
-		String power = " not connected";
-		if(state.exists(values.powerport)) power = state.get(values.powerport);	
-		if(state.exists(values.motorport)) motor = state.get(values.motorport);
+		String motor, power;
+		if(state.exists(values.powerport)) power = "<a href=\"dashboard?action=power\" >"+state.get(values.powerport)+"</a>";	
+		else  power = "<a href=\"dashboard?action=power\" >connect power</a>";	
+		if(state.exists(values.motorport)) motor = "<a href=\"dashboard?action=motor\" >"+state.get(values.motorport)+"</a>";
+		else motor = "<a href=\"dashboard?action=motor\" >connect motors</a>";
 		
 		String rec = state.get(values.record);
 		if(rec == null) rec = "off";
@@ -563,13 +566,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void updated(String key) {
 
 		if(key.equals(values.batteryinfo.name())) return;
-		if(key.equals(values.batterylife.name())) return;
-		
-// 		if(key.equals(values.batteryvolts.name())) return;
+		if(key.equals(values.batterylife.name())) return;		
+ 		if(key.equals(values.batteryvolts.name())) return; 		
+ 		if(key.equals(values.cpu.name())) return; 
+
 //		if(key.equals(values.framegrabbusy.name())) return;
 //		if(key.equals(values.rosglobalpath.name())) return;
 //		if(key.equals(values.rosscan.name())) return;
-// 		if(key.equals(values.cpu.name())) return; 
 		
 		// trim size
 		if(history.size() > MAX_STATE_HISTORY) history.remove(0);

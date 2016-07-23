@@ -38,13 +38,12 @@ public class Navigation implements Observer {
 	public static final String ROUTE_COUNT_TAG = "routecount";
 	public static final String ROUTE_FAIL_TAG = "routefail";
 	
-	private Application app = null;
+	private Application app = null;	
+	private static Settings settings = Settings.getReference();
 	private static State state = State.getReference();
 	private static final String DOCK = "dock"; // waypoint name
 	private static final String redhome = System.getenv("RED5_HOME");
 	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
-	
-	private final Settings settings = Settings.getReference();
 	
 	// SHOULD ALL BE PUT IN STATE? 
 	public volatile boolean navdockactive = false;
@@ -59,12 +58,12 @@ public class Navigation implements Observer {
 	/** Constructor */
 
 	public Navigation(Application a) {
-		app = a;
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
-		Util.log("ros dir = " + Ros.rospackagedir, this);
+		// Util.log("ros dir = " + Ros.rospackagedir, this);
 		state.addObserver(this);
+		app = a;
 	}	
 	
 	@Override
@@ -525,7 +524,6 @@ public class Navigation implements Observer {
 				try {	
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(mm / (double)1000, 0));
 				} catch (Exception e) { // create if not there 
-					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
 					dist.setTextContent(Util.formatFloat(mm / (double)1000, 1));
 					route.appendChild(dist);
@@ -533,7 +531,6 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
 				} catch (Exception e) { // create if not there 
-					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node time = document.createElement(ESTIMATED_TIME_TAG);
 					time.setTextContent(Integer.toString(seconds));
 					route.appendChild(time);
@@ -612,14 +609,10 @@ public class Navigation implements Observer {
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
-				
-				Util.debug(".....update xml route stats:  " + name + " count:  " + routecount + " fails: " + routefails, null);
-				
 				route = (Element) routes.item(i);				
 				try {
 					route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).setTextContent(Integer.toString(routecount));
 				} catch (Exception e) { // create if not there 
-					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node count = document.createElement(ROUTE_COUNT_TAG);
 					count.setTextContent(Integer.toString(routecount));
 					route.appendChild(count);
@@ -627,7 +620,6 @@ public class Navigation implements Observer {
 				try {
 					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
 				} catch (Exception e) { // create if not there 
-					// Util.log("xml error missing tag: " + e.getMessage(), null);
 					Node fail = document.createElement(ROUTE_FAIL_TAG);
 					fail.setTextContent(Integer.toString(routefails));
 					route.appendChild(fail);
@@ -657,7 +649,7 @@ public class Navigation implements Observer {
 			return;
 		}
 
-		if (state.exists(State.values.navigationroute)) cancelAllRoutes(); // if another route running
+		if (state.exists(State.values.navigationroute)) cancelAllRoutes(); // if another route running	
 
 		// check for route name and info.. 
 		Document document = Util.loadXMLFromString(routesLoad());
@@ -686,7 +678,6 @@ public class Navigation implements Observer {
 		String xmlstring = Util.XMLtoString(document);
 		saveRoute(xmlstring);
 		
-	
 		new Thread(new Runnable() { public void run() {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);

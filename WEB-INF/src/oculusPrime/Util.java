@@ -154,21 +154,8 @@ public class Util {
 	 */
 	public static void systemCallBlocking(final String args) {
 		try {	
-
 			Process proc = Runtime.getRuntime().exec(args);
-
-//			long start = System.currentTimeMillis();
-//			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-//			String line = null;
-//			System.out.println(proc.hashCode() + "OCULUS: exec():  " + args);
-//			while ((line = procReader.readLine()) != null)
-//				System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
-			
 			proc.waitFor(); // required for linux else throws process hasn't terminated error
-
-//			System.out.println("OCULUS: process exit value = " + proc.exitValue());
-//			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
-
 		} catch (Exception e) {
 			printError(e);
 		}
@@ -231,7 +218,7 @@ public class Util {
 		final long now = System.currentTimeMillis();
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) {
+		for(; i < history.size() ; i++){
 			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim();
 			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
 			line = line.replaceFirst("\\$[0-9]", "");
@@ -267,7 +254,6 @@ public class Util {
     	if(c!=null) filter = c.getClass().getName();
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
-			history.add(System.currentTimeMillis() + ", " +str);
 		}
 	}
     
@@ -721,15 +707,14 @@ public class Util {
 
 		new Thread(new Runnable() { public void run() {
 			try {
-				String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder};
-				Runtime.getRuntime().exec(cmd);
+				Runtime.getRuntime().exec(new String[]{"bash", "-ic", "rm -rf " + Settings.roslogfolder});
 				new File("rlog.txt").delete();
 			} catch (Exception e){printError(e);}
 		} }).start();
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				PowerLogger.append("shutting down application", this);
+				PowerLogger.append("deleteROS(): shutting down application", this);
 				PowerLogger.close();
 				delay(10000);					
 				systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
