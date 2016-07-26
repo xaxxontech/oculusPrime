@@ -39,7 +39,7 @@ public class NavigationLog {
     
     // use if only needing to write a simple message 
     public static void newItem(final String status, final String msg){
-    	newItem(status, msg, State.getReference().get(values.roscurrentgoal), State.getReference().get(values.navigationroute));
+    	newItem(status, msg, State.getReference().get(values.roswaypoint), State.getReference().get(values.navigationroute));
     }
     
     public static synchronized void newItem(final String status, final String msg, final String waypoint, final String routename){ 
@@ -132,17 +132,14 @@ public class NavigationLog {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
                 String line;
                 int items = 0;
-                while ((line = reader.readLine()) != null) {
-                    if (line.contains(ITEM))
-                        items ++;
+                while((line = reader.readLine()) != null){
+                    if(line.contains(ITEM)) items ++;
 
-                    if (items < maxitems || line.contains(FILEEND))
-                        entirefile += line + "\n";
+                    if(items < maxitems || line.contains(FILEEND))
+                    	entirefile += line + "\n";
                 }
-                
                 reader.close();
-
-            } catch (Exception e) { Util.printError(e); }
+            } catch (Exception e){ Util.printError(e); }
         }
 
         // read file, splice newitem into file, after 1st div
