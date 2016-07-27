@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.951; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.952; // trailing zeros ignored!
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -445,7 +445,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				// redock if unplanned and redock set
 				if (!state.exists(State.values.telnetusers.toString())) state.set(State.values.telnetusers, 0);
 				if (!state.exists(State.values.driver.toString()) && state.getInteger(State.values.telnetusers) == 0 &&
-						settings.getBoolean(GUISettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) { 
+						settings.getBoolean(GUISettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+						 !state.getBoolean(State.values.forceundock) ) {
 					Util.log("unplanned undock, trying redock",this);
 					PowerLogger.append("unplanned undock, trying redock",this);
 					application.driverCallServer(PlayerCommands.redock, null);
