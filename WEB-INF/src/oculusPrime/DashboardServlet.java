@@ -40,6 +40,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	static final String link = "<tr><td><b>views</b><td colspan=\"11\">"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
+			"<a href=\"dashboard?view=image\">image</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
@@ -74,15 +75,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	}
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-	
-		if( ! ban.knownAddress(request.getRemoteAddr())){
-			Util.log("unknown address: sending to login: "+request.getRemoteAddr(), this);
-			response.sendRedirect("/oculusPrime");   
-			return;
-		}
 		
 		if( ! settings.getBoolean(ManualSettings.developer.name())){
 			Util.log("dangerous.. not in developer mode: "+request.getRemoteAddr(), this);
+			response.sendRedirect("/oculusPrime");   
+			return;
+		}
+		if( ! ban.knownAddress(request.getRemoteAddr())){
+			Util.log("unknown address: sending to login: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
@@ -91,37 +91,40 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String delay = null;	
 		String action = null;
 		String route = null;
-//		String member = null;
+		String move = null;
 		
 		try {
 			view = request.getParameter("view");
 			delay = request.getParameter("delay");
 			action = request.getParameter("action");
 			route = request.getParameter("route");
-//			member = request.getParameter("member");
+			move = request.getParameter("move");
 		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
-//		if(action != null && app != null && member != null){
-//			if(action.equals("delete")){
-//				Util.log("doGet: detete state member: " + member, this);
-//				state.delete(member);
-//				action = null;
-//			}
-//		}
+		if(move != null){ 
+			delay = "10";
+			if(state.equals(values.dockstatus, AutoDock.DOCKED)){ 
+				state.set(values.motionenabled, true);
+				double distance = 1.0;
+				app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
+				Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.name())) + 2000);
+			} else app.driverCallServer(PlayerCommands.nudge, move);
+		}
 		
 		if(action != null && app != null){
 
-			Util.debug("action ==== " + action, this);
+			if(action.equalsIgnoreCase("camon")) {
+				app.driverCallServer(PlayerCommands.publish, "camera");
+				turnLightOnIfDark();
+			}
 			
+			if(action.equalsIgnoreCase("camoff")) app.driverCallServer(PlayerCommands.publish, "stop");
 			if(action.equalsIgnoreCase("startrec")) app.driverCallServer(PlayerCommands.record, "true");
 			if(action.equalsIgnoreCase("stoprec")) app.driverCallServer(PlayerCommands.record, "false");
-			if(action.equalsIgnoreCase("camon")) app.driverCallServer(PlayerCommands.publish, "camera");
-			if(action.equalsIgnoreCase("camoff")) app.driverCallServer(PlayerCommands.publish, "stop");
 			if(action.equalsIgnoreCase("motor")) app.driverCallServer(PlayerCommands.motorsreset, null);
-			if(action.equalsIgnoreCase("power")) app.driverCallServer(PlayerCommands.powerreset, null);
-			
+			if(action.equalsIgnoreCase("power")) app.driverCallServer(PlayerCommands.powerreset, null);			
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify); 
 			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
 			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
@@ -204,8 +207,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 	
 		if(view != null){
+			if(view.equalsIgnoreCase("image")){
+				out.println("<br/><img src=\"frameGrabHTTP\"><br/>\n");
+				out.println("<br/>&nbsp;&nbsp;<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+				out.println("nudge: <a href=\"dashboard?view=image&move=forward\">forward</a>&nbsp;&nbsp;");
+				out.println("<a href=\"dashboard?view=image&move=backward\">backward</a>&nbsp;&nbsp;");
+				out.println("<a href=\"dashboard?view=image&move=left\">left</a>&nbsp;&nbsp;");
+				out.println("<a href=\"dashboard?view=image&move=right\">right</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+				out.println("\n</body></html> \n");
+				out.close();
+			}
+			
 			if(view.equalsIgnoreCase("users")){	
-				out.println("<a href=\"dashboard\">dashboard</a> &nbsp;&nbsp; <br />\n");
+				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;<br/>\n");
 				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
 				
@@ -255,6 +269,26 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.close();	
 	}
 	
+	private boolean turnLightOnIfDark(){
+
+		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
+
+		state.delete(values.lightlevel);
+		app.driverCallServer(PlayerCommands.getlightlevel, null);
+		long timeout = System.currentTimeMillis() + 5000;
+		while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) {
+			Util.delay(10);
+		}
+
+		if (state.exists(values.lightlevel)) {
+			if (state.getInteger(values.lightlevel) < 25) {
+				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public String toHTML(){ 
 		StringBuffer str = new StringBuffer("<table>"); 
 		HashMap<String, String> props = state.getState();
@@ -270,8 +304,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosscan.name())) key = i.next();
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<tr><td><b>" + key + "</b><td><a href=\"dashboard?view=state&action=delete&member=" 
-						+ key + "\">" + props.get(key) + "</a>");
+				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
 	
 				if( !i.hasNext()) break;
 				
@@ -282,8 +315,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosscan.name())) key = i.next();
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<td><b>" + key + "</b><td><a href=\"dashboard?view=state&action=delete&member=" 
-						+ key + "\">" + props.get(key) + "</a>");
+				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
 				
 				if( !i.hasNext()) break;
 				
@@ -294,18 +326,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosscan.name())) key = i.next();
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<td><b>" + key + "</b><td><a href=\"dashboard?view=state&action=delete&member=" 
-						+ key + "\">" + props.get(key) + "</a>");
+				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
 				
 			} catch (Exception e) { break; }
 		}
 	
-	//	if(props.containsKey(values.rosamcl.name())) 
-	//		str.append("<tr><td><b>rosamcl</b><td colspan=\"9\"> " + props.get(values.rosamcl.name()) + " </tr> \r");
-	
-	//	if(props.containsKey(values.batteryinfo.name())) 
-	//		str.append("<tr><td colspan=\"9\"><br><hr><b>bateryinfo</b> " + props.get(values.batteryinfo.name()) + " </tr> \r");
-		
 		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>null's</b>");
 		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
 		str.append("</table>\n");
@@ -355,8 +380,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String debug = "<a href=\"dashboard?action=debugon\">on</a>&nbsp;&nbsp;|&nbsp;&nbsp;off";
 		if(settings.getBoolean(ManualSettings.debugenabled)) 
 			debug = "<font color=\"blue\"><b>on</b></font>&nbsp;&nbsp;|&nbsp;&nbsp;<a href=\"dashboard?action=debugoff\">off</a>";
-		
-		
+				
 		if(httpport == null) httpport = state.get(State.values.httpport);
 		String dock = "<font color=\"blue\">undocked</font>";
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
@@ -507,13 +531,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 		} 
 		
-		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp;waypoint " + state.get(values.roswaypoint);			
-//		if(Navigation.routemillimeters > 0) link += "&nbsp;|&nbsp;meters " 
-//				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 1) + " (" 
-//				+ (System.currentTimeMillis() - Navigation.routestarttime)/1000 + "sec)";
+		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp; " + state.get(values.roswaypoint);			
+		if(Navigation.routemillimeters > 0) link += "&nbsp;|&nbsp;" 
+				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 1) + "m " 
+				+ (System.currentTimeMillis() - Navigation.routestarttime)/1000 + "s ";
 		
-//		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">*overdue*</font>";
-//		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">*recovery*</font>";
+		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">*overdue*</font>";
+		if(state.getBoolean(values.recoveryrotation)) link += " <font color=\"blue\">*recovery*</font>";
 	
 		link = link.trim();
 		if(link.startsWith("|")) link = link.substring(1, link.length());
@@ -579,3 +603,4 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
 	}
 }
+

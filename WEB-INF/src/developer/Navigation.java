@@ -926,7 +926,7 @@ public class Navigation implements Observer {
 		// rotate to localize
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
 		app.driverCallServer(PlayerCommands.left, "360");
-		Util.delay((long) (360 / state.getDouble(values.odomturndpms.name())) + 2000);
+		Util.delay((long)(360 / state.getDouble(values.odomturndpms.name())) + 2000);
 	}
 
 	private boolean delayToNextRoute(Element navroute, String name, String id) {
@@ -1305,7 +1305,7 @@ public class Navigation implements Observer {
 		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode) ;
 	}
 
-	private boolean turnLightOnIfDark() {
+	private boolean turnLightOnIfDark(){
 
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
 

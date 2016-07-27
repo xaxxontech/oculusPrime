@@ -316,9 +316,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateJetty();		 
 			
 		watchdog = new SystemWatchdog(this);
+		
 		if (settings.getBoolean(ManualSettings.developer.name()) && state.equals(values.dockstatus, AutoDock.UNDOCKED)){	
 			/// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
-			NavigationLog.newItem(".. robot needs help finding home, trying redock!");
+			NavigationLog.newItem("robot needs help finding home, trying redock!");
 			watchdog.redock("robot needs help finding home, trying redock!");
 		}
 		
