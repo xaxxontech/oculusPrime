@@ -34,7 +34,7 @@ public class NavigationLog {
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
     private static final String FILEEND = "</body></html>";
-    private static final int maxitems = 500; // Development
+    private static final int maxitems = 900; // Development
     private static volatile boolean newItemBusy = false;
     
     // use if only needing to write a simple message 

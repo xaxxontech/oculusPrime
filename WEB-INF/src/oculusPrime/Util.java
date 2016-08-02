@@ -192,13 +192,12 @@ public class Util {
         BufferedInputStream in = null;
         FileOutputStream fout = null;
         try{
-                in = new BufferedInputStream(new URL(urlString).openStream());
-                fout = new FileOutputStream(filename);
-                byte data[] = new byte[1024];
-                int count;
-                while ((count = in.read(data, 0, 1024)) != -1)
-                	fout.write(data, 0, count);	
-                
+        	in = new BufferedInputStream(new URL(urlString).openStream());
+            fout = new FileOutputStream(filename);
+            byte data[] = new byte[1024];
+            int count;
+            while ((count = in.read(data, 0, 1024)) != -1)
+            	fout.write(data, 0, count);	
         } finally {    
         	if (in != null) in.close();
             if (fout != null) fout.close();
@@ -469,6 +468,16 @@ public class Util {
 		return wdev;
 	}
 
+	public static void logLinuxRelease(){
+		try {
+			// log("lookupRelease(): ", null);
+			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "lsb_release -a"});
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) log("lookupRelease(): " + line, null);
+		} catch (Exception e){}
+	}
+	
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 			State state = State.getReference();

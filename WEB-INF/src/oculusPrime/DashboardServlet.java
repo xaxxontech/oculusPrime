@@ -115,25 +115,31 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(action != null && app != null){
 
-			if(action.equalsIgnoreCase("camon")) {
-				app.driverCallServer(PlayerCommands.publish, "camera");
-				turnLightOnIfDark();
+			if(action.equalsIgnoreCase("camon")){
+				new Thread(new Runnable() { public void run() {
+					app.driverCallServer(PlayerCommands.publish, "camera");
+					Util.delay(2000);
+					if( ! turnLightOnIfDark()){
+						Util.delay(2000);
+						if( ! turnLightOnIfDark()) Util.log("can't turn on the lights", this);
+					}
+				}}).start();
 			}
-			
+						
+			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify); 
 			if(action.equalsIgnoreCase("camoff")) app.driverCallServer(PlayerCommands.publish, "stop");
 			if(action.equalsIgnoreCase("startrec")) app.driverCallServer(PlayerCommands.record, "true");
 			if(action.equalsIgnoreCase("stoprec")) app.driverCallServer(PlayerCommands.record, "false");
 			if(action.equalsIgnoreCase("motor")) app.driverCallServer(PlayerCommands.motorsreset, null);
 			if(action.equalsIgnoreCase("power")) app.driverCallServer(PlayerCommands.powerreset, null);			
-			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify); 
-			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);	
 			if(action.equalsIgnoreCase("cancel")) app.driverCallServer(PlayerCommands.cancelroute, null);
 			if(action.equalsIgnoreCase("gotodock")) app.driverCallServer(PlayerCommands.gotodock, null);
 			if(action.equalsIgnoreCase("startnav")) app.driverCallServer(PlayerCommands.startnav, null);
 			if(action.equalsIgnoreCase("stopnav")) app.driverCallServer(PlayerCommands.stopnav, null);
  			if(action.equalsIgnoreCase("deletelogs")) app.driverCallServer(PlayerCommands.deletelogs, null);			
 			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
-			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);
+			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);		
+			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);	
 			if(action.equalsIgnoreCase("debugon")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 
@@ -399,7 +405,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String life = state.get(values.batterylife);
 		if(life == null) life = "";
 		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
-		if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889;";
+		if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889; &#8599;"; // &#8599;
 		life = "<a href=\"dashboard?view=power\">"+life;
 	
 		// ----- build html buffer --//  
@@ -531,9 +537,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 		} 
 		
-		if(state.exists(values.roswaypoint)) link += "&nbsp;|&nbsp; " + state.get(values.roswaypoint);			
-		if(Navigation.routemillimeters > 0) link += "&nbsp;|&nbsp;" 
-				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 1) + "m " 
+		if(state.exists(values.roswaypoint)) link += "&nbsp;&nbsp;|&nbsp;&nbsp; " + state.get(values.roswaypoint);			
+		if(Navigation.routemillimeters > 0) link += "&nbsp;&nbsp;|&nbsp;&nbsp;" 
+				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 1) + "m - " 
 				+ (System.currentTimeMillis() - Navigation.routestarttime)/1000 + "s ";
 		
 		if(state.getBoolean(values.routeoverdue)) link += " <font color=\"blue\">*overdue*</font>";

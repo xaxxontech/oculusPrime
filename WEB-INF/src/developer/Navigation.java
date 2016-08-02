@@ -770,8 +770,8 @@ public class Navigation implements Observer {
 				failed = false;
 				rotations = 0;
 				
-				Util.log("starting.. estimate meters: " + estimatedmeters + " seconds: "+estimatedtime, this);	
-				new Thread(new watchOverdue()).start(); 
+				Util.log("starting: " + name + " estimated meters: " + estimatedmeters + " seconds: "+estimatedtime, this);	
+// 				new Thread(new watchOverdue()).start(); 
 				
 		    	// go to each waypoint
 		    	NodeList waypoints = navroute.getElementsByTagName("waypoint");	    	
@@ -831,7 +831,7 @@ public class Navigation implements Observer {
 					
 					//TODO: TESTING........
 					if(settings.getBoolean(ManualSettings.developer.name())){
-						// SystemWatchdog.waitForCpu();
+						SystemWatchdog.waitForCpu();
 						app.driverCallServer(PlayerCommands.left, "360");
 						Util.delay((long) (360 / state.getDouble(values.odomturndpms.name())) + 1000);
 						SystemWatchdog.waitForCpu();
@@ -880,6 +880,7 @@ public class Navigation implements Observer {
 					Util.log("["+ name + "] estimated: " + estimatedtime   + " seconds : " + seconds     
 							+ " delta: " + Math.abs(estimatedtime - seconds) + " seconds ", this);
 					
+				
 					if(estimatedtime == 0 && estimatedmeters > 0){
 						// Util.log("route estimate is zero, meters = " + estimatedmeters, this);
 						updateRouteEstimatess(name, seconds, ((estimatedmeters*1000 + routemillimeters/1000)/2));
@@ -900,10 +901,12 @@ public class Navigation implements Observer {
 						updateRouteEstimatess(name, seconds, estimatedmeters + routemillimeters);
 					}						
 				}
-									
+					
 				if(failed) updateRouteStats(state.get(values.navigationroute), getRouteCount(name)+1, getRouteFails(name)+1);
 				else updateRouteStats(state.get(values.navigationroute), getRouteCount(name)+1, getRouteFails(name));
 				NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
+				
+				Util.log("[" + name + "] count: " + Navigation.getRouteCountString(name) + " fail: " + Navigation.getRouteFailsString(name), this);
 
 				// reset 	
 				state.delete(values.recoveryrotation);
@@ -1149,7 +1152,7 @@ public class Navigation implements Observer {
 
 				if (email) {
 					String emailto = settings.readSetting(GUISettings.email_to_address);
-					if (!emailto.equals(Settings.DISABLED)) {
+					if (!emailto.equals(Settings.DISABLED)){
 						app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
 						navlogmsg += "<br> email sent ";
 					}

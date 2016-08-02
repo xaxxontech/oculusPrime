@@ -38,7 +38,7 @@ public class Video {
     static final String FFMPEG = "ffmpeg";
     static final String AVCONV = "avconv";
     private String avprog = AVCONV;
-    private static long STREAM_CONNECT_DELAY = Application.STREAM_CONNECT_DELAY;
+    private static long STREAM_CONNECT_DELAY = 5000; // Application.STREAM_CONNECT_DELAY;
     private static int dumpfps = 15;
     private static final String STREAMSPATH="/oculusPrime/streams/";
     public static final String FMTEXT = ".flv";

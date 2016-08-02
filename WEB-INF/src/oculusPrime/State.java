@@ -124,12 +124,13 @@ public class State {
 	public boolean block(final values member, final String target, int timeout){
 		long start = System.currentTimeMillis();
 		String current = null;
-		while(true){
-			
+		while(true){	
 			current = get(member); 
 			if(current!=null){
-				if(target.equals(current)) return true;
-				if(target.startsWith(current)) return true;
+				if(target.equalsIgnoreCase(current)){
+					Util.debug("block() timeout in:  " + ((System.currentTimeMillis()-start)) + " " + member.name(), this);
+					return true;
+				}
 			}
 	
 			Util.delay(1); // no higher, used by motion, odometry

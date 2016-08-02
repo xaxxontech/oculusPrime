@@ -9,6 +9,8 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import developer.NavigationLog;
+import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -319,6 +321,11 @@ public class AutoDock {
 					Util.log(state.get(State.values.driver) + " docked successfully", this);
 					PowerLogger.append(state.get(State.values.driver) + " docked successfully", this);
 
+					if(settings.getBoolean(ManualSettings.developer.name())){
+						if(!state.exists(values.driver)) NavigationLog.newItem("Docked: docked successfully");
+						else NavigationLog.newItem("Docked: " + state.get(State.values.driver) + " docked successfully");
+					}
+				
 				} else { // dock fail
 					
 					if (state.getBoolean(State.values.docking)) {
@@ -328,6 +335,11 @@ public class AutoDock {
 						Util.log("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 						PowerLogger.append("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 
+						if(settings.getBoolean(ManualSettings.developer.name())){
+							if(!state.exists(values.driver))NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): docking timed out");
+							else NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): " + state.get(State.values.driver) + " docking timed out");
+						}
+													
 						// back up and retry
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
 							dockattempts ++;

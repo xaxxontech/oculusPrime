@@ -299,31 +299,38 @@ public class FrameGrabHTTP extends HttpServlet {
 			radarImage = image;
 //			radarImageGenerating = false;
 //		} }).start();
-
 	}
 
 	/**
-	 *
 	 * @param args download url params, can be null
 	 * @return   returns download url of saved image
 	 */
 	public static String saveToFile(String args) {
-		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;
-
+		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;		
+		final String datetime = Util.getDateStamp();
+		final String path =  "webapps"+Util.sep+"oculusPrime"+Util.sep+"framegrabs";
 		final Downloader dl = new Downloader();
+		
 //		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
 //		Calendar cal = Calendar.getInstance();
 //		final String datetime = dateFormat.format(cal.getTime());
-		final String datetime = Util.getDateStamp();
-		new Thread(new Runnable() {
-			public void run() {
-				String sep = Util.sep;
-				dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculusPrime"+sep+"framegrabs");
+		
+		new Thread(new Runnable(){
+			public void run(){
+				if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
+					Util.log("failure to download... 1", this);
+					Util.delay(500);
+					if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
+						Util.log("failure to download... 2", this);
+						Util.delay(900);
+						if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
+							Util.log("failure to download... 3, give up..", this);
+						}
+					}
+				}
 			}
 		}).start();
 		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
 				"/oculusPrime/framegrabs/"+datetime+".jpg";
 	}
-	
-
 }

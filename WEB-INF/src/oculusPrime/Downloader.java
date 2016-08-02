@@ -15,7 +15,7 @@ public class Downloader {
 	 * @return true if the file is down loaded, false on any error. 
 	 * 
 	 */
-	public boolean FileDownload(final String fileAddress, final String localFileName, final String destinationDir) {
+	public boolean FileDownload(final String fileAddress, final String localFileName, final String destinationDir){
 		long start = System.currentTimeMillis();
 		String sep = System.getProperty("file.separator");
 		

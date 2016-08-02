@@ -287,28 +287,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		if (settings.getBoolean(GUISettings.navigation)) {
-			navigation = new developer.Navigation(this);
-			navigation.runAnyActiveRoute();
-		}
+//		if (settings.getBoolean(GUISettings.navigation)) {
+//			navigation = new developer.Navigation(this);
+//			navigation.runAnyActiveRoute();
+//		}
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
-		if (state.get(values.osarch).equals(ARM))
-			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if (!settings.getBoolean(ManualSettings.useflash))
-			state.set(values.driverstream, driverstreamstate.disabled.toString());
-		else
-			state.set(State.values.driverstream, driverstreamstate.stop.toString());
+		if (state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if (!settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
-		if (state.get(values.osarch).equals(ARM))
-			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if (state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 		
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
-
+		
+		if (settings.getBoolean(GUISettings.navigation)) navigation = new developer.Navigation(this);
+		//	navigation.runAnyActiveRoute();
+		
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();	
@@ -317,17 +316,35 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		watchdog = new SystemWatchdog(this);
 		
-		if (settings.getBoolean(ManualSettings.developer.name()) && state.equals(values.dockstatus, AutoDock.UNDOCKED)){	
-			/// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
-			NavigationLog.newItem("robot needs help finding home, trying redock!");
-			watchdog.redock("robot needs help finding home, trying redock!");
+		if(settings.getBoolean(ManualSettings.developer.name())){
+			
+			// try re-docking, then start routes again 
+			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
+			
+			// developer debugging info, warning to reboot after many restarts
+			NavigationLog.newItem("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			Util.debug("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+			Util.logLinuxRelease(); 
 		}
 		
-		if(settings.getBoolean(ManualSettings.developer.name())) // developer warning to reboot 
-			NavigationLog.newItem("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
-			
-		Util.debug("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+		if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runAnyActiveRoute();
 		Util.debug("application initialize done", this);
+	}
+	
+	private void redockWaitRunRoute(){
+		new Thread(new Runnable() { public void run(){
+			try {
+				
+				/// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
+				NavigationLog.newItem("robot needs help finding home, trying redock!");
+				watchdog.redock(SystemWatchdog.NOFORWARD);	
+				
+				state.block(values.dockstatus, AutoDock.DOCKED, (int)Util.FIVE_MINUTES);
+				
+				if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runAnyActiveRoute();
+				
+			} catch (Exception e){Util.printError(e);}
+		} }).start();
 	}
 
 	private void grabberInitialize() {
@@ -825,16 +842,32 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null){
 				navigation.saveRoute(str);
 				messageplayer("route saved", null, null);
+				// reset if existed
+				// TODO: TESTING... 	
+				String r = "count: " + Navigation.getRouteCountString(str) 
+	 			+ " fail: " + Navigation.getRouteFailsString(str)
+	 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
+	 			+ " seconds: " + Navigation.getRouteTimeEstimate(str);
+
+	 			commandServer.sendToGroup("route: " + str + " " + r);
+	
+				NavigationLog.newItem("User reset route info for: "+str.substring(str.indexOf("<rname>"), str.indexOf("</rname>")) + "\n<br>" + r);
+				Navigation.updateRouteEstimatess(str, 0, 0);
+				Navigation.updateRouteStats(str, 0, 0);
 			}
 			break;
 		
-		case resetroutedata: 
-			// TODO: TESTING... 
-			if( ! settings.getBoolean(ManualSettings.developer.name())) break;
+		case routedata:
+			String r = "count: " + Navigation.getRouteCountString(str) 
+			 			+ " fail: " + Navigation.getRouteFailsString(str)
+			 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
+			 			+ " seconds: " + Navigation.getRouteTimeEstimate(str) ;
+			commandServer.sendToGroup("route: " + str + " " + r);
+			break;
 			
+		case resetroutedata: 
 			NavigationLog.newItem("User reset route info for: "+str);
 			messageplayer("User reset route status for: "+str, null, null);
-			
 			Navigation.updateRouteEstimatess(str, 0, 0);
 			Navigation.updateRouteStats(str, 0, 0);
 			break;
@@ -842,7 +875,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null && str != null){
 				state.set(State.values.navigationroute, str);
-				NavigationLog.newItem("Route: " + str + " activated by user");
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: " + str + " activated by user");
 				navigation.runRoute(str);
 			}
 			break;
@@ -872,6 +905,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case cpu: 
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
+			commandServer.sendToGroup("cpu = " + cpu);
 			break;
 		case waitforcpu: watchdog.waitForCpuThread();  break;
 
@@ -1504,7 +1538,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		shutdownApplication();
 	}
 	
-	public  void reboot() {
+	public  void reboot(){
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
