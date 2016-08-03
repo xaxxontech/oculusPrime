@@ -23,7 +23,7 @@ public class Video {
     private static final int quality720p = 7;
     private static final int defaultwidth=640;
     private static final int defaultheight=480;
-    private static final int lowreswidth=320;
+    public static final int lowreswidth=320;
     private static final int lowresheight=240;
     private static final String PATH="/dev/shm/avconvframes/";
     private static final String EXT=".bmp";

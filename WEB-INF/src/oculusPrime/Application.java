@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.Calibrate;
 import developer.swingtool.Input;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
@@ -952,6 +953,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			grabberSetStream(str);
 			break;
 
+		case calibraterotation:
+			new Calibrate(this).calibrateRotation();
+			break;
+
 		}
 	}
 
@@ -1428,7 +1433,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			state.set(State.values.docking, false);
 //			powerport.manualSetBatteryUnDocked();
 		}
-		
 	}
 
 	private void statusCheck(String s) {
@@ -1611,6 +1615,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (str.equals(ArduinoPrime.direction.stop.name())) {
 			if (state.getBoolean(State.values.autodocking))
 				docker.autoDockCancel();
+			state.set(values.calibratingrotation, false);
 
 			comport.stopGoing();
 			moveMacroCancel();

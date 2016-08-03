@@ -60,7 +60,7 @@ public enum PlayerCommands {
     
 	// undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, truncros, truncarchive, archive, 
-    archiveros, archiveimages, archivelogs, 
+    archiveros, archiveimages, archivelogs, calibraterotation,
     
     // experimental (undocumented)
     opennisensor, clearmap, error,

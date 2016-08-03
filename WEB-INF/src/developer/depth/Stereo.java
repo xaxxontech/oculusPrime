@@ -37,11 +37,14 @@ public class Stereo {
 	public static final int yres = 360;
 
 	public Mat rotImage;
-	public boolean generating = false;	 
+	public boolean generating = false;
+
+	// lifecam cinema measured angles (may not reflect average)
 	final static double camFOVx169 = 68.46;
 	static final double camFOVy169 = 41.71;
-	static final double camFOVx43 = 58.90;
+	public static final double camFOVx43 = 58.90;
 	static final double camFOVy43 = 45.90;
+
 	final static int maxDepthTopView = 3500; // 3500;
 	final static int minDepthTopView = 750;
 //	final double scaleMult = 275*2032; // disparity*mm (based on xoffset=2)!

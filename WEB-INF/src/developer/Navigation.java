@@ -354,7 +354,7 @@ public class Navigation implements Observer {
 		int rot = 0;
 
 		while (navdockactive) {
-			SystemWatchdog.waitForCpu(); // added stricter 40% check, lots of missed dock grabs here
+			SystemWatchdog.waitForCpu();
 
 			app.driverCallServer(PlayerCommands.dockgrab, resolution);
 			long start = System.currentTimeMillis();
@@ -755,7 +755,11 @@ public class Navigation implements Observer {
 		state.set(State.values.motionenabled, true);
 		double distance = 1.0;
 		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
-		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString())) + 1000);
+		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString()))); // required for fast systems?!
+		long start = System.currentTimeMillis();
+		while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
+				&& System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
+		Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
 		// rotate to localize
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery

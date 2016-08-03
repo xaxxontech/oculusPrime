@@ -365,20 +365,20 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //			state.set(State.values.lastodomreceived, System.currentTimeMillis());
 			
 			// testing only ----------------
-			if (settings.getBoolean(ManualSettings.developer.name())) {
-				if (Application.openNIRead.depthCamGenerating) {
-					if (!state.exists(State.values.distanceanglettl.toString())) {
-						state.set(State.values.distanceanglettl, "0 0");
-					}
-					
-					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
-					dttl += lastodomlinear;
-					attl += lastodomangle;
-					String dattl = dttl+" "+attl;
-					state.set(State.values.distanceanglettl,dattl);
-				}
-			}
+//			if (settings.getBoolean(ManualSettings.developer.name())) {
+//				if (Application.openNIRead.depthCamGenerating) {
+//					if (!state.exists(State.values.distanceanglettl.toString())) {
+//						state.set(State.values.distanceanglettl, "0 0");
+//					}
+//
+//					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+//					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+//					dttl += lastodomlinear;
+//					attl += lastodomangle;
+//					String dattl = dttl+" "+attl;
+//					state.set(State.values.distanceanglettl,dattl);
+//				}
+//			}
 			// end of testing only ----------------
 
 		}
