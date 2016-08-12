@@ -23,6 +23,7 @@ import oculusPrime.GUISettings;
 import oculusPrime.ManualSettings;
 import oculusPrime.Observer;
 import oculusPrime.PlayerCommands;
+import oculusPrime.SendMail;
 import oculusPrime.Settings;
 import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
@@ -771,7 +772,7 @@ public class Navigation implements Observer {
 				rotations = 0;
 				
 				Util.log("starting: " + name + " estimated meters: " + estimatedmeters + " seconds: "+estimatedtime, this);	
-// 				new Thread(new watchOverdue()).start(); 
+ 				new Thread(new watchOverdue()).start(); 
 				
 		    	// go to each waypoint
 		    	NodeList waypoints = navroute.getElementsByTagName("waypoint");	    	
@@ -1110,7 +1111,7 @@ public class Navigation implements Observer {
 			// enable sound detection
 			if (sound) {
 				if (!settings.getBoolean(ManualSettings.useflash))   app.video.sounddetect(Settings.TRUE);
-				else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
+				else app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
 						"0 " + settings.readSetting(ManualSettings.soundthreshold));
 			}
 
@@ -1139,7 +1140,7 @@ public class Navigation implements Observer {
 			if (photo) {
 				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
 
-				String link = FrameGrabHTTP.saveToFile("");
+				final String link = FrameGrabHTTP.saveToFile("");
 
 				Util.delay(2000); // allow time for framgrabusy flag to be set true
 				long timeout = System.currentTimeMillis() + 10000;
@@ -1155,6 +1156,9 @@ public class Navigation implements Observer {
 					if (!emailto.equals(Settings.DISABLED)){
 						app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
 						navlogmsg += "<br> email sent ";
+						
+						// TODO: TESTING.. adjust path 
+						// new SendMail("Oculus Prime Photo", msg, new String[]{ link });
 					}
 				}
 				if (rss) {
@@ -1308,23 +1312,69 @@ public class Navigation implements Observer {
 		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode) ;
 	}
 
+	/*
 	private boolean turnLightOnIfDark(){
+		
+		Util.log("turnLightOnIfDark(): start, light level = " + state.getInteger(values.spotlightbrightness), this);
 
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
 
 		state.delete(values.lightlevel);
 		app.driverCallServer(PlayerCommands.getlightlevel, null);
 		long timeout = System.currentTimeMillis() + 5000;
-		while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) {
-			Util.delay(10);
-		}
-
-		if (state.exists(values.lightlevel)) {
+		while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) Util.delay(10);
+	
+		if (state.exists(values.lightlevel)){
 			if (state.getInteger(values.lightlevel) < 25) {
+
+				Util.log("turnLightOnIfDark(): too low = " + state.getInteger(values.spotlightbrightness), this);
+
 				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
 				return true;
 			}
 		}
+		
+		Util.log("turnLightOnIfDark(): not too dark, light level = " + state.getInteger(values.spotlightbrightness), this);
+
+		return false;
+	}
+*/
+	
+	private boolean turnLightOnIfDark(){
+		
+		Util.log("turnLightOnIfDark(): start, light level = " + state.getInteger(values.lightlevel), this);
+
+		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
+
+		state.delete(values.lightlevel);
+		app.driverCallServer(PlayerCommands.getlightlevel, null);
+		
+	// this should work but doesn't... 	
+	//	long timeout = System.currentTimeMillis() + 5000;
+	//	while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) Util.delay(10);
+	
+		// block wait.. 
+		for(int i = 0; i < 9 ; i++){
+			if(state.exists(values.lightlevel)){
+				Util.log("turnLightOnIfDark(): for loop break = " + state.getInteger(values.lightlevel), this);
+				break;
+			} else {
+				Util.debug("looop " + i, this);
+				Util.delay(1000);
+			}
+		}
+		
+		if (state.exists(values.lightlevel)){
+			if (state.getInteger(values.lightlevel) < 30) {
+				Util.log("turnLightOnIfDark(): turn on light too low = " + state.getInteger(values.lightlevel), this);
+				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
+				return true;
+			}
+		} else Util.log("light leve doesn't exist!", this);
+
+		
+		Util.log("turnLightOnIfDark(): not too dark, light level = " + state.getInteger(values.lightlevel), this);
+
 		return false;
 	}
 

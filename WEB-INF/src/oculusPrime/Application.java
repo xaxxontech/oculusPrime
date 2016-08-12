@@ -305,9 +305,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
 		
-		if (settings.getBoolean(GUISettings.navigation)) navigation = new developer.Navigation(this);
-		//	navigation.runAnyActiveRoute();
-		
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();	
@@ -316,32 +313,60 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		watchdog = new SystemWatchdog(this);
 		
+		if(settings.getBoolean(GUISettings.navigation)) navigation = new developer.Navigation(this);
+		
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
 			// try re-docking, then start routes again 
 			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 			
 			// developer debugging info, warning to reboot after many restarts
-			NavigationLog.newItem("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
-			Util.debug("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+			if(settings.getInteger(ManualSettings.restarted) > 5)
+				NavigationLog.newItem("restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			
+			// extra logging info 
+			Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);			
+			Util.log("restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
 			Util.logLinuxRelease(); 
 		}
 		
 		if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runAnyActiveRoute();
-		Util.debug("application initialize done", this);
+		Util.log("application initialized", this);
 	}
 	
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run(){
 			try {
 				
+				Util.log("... redockWaitRunRoute start, waiting to run: " + state.get(values.navigationroute), this); 
+				
 				/// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
 				NavigationLog.newItem("robot needs help finding home, trying redock!");
 				watchdog.redock(SystemWatchdog.NOFORWARD);	
 				
-				state.block(values.dockstatus, AutoDock.DOCKED, (int)Util.FIVE_MINUTES);
+				Util.log("... redockWaitRunRoute blocking while docking.....", this);
 				
-				if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runAnyActiveRoute();
+				// state.block(values.dockstatus, AutoDock.DOCKED, 99999); // (int)Util.FIVE_MINUTES);
+				for(int i = 0 ; i < 100 ; i++){
+					
+					if( state.equals(values.dockstatus, AutoDock.DOCKED)) {
+						Util.log("... redockWaitRunRoute now docked...", this); 
+						break;
+					}
+					
+					Util.log("... redockWaitRunRoute wait " + i, this); 
+					Util.delay(9000);
+					
+				}
+				
+				if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)){
+					Util.log("... redockWaitRunRoutestarted docked run any route.. ", this);
+					Util.delay(9000);
+					navigation.runAnyActiveRoute();
+				}
+				
+				Util.log("... redockWaitRunRoute end ...", this); 
+
 				
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
@@ -833,7 +858,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		case gotodock:
 			if (navigation != null){
-				NavigationLog.newItem("Route canceled by user, returning to dock");
+				NavigationLog.newItem("Route canceled by user");
 				navigation.dock(); 
 			}
 			break;
@@ -842,18 +867,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null){
 				navigation.saveRoute(str);
 				messageplayer("route saved", null, null);
+				
+				Util.log("save route: " + str, this);
+
 				// reset if existed
-				// TODO: TESTING... 	
+				// TODO: TESTING... 
+				/*
 				String r = "count: " + Navigation.getRouteCountString(str) 
 	 			+ " fail: " + Navigation.getRouteFailsString(str)
 	 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
 	 			+ " seconds: " + Navigation.getRouteTimeEstimate(str);
 
 	 			commandServer.sendToGroup("route: " + str + " " + r);
-	
-				NavigationLog.newItem("User reset route info for: "+str.substring(str.indexOf("<rname>"), str.indexOf("</rname>")) + "\n<br>" + r);
-				Navigation.updateRouteEstimatess(str, 0, 0);
-				Navigation.updateRouteStats(str, 0, 0);
+			*/
+			//	NavigationLog.newItem("User reset route info for: "+str.substring(str.indexOf("<rname>"), str.indexOf("</rname>")) + "\n<br>" + r);
+			//	Navigation.updateRouteEstimatess(str, 0, 0);
+			//	Navigation.updateRouteStats(str, 0, 0);
 			}
 			break;
 		
@@ -862,7 +891,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			 			+ " fail: " + Navigation.getRouteFailsString(str)
 			 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
 			 			+ " seconds: " + Navigation.getRouteTimeEstimate(str) ;
-			commandServer.sendToGroup("route: " + str + " " + r);
+			
+			Util.log("route: " + r, this);
+
+			// commandServer.sendToGroup("route: " + str + " " + r);
 			break;
 			
 		case resetroutedata: 

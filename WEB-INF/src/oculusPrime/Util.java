@@ -470,12 +470,11 @@ public class Util {
 
 	public static void logLinuxRelease(){
 		try {
-			// log("lookupRelease(): ", null);
 			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "lsb_release -a"});
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) log("lookupRelease(): " + line, null);
-		} catch (Exception e){}
+		} catch (Exception e){printError(e);}
 	}
 	
 	public static void updateExternalIPAddress(){

@@ -40,7 +40,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	static final String link = "<tr><td><b>views</b><td colspan=\"11\">"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
-			"<a href=\"dashboard?view=image\">image</a>&nbsp;&nbsp;"  +
+			"<a href=\"dashboard?view=drive\">drive</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
@@ -118,11 +118,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("camon")){
 				new Thread(new Runnable() { public void run() {
 					app.driverCallServer(PlayerCommands.publish, "camera");
-					Util.delay(2000);
-					if( ! turnLightOnIfDark()){
-						Util.delay(2000);
-						if( ! turnLightOnIfDark()) Util.log("can't turn on the lights", this);
-					}
+					
+	//				Util.delay(5000);
+					if( ! state.block(values.stream, "camera", 5000)) Util.log("block failed on stream == camera", this);
+					
+					if( ! state.equals(values.stream, "camera")) Util.log("camera not on! ", this);
+
+					if(turnLightOnIfDark()) Util.log("light was turning on because dark..", this);
+
 				}}).start();
 			}
 						
@@ -155,15 +158,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					text.append("\n\r -- settings --\n");
 					text.append(Settings.getReference().toString().replaceAll("<br>", "\n"));
 					new SendMail("oculus prime snapshot", text.toString());
-					Util.delay(5000);
-					new SendMail("oculus prime log files", "see attached", new String[]{ Settings.settingsfile, Navigation.navroutesfile.getAbsolutePath() });
+					// Util.delay(5000);
+					// new SendMail("oculus prime log files", "see attached", new String[]{ Settings.settingsfile, Navigation.navroutesfile.getAbsolutePath() });
 				}}).start();
 			}  
 			
 			if(action.equalsIgnoreCase("reboot")){
 				new Thread(new Runnable() { public void run(){
 					Util.log("reboot called, going down..", this);	
-					Util.delay(3000); // redirect before calling.. 
+					Util.delay(1000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.reboot, null);
 				}}).start();
 			}
@@ -184,8 +187,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			//			app.driverCallServer(PlayerCommands.restart, null);
 			//		}
 					
+					app.driverCallServer(PlayerCommands.move, "stop");
 					Util.log("restart called, going down..", this);
-					Util.delay(3000); // redirect before calling.. 
+					Util.delay(1000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.restart, null);
 				}}).start();
 			}
@@ -210,21 +214,22 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 	
 		if(view != null){
-			if(view.equalsIgnoreCase("image")){
+			if(view.equalsIgnoreCase("drive")){
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<br/><img src=\"frameGrabHTTP\"><br/>\n");
 				out.println("<br/>&nbsp;&nbsp;<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;&nbsp;&nbsp;");
-				out.println("nudge: <a href=\"dashboard?view=image&move=forward\">forward</a>&nbsp;&nbsp;");
-				out.println("<a href=\"dashboard?view=image&move=backward\">backward</a>&nbsp;&nbsp;");
-				out.println("<a href=\"dashboard?view=image&move=left\">left</a>&nbsp;&nbsp;");
-				out.println("<a href=\"dashboard?view=image&move=right\">right</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+				out.println("nudge: <a href=\"dashboard?view=drive&move=forward\">forward</a>&nbsp;&nbsp;");
+				out.println("<a href=\"dashboard?view=drive&move=backward\">backward</a>&nbsp;&nbsp;");
+				out.println("<a href=\"dashboard?view=drive&move=left\">left</a>&nbsp;&nbsp;");
+				out.println("<a href=\"dashboard?view=drive&move=right\">right</a>&nbsp;&nbsp;&nbsp;&nbsp;");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("users")){	
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;<br/>\n");
 				out.println(ban + "<br />\n");
 				out.println(ban.tail(30) + "\n");
@@ -239,6 +244,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
+				out.println("<html><body> \n");
 				out.println(toHTML() + "\n");
 				out.println("<br />&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
 				out.println("\n</body></html> \n");
@@ -246,6 +252,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("stdout")){
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;  \n" 
 						+ new File(Settings.stdout).getAbsolutePath() + "<br />\n");
 				out.println(Util.tail(35) + "\n");
@@ -254,14 +261,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("power")){	
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp; \n"
 						+ new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
-				out.println(PowerLogger.tail(40) + "\n");
+				out.println(PowerLogger.tail(45) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("history")){
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a> state history: "+ new Date().toString() +"<br />\n");
 				out.println(getHistory().replaceAll("\n", "<br>\n"));
 				out.println("\n</body></html> \n");
@@ -270,11 +279,47 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		
 		// default view 
+		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html> \n");
 		out.close();	
 	}
 	
+
+	//--------------------------------------------------------------------------------------------------------------------------------------//
+	private boolean turnLightOnIfDark(){
+		
+		Util.log("turnLightOnIfDark(): start, light level = " + state.getInteger(values.lightlevel), this);
+
+		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
+
+		state.delete(values.lightlevel);
+		app.driverCallServer(PlayerCommands.getlightlevel, null);
+	//	long timeout = System.currentTimeMillis() + 5000;
+	//	while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) Util.delay(10);
+	
+		for(int i = 0 ; i < 9 ; i++){		
+			if(state.exists(values.lightlevel)){
+				Util.log("turnLightOnIfDark(): for loop break = " + state.getInteger(values.lightlevel), this);
+				break;
+			} else {
+				Util.log("looop " + i, this);
+				Util.delay(1000);
+			}
+		}
+		
+		if(state.exists(values.lightlevel)){
+			if(state.getInteger(values.lightlevel) < 30) {
+				Util.log("turnLightOnIfDark(): turn on light too low = " + state.getInteger(values.lightlevel), this);
+				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
+				return true;
+			}
+		} else Util.log("light leve doesn't exist!", this);
+		Util.log("turnLightOnIfDark(): not too dark, light level = " + state.getInteger(values.lightlevel), this);
+		return false;
+	}
+	
+	/*
 	private boolean turnLightOnIfDark(){
 
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
@@ -294,11 +339,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		return false;
 	}
+	*/
 	
-	public String toHTML(){ 
-		StringBuffer str = new StringBuffer("<table>"); 
+	public String toHTML(){
+		
 		HashMap<String, String> props = state.getState();
 		Set<String> keys = props.keySet();
+		StringBuffer str = new StringBuffer("<table border=\"1\">"); 		
+		
+		
 		for(Iterator<String> i = keys.iterator(); i.hasNext();){
 			try {
 				if( !i.hasNext()) break;
@@ -311,7 +360,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
 				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
-	
+	/*
 				if( !i.hasNext()) break;
 				
 				key = i.next();
@@ -333,12 +382,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
 				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
-				
+*/				
 			} catch (Exception e) { break; }
 		}
-	
-		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>null's</b>");
+
+		str.append(/*"<tr><td colspan=\"9\"><hr>"*/ "<tr><td colspan=\"9\"><b>null members: </b>");		
 		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
+
 		str.append("</table>\n");
 		return str.toString();
 	}
@@ -405,7 +455,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String life = state.get(values.batterylife);
 		if(life == null) life = "";
 		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
-		if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889; &#8599;"; // &#8599;
+		if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889;"; // charge &#8599;
+		// else life += "</a>&nbsp;&nbsp;&nbsp;&#8600;"; // draining 
+
 		life = "<a href=\"dashboard?view=power\">"+life;
 	
 		// ----- build html buffer --//  

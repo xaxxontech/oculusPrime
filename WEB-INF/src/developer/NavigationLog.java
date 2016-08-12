@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 
+import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.State.values;
@@ -34,7 +35,7 @@ public class NavigationLog {
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
     private static final String FILEEND = "</body></html>";
-    private static final int maxitems = 900; // Development
+    private static final int maxitems = 500; // Development
     private static volatile boolean newItemBusy = false;
     
     // use if only needing to write a simple message 
@@ -47,7 +48,7 @@ public class NavigationLog {
             long timeout = System.currentTimeMillis() + 5000;
             while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
             if (newItemBusy) {
-                Util.log("error, newitembusy timed out", this);
+                Util.log("error, newitembusy timed out: "+msg, this);
                 return;
             }
 
@@ -111,7 +112,7 @@ public class NavigationLog {
             long timeout = System.currentTimeMillis() + 5000;
             while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
             if (newItemBusy) {
-                Util.log("error, newitembusy timed out", this);
+                Util.log("error, newitembusy timed out: "+msg, this);
                 return;
             }
             newItemBusy = true;;
@@ -121,7 +122,13 @@ public class NavigationLog {
         } }).start();
     }
     
-    private static void writeFile(String newitem) {
+    private static void writeFile(String newitem){
+  
+// in development mode... backup by renaming index.html to xxx.html 
+//		if(settings.getBoolean(ManualSettings.developer.name())){
+//		if(maxitems 
+//		}
+		
         File file = new File(navigationlogpath);
         new File(file.getParentFile().getAbsolutePath()).mkdirs(); // make sure folder exists, returns if exists
         String entirefile = "";
@@ -134,9 +141,7 @@ public class NavigationLog {
                 int items = 0;
                 while((line = reader.readLine()) != null){
                     if(line.contains(ITEM)) items ++;
-
-                    if(items < maxitems || line.contains(FILEEND))
-                    	entirefile += line + "\n";
+                    if(items < maxitems || line.contains(FILEEND)) entirefile += line + "\n";
                 }
                 reader.close();
             } catch (Exception e){ Util.printError(e); }

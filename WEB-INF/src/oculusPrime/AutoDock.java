@@ -770,8 +770,8 @@ public class AutoDock {
 
 		if (state.getBoolean(State.values.framegrabbusy)) {
 			app.message("framegrab busy", null, null);
-			Util.log("error, framegrab busy", this);
-			state.delete(State.values.framegrabbusy); // TODO: testing
+			Util.log("dockGrab(): error, framegrab busy", this);
+//			state.delete(State.values.framegrabbusy); // TODO: testing.......................................................
 			return;
 		}
 
