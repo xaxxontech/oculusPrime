@@ -14,11 +14,10 @@ public class Frame extends JFrame implements Runnable {
 		setDefaultLookAndFeelDecorated(true);
 		setLayout(new BorderLayout());
 		JScrollPane chatScroller = new JScrollPane(out);
-		chatScroller.setPreferredSize(new Dimension(450, 750));
+		chatScroller.setPreferredSize(new Dimension(300, 900));
 		getContentPane().add(chatScroller, BorderLayout.NORTH);
 		getContentPane().add(in, BorderLayout.PAGE_END);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
-		
 		chatScroller.setFocusable(false);
 		in.setFocusable(true);
 		in.requestFocus();

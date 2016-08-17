@@ -26,6 +26,7 @@ import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
 import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
+import oculusPrime.StateObserver.modes;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -287,11 +288,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-//		if (settings.getBoolean(GUISettings.navigation)) {
-//			navigation = new developer.Navigation(this);
-//			navigation.runAnyActiveRoute();
-//		}
-
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
@@ -317,17 +313,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
-			// try re-docking, then start routes again 
-			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
-			
 			// developer debugging info, warning to reboot after many restarts
 			if(settings.getInteger(ManualSettings.restarted) > 5)
 				NavigationLog.newItem("restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// extra logging info 
 			Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);			
-			Util.log("restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
+			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
 			Util.logLinuxRelease(); 
+			
+			// try re-docking, then start routes again 
+			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 		}
 		
 		if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runAnyActiveRoute();
@@ -337,37 +333,25 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run(){
 			try {
+			
+				// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
+				// NavigationLog.newItem("booted undocked, trying redock");
 				
-				Util.log("... redockWaitRunRoute start, waiting to run: " + state.get(values.navigationroute), this); 
+				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
+				Util.log("... starting to dock wait", this);
+				new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES);
 				
-				/// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
-				NavigationLog.newItem("robot needs help finding home, trying redock!");
-				watchdog.redock(SystemWatchdog.NOFORWARD);	
+			//	Util.log("...succsess to get dock wait", this);
+			//	else Util.log("...failed to get dock wait", this);
+			//  Util.log("...done to get dock wait", this);
 				
-				Util.log("... redockWaitRunRoute blocking while docking.....", this);
-				
-				// state.block(values.dockstatus, AutoDock.DOCKED, 99999); // (int)Util.FIVE_MINUTES);
-				for(int i = 0 ; i < 100 ; i++){
-					
-					if( state.equals(values.dockstatus, AutoDock.DOCKED)) {
-						Util.log("... redockWaitRunRoute now docked...", this); 
-						break;
-					}
-					
-					Util.log("... redockWaitRunRoute wait " + i, this); 
-					Util.delay(9000);
-					
+				if(navigation != null /*&& state.equals(values.wallpower, "true")*/ && state.equals(values.dockstatus, AutoDock.DOCKED)){
+					Util.delay(5000); // system settle 		
+					Util.debug("redockWaitRunRoutestarted(): run active route");
+					navigation.runAnyActiveRoute();					
 				}
 				
-				if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)){
-					Util.log("... redockWaitRunRoutestarted docked run any route.. ", this);
-					Util.delay(9000);
-					navigation.runAnyActiveRoute();
-				}
-				
-				Util.log("... redockWaitRunRoute end ...", this); 
-
-				
+				Util.debug("...redockWaitRunRoute(): exit.."); 		
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
@@ -892,9 +876,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
 			 			+ " seconds: " + Navigation.getRouteTimeEstimate(str) ;
 			
-			Util.log("route: " + r, this);
-
-			// commandServer.sendToGroup("route: " + str + " " + r);
+			Util.log("route: " + str + " " + r, this);
+			commandServer.sendToGroup("route: " + str + " " + r);
 			break;
 			
 		case resetroutedata: 
@@ -966,6 +949,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			Util.deleteLogFiles();
+			break;
+		
+			
+		case wait: //---------------------------------------------------------------------------------
+		
+			Util.log("wait on: " + str, this);
+
+			final String input[] = str.split(" ");
+			new Thread(new Runnable() { public void run(){
+				
+				if(new StateObserver().block(values.valueOf(input[0]), input[1], Util.FIVE_MINUTES)) 
+					commandServer.sendToGroup("wait: " + input[0] + " == " + input[1]);
+				else 
+					commandServer.sendToGroup("wait: time out: " + input[0]);
+
+
+			}}).start();
 			break;
 			
 		case archivelogs: 

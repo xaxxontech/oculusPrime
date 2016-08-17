@@ -17,7 +17,9 @@ import oculusPrime.Application;
 import oculusPrime.AutoDock;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.State;
+import oculusPrime.StateObserver;
 import oculusPrime.State.values;
+import oculusPrime.StateObserver.modes;
 import oculusPrime.FrameGrabHTTP;
 import oculusPrime.GUISettings;
 import oculusPrime.ManualSettings;
@@ -1338,50 +1340,23 @@ public class Navigation implements Observer {
 
 		return false;
 	}
-*/
+	*/
 	
 	private boolean turnLightOnIfDark(){
-		
-		Util.log("turnLightOnIfDark(): start, light level = " + state.getInteger(values.lightlevel), this);
-
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
-
-		state.delete(values.lightlevel);
 		app.driverCallServer(PlayerCommands.getlightlevel, null);
-		
-	// this should work but doesn't... 	
-	//	long timeout = System.currentTimeMillis() + 5000;
-	//	while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) Util.delay(10);
-	
-		// block wait.. 
-		for(int i = 0; i < 9 ; i++){
-			if(state.exists(values.lightlevel)){
-				Util.log("turnLightOnIfDark(): for loop break = " + state.getInteger(values.lightlevel), this);
-				break;
-			} else {
-				Util.debug("looop " + i, this);
-				Util.delay(1000);
-			}
+		new StateObserver(modes.changed).block(values.lightlevel); // wait for a new value
+		if(state.getInteger(values.lightlevel) < 30){
+			Util.log("turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel), this);
+			app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
+			return true;
 		}
 		
-		if (state.exists(values.lightlevel)){
-			if (state.getInteger(values.lightlevel) < 30) {
-				Util.log("turnLightOnIfDark(): turn on light too low = " + state.getInteger(values.lightlevel), this);
-				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
-				return true;
-			}
-		} else Util.log("light leve doesn't exist!", this);
-
-		
-		Util.log("turnLightOnIfDark(): not too dark, light level = " + state.getInteger(values.lightlevel), this);
-
+		Util.debug("turnLightOnIfDark(): exit, light level = " + state.getInteger(values.lightlevel), this);
 		return false;
 	}
 
-	/**
-	 * cancel all routes, only if id matches state
-	 * @param id
-	 */
+	/** cancel all routes, only if id matches state */
 	private void cancelRoute(String id) {
 		if (id.equals(state.get(values.navigationrouteid))) cancelAllRoutes();
 	}
@@ -1395,13 +1370,12 @@ public class Navigation implements Observer {
 		NodeList routes = document.getDocumentElement().getChildNodes();
 
 		// set all routes inactive
-		for (int i = 0; i< routes.getLength(); i++) {
+		for (int i = 0 ; i < routes.getLength(); i++)
 			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
-		}
+		
 
 		String xmlString = Util.XMLtoString(document);
 		saveRoute(xmlString);
-
 		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 	}
 
@@ -1411,7 +1385,7 @@ public class Navigation implements Observer {
 			return;
 		}
 		new Thread(new Runnable() { public void run() {
-			if (Ros.saveMap())  app.message("map saved to "+Ros.getMapFilePath(), null, null);
+			if (Ros.saveMap()) app.message("map saved to "+Ros.getMapFilePath(), null, null);
 		}  }).start();
 	}
 }

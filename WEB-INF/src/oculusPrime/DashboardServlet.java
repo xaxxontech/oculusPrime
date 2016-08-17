@@ -23,6 +23,7 @@ import org.w3c.dom.NodeList;
 
 import developer.Navigation;
 import oculusPrime.State.values;
+import oculusPrime.StateObserver.modes;
 import oculusPrime.commport.PowerLogger;
 
 public class DashboardServlet extends HttpServlet implements Observer {
@@ -104,7 +105,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
 		if(move != null){ 
-			delay = "10";
+			delay = "4";
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){ 
 				state.set(values.motionenabled, true);
 				double distance = 1.0;
@@ -116,15 +117,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(action != null && app != null){
 
 			if(action.equalsIgnoreCase("camon")){
-				new Thread(new Runnable() { public void run() {
+				new Thread(new Runnable() { public void run(){
+					
 					app.driverCallServer(PlayerCommands.publish, "camera");
+					if( ! new StateObserver(modes.equals).block(values.stream, "camera", 5000)) 
+						Util.log("block failed on stream == camera", this);
 					
-	//				Util.delay(5000);
-					if( ! state.block(values.stream, "camera", 5000)) Util.log("block failed on stream == camera", this);
-					
-					if( ! state.equals(values.stream, "camera")) Util.log("camera not on! ", this);
-
-					if(turnLightOnIfDark()) Util.log("light was turning on because dark..", this);
+					if(turnLightOnIfDark()) Util.log("light was turned on because was dark", this);
 
 				}}).start();
 			}
@@ -142,7 +141,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
  			if(action.equalsIgnoreCase("deletelogs")) app.driverCallServer(PlayerCommands.deletelogs, null);			
 			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
 			if(route != null)if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);		
-			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);	
+			if(action.equalsIgnoreCase("redock")) app.driverCallServer(PlayerCommands.redock, null);//, SystemWatchdog.NOFORWARD);	
 			if(action.equalsIgnoreCase("debugon")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
 			if(action.equalsIgnoreCase("debugoff")) app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 
@@ -244,9 +243,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 			
 			if(view.equalsIgnoreCase("state")){
-				out.println("<html><body> \n");
-				out.println(toHTML() + "\n");
+				out.println("<html><body> \n");				
 				out.println("<br />&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a><br />\n");
+				out.println(toHTML() + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -254,7 +253,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(view.equalsIgnoreCase("stdout")){
 				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;  \n" 
-						+ new File(Settings.stdout).getAbsolutePath() + "<br />\n");
+						+ new File(Settings.stdout).getAbsolutePath() + "<br /><br />\n");
 				out.println(Util.tail(35) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
@@ -263,7 +262,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(view.equalsIgnoreCase("power")){	
 				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp; \n"
-						+ new File(PowerLogger.powerlog).getAbsolutePath() + "<br />\n");
+						+ new File(PowerLogger.powerlog).getAbsolutePath() + "<br /><br />\n");
 				out.println(PowerLogger.tail(45) + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
@@ -271,7 +270,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			if(view.equalsIgnoreCase("history")){
 				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
-				out.println("<a href=\"dashboard\">dashboard</a> state history: "+ new Date().toString() +"<br />\n");
+				out.println("<a href=\"dashboard\">dashboard</a> state history: "+ new Date().toString() +"<br /><br />\n");
 				out.println(getHistory().replaceAll("\n", "<br>\n"));
 				out.println("\n</body></html> \n");
 				out.close();
@@ -285,67 +284,26 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.close();	
 	}
 	
-
-	//--------------------------------------------------------------------------------------------------------------------------------------//
 	private boolean turnLightOnIfDark(){
-		
-		Util.log("turnLightOnIfDark(): start, light level = " + state.getInteger(values.lightlevel), this);
-
+		Util.debug("turnLightOnIfDark(): start, light level = " + state.getInteger(values.lightlevel), this);
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
-
-		state.delete(values.lightlevel);
-		app.driverCallServer(PlayerCommands.getlightlevel, null);
-	//	long timeout = System.currentTimeMillis() + 5000;
-	//	while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) Util.delay(10);
-	
-		for(int i = 0 ; i < 9 ; i++){		
-			if(state.exists(values.lightlevel)){
-				Util.log("turnLightOnIfDark(): for loop break = " + state.getInteger(values.lightlevel), this);
-				break;
-			} else {
-				Util.log("looop " + i, this);
-				Util.delay(1000);
-			}
+		app.driverCallServer(PlayerCommands.getlightlevel, null); // get new value
+		new StateObserver(modes.changed).block(values.lightlevel, 5000); // wait for a new value
+		if(state.getInteger(values.lightlevel) < 55){
+			Util.debug("turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel), this);
+			app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
+			return true;
 		}
 		
-		if(state.exists(values.lightlevel)){
-			if(state.getInteger(values.lightlevel) < 30) {
-				Util.log("turnLightOnIfDark(): turn on light too low = " + state.getInteger(values.lightlevel), this);
-				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
-				return true;
-			}
-		} else Util.log("light leve doesn't exist!", this);
-		Util.log("turnLightOnIfDark(): not too dark, light level = " + state.getInteger(values.lightlevel), this);
+		Util.debug("turnLightOnIfDark(): exit, light level = " + state.getInteger(values.lightlevel), this);
 		return false;
 	}
-	
-	/*
-	private boolean turnLightOnIfDark(){
-
-		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
-
-		state.delete(values.lightlevel);
-		app.driverCallServer(PlayerCommands.getlightlevel, null);
-		long timeout = System.currentTimeMillis() + 5000;
-		while (!state.exists(values.lightlevel) && System.currentTimeMillis() < timeout) {
-			Util.delay(10);
-		}
-
-		if (state.exists(values.lightlevel)) {
-			if (state.getInteger(values.lightlevel) < 25) {
-				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
-				return true;
-			}
-		}
-		return false;
-	}
-	*/
 	
 	public String toHTML(){
 		
 		HashMap<String, String> props = state.getState();
 		Set<String> keys = props.keySet();
-		StringBuffer str = new StringBuffer("<table border=\"1\">"); 		
+		StringBuffer str = new StringBuffer();//("<table border=\"1\">"); 		
 		
 		
 		for(Iterator<String> i = keys.iterator(); i.hasNext();){
@@ -359,7 +317,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosscan.name())) key = i.next();
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
-				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
+//				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "<br>\n"); 
+				str.append("<b>" + key + ":</b> " + props.get(key) + "<br>\n"); 
+
 	/*
 				if( !i.hasNext()) break;
 				
@@ -562,7 +522,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					//Navigation.getRouteCountString(r) + " with fails: " +
 					//Navigation.getRouteFailsString(r)+ "\">" +r+ "</a>&nbsp;&nbsp;";
 		}
-		return link + "<a href=\"dashboard?action=gotodock\" title=\"return to the dock\">dock</a>"; 
+		return link + "&nbsp;&nbsp;|&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\" title=\"return to the dock\">dock</a>  _" 
+						+ Navigation.consecutiveroute + "_"; 
 	}
 	
 	private String getActiveRoute(){  

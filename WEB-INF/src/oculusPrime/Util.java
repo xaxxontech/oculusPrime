@@ -45,7 +45,7 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
 
-	public static final int MAX_HISTORY = 30;
+	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;	
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
@@ -253,6 +253,7 @@ public class Util {
     	if(c!=null) filter = c.getClass().getName();
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
+    		history.add(System.currentTimeMillis() + ", " +str);
 		}
 	}
     
@@ -312,7 +313,6 @@ public class Util {
 	
 	public static boolean validIP (String ip) {
 	    try {
-	    	
 	        if (ip == null || ip.isEmpty()) return false;
 	        String[] parts = ip.split( "\\." );
 	        if ( parts.length != 4 ) return false;
@@ -321,29 +321,21 @@ public class Util {
 	            if ( (i < 0) || (i > 255) )
 	            	return false;
 	        }
-	        
 	        if(ip.endsWith(".")) return false;
-	        
 	        return true;
-	    } catch (NumberFormatException nfe) {
-	        return false;
-	    }
+	    } catch (Exception e) { return false; }
 	}
 
 	public static long[] readProcStat() {
 		try {
-
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
 			String line = reader.readLine();
 			reader.close();
 			String[] values = line.split("\\s+");
 			long total = Long.valueOf(values[1])+Long.valueOf(values[2])+Long.valueOf(values[3])+Long.valueOf(values[4]);
 			long idle = Long.valueOf(values[4]);
-			return new long[] { total, idle};
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			return new long[] { total, idle };
+		} catch (Exception e) { e.printStackTrace(); }
 		return null;
 	}
 

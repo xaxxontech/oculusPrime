@@ -278,7 +278,8 @@ public class AutoDock {
 					Util.delay((long) comport.voltsComp(200)); // was 150
 					comport.stopGoing();
 
-					state.block(oculusPrime.State.values.wallpower, "true", 400);
+					// state.block(values.wallpower, "true", 400);
+					new StateObserver().block(values.wallpower, "true", 400);
 					inchforward ++;
 				}
 				

@@ -65,7 +65,7 @@ public enum PlayerCommands {
     spotlightsetbrightness, 
     
     // undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, archivelogs, deletelogs, routedata 
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, archivelogs, deletelogs, routedata, wait 
     
     ;
 

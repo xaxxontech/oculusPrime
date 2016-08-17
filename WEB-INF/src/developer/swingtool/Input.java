@@ -95,12 +95,12 @@ public class Input extends JTextField implements KeyListener {
 		
 		PlayerCommands[] cmds = PlayerCommands.values();
         State.values[] state = State.values.values();
-		
+
         if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
 			
 			if (stateptr++ >= (state.length-1)) stateptr = 0;
 
-			setText("state delete " + state[stateptr].name() + " ");
+			setText("state " + state[stateptr].name() + " ");
 
 			setCaretPosition(getText().length());
 		
@@ -108,7 +108,7 @@ public class Input extends JTextField implements KeyListener {
 			
 			if (stateptr-- <= 0) stateptr = (state.length-1);
 			
-			setText("state delete " + state[stateptr].name() + " ");
+			setText("state " + state[stateptr].name() + " ");
 
 			setCaretPosition(getText().length());
 			
@@ -129,26 +129,6 @@ public class Input extends JTextField implements KeyListener {
 			setCaretPosition(getText().length());
 			
 		} 
-        
-        /* else if (e.getKeyChar() == '*') {
-			
-			
-			setText("");
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-			
-					for (PlayerCommands factory : PlayerCommands.values()) {
-						if (!factory.equals(PlayerCommands.restart)) {
-							out.println(factory.toString());
-							Util.log("sending: " + factory.toString());
-							Util.delay(500);
-						}
-					}
-				}}).start();
-			
-		} */
-        
 	}
 
 	
