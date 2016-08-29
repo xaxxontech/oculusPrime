@@ -78,6 +78,10 @@ public class AutoDock {
 				app.message("odometry running, disabling", null, null);
 				app.driverCallServer(PlayerCommands.odometrystop, null);
 			}
+			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+				app.message("navigation running, disabling", null, null);
+				app.driverCallServer(PlayerCommands.stopnav, null);
+			}
 
 			lowres=true;
 

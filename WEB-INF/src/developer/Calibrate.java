@@ -57,9 +57,9 @@ public class Calibrate implements Observer{
                     Util.delay(10);  // wait
 
                 if (state.getBoolean(values.dockfound)) break; // great, onwards
-                else { // rotate a bit
+                else { // rotate a bit (non odometry)
                     app.driverCallServer(PlayerCommands.left, "25");
-                    Util.delay((long) (25 / state.getDouble(values.odomturndpms.toString())));
+                    Util.delay(100);
                     start = System.currentTimeMillis();
                     while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
                             && System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
