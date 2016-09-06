@@ -78,7 +78,7 @@ public class TelnetServer implements Observer {
 			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
 			String str = null;
-			while (true) {
+			while (true){
 				
 				try {
 					str = in.readLine();
@@ -88,7 +88,7 @@ public class TelnetServer implements Observer {
 				}
 
 				// client is terminating?
-				if (str == null) {
+				if(str == null) {
 					Util.debug("read thread, closing.", this);
 					break;
 				}
@@ -100,13 +100,14 @@ public class TelnetServer implements Observer {
 					if(str.length()>=1){
 						
 						if( ! manageCommand(str, out, in, clientSocket)) {
-							Util.debug("doPlayer(" + str + ")", this);	
+//							Util.debug("doPlayer(" + str + ")", this);	
 							doPlayer(str, out);
 						}
 					}	
 							
 				} catch (Exception e) {
 					Util.log("parse error: " + e.getLocalizedMessage(), this);
+					Util.printError(e);
 				}
 			}
 	

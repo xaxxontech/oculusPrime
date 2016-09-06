@@ -47,6 +47,11 @@ public class Util {
 
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;	
+
+	private static final int MIN_BATTERY_LIFE = 20;
+	
+//	private static Settings settings = Settings.getReference();
+//	private static State state = State.getReference();
 	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
@@ -146,28 +151,43 @@ public class Util {
 		}
 	}
 
-	/**
-	 * Run the given text string as a command on the host computer. 
-	 * 
-	 * @param args is the command to run, like: "restart
-	 * 
-	 */
+	/** */
+	public static boolean batteryTooLow(){
+		
+		if( ! State.getReference().get(values.batterylife).contains("%")){
+			Util.log("....waiting on battery: " + State.getReference().get(values.batterylife), null);
+			// new StateObserver().block(values.batterylife);
+			// return false;/////////////////////////////////////////////////////////////////// bad/////
+			// delay(3000);
+		}
+		
+		int value = 0;
+		
+		try {
+			value = Integer.parseInt(State.getReference().get(values.batterylife).split("%")[0]);
+		} catch (NumberFormatException e) {
+			Util.log("can't read battery info from state", null);
+			return false;
+		}
+		
+		Util.log(".............battery value: " + State.getReference().get(values.batterylife).split("%")[0], null);
+
+		if( value < MIN_BATTERY_LIFE) return false;/// wrong 
+		else return false;
+	}
+	
+	/** Run the given text string as a command on the host computer. */
 	public static void systemCallBlocking(final String args) {
 		try {	
 			Process proc = Runtime.getRuntime().exec(args);
 			proc.waitFor(); // required for linux else throws process hasn't terminated error
-		} catch (Exception e) {
-			printError(e);
-		}
+		} catch (Exception e){ printError(e); }
 	}	
 
-	/**
-	 * Run the given text string as a command on the windows host computer. 
-	 * 
-	 * @param str is the command to run, like: "restart"
-	 */
+	/** Run the given text string as a command on the windows host computer. */
 	public static void systemCall(final String str){
-		try { Runtime.getRuntime().exec(str); 
+		try {
+			Runtime.getRuntime().exec(str); 
 		} catch (Exception e) { printError(e); }
 	}
 
@@ -275,6 +295,7 @@ public class Util {
 		return str;
     }
 	
+	/*
 	public static Document loadXMLFromString(String xml){
 		try {
 	    
@@ -290,7 +311,8 @@ public class Util {
 		}
 		return null;
 	}
-
+	 */
+	
 	// replaces standard e.printStackTrace();
 	public static String XMLtoString(Document doc) {
 		String output = null;
@@ -755,7 +777,11 @@ public class Util {
 			if(rosinfor.contains("K ROS node logs")) rosinfor = "1";
 			if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
-		} catch (Exception e){ rosinfor = "0.00"; }
+			
+			if(rosinfor.contains("G ROS node logs")) 
+				rosinfor = rosinfor.substring(0, rosinfor.indexOf("G")).trim() + " gb";
+				
+		} catch (Exception e){ rosinfor = "-0.00"; }
 		
 		return rosinfor;
 	}	

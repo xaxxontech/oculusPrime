@@ -281,14 +281,14 @@ public class Video {
         } }).start();
     }
 
-    public String record(String mode) {
+    public String record(String mode){
         return record(mode, null);
     }
 
     // record to flv in webapps/oculusPrime/streams/
     private String record(String mode, String optionalfilename) {
         IConnection conn = app.grabber;
-
+       
         if (state.get(State.values.stream) == null) return null;
 
         if (state.get(State.values.record) == null)

@@ -308,19 +308,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateJetty();		 
 			
 		watchdog = new SystemWatchdog(this);
-		
 		if(settings.getBoolean(GUISettings.navigation)) navigation = new developer.Navigation(this);
 		
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
+			// extra logging info 
+			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
+			// Util.logLinuxRelease(); 
+			
 			// developer debugging info, warning to reboot after many restarts
 			if(settings.getInteger(ManualSettings.restarted) > 5)
-				NavigationLog.newItem("restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
-			
-			// extra logging info 
-			Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);			
-			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
-			Util.logLinuxRelease(); 
+				NavigationLog.newItem("WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// try re-docking, then start routes again 
 			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
@@ -333,25 +331,26 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run(){
 			try {
-			
+				Util.log("--- starting to dock waiting ---", this);
+				
+				Util.delay(3000); // system settle 	
 				// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
 				// NavigationLog.newItem("booted undocked, trying redock");
 				
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
-				Util.log("... starting to dock wait", this);
-				new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES);
 				
-			//	Util.log("...succsess to get dock wait", this);
-			//	else Util.log("...failed to get dock wait", this);
-			//  Util.log("...done to get dock wait", this);
+				if( ! new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES))
+					Util.log("--- time out: dock status ---", this);
 				
-				if(navigation != null /*&& state.equals(values.wallpower, "true")*/ && state.equals(values.dockstatus, AutoDock.DOCKED)){
+				if(/*navigation != null && state.equals(values.wallpower, "true")*/ state.equals(values.dockstatus, AutoDock.DOCKED)){
+					
+					Util.debug("..redockWaitRunRoutestarted(): run active route, wait 5SEC..");
 					Util.delay(5000); // system settle 		
 					Util.debug("redockWaitRunRoutestarted(): run active route");
 					navigation.runAnyActiveRoute();					
 				}
-				
-				Util.debug("...redockWaitRunRoute(): exit.."); 		
+
+				Util.log("--- redockWaitRunRoute(): exit ---", this); 		
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
@@ -526,6 +525,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 		
+		/*
+		if( ! fn.name().equals(PlayerCommands.statuscheck ) &&
+				 ! fn.name().equals(PlayerCommands.arcmove )	) 
+			Util.log("---playerCallServer: " + fn.name() + " argument: " + str, this);
+		*/
+		
 		switch (fn) {
 	
 		case move: {
@@ -578,7 +583,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: video.record(str); break; // record [true | false]
+		
+		case record: record(str); break;  // record [true | false]
+		
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 
@@ -829,7 +836,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case gotowaypoint:
-			if (navigation != null) navigation.gotoWaypoint(str);
+			if (navigation != null) {
+				navigation.gotoWaypoint(str);
+				navigation.failed = true;
+			}
 			break;
 		
 		case startnav:
@@ -842,7 +852,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		case gotodock:
 			if (navigation != null){
-				NavigationLog.newItem("Route canceled by user");
+				navigation.failed = true;
+				NavigationLog.newItem("Route canceled by user, failed");
 				navigation.dock(); 
 			}
 			break;
@@ -899,6 +910,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null && state.exists(values.navigationroute)) {
 				NavigationLog.newItem("All routes cancelled by user");
 				navigation.cancelAllRoutes();
+				navigation.failed = true;
 			}
 			break;
 
