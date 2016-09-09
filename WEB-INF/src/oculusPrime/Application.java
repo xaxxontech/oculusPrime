@@ -20,6 +20,7 @@ import org.red5.server.stream.ClientBroadcastStream;
 
 import developer.Navigation;
 import developer.NavigationLog;
+import developer.NavigationUtilities;
 import developer.Ros;
 import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
@@ -860,7 +861,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case saveroute: 
 			if (navigation != null){
-				navigation.saveRoute(str);
+				NavigationUtilities.saveRoute(str);
 				messageplayer("route saved", null, null);
 				
 				Util.log("save route: " + str, this);
@@ -882,10 +883,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case routedata:
-			String r = "count: " + Navigation.getRouteCountString(str) 
-			 			+ " fail: " + Navigation.getRouteFailsString(str)
-			 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
-			 			+ " seconds: " + Navigation.getRouteTimeEstimate(str) ;
+			String r = "count: " + NavigationUtilities.getRouteCountString(str) 
+			 			+ " fail: " + NavigationUtilities.getRouteFailsString(str)
+			 			+ " meters: " + NavigationUtilities.getRouteDistanceEstimate(str)
+			 			+ " seconds: " + NavigationUtilities.getRouteTimeEstimate(str) ;
 			
 			Util.log("route: " + str + " " + r, this);
 			commandServer.sendToGroup("route: " + str + " " + r);
@@ -894,8 +895,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case resetroutedata: 
 			NavigationLog.newItem("User reset route info for: "+str);
 			messageplayer("User reset route status for: "+str, null, null);
-			Navigation.updateRouteEstimatess(str, 0, 0);
-			Navigation.updateRouteStats(str, 0, 0);
+			NavigationUtilities.updateRouteEstimatess(str, 0, 0);
+			NavigationUtilities.updateRouteStats(str, 0, 0);
 			break;
 			
 		case runroute:

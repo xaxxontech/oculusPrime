@@ -46,6 +46,7 @@ public class AutoDock {
 	public static final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
 	private volatile boolean autodocknavrunning = false;
+	private int busyflags;
 	
 	public AutoDock(Application theapp, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
@@ -277,7 +278,8 @@ public class AutoDock {
 					comport.goForward();
 					Util.delay((long) comport.voltsComp(200)); // was 150
 					comport.stopGoing();
-
+					
+					// Replaced by new method 
 					// state.block(values.wallpower, "true", 400);
 					new StateObserver().block(values.wallpower, "true", 400);
 					inchforward ++;
@@ -295,11 +297,13 @@ public class AutoDock {
 					Util.delay(5000);
 				}
 				
-				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful
-					
+				if(state.get(State.values.dockstatus).equals(DOCKED)){ // dock successful
+
+					//TODO: testing.. 
+					busyflags = 0;
+
 					state.set(State.values.docking, false);
 					comport.speedset(ArduinoPrime.speeds.fast.toString());
-
 					String str = "";
 					
 					if (state.getBoolean(State.values.autodocking)) {
@@ -754,7 +758,8 @@ public class AutoDock {
 
 	public void dockGrab(final dockgrabmodes mode, final int x, final int y) {
 
-		if (state.getBoolean(State.values.dockgrabbusy)) {
+		if (state.getBoolean(State.values.dockgrabbusy)){
+			busyflags++;
 			Util.log("dockGrab() error, dockgrabbusy", this);
 			return;
 		}
@@ -770,9 +775,11 @@ public class AutoDock {
 //		}
 
 		if (state.getBoolean(State.values.framegrabbusy)) {
-			app.message("framegrab busy", null, null);
-			Util.log("dockGrab(): error, framegrab busy", this);
-//			state.delete(State.values.framegrabbusy); // TODO: testing.......................................................
+			busyflags++;
+			app.message("framegrab busy: " + busyflags, null, null);
+			Util.log("dockGrab(): error, framegrab busy.. reset state", this);
+			state.delete(State.values.framegrabbusy);
+			// TODO: testing.......................................................
 			return;
 		}
 

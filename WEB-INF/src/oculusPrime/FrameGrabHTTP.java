@@ -1,6 +1,7 @@
 package oculusPrime;
 
 import developer.Navigation;
+import developer.NavigationUtilities;
 import developer.Ros;
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
@@ -103,7 +104,7 @@ public class FrameGrabHTTP extends HttpServlet {
             else if (mode.equals("routesload")) {
         		res.setContentType("text/html");
         		PrintWriter out = res.getWriter();
-        		out.print(Navigation.routesLoad());
+        		out.print(NavigationUtilities.routesLoad());
         		out.close();
             }
 			else if (mode.equals("rosmapdownload")) {

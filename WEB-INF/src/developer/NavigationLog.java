@@ -81,8 +81,8 @@ public class NavigationLog {
             str += "Consecutive Route: "+Navigation.consecutiveroute+"<br>\n";
             
             if(status.equals(COMPLETEDSTATUS.toString()) && routename != null){ 
-            	str += "Route Count: " + Navigation.getRouteCount(routename) + " <br>\n";
-            	int fails = Navigation.getRouteFails(routename);
+            	str += "Route Count: " + NavigationUtilities.getRouteCount(routename) + " <br>\n";
+            	int fails = NavigationUtilities.getRouteFails(routename);
             	if(fails > 0) str += "Route Failures: " + fails + "<br>\n"; 	
             }
             
