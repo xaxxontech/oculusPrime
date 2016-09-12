@@ -10,6 +10,7 @@ import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
 import oculusPrime.*;
+import oculusPrime.State.values;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
@@ -425,7 +426,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
 			}
 
-			state.set(State.values.redockifweakconnection, true); // TODO: testing
+			// TODO: DON'T SET VALUE IF ALREASDY SET 
+			
+			if( ! state.getBoolean(values.redockifweakconnection)) 
+				state.set(values.redockifweakconnection, true); // TODO: testing
+			
+			if( ! state.exists(values.redockifweakconnection)) 
+				state.set(values.redockifweakconnection, true); // TODO: testing
+			
 		}
 		
 		else if (s[0].equals("undocked")) {

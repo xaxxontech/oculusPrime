@@ -226,7 +226,7 @@ public class SystemWatchdog implements Observer {
 				return;
 			}
 			if (state.exists(values.nextroutetime)) {
-				if (state.getLong(values.nextroutetime.toString()) - System.currentTimeMillis() < Util.TWO_MINUTES) {
+				if (state.getLong(values.nextroutetime.name()) - System.currentTimeMillis() < Util.TWO_MINUTES) {
 					Util.log("warning: redock skipped, route starting soon", this);
 					return;
 				}

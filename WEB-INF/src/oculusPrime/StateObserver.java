@@ -9,8 +9,7 @@ public class StateObserver implements Observer {
 	public static int total = 0;
 	public static int alive = 0;
 
-	
-	private static State state = State.getReference();
+	private State state = State.getReference();
 	private boolean waiting = true;
 	private values member = null;
 	private String target = null;
@@ -90,7 +89,7 @@ public class StateObserver implements Observer {
 		
 	///	Util.log("blocking cleared: " + member.name(), this);
 		alive--;
-		Util.log("block(): " + member.name() + " equals target in: " + ((System.currentTimeMillis()-start)/1000) + "sec ", this);
+		Util.log("block(): " + member.name() + " equals target in: " + ((System.currentTimeMillis()-start)/1000) + " seconds", this);
 		return true; 
 	} 
 	/*

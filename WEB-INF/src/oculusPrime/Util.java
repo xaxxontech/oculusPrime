@@ -8,8 +8,6 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -18,17 +16,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
 
 import developer.NavigationLog;
 import oculusPrime.State.values;
@@ -44,11 +31,12 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
-
+	public static final int MIN_BATTERY_LIFE = 30;
+	
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;	
 
-	private static final int MIN_BATTERY_LIFE = 20;
+	
 	
 //	private static Settings settings = Settings.getReference();
 //	private static State state = State.getReference();
@@ -154,26 +142,26 @@ public class Util {
 	/** */
 	public static boolean batteryTooLow(){
 		
-		if( ! State.getReference().get(values.batterylife).contains("%")){
-			Util.log("....waiting on battery: " + State.getReference().get(values.batterylife), null);
-			// new StateObserver().block(values.batterylife);
-			// return false;/////////////////////////////////////////////////////////////////// bad/////
-			// delay(3000);
+		State state = State.getReference();
+		
+		if( ! state.get(values.batterylife).contains("%")){
+			Util.debug("waiting on battery to exist in state: " + state.get(values.batterylife), null);
+			new StateObserver(StateObserver.modes.changed).block(values.batterylife);
 		}
 		
 		int value = 0;
 		
 		try {
-			value = Integer.parseInt(State.getReference().get(values.batterylife).split("%")[0]);
+			value = Integer.parseInt(state.get(values.batterylife).split("%")[0]);
 		} catch (NumberFormatException e) {
 			Util.log("can't read battery info from state", null);
-			return false;
+			return true;
 		}
 		
-		Util.log(".............battery value: " + State.getReference().get(values.batterylife).split("%")[0], null);
+		Util.debug("batteryTooLow(): value: " + value, null);
 
-		if( value < MIN_BATTERY_LIFE) return false;/// wrong 
-		else return false;
+		if( value < MIN_BATTERY_LIFE) return true; 
+		return false;
 	}
 	
 	/** Run the given text string as a command on the host computer. */

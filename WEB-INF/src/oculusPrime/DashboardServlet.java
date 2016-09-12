@@ -25,8 +25,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 32;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "5"; 
+	private static final int MAX_STATE_HISTORY = 40;
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "7"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -461,7 +461,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append( nlink + "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>" ); 
 		
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
-		
 	
 		str.append("\n</table>\n");
 		str.append(getTail(11) + "\n");
@@ -471,17 +470,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	private String getRouteLinks(){   
 		Vector<String> list = NavigationUtilities.getRoutes();
 		String link = "<td colspan=\"11\">";
-		for(int i = 0; i < list.size(); i++){ 
-			if(NavigationUtilities.getActiveRoute().equals(list.get(i)))
-				link += "<a href=\"dashboard?action=cancel\">*" + list.get(i) + "*</a>&nbsp;&nbsp;";
-			else
+		String active = NavigationUtilities.getActiveRoute();
+		if(active != null) link += "<a href=\"dashboard?action=cancel\">*" + active + "</a>&nbsp;&nbsp;";
+		for(int i = 0; i < list.size(); i++){
+			if( ! list.get(i).equals(active))
 				link += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>&nbsp;&nbsp;";
 		}
 		return link;
 	}
 	
-	private String getActiveRoute(){  
-		
+	private String getActiveRoute(){  	
 		String rname = NavigationUtilities.getActiveRoute(); 
 		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) +  " sec";
 		String next = state.get(values.roswaypoint);
@@ -501,8 +499,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		link += "<tr><td><b>stats</b><td>" + NavigationUtilities.getRouteFailsString(rname)
 			+ " / " + NavigationUtilities.getRouteCountString(rname) 
-			+ "<td><b>meters</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname)
-			+ "<td><b>time</b><td>" + NavigationUtilities.getRouteTimeEstimate(rname);
+			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname)
+			+ "<td><b>sec</b><td>" + NavigationUtilities.getRouteTimeEstimate(rname);
 		
 		return link.trim(); 
 	}
@@ -550,7 +548,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	@Override
 	public void updated(String key){
+	
+		if(key.equals(values.dockstatus.name())){
+			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
+		
+				Util.debug("....... docked.... ", this);
 
+			
+			}
+		}
+		
 		if(state.getBoolean(values.routeoverdue)) 
 			state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
 		

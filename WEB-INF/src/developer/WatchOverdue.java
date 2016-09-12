@@ -12,19 +12,15 @@ public class WatchOverdue implements Observer {
 	// private static Settings settings = Settings.getReference();
 
 	private static State state = State.getReference();
-	String rname; //state.get(values.navigationroute);	
-	long start;// = System.currentTimeMillis();
-	int estsec; //estimatedtime;
-	int i = 0;
+	String rname = state.get(values.navigationroute);	
+	long start = System.currentTimeMillis();
+	int estsec;
+	private static int i = 0;
 	boolean docked = false;
 	
 	WatchOverdue(){
-    	rname = state.get(values.navigationroute);	
-    	start = System.currentTimeMillis();
-    	// estsec = estimatedtime;
-		docked = false;
-		i = 0;
-		watch();
+    	state.addObserver(this);
+    	i++;
 	}
 	
     public void watch(){
@@ -35,16 +31,20 @@ public class WatchOverdue implements Observer {
     		 return;
     	}
     	
-		state.addObserver(this);
-		Util.log("waiting: [" + state.get(values.navigationroute) + "] seconds: "+estsec, this);
+    	rname = state.get(values.navigationroute);	
+    	start = System.currentTimeMillis();
+    	estsec = NavigationUtilities.getEstimatedSeconds();
+		
+		Util.log(i + " waiting: [" + state.get(values.navigationroute) + "] seconds: "+estsec, this);
 		
 		// Util.delay(estsec*500); // TODO: make a setting? in seconds 
-		
+	
 		while(System.currentTimeMillis() < (start + (estsec*1000))){
 	
 			Util.delay(9000);
 			Util.log("waiting... "+i++, this);
-/*
+
+			/*
 			if(failed){
 	    		Util.log("watching (exit, failed): " +rname + " seconds: "+estsec, this);
 				return;
@@ -54,14 +54,17 @@ public class WatchOverdue implements Observer {
 	    		Util.log("watching (exit, aborted): " + rname + " seconds: "+estsec, this);
 				return;
 			}	
-*/	
+
 			if(docked){
 	    		Util.log("watching (exit, docked): " +rname + " seconds: "+estsec, this);
 				return;
 			}
    		}
+	*/
+		}
 		
-		Util.log("watching (exited): [" + state.get(values.navigationroute) + "] seconds: "+estsec, this);
+		Util.log(i + " watching (exited): [" + state.get(values.navigationroute) + "] seconds: "+estsec, this);
+		state.removeObserver(this);
     }
 
 	@Override
@@ -69,7 +72,7 @@ public class WatchOverdue implements Observer {
 		
 		if(key.equals(values.dockstatus.name())){
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
-				Util.log("watching (exit, docked): " + rname + " seconds: "+estsec, this);
+				Util.log(i + " watching (exit, docked): " + rname + " seconds: "+estsec, this);
 				 docked = true;
 			}
 		}
@@ -78,7 +81,7 @@ public class WatchOverdue implements Observer {
 						
 			// if( ! state.exists(key)) aborted = true;
 			
-			Util.log(" ---*-*--- sate change:" + key + " = " + state.get(key), this);
+			Util.log( i+ " --- sate change:" + key + " = " + state.get(key), this);
 
 		}
 	}

@@ -24,26 +24,20 @@ import org.xml.sax.InputSource;
 
 import oculusPrime.Util;
 
+/** manage XML file for nanigation */
 public class NavigationUtilities {
 
-//	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
-//	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-//	public static final int RESTARTAFTERCONSECUTIVEROUTES = 10; // TODO: set to 15 in production
+	private static final String redhome = System.getenv("RED5_HOME");
+	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
+
 	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
 	public static final String ROUTE_COUNT_TAG = "routecount";
 	public static final String ROUTE_FAIL_TAG = "routefail";
 	
-//	private static Application app = null;	
-//	private static Settings settings = Settings.getReference();
-//	private static State state = State.getReference();
-//	private static final String DOCK = "dock"; // waypoint name
-	private static final String redhome = System.getenv("RED5_HOME");
-	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
-//	private static final int MIN_BATTERY_LIFE = 80;
 
 	//
-	// driver
+	// testing tool driver
 	//
 	public static void main(String args[]) throws Exception {
 	
@@ -61,7 +55,7 @@ public class NavigationUtilities {
 	}
 	
 
-	public static void saveRoute(final String str){
+	public static synchronized void saveRoute(final String str){
 		
 		final String current = routesLoad();
 		
@@ -272,8 +266,16 @@ public class NavigationUtilities {
 		return "0";
 	}
 	
+	public static int getEstimatedMeters(){
+		return Integer.parseInt(Util.formatFloat(getRouteDistanceEstimate(getActiveRoute()), 0));
+	}
+	
+	public static int getEstimatedSeconds(){
+		return Integer.parseInt(getRouteTimeEstimate(getActiveRoute()));
+	}
+	
 	public static String getRouteDistanceEstimate(final String name){
-		NodeList routes = NavigationUtilities.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		NodeList routes = loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
@@ -286,7 +288,7 @@ public class NavigationUtilities {
 	}
 	
 	public static String getRouteTimeEstimate(final String name){
-		NodeList routes = NavigationUtilities.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		NodeList routes = loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
@@ -372,6 +374,48 @@ public class NavigationUtilities {
 			if(rname.equals(name)) route = (Element) routes.item(i); 
 		}
 		return route;
+	}
+
+
+	public static void updateRouteInfo(){ // long routestarttime, String estimatedmeters){
+
+		/*
+		int seconds = (int)((System.currentTimeMillis()-routestarttime)/1000);
+		
+		Util.log("["+ name + "] estimated: " + estimatedmeters + " meters: " +
+				Util.formatFloat((double)routemillimeters/(double)1000) + 
+				" delta: " + Math.abs(estimatedmeters - routemillimeters/1000) + " meters ");
+		
+		Util.log("["+ name + "] estimated: " + estimatedtime   + " seconds : " + seconds     
+				+ " delta: " + Math.abs(estimatedtime - seconds) + " seconds ");
+		
+		if(estimatedtime == 0 && estimatedmeters > 0){
+			Util.log("route estimate is zero, meters = " + estimatedmeters, this);
+			NavigationUtilities.updateRouteEstimatess(name, seconds, ((estimatedmeters*1000 + routemillimeters/1000)/2));
+		} 
+		
+		if(estimatedmeters == 0 && estimatedtime > 0){
+			Util.log("route estimated distance is zero, seconds = " + seconds, this);
+			NavigationUtilities.updateRouteEstimatess(name, ((estimatedtime + seconds)/2), routemillimeters);
+		} 
+		
+		if(estimatedmeters > 0 && estimatedtime > 0){
+			Util.log("route distance and time greater zero.. compute average", this);
+			NavigationUtilities.updateRouteEstimatess(name, ((estimatedtime + seconds)/2),((estimatedmeters*1000 + routemillimeters)/2));
+		} 
+		
+		if(estimatedmeters == 0 && estimatedtime == 0){
+			Util.log("route distance and time are zero, use these values", this);
+			NavigationUtilities.updateRouteEstimatess(name, seconds, estimatedmeters + routemillimeters);
+		}						
+	
+			
+//		if(failed) NavigationUtilities.updateRouteStats(state.get(values.navigationroute), NavigationUtilities.getRouteCount(name)+1, NavigationUtilities.getRouteFails(name)+1);
+//		else NavigationUtilities.updateRouteStats(state.get(values.navigationroute), NavigationUtilities.getRouteCount(name)+1, NavigationUtilities.getRouteFails(name));
+	
+		Util.log("[" + name + "] count: " + NavigationUtilities.getRouteCountString(name) + " fail: " + NavigationUtilities.getRouteFailsString(name), this);
+*/
+		
 	}
 	
 }

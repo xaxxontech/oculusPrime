@@ -42,7 +42,7 @@ public class State {
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		navigationrouteid, nextroutetime, roswaypoint,
+		navigationrouteid, roswaypoint, nextroutetime,
 		
 		rosarcmove, routeoverdue, recoveryrotation, waitingforcpu, sounddetect, // to be documented
 
@@ -111,7 +111,21 @@ public class State {
 	}
 	
 	/** register class for call backs */ 
-	public void addObserver(Observer obs){ observers.add(obs); }
+	public void addObserver(Observer obs){ observers.add(obs); 
+	
+	for(int i = 0 ; i < observers.size() ; i++) 
+		Util.log(i + " add observer: " + observers.get(i).getClass().getName(), this);
+
+	
+	}
+	public void removeObserver(Observer obs){ observers.add(obs); 
+	
+	for(int i = 0 ; i < observers.size() ; i++) 
+		Util.log(i + " remove observer: " + observers.get(i).getClass().getName(), this);
+
+	
+	}
+	
 	
 	/**
 	 * block until timeout or until member == target

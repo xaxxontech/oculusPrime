@@ -747,7 +747,7 @@ public class AutoDock {
 					}
 					avg = avg / n;
 					app.message("getlightlevel: " + Integer.toString(avg), null, null);
-					state.set(State.values.lightlevel, avg);
+					state.set(values.lightlevel, avg);
 					
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -758,14 +758,21 @@ public class AutoDock {
 
 	public void dockGrab(final dockgrabmodes mode, final int x, final int y) {
 
-		if (state.getBoolean(State.values.dockgrabbusy)){
+		if (state.getBoolean(values.dockgrabbusy)){
 			busyflags++;
-			Util.log("dockGrab() error, dockgrabbusy", this);
+			Util.log("dockGrab() error, dockgrabbusy flags: " + busyflags, this);
+			if(busyflags > 5) {
+				
+				Util.log("dockGrab(): reset busy flags", this);
+				state.delete(values.dockgrabbusy);
+				busyflags = 0;
+				
+			}
 			return;
 		}
 
-		state.delete(oculusPrime.State.values.dockfound);
-		state.delete(oculusPrime.State.values.dockmetrics);
+		state.delete(values.dockfound);
+		state.delete(values.dockmetrics);
 
 //		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
 //				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
@@ -774,18 +781,18 @@ public class AutoDock {
 //			return;
 //		}
 
-		if (state.getBoolean(State.values.framegrabbusy)) {
+		if (state.getBoolean(values.framegrabbusy)) {
 			busyflags++;
 			app.message("framegrab busy: " + busyflags, null, null);
 			Util.log("dockGrab(): error, framegrab busy.. reset state", this);
-			state.delete(State.values.framegrabbusy);
+			state.delete(values.framegrabbusy);
 			// TODO: testing.......................................................
 			return;
 		}
 
-		state.set(oculusPrime.State.values.dockgrabbusy, true);
+		state.set(values.dockgrabbusy, true);
 
-		String res=HIGHRES;
+		String res = HIGHRES;
 		if (lowres) res=LOWRES;
 
 		if (!app.frameGrab(res)) return; // performs stream availability check
