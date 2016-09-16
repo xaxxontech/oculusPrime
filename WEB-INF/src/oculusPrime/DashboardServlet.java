@@ -25,7 +25,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 40;
+	private static final int MAX_STATE_HISTORY = 60;
 	private static final String HTTP_REFRESH_DELAY_SECONDS = "7"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
@@ -377,15 +377,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.equals(values.dockstatus, AutoDock.UNKNOWN)) dock = "<font color=\"blue\">UNKNOWN</font>";
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
 			
-		String life = state.get(values.batterylife);
-		if(life == null) life = "";
-		if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
-		if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889;"; // charge &#8599;
+		//String life = state.get(values.batterylife);
+		//if(life == null) life = "";
+		//if(life.contains("%")) life = Util.formatFloat(life.substring(0, life.indexOf('%')+1), 1); 
+		//if(state.get(values.batterylife).contains("charging")) life += "</a>&nbsp;&nbsp;&nbsp;&#9889;"; // charge &#8599;
 		// else life += "</a>&nbsp;&nbsp;&nbsp;&#8600;"; // draining 
-		life = "<a href=\"dashboard?view=power\">"+life;
+		//life = "<a href=\"dashboard?view=power\">"+state.get(values.batterylife);
 	
 		//------------------- now build HTML STRING buffer ------------------------------------------------------------//  
-		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\" style=\"min-width: 630; max-width: 700px;\">\n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
 		//str.append("\n\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		
 		// version | ssid | ping delay
@@ -400,26 +400,27 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String ext = state.get(values.externaladdress);
 		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
 		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
-				+ "/oculusPrime/" +"\" target=\"_blank\" title=\"go to user interface on external address\">" + ext + "</a>");
+				+ "/oculusPrime/" +"\">" + ext + "</a>"); // target=\"_blank\" title=\"go to user interface on external address\"
 		str.append( "<td><b>hdd</b><td>" + Util.diskFullPercent() + "% used</a></tr> \n"); 
 	
 		// power | lan | prime 
 		str.append("\n<tr>");
 		str.append("<td><b>power</b><td>" + power );
 		str.append("<td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
-			+"\" target=\"_blank\" title=\"go to network control panel\">" + state.get(values.localaddress) + "</a>");
+			+"\" target=\"_blank\">" + state.get(values.localaddress) + "</a>"); // title=\"go to network control panel\"
 		str.append("<td><b>prime</b><td>" + deletelogs + Util.countAllMbytes(".") + "</a> mb</tr> \n");
 		
 		// dock | battery | streams
 		str.append("\n<tr>");
 		str.append("<td><b>dock</b><td>" + dock);	
-		str.append("<td><b>battery</b>&nbsp;<td>" + life); 
-		str.append("<td><b>streams</b><td>" + Util.countAllMbytes(Settings.streamfolder) + " mb</tr> \n" );
+		str.append("<td><b>battery</b><td><a href=\"dashboard?view=power\">" + state.get(values.batterylife) + "</a>"); 
+		str.append("<td><b>streams</b><td><a href=\"http://"+ ext + ":" + httpport 
+				+ "/oculusPrime/streams/"  +"\">" + Util.countAllMbytes(Settings.streamfolder) + "</a> mb</tr> \n" );
 	
 		// record | booted | archive 
 		str.append("\n<tr>");	
 		str.append("<td><b>record</b><td>" + rec);
-		str.append("<td><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins ");
+		str.append("<td><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins (" + settings.readSetting(ManualSettings.restarted) + ")");
 		str.append("<td><b>archive</b><td>"+ archivelogs + Util.countMbytes("./log/archive") + "</a> mb</tr> \n" );
 
 		// camera | uptime | frames 
@@ -458,12 +459,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		String nlink = "<tr><td><b>points</b><td colspan=\"11\">";
 		for(int i = 0 ; i < list.size() ; i++)
 			nlink += "<a href=\"dashboard?action=gotowp&route="+ list.get(i) +"\">" + list.get(i) + "</a>&nbsp;&nbsp;";
-		str.append( nlink + "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>" ); 
-		
+		str.append( nlink + "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>" ); 		
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
-	
 		str.append("\n</table>\n");
-		str.append(getTail(11) + "\n");
+		str.append(getTail(22) + "\n");
 		return str.toString();
 	}
 	
@@ -471,7 +470,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		Vector<String> list = NavigationUtilities.getRoutes();
 		String link = "<td colspan=\"11\">";
 		String active = NavigationUtilities.getActiveRoute();
-		if(active != null) link += "<a href=\"dashboard?action=cancel\">*" + active + "</a>&nbsp;&nbsp;";
+		if(active != null) link += "<a href=\"dashboard?action=cancel\">" + active; 
+		if(state.exists(values.navigationroute)) link += "**</a>&nbsp;&nbsp;";
+		else link += "</a>&nbsp;&nbsp;";
+		
 		for(int i = 0; i < list.size(); i++){
 			if( ! list.get(i).equals(active))
 				link += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>&nbsp;&nbsp;";
@@ -548,15 +550,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	@Override
 	public void updated(String key){
-	
+	/*
 		if(key.equals(values.dockstatus.name())){
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
 		
-				Util.debug("....... docked.... ", this);
+				Util.fine("dashboard....... docked.... ");
 
 			
 			}
 		}
+		*/
 		
 		if(state.getBoolean(values.routeoverdue)) 
 			state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 

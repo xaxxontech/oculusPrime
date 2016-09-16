@@ -60,10 +60,8 @@ public class NavigationUtilities {
 		final String current = routesLoad();
 		
 		if(str.equalsIgnoreCase(current)){
-			
-			Util.log(".. skipped, same XML string", null);
+			Util.debug("saveRoute(): skipped, same XML string");
 			return;
-			
 		}
 		
 		// TODO: COMPARE YTWO STRING... RETURN NAME OF ROUTE THAT WAS EDITED... ? or reset states, esitmates? 

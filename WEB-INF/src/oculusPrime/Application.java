@@ -27,7 +27,6 @@ import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
 import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
-import oculusPrime.StateObserver.modes;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -332,26 +331,26 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run(){
 			try {
-				Util.log("--- starting to dock waiting ---", this);
+//				Util.log("--- starting to dock waiting ---", this);
 				
 				Util.delay(3000); // system settle 	
 				// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
-				// NavigationLog.newItem("booted undocked, trying redock");
+				NavigationLog.newItem("booted undocked, trying redock");
 				
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				
 				if( ! new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES))
-					Util.log("--- time out: dock status ---", this);
+					Util.log("redockWaitRunRoute(): time out on dock status", this);
 				
 				if(/*navigation != null && state.equals(values.wallpower, "true")*/ state.equals(values.dockstatus, AutoDock.DOCKED)){
 					
-					Util.debug("..redockWaitRunRoutestarted(): run active route, wait 5SEC..");
+//					Util.debug("..redockWaitRunRoutestarted(): run active route, wait 5SEC..");
 					Util.delay(5000); // system settle 		
-					Util.debug("redockWaitRunRoutestarted(): run active route");
+					Util.debug("redockWaitRunRoute(): run active route");
 					navigation.runAnyActiveRoute();					
 				}
 
-				Util.log("--- redockWaitRunRoute(): exit ---", this); 		
+//				Util.log("--- redockWaitRunRoute(): exit ---", this); 		
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
@@ -486,7 +485,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		try {
 			cmd = PlayerCommands.valueOf(fn);
 		} catch (Exception e) {
-			Util.debug("playerCallServer() command not found:" + fn, this);
+			Util.log("playerCallServer() command not found:" + fn, this);
 			messageplayer("error: unknown command, "+fn,null,null);
 			return;
 		}
@@ -838,8 +837,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case gotowaypoint:
 			if (navigation != null) {
-				navigation.gotoWaypoint(str);
 				navigation.failed = true;
+				navigation.gotoWaypoint(str);
 			}
 			break;
 		

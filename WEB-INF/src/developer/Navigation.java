@@ -27,6 +27,8 @@ import oculusPrime.commport.ArduinoPrime;
 
 public class Navigation implements Observer {
 	
+	public static final int MIN_BATTERY_LIFE = 25;
+	
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 10; // TODO: set to 15 in production
@@ -34,12 +36,12 @@ public class Navigation implements Observer {
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
 	public static final String ROUTE_COUNT_TAG = "routecount";
 	public static final String ROUTE_FAIL_TAG = "routefail";
-	private static final String DOCK = "dock"; // waypoint name
+	public static final String DOCK = "dock"; // waypoint name
 
 	private static Settings settings = Settings.getReference();
 	private static State state = State.getReference();
 	private static Application app = null;	
-	private Element navroute = null;
+	private static Element navroute = null;
 	
 	// SHOULD ALL BE PUT IN STATE? 
 	public volatile static boolean navdockactive = false;
@@ -52,6 +54,7 @@ public class Navigation implements Observer {
 	public volatile static int rotations = 0;
 	
 //	WatchOverdue watchRoute = new WatchOverdue();
+	static WatchOverdue jj = new WatchOverdue();
 	
 	/** Constructor */
 
@@ -64,7 +67,8 @@ public class Navigation implements Observer {
 	}	
 	
 	@Override
-	public void updated(String key) {
+	public void updated(String key){
+		
 		if(key.equals(values.distanceangle.name())){
 			try {
 				int mm = Integer.parseInt(state.get(values.distanceangle).split(" ")[0]);
@@ -78,23 +82,54 @@ public class Navigation implements Observer {
 
 		}
 		
+		if(key.equals(values.recoveryrotation.name())){
+			if(state.getBoolean(values.recoveryrotation)) rotations++; 
+			Util.log("rotations: " + rotations, this);
+
+		}
+		
 		if(key.equals(values.dockstatus.name())){
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
 				Util.log(".... docked, resetiing ...", this);	
 				state.delete(values.routeoverdue);
-				state.delete(values.recoveryrotation);
-			// never do these here! 
+				state.delete(values.recoveryrotation);		
+				rotations = 0;
+				failed = false;
+				
+			//  never do these here! 
 			//	routemillimeters = 0;  
 			//	routestarttime = 0;
 			//	estimatedmeters = 0;	      
-			//	estimatedtime = 0;			
-				rotations = 0;
-				failed = false;
-			//	navroute = null;
+			//	estimatedtime = 0;	
 			}
 		}
 	}
 
+	/** */
+	public static boolean batteryTooLow(){
+		
+		State state = State.getReference();
+		if( ! state.get(values.batterylife).contains("%")){
+			Util.debug("batteryTooLow() waiting on battery to exist in state: " + state.get(values.batterylife));
+			new StateObserver(StateObserver.modes.changed).block(values.batterylife, 5000);
+		}
+		
+		int value = 0;
+		
+		try {
+			value = Integer.parseInt(state.get(values.batterylife).split("%")[0]);
+		} catch (NumberFormatException e) {
+			Util.log("can't read battery info from state", null);
+			return true;
+		}
+		
+		if( value < MIN_BATTERY_LIFE){
+			app.driverCallServer(PlayerCommands.messageclients, "skipping route, battery too low");
+			return true; 
+		}
+		return false;
+	}
+	
 	public void gotoWaypoint(final String str) {
 		if (state.getBoolean(values.autodocking)) {
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
@@ -480,7 +515,7 @@ public class Navigation implements Observer {
 					calendarnow.get(Calendar.DATE) + adddays, starthour, startmin);
 
 			if (testday.getTimeInMillis() < System.currentTimeMillis()) { // same day, past route
-				nextdayindex ++; //  604.714.3420 
+				nextdayindex ++;
 				if (nextdayindex >= daynums.length ) { //wrap around
 					adddays = 7-daynow + daynums[0];
 				}
@@ -502,7 +537,12 @@ public class Navigation implements Observer {
     	NodeList waypoints = navroute.getElementsByTagName("waypoint");	    	
     	int wpnum = 0;
     	while(wpnum < waypoints.getLength()){
-
+    		
+    		if(failed){
+				Util.log("... breaking loop ...", this);
+				return;
+			}
+			
     		// check if cancelled while waiting
 			if( ! state.exists(values.navigationroute)) return;
 			if( ! state.equals(values.navigationrouteid, id)) return;
@@ -511,14 +551,6 @@ public class Navigation implements Observer {
 
     	
 			app.comport.checkisConnectedBlocking(); // just in case
-			
-/*
-			if(failed || aborted) {
-				Util.log("... breaking loop ...", this);
-				break;
-			}
-			*/
-    		
     		if(wpname.equals(DOCK)) break;
 
 			SystemWatchdog.waitForCpu();
@@ -654,8 +686,8 @@ public class Navigation implements Observer {
 				}
 
 				// check if cancelled while waiting
-				if( ! state.exists(State.values.navigationroute)) return;
-				if( ! state.equals(values.navigationrouteid, id)) return;
+				// if( ! state.exists(State.values.navigationroute)) return;
+				// if( ! state.equals(values.navigationrouteid, id)) return;
 
 				if(state.equals(values.dockstatus, AutoDock.UNDOCKED) &&
 						!state.equals(values.navsystemstatus, Ros.navsystemstate.running)){
@@ -666,9 +698,9 @@ public class Navigation implements Observer {
 
 				// developer 
 				if(settings.getBoolean(ManualSettings.developer.name())){
-					if(Util.batteryTooLow()){
-						Util.log("battery too low: " + state.get(values.batterylife) + " needs to be: " + Util.MIN_BATTERY_LIFE, this);
-						NavigationLog.newItem(NavigationLog.ALERTSTATUS, "Battery too low to start: " + state.get(values.batterylife));
+					if(batteryTooLow()){
+						Util.log("battery too low: " + state.get(values.batterylife) + " needs to be: " + MIN_BATTERY_LIFE, this);
+						NavigationLog.newItem("Battery too low to start: " + state.get(values.batterylife));
 						if( ! delayToNextRoute(navroute, name, id)) return;
 						continue;
 					}
@@ -704,9 +736,7 @@ public class Navigation implements Observer {
 				rotations = 0;
 				failed = false;
 				
-				Util.log("--- wayoints: " + NavigationUtilities.getWaypointsForActiveRoute(),this);	
-
-				new WatchOverdue();
+				jj.watch();
 				visitWaypoints(id, name);
 						
 				// TODO: flawless route? 
@@ -714,10 +744,8 @@ public class Navigation implements Observer {
 					
 				if( !failed) NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
 
-				// reset 	
-				// state.delete(values.recoveryrotation);
-				// state.delete(values.routeoverdue);
 				consecutiveroute++;
+				Util.log(".. runRoute (bottom of loop): " + name, this);
 
 				// wait 
 				if(!delayToNextRoute(navroute, name, id)) return;
@@ -1122,7 +1150,7 @@ public class Navigation implements Observer {
 	public static boolean turnLightOnIfDark(){
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
 		app.driverCallServer(PlayerCommands.getlightlevel, null);
-		new StateObserver(modes.changed).block(values.lightlevel); // wait for a new value
+		new StateObserver(modes.changed).block(values.lightlevel, 7000); // wait for a new value
 		if(state.getInteger(values.lightlevel) < 30){
 			Util.log("turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel), null);
 			app.driverCallServer(PlayerCommands.spotlight, "100"); // light on

@@ -46,7 +46,7 @@ public class AutoDock {
 	public static final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
 	private volatile boolean autodocknavrunning = false;
-	private int busyflags;
+	private int busyflags; // TODO: TESTING RESET FLAG COUNTER 
 	
 	public AutoDock(Application theapp, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
@@ -761,7 +761,7 @@ public class AutoDock {
 		if (state.getBoolean(values.dockgrabbusy)){
 			busyflags++;
 			Util.log("dockGrab() error, dockgrabbusy flags: " + busyflags, this);
-			if(busyflags > 5) {
+			if(busyflags >= 3){
 				
 				Util.log("dockGrab(): reset busy flags", this);
 				state.delete(values.dockgrabbusy);

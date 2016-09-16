@@ -111,19 +111,28 @@ public class State {
 	}
 	
 	/** register class for call backs */ 
-	public void addObserver(Observer obs){ observers.add(obs); 
-	
-	for(int i = 0 ; i < observers.size() ; i++) 
-		Util.log(i + " add observer: " + observers.get(i).getClass().getName(), this);
+	public void addObserver(Observer obs){
+		if( observers.contains(obs)) {
+			Util.log(" ---- observers exist already: " + obs.getClass().getName(), this);
+			
+		}
+		
+		Util.log(" ---- observers: " + observers.size(), this);
+		Util.log(" ---- add observer: " + obs.getClass().getName() + " " + obs.getClass().hashCode(), this);
 
-	
+		observers.add(obs); 
+		for(int i = 0 ; i < observers.size() ; i++) 
+			Util.log(i + " add observer: " + observers.get(i).getClass().getName() + " " + observers.get(i).hashCode(), this);
 	}
-	public void removeObserver(Observer obs){ observers.add(obs); 
 	
-	for(int i = 0 ; i < observers.size() ; i++) 
-		Util.log(i + " remove observer: " + observers.get(i).getClass().getName(), this);
+	public void removeObserver(Observer obs){ 
 
-	
+		Util.log(" ---- observers: " + observers.size(), this);
+		Util.log(" ---- remove observer: " + obs.getClass().getName() + " " + obs.getClass().hashCode(), this);
+
+		observers.remove(obs);
+		for(int i = 0 ; i < observers.size() ; i++) 
+			Util.log(i + " remove observer: " + observers.get(i).getClass().getName() + " " + observers.get(i).hashCode(), this);
 	}
 	
 	
@@ -134,7 +143,7 @@ public class State {
 	 * @param target block until timeout or until member == target
 	 * @param timeout is the ms to wait before giving up 
 	 * @return true if the member was set to the target in less than the given timeout 
-	 */
+	
 	public boolean block(final values member, final String target, int timeout){
 		long start = System.currentTimeMillis();
 		String current = null;
@@ -154,6 +163,7 @@ public class State {
 			}
 		}
 	} 
+	 */
 	
 	/** test for string equality. any nulls will return false */ 
 	public boolean equals(State.values value, String b){ return equals(value.name(), b); }

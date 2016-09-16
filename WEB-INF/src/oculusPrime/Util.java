@@ -31,10 +31,12 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
-	public static final int MIN_BATTERY_LIFE = 30;
+	
 	
 	public static final int MAX_HISTORY = 45;
-	public static final int PRECISION = 1;	
+	public static final int PRECISION = 1;
+
+	private static final boolean DEBUG_FINE = true;	
 
 	
 	
@@ -137,31 +139,6 @@ public class Util {
 		} else {
 			return text;
 		}
-	}
-
-	/** */
-	public static boolean batteryTooLow(){
-		
-		State state = State.getReference();
-		
-		if( ! state.get(values.batterylife).contains("%")){
-			Util.debug("waiting on battery to exist in state: " + state.get(values.batterylife), null);
-			new StateObserver(StateObserver.modes.changed).block(values.batterylife);
-		}
-		
-		int value = 0;
-		
-		try {
-			value = Integer.parseInt(state.get(values.batterylife).split("%")[0]);
-		} catch (NumberFormatException e) {
-			Util.log("can't read battery info from state", null);
-			return true;
-		}
-		
-		Util.debug("batteryTooLow(): value: " + value, null);
-
-		if( value < MIN_BATTERY_LIFE) return true; 
-		return false;
 	}
 	
 	/** Run the given text string as a command on the host computer. */
@@ -273,6 +250,15 @@ public class Util {
     	}
     }
     
+
+    public static void fine(String str) {
+    	if(str == null) return;
+    	if(DEBUG_FINE){
+    		System.out.println("DEBUG FINE: " + getTime() + ", " +str);
+    		history.add(System.currentTimeMillis() + ", " +str);
+    	}
+    }
+    
 	public static String memory() {
     	String str = "";
 		str += "memory : " + ((double)Runtime.getRuntime().freeMemory()
@@ -282,24 +268,6 @@ public class Util {
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-	
-	/*
-	public static Document loadXMLFromString(String xml){
-		try {
-	    
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder builder;
-		
-			builder = factory.newDocumentBuilder();
-			InputSource is = new InputSource(new StringReader(xml));
-			return builder.parse(is);
-		
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	 */
 	
 	// replaces standard e.printStackTrace();
 	public static void printError(Exception e) {
@@ -586,7 +554,7 @@ public class Util {
 	public static void archiveLogs(){
 		new Thread(new Runnable() { public void run() {
 			try {
-				// appendUserMessage("log files being archived");
+				appendUserMessage("log files being archived");
 				// truncStaleAudioVideo();		
 				// truncStaleFrames();
 				zipLogFile();

@@ -89,7 +89,7 @@ public class TelnetServer implements Observer {
 
 				// client is terminating?
 				if(str == null) {
-					Util.debug("read thread, closing.", this);
+					Util.debug("read thread, closing", this);
 					break;
 				}
 					
@@ -100,7 +100,7 @@ public class TelnetServer implements Observer {
 					if(str.length()>=1){
 						
 						if( ! manageCommand(str, out, in, clientSocket)) {
-//							Util.debug("doPlayer(" + str + ")", this);	
+							// Util.fine("Telnet calling doPlayer(" + str + ")");	
 							doPlayer(str, out);
 						}
 					}	
