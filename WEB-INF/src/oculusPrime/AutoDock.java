@@ -14,8 +14,6 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
-import org.red5.server.api.service.IServiceCapableConnection;
-
 public class AutoDock { 
 	
 	public static final String UNDOCKED = "un-docked";
@@ -169,7 +167,7 @@ public class AutoDock {
 
 //									comport.rotate(ArduinoPrime.direction.left, 180);
 
-									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + comport.FIRMWARE_TIMED_OFFSET);
+									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + ArduinoPrime.FIRMWARE_TIMED_OFFSET);
 									String tmpspeed = state.get(State.values.motorspeed);
 									comport.speedset(ArduinoPrime.speeds.fast.toString());
 									comport.turnLeft((int) d);

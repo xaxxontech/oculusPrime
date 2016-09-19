@@ -57,16 +57,21 @@ public enum PlayerCommands {
 
 	// un-categorized
 	speech, serverbrowser, email, state, rssadd,
-    
-	// undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, truncimages, truncros, truncarchive, archive, 
-    archiveros, archiveimages, archivelogs, calibraterotation,
-    
+
+
+
     // experimental (undocumented)
     opennisensor, clearmap, error,
 
     // deprecated (kept for mobile client compatibility, undocumented)
-    spotlightsetbrightness;
+    spotlightsetbrightness,
+    
+    // undocumented    
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
+	deletelogs, truncimages, truncros, truncarchive, archive,
+	archiveros, archiveimages, archivelogs, calibraterotation,
+
+    ;
 	
 	// sub-set that are restricted to "user0"
 	public enum AdminCommands {
