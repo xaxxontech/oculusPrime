@@ -30,6 +30,8 @@ public class Calibrate implements Observer{
      * use nominal camera FOV angle and dockmetrics to calculate gyro comp
      */
     public void calibrateRotation() {
+        final int REVOLUTIONS = 0; // >0 allows extra time for trackturnrate() to dial in for floor time
+                                    // TODO: full rev should be done before odometry turned on, in case turn rate too fast
         new Thread(new Runnable() { public void run() {
             if (state.getBoolean(values.calibratingrotation)) return;
             state.set(values.calibratingrotation, true);
@@ -92,11 +94,11 @@ public class Calibrate implements Observer{
             Util.delay(1000); // getting incomplete turns?
             SystemWatchdog.waitForCpu();
 
-            app.driverCallServer(PlayerCommands.left, "180"); // assume default settings are pretty good, to speed things up..?
-            Util.delay((long) (180 / state.getDouble(values.odomturndpms.toString())));
+            app.driverCallServer(PlayerCommands.left, Integer.toString(360*REVOLUTIONS+180)); // assume default settings are pretty good, to speed things up..?
+            Util.delay((long) ((360*REVOLUTIONS+180) / state.getDouble(values.odomturndpms.toString())));
             long start = System.currentTimeMillis();
             while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
-                    && System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
+                    && System.currentTimeMillis() - start < 15000) { Util.delay(10); } // wait
             Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
             rot = 0;
             while (state.getBoolean(values.calibratingrotation)) {
@@ -109,7 +111,7 @@ public class Calibrate implements Observer{
                 if (state.getBoolean(values.dockfound)) break; // great, onwards
                 else { // rotate a bit
                     app.driverCallServer(PlayerCommands.left, "25");
-                    Util.delay((long) (180 / state.getDouble(values.odomturndpms.toString())));
+                    Util.delay((long) (180 / state.getDouble(values.odomturndpms.toString()))); // TODO: why 180?
                     start = System.currentTimeMillis();
                     while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
                             && System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
@@ -137,9 +139,9 @@ public class Calibrate implements Observer{
             String msg = "1st cam angle: "+String.format("%.3f",firstangledegrees);
             msg += "<br>2nd cam angle: "+String.format("%.3f", finalangledegrees);
             msg += "<br>cumulative angle reported by gyro: "+String.format("%.3f",cumulativeangle);
-            msg += "<br>actual angle moved: "+String.format("%.3f", (360+cameraoffset));
+            msg += "<br>actual angle moved: "+String.format("%.3f", (360*REVOLUTIONS+360+cameraoffset));
             msg += "<br>original gyrocomp setting: "+Double.toString(settings.getDouble(ManualSettings.gyrocomp));
-            double newgyrocomp = (360+cameraoffset)/(cumulativeangle/settings.getDouble(ManualSettings.gyrocomp));
+            double newgyrocomp = (360*REVOLUTIONS+360+cameraoffset)/(cumulativeangle/settings.getDouble(ManualSettings.gyrocomp));
             settings.writeSettings(ManualSettings.gyrocomp, String.format("%.4f", newgyrocomp));
             msg += "<br>new gyrocomp setting: "+settings.getDouble(ManualSettings.gyrocomp);
             app.driverCallServer(PlayerCommands.messageclients, msg); // TODO: debug

@@ -29,8 +29,14 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        double n = -0.45;
-        System.out.println("card 0123123"+n);
+        double mAhCapacity= 4520.0;
+        double newmAhCapacity = 7000;
+        if (Math.abs(newmAhCapacity-mAhCapacity)/mAhCapacity > 0.2) {
+            if (newmAhCapacity > mAhCapacity ) newmAhCapacity = mAhCapacity*1.2;
+            else newmAhCapacity = mAhCapacity*0.8;
+        }
+
+        System.out.println(newmAhCapacity);
 
     }
 }
