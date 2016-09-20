@@ -22,6 +22,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import oculusPrime.State;
+import oculusPrime.State.values;
 import oculusPrime.Util;
 
 /** manage XML file for nanigation */
@@ -87,7 +89,7 @@ public class NavigationUtilities {
 		return output;
 	}
 	
-	public static String routesLoad(String path){
+	public static synchronized String routesLoad(String path){
 		String result = "";
 		BufferedReader reader;
 		try {
@@ -337,10 +339,10 @@ public class NavigationUtilities {
 		return null;
 	}
 	
-	public static void cancelAllRoutes() {
+	public static void deactivateAllRoutes() {
 		Document document = loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
-		for (int i = 0 ; i < routes.getLength(); i++) // set all routes inactive
+		for (int i = 0 ; i < routes.getLength(); i++) 
 			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
 		
 		String xmlString = XMLtoString(document);
@@ -410,9 +412,11 @@ public class NavigationUtilities {
 			
 //		if(failed) NavigationUtilities.updateRouteStats(state.get(values.navigationroute), NavigationUtilities.getRouteCount(name)+1, NavigationUtilities.getRouteFails(name)+1);
 //		else NavigationUtilities.updateRouteStats(state.get(values.navigationroute), NavigationUtilities.getRouteCount(name)+1, NavigationUtilities.getRouteFails(name));
-	
-		Util.log("[" + name + "] count: " + NavigationUtilities.getRouteCountString(name) + " fail: " + NavigationUtilities.getRouteFailsString(name), this);
-*/
+	*/
+		
+		String name = State.getReference().get(values.navigationroute);
+		Util.log("[" + name + "] count: " + NavigationUtilities.getRouteCountString(name) + " fail: " + NavigationUtilities.getRouteFailsString(name), null);
+
 		
 	}
 	

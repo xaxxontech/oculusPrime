@@ -12,20 +12,18 @@ import java.util.TimerTask;
 
 public class SystemWatchdog implements Observer {
 	
-	private final Settings settings = Settings.getReference();
-	protected Application application = null;
-
 	static final String AP = "oculusprime";
-
 	private static final long DELAY = 10000; // 10 sec 
-	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
-	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
+	public static final long AUTODOCKTIMEOUT = 360000; // 6 min
+	private static final long ABANDONDEDLOGIN = 30*Util.ONE_MINUTE; 
 	public static final String NOFORWARD = "noforward";
 
 	// stale system reboot frequency 
  	private static final long STALE = Util.ONE_DAY * 2; 
 	
-	private State state = State.getReference();
+	Settings settings = Settings.getReference();	
+	State state = State.getReference();
+	Application application = null;
 	
 	public String lastpowererrornotify = null; // this gets set to null on client login 
 	public boolean powererrorwarningonly = true;
@@ -40,6 +38,8 @@ public class SystemWatchdog implements Observer {
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
+		// new Timer().scheduleAtFixedRate(new cpuTask(), 0, DELAY*4);
+		// poll cpu at slower rate, waitforcpu() update state value on each call too 
 	}
 
 	@Override
@@ -50,11 +50,22 @@ public class SystemWatchdog implements Observer {
 			Util.updateExternalIPAddress();
 			Util.updateLocalIPAddress();
 		}
+		
+		if(key.equals(values.cpu.name())){
+			int cpu = state.getInteger(values.cpu);
+			if(cpu > 60) Util.fine("warning cpu: " + cpu + "%");
+		}
 	}
 
+	private class cpuTask extends TimerTask {
+		public void run(){ Util.getCPU(); }
+	}
+	
 	private class Task extends TimerTask {
-		public void run() {
-
+		public void run(){
+				
+			Util.getCPU(); // check cpu useage result in state and updated() listener above 
+			
 			if(! state.exists(values.localaddress)) Util.updateLocalIPAddress();
 			else if(state.equals(values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
 			if(! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
@@ -78,8 +89,8 @@ public class SystemWatchdog implements Observer {
 			if(state.equals(values.ssid, AP)){ 
 				if( ! state.getBoolean(State.values.autodocking) && ! state.exists(State.values.driver)) {
 					application.driverCallServer(PlayerCommands.strobeflash, "on 10 10");
+					application.driverCallServer(PlayerCommands.strobeflash, "on 20 20");
 				}
-
 			}
 
 			// notify clients of power errors
@@ -133,11 +144,7 @@ public class SystemWatchdog implements Observer {
 				} else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 			}
 
-//			 check cpu useage
-			int cpuNow = Util.getCPU();
-			if(cpuNow > 60) Util.log("cpu: "+cpuNow, this);
-			// redundant calls 
-			// state.set(values.cpu, Util.getCPU());
+			// check cpu useage
 			// Util.getCPU();
 			
 			// notify driver if any system messages
@@ -193,7 +200,7 @@ public class SystemWatchdog implements Observer {
 			if (resetrequired)
 				msg += "<br><br>Charging is limited or disabled";
 
-			if (warningonly && resetrequired)
+			if (warningonly && resetrequired) 
 				msg += "<br>until this message is cleared";
 
 			msg += "<br><br>";
@@ -219,9 +226,9 @@ public class SystemWatchdog implements Observer {
 		if (str == null) str = "";
 
 		// TODO: force nav shutdown?
-		if (settings.getBoolean(GUISettings.navigation) && !str.equals(NOFORWARD) ) {
-			if ( !state.get(values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) &&
-					!state.get(values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+		if (settings.getBoolean(GUISettings.navigation) && !str.equals(NOFORWARD)){
+			if ( !state.equals(values.navsystemstatus, Ros.navsystemstate.stopping) &&
+					!state.equals(values.navsystemstatus, Ros.navsystemstate.stopped)){
 				Util.log("warning: redock skipped, navigation running", this);
 				return;
 			}
@@ -307,7 +314,7 @@ public class SystemWatchdog implements Observer {
 					application.driverCallServer(PlayerCommands.left, "25");
 					Util.delay(10); // thread safe
 					start = System.currentTimeMillis();
-					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
+					while( ! state.equals(State.values.direction, ArduinoPrime.direction.stop.name())
 							&& System.currentTimeMillis() - start < 5000) {  Util.delay(10); } // wait
 					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
 				}
@@ -390,7 +397,7 @@ public class SystemWatchdog implements Observer {
 			if (cpu < threshold) { // do it again to be sure
 				cpu = Util.getCPU();
 				if (cpu <threshold) {
-//					Util.fine("SystemWatchdog.waitForCpu() cleared, cpu @ " + cpu + "% after " + (System.currentTimeMillis() - start) + "ms");
+					Util.fine("SystemWatchdog.waitForCpu() cleared, cpu @ " + cpu + "% after " + (System.currentTimeMillis() - start) + " ms");
 					state.set(values.waitingforcpu, false);
 					return;
 				}
@@ -398,6 +405,6 @@ public class SystemWatchdog implements Observer {
 			Util.delay(1000);
 		}
 		state.set(values.waitingforcpu, false);
-		Util.log("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + "ms", null);
+		Util.fine("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + " ms");
 	}
 }

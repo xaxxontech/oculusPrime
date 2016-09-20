@@ -18,15 +18,14 @@ import javax.servlet.http.HttpServletResponse;
 import developer.Navigation;
 import developer.NavigationUtilities;
 import oculusPrime.State.values;
-import oculusPrime.StateObserver.modes;
 import oculusPrime.commport.PowerLogger;
 
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 60;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "7"; 
+	private static final int MAX_STATE_HISTORY = 25;
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "6"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -45,13 +44,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?action=email\">email</a>" ; 
 	//+"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
-	static double VERSION = new Updater().getCurrentVersion();
+	static final double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
 	static Application app = null;
 	static Settings settings = null;
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
+	String nextWapoint;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -112,7 +112,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				new Thread(new Runnable() { public void run(){
 					app.driverCallServer(PlayerCommands.publish, "camera");
 					Util.delay(4000); // TODO: BETTER WAY TO KNOW IF CAMERA IS ON?
-					if(turnLightOnIfDark()) Util.log("light was turned on because was dark", this);
+					if(Navigation.turnLightOnIfDark()) Util.log("light was turned on because was dark", this);
 				}}).start();
 			}
 				
@@ -221,7 +221,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.close();
 			}
 			
-			//TODO:: ///////////////////////////////////////////////////////////////////////////////////////////////////////
 			if(view.equalsIgnoreCase("state")){
 				out.println("<html><body> \n");				
 				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a>");
@@ -264,21 +263,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html> \n");
 		out.close();	
-	}
-	
-	private boolean turnLightOnIfDark(){
-		Util.debug("turnLightOnIfDark(): start, light level = " + state.getInteger(values.lightlevel), this);
-		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
-		app.driverCallServer(PlayerCommands.getlightlevel, null); // get new value
-		new StateObserver(modes.changed).block(values.lightlevel, 5000); // wait for a new value
-		if(state.getInteger(values.lightlevel) < 25){
-			Util.debug("turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel), this);
-			app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
-			return true;
-		}
-		
-		Util.debug("turnLightOnIfDark(): exit, light level = " + state.getInteger(values.lightlevel), this);
-		return false;
 	}
 	
 	public String toHTML(){
@@ -385,8 +369,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		//life = "<a href=\"dashboard?view=power\">"+state.get(values.batterylife);
 	
 		//------------------- now build HTML STRING buffer ------------------------------------------------------------//  
-		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
-		//str.append("\n\n<tr><td colspan=\"11\"><hr></tr> \n");	
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
 		
 		// version | ssid | ping delay
 		String[] jetty = Util.getJettyStatus().split(",");
@@ -438,13 +421,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// debug | telnet | ros
 		str.append("\n<tr>");
 		str.append("<td><b>debug</b><td>" + debug  
-			+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) + " - " + StateObserver.alive + " " + StateObserver.total
+			+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) // " - " + StateObserver.alive + " " + StateObserver.total
 			+ "<td><b>ros</b><td>" + Util.getRosCheck() + "</tr> \n" );
 			// doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
 		
 		str.append(getActiveRoute());
 
-		str.append("<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
+		str.append("\n\n<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
 		
 		
 		String msg = state.get(values.guinotify);
@@ -467,16 +450,23 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	}
 	
 	private String getRouteLinks(){   
+		String active = NavigationUtilities.getActiveRoute();
 		Vector<String> list = NavigationUtilities.getRoutes();
 		String link = "<td colspan=\"11\">";
-		String active = NavigationUtilities.getActiveRoute();
-		if(active != null) link += "<a href=\"dashboard?action=cancel\">" + active; 
-		if(state.exists(values.navigationroute)) link += "**</a>&nbsp;&nbsp;";
-		else link += "</a>&nbsp;&nbsp;";
+		if(active != null) 
+			link += "# " + Navigation.consecutiveroute + " " + active;
 		
+		if(state.exists(values.navigationroute)) link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">(cancel)</a>";
+		
+		link += " f: " + Navigation.failed;
+		link += "  |  ";
 		for(int i = 0; i < list.size(); i++){
-			if( ! list.get(i).equals(active))
+			//if( ! list.get(i).equals(active))
+			//if(list.get(i).equals(state.exists(values.navigationroute)))
+			//	link += "<a href=\"dashboard?action=cancel\">*" + list.get(i) + "*</a>&nbsp;&nbsp;";
+			//else 
 				link += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>&nbsp;&nbsp;";
+
 		}
 		return link;
 	}
@@ -494,14 +484,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(next==null) time = "";
 		
-		String link = "<td><b>next</b><td>" + next; 
+		String link = "\n\n<td><b>next</b><td>" + next; 
 		link += "<td><b>meters</b><td>" 
 				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0)  
 				+ "<td><b>time</b><td>" + time;
 		
 		link += "<tr><td><b>stats</b><td>" + NavigationUtilities.getRouteFailsString(rname)
 			+ " / " + NavigationUtilities.getRouteCountString(rname) 
-			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname)
+			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname) + " " + state.get(values.navigationrouteid)
 			+ "<td><b>sec</b><td>" + NavigationUtilities.getRouteTimeEstimate(rname);
 		
 		return link.trim(); 
@@ -560,6 +550,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 		}
 		*/
+		
+
+		if(key.equals(values.roswaypoint.name())){
+			
+			Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);
+			nextWapoint = state.get(values.roswaypoint);
+		}
 		
 		if(state.getBoolean(values.routeoverdue)) 
 			state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 

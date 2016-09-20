@@ -279,9 +279,8 @@ public class AutoDock {
 					Util.delay((long) comport.voltsComp(200)); // was 150
 					comport.stopGoing();
 					
-					// Replaced by new method 
-					// state.block(values.wallpower, "true", 400);
-					new StateObserver().block(values.wallpower, "true", 400);
+					state.block(values.wallpower, "true", 400);
+					// new StateObserver().block(values.wallpower, "true", 400);
 					inchforward ++;
 				}
 				
@@ -326,10 +325,10 @@ public class AutoDock {
 					Util.log(state.get(State.values.driver) + " docked successfully", this);
 					PowerLogger.append(state.get(State.values.driver) + " docked successfully", this);
 
-					if(settings.getBoolean(ManualSettings.developer.name())){
-						if(!state.exists(values.driver)) NavigationLog.newItem("Docked: docked successfully");
-						else NavigationLog.newItem("Docked: " + state.get(State.values.driver) + " docked successfully");
-					}
+//					if(settings.getBoolean(ManualSettings.developer.name())){
+//						if(!state.exists(values.driver)) NavigationLog.newItem("Docked: docked successfully");
+//						else NavigationLog.newItem("Docked: " + state.get(State.values.driver) + " docked successfully");
+//					}
 				
 				} else { // dock fail
 					
@@ -340,13 +339,13 @@ public class AutoDock {
 						Util.log("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 						PowerLogger.append("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 
-						if(settings.getBoolean(ManualSettings.developer.name())){
-							if(!state.exists(values.driver))NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): docking timed out");
-							else NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): " + state.get(State.values.driver) + " docking timed out");
-						}
+//						if(settings.getBoolean(ManualSettings.developer.name())){
+//							if(!state.exists(values.driver))NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): docking timed out");
+//							else NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): " + state.get(State.values.driver) + " docking timed out");
+//						}
 													
 						// back up and retry
-						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
+						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)){
 							dockattempts ++;
 
 							// backup a bit

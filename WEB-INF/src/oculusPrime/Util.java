@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.Vector;
 
 import developer.NavigationLog;
+import developer.Ros;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
@@ -36,7 +37,7 @@ public class Util {
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;
 
-	private static final boolean DEBUG_FINE = true;	
+	private static final boolean DEBUG_FINE = false;	
 
 	
 	
@@ -221,6 +222,10 @@ public class Util {
 	
 	public static void log(String method, Exception e, Object c) {
 		log(method + ": " + e.getLocalizedMessage(), c);
+	}
+	
+	public static void log(String str){
+		log(str, null);
 	}
 	
 	public static void log(String str, Object c) {
@@ -724,6 +729,18 @@ public class Util {
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("G")).trim() + " gb";
 				
 		} catch (Exception e){ rosinfor = "-0.00"; }
+		
+		Util.log(".........ros dir = " + Ros.getRosPackageDir(), null);
+		
+		try {
+			new Thread(new Runnable() { public void run() {
+				try {
+					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt"};
+					Runtime.getRuntime().exec(cmd);		
+				} catch (Exception e){printError(e);}
+			}}).start();
+		} catch (Exception e){printError(e);}
+
 		
 		return rosinfor;
 	}	

@@ -324,13 +324,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 		}
 		
-		if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runAnyActiveRoute();
+		if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runActiveRoute();
 		Util.log("application initialized", this);
 	}
 	
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run(){
 			try {
+
 //				Util.log("--- starting to dock waiting ---", this);
 				
 				Util.delay(3000); // system settle 	
@@ -339,18 +340,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				
-				if( ! new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES))
-					Util.log("redockWaitRunRoute(): time out on dock status", this);
+//				if( ! new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES))
+//					Util.log("redockWaitRunRoute(): time out on dock status", this);
 				
+//				Util.log("--- blocking ---", this);
+				state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TEN_MINUTES);
+//				Util.log("--- blocking exit ---", this);
+
 				if(/*navigation != null && state.equals(values.wallpower, "true")*/ state.equals(values.dockstatus, AutoDock.DOCKED)){
 					
-//					Util.debug("..redockWaitRunRoutestarted(): run active route, wait 5SEC..");
+//					Util.debug("..redockWaitRunRoutestarted(): run active routeC..");
 					Util.delay(5000); // system settle 		
 					Util.debug("redockWaitRunRoute(): run active route");
-					navigation.runAnyActiveRoute();					
+					navigation.runActiveRoute();					
 				}
 
 //				Util.log("--- redockWaitRunRoute(): exit ---", this); 		
+				
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
@@ -878,6 +884,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			//	NavigationLog.newItem("User reset route info for: "+str.substring(str.indexOf("<rname>"), str.indexOf("</rname>")) + "\n<br>" + r);
 			//	Navigation.updateRouteEstimatess(str, 0, 0);
 			//	Navigation.updateRouteStats(str, 0, 0);
+				
 			}
 			break;
 		
@@ -910,7 +917,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (navigation != null && state.exists(values.navigationroute)) {
 				NavigationLog.newItem("All routes cancelled by user");
 				navigation.cancelAllRoutes();
-				navigation.failed = true;
 			}
 			break;
 
@@ -934,6 +940,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if(cpu != null) state.set(values.cpu, cpu);
 			commandServer.sendToGroup("cpu = " + cpu);
 			break;
+		
 		case waitforcpu: watchdog.waitForCpuThread();  break;
 
 		// dev tool only
@@ -963,7 +970,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.deleteLogFiles();
 			break;
 		
-			
+	/*		*/
 		case wait: //---------------------------------------------------------------------------------
 		
 			Util.log("wait on: " + str, this);
@@ -971,14 +978,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			final String input[] = str.split(" ");
 			new Thread(new Runnable() { public void run(){
 				
-				if(new StateObserver().block(values.valueOf(input[0]), input[1], Util.FIVE_MINUTES)) 
-					commandServer.sendToGroup("wait: " + input[0] + " == " + input[1]);
-				else 
-					commandServer.sendToGroup("wait: time out: " + input[0]);
-
+				if(state.block(input[0], (int) Util.TEN_MINUTES)){ 
+					commandServer.sendToGroup("... wait: " + input[0] + " == " + input[1]);
+				} else { 
+					commandServer.sendToGroup("... wait: time out: " + input[0]);
+				}
 
 			}}).start();
 			break;
+	
 			
 		case archivelogs: 
 //			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
@@ -1354,7 +1362,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if(str!=null){
 			if(! str.equals("status check received")) // basic ping from client, ignore
-				Util.debug("messageplayer: "+str+", "+status+", "+value, this);
+				Util.fine("messageplayer: "+str+", "+status+", "+value);
 		}
 
 	}

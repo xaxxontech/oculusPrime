@@ -112,19 +112,11 @@ public class State {
 	
 	/** register class for call backs */ 
 	public void addObserver(Observer obs){
-		if( observers.contains(obs)) {
-			Util.log(" ---- observers exist already: " + obs.getClass().getName(), this);
-			
-		}
-		
-		Util.log(" ---- observers: " + observers.size(), this);
-		Util.log(" ---- add observer: " + obs.getClass().getName() + " " + obs.getClass().hashCode(), this);
-
 		observers.add(obs); 
-		for(int i = 0 ; i < observers.size() ; i++) 
-			Util.log(i + " add observer: " + observers.get(i).getClass().getName() + " " + observers.get(i).hashCode(), this);
+		// for(int i = 0 ; i < observers.size() ; i++) Util.log(i + " add observer: " + observers.get(i).getClass().getName(), this);
 	}
 	
+	/**
 	public void removeObserver(Observer obs){ 
 
 		Util.log(" ---- observers: " + observers.size(), this);
@@ -134,7 +126,7 @@ public class State {
 		for(int i = 0 ; i < observers.size() ; i++) 
 			Util.log(i + " remove observer: " + observers.get(i).getClass().getName() + " " + observers.get(i).hashCode(), this);
 	}
-	
+	*/
 	
 	/**
 	 * block until timeout or until member == target
@@ -143,27 +135,57 @@ public class State {
 	 * @param target block until timeout or until member == target
 	 * @param timeout is the ms to wait before giving up 
 	 * @return true if the member was set to the target in less than the given timeout 
-	
+	 */
 	public boolean block(final values member, final String target, int timeout){
+		return block(member, target, timeout, 1); 
+	} 
+	
+	public boolean block(final values member, final String target, int timeout, int delay){
 		long start = System.currentTimeMillis();
 		String current = null;
 		while(true){	
 			current = get(member); 
 			if(current!=null){
 				if(target.equalsIgnoreCase(current)){
-					Util.debug("block() timeout in:  " + ((System.currentTimeMillis()-start)) + " " + member.name(), this);
+					Util.debug("block() timeout in:  " + ((System.currentTimeMillis()-start)) + " ms for member: " + member.name(), this);
 					return true;
 				}
 			}
 	
-			Util.delay(1); // no higher, used by motion, odometry
+			Util.delay(delay); 
 			if (System.currentTimeMillis()-start > timeout){ 
 				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}
 	} 
-	 */
+	
+	/**	block, wait for a change in given member */
+	public boolean block(final values member, int timeout){
+		return block(member.name(), timeout);
+	} 
+	
+	public boolean block(final String member, int timeout){
+		long start = System.currentTimeMillis();
+		final String starting = get(member);
+		while(true){	
+			String current = get(member); 
+			if(current!=null){
+				if(starting != current){	
+					Util.debug("block() updated: " + member, this);
+					Util.debug("block() changed in: " + ((System.currentTimeMillis()-start))/1000 + " seconds", this);
+					Util.debug("block() was: [" + starting + "] now: [" + current + "]", this);
+					return true;
+				}
+			}
+	
+			Util.delay(1); 
+			if (System.currentTimeMillis()-start > timeout){ 
+				Util.debug("block() timeout: " + member, this);
+				return false;
+			}
+		}
+	} 
 	
 	/** test for string equality. any nulls will return false */ 
 	public boolean equals(State.values value, String b){ return equals(value.name(), b); }
