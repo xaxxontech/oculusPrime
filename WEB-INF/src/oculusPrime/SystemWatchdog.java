@@ -57,9 +57,9 @@ public class SystemWatchdog implements Observer {
 		}
 	}
 
-	private class cpuTask extends TimerTask {
-		public void run(){ Util.getCPU(); }
-	}
+//	private class cpuTask extends TimerTask {
+//		public void run(){ Util.getCPU(); }
+//	}
 	
 	private class Task extends TimerTask {
 		public void run(){
@@ -144,9 +144,6 @@ public class SystemWatchdog implements Observer {
 				} else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
 			}
 
-			// check cpu useage
-			// Util.getCPU();
-			
 			// notify driver if any system messages
 			if (state.exists(values.guinotify)) {
 				if (state.exists(State.values.driver.toString())) {

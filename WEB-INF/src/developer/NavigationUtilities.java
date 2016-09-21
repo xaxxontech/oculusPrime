@@ -350,7 +350,7 @@ public class NavigationUtilities {
 	}
 
 	public static void setActiveRoute(String name){
-		Document document = NavigationUtilities.loadXMLFromString(NavigationUtilities.routesLoad());
+		Document document = loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i < routes.getLength(); i++){
@@ -374,6 +374,17 @@ public class NavigationUtilities {
 			if(rname.equals(name)) route = (Element) routes.item(i); 
 		}
 		return route;
+	}
+
+
+	public static void routeFailed(String name){
+		Document document = loadXMLFromString(routesLoad());
+		
+	}
+	
+	public static void routeCompleted(String name){
+		Document document = loadXMLFromString(routesLoad());
+		
 	}
 
 
@@ -415,7 +426,7 @@ public class NavigationUtilities {
 	*/
 		
 		String name = State.getReference().get(values.navigationroute);
-		Util.log("[" + name + "] count: " + NavigationUtilities.getRouteCountString(name) + " fail: " + NavigationUtilities.getRouteFailsString(name), null);
+		Util.log("........... [" + name + "] count: " + NavigationUtilities.getRouteCountString(name) + " fail: " + NavigationUtilities.getRouteFailsString(name), null);
 
 		
 	}

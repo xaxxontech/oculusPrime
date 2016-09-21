@@ -491,7 +491,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		link += "<tr><td><b>stats</b><td>" + NavigationUtilities.getRouteFailsString(rname)
 			+ " / " + NavigationUtilities.getRouteCountString(rname) 
-			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname) + " " + state.get(values.navigationrouteid)
+			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname) // + " " + state.get(values.navigationrouteid)
 			+ "<td><b>sec</b><td>" + NavigationUtilities.getRouteTimeEstimate(rname);
 		
 		return link.trim(); 

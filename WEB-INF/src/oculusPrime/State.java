@@ -42,7 +42,7 @@ public class State {
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		navigationrouteid, roswaypoint, nextroutetime,
+		roswaypoint, nextroutetime, //navigationrouteid
 		
 		rosarcmove, routeoverdue, recoveryrotation, waitingforcpu, sounddetect, // to be documented
 

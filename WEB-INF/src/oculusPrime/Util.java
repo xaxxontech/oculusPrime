@@ -37,7 +37,7 @@ public class Util {
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;
 
-	private static final boolean DEBUG_FINE = false;	
+	private static final boolean DEBUG_FINE = true;	
 
 	
 	
