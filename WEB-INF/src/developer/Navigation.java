@@ -27,7 +27,7 @@ public class Navigation implements Observer {
 	
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 10; // TODO: set to 15 in production
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 20; // TODO: set to 15 in production
 	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
 	public static final String ROUTE_COUNT_TAG = "routecount";
@@ -48,16 +48,17 @@ public class Navigation implements Observer {
 	public static long routemillimeters = 0;  
 	public static long routestarttime = 0;
 	public static int rotations = 0;
+
 	
 	/** Constructor */
 	public Navigation(Application a){
+		app = a;
 		state.set(values.navsystemstatus, Ros.navsystemstate.stopped.name());
 		Ros.loadwaypoints();
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		state.addObserver(this);
-		app = a;
-	}	
-	
+	}
+	  
 	@Override
 	public void updated(String key){
 		
@@ -96,29 +97,7 @@ public class Navigation implements Observer {
 			}
 		}
 	}
-	
-	/*
-	public class StateListener implements Observer {
-		
-		// Settings settings = Settings.getReference();	
-		// State state = State.getReference();
-		// Application application = null;
-		
-		StateListener(){ state.addObserver(this); }
-		
-		@Override
-		public void updated(String key){
-			
-			if(key.equals(values.distanceangle.name())){
-				try {
-					int mm = Integer.parseInt(state.get(values.distanceangle).split(" ")[0]);
-					if(mm > 0) routemillimeters += mm;
-				} catch (Exception e){}
-			}
-		}
-	}
-	*/
-	
+
 	/** */
 	public static boolean batteryTooLow(){
 		
@@ -156,7 +135,7 @@ public class Navigation implements Observer {
 	}
 	
 	/** */
-	public void gotoWaypoint(final String str){
+	public static void gotoWaypoint(final String str){
 		
 		if(state.getBoolean(values.autodocking)){
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
@@ -687,7 +666,7 @@ public class Navigation implements Observer {
 		}
 		
 		// set as active and start route
-		// cancelAllRoutes();
+		cancelAllRoutes();
 		NavigationUtilities.setActiveRoute(name);
 		navroute = NavigationUtilities.getRouteElement(name);
 	//	final String id = String.valueOf(System.nanoTime());
@@ -725,7 +704,7 @@ public class Navigation implements Observer {
 					if(batteryTooLow()){
 						Util.log("battery too low: " + state.get(values.batterylife) + " needs to be: " + MIN_BATTERY_LIFE, this);
 						NavigationLog.newItem("Battery too low to start: " + state.get(values.batterylife));
-	//					if( ! delayToNextRoute(navroute, name, id)) return;
+						if( ! delayToNextRoute(name)) return;
 						continue;
 					}
 				}
@@ -759,39 +738,34 @@ public class Navigation implements Observer {
 				routemillimeters = 0;
 				rotations = 0;
 				failed = false;
-				
-			//	jj.watch();
-				/*
+
 				new Thread(new Runnable() { public void run(){
-					if(state.block(values.navigationrouteid, (int) Util.TEN_MINUTES)){ 
-						Util.log(".............. nav id changed, return", this);
+					if(state.block(values.navigationroute, (int) Util.TEN_MINUTES)){ 
+						Util.log(".............. nav changed, return", this);
 						failed = true;
 						return;
 					} else { 
-						Util.log(".............nav id timeout", this);
+						Util.log(".............nav timeout", this);
 					}
 				}}).start();
-				*/
+					
+				visitWaypoints(name);	
+				if(failed){
+					
+					 Util.log("route failed: " + name  , this);
+					 return;
 				
-				visitWaypoints(name);
-						
-				// TODO: flawless route? 
-				// if( /*!overdue*/ rotations == 0 && !failed) 
-					
-				if( ! failed){
-					
+				 } else {
+					 
 					NavigationUtilities.updateRouteInfo(); 
 					NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
 					consecutiveroute++;
-					Util.log("runRoute (bottom of loop): " + name + " #" + consecutiveroute, this);
 
 					// wait 
 					if(!delayToNextRoute(name)) return;
+				 }					
 				
-				 } else {
-					 Util.log("route failed: " + name  , this);
-					 return;
-				 }
+				Util.log("runRoute (bottom of loop): " + name + " #" + consecutiveroute, this);
 			}
 		}}).start();
 		
@@ -831,14 +805,17 @@ public class Navigation implements Observer {
 				state.delete(values.nextroutetime);
 				return false;
 			}
-//			if (!state.get(values.navigationrouteid).equals(id)) {
-//				state.delete(values.nextroutetime);
-//				return false;
-//			}
-			if( failed ){
-				Util.log("delayToNextRoute(): failed, return..");
+
+			if( ! state.exists(values.navigationroute)){
+				state.delete(values.nextroutetime);
 				return false;
 			}
+
+//			if( failed ){
+//				Util.log("delayToNextRoute(): failed, return..");
+//				return false;
+//			}
+			
 			Util.delay(1000);
 		}
 
@@ -1228,7 +1205,7 @@ public class Navigation implements Observer {
 		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 	}
 
-	public void saveMap() {
+	public static void saveMap() {
 		if (!state.get(values.navsystemstatus).equals(Ros.navsystemstate.mapping.name())) {
 			app.message("unable to save map, mapping not running", null, null);
 			return;

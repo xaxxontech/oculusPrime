@@ -36,9 +36,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String viewslinks = // "<tr><td><b>views</b><td colspan=\"11\">"+	
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;&nbsp&nbsp;"+
 			"<a href=\"dashboard?view=drive\">drive</a>&nbsp;&nbsp;&nbsp;&nbsp;"  +
-			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;&nbsp;&nbsp;" +
+	//		"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
+	//		"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;&nbsp;&nbsp;"+ 
 			"<a href=\"dashboard?action=email\">email</a>" ; 
@@ -403,7 +403,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// record | booted | archive 
 		str.append("\n<tr>");	
 		str.append("<td><b>record</b><td>" + rec);
-		str.append("<td><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins (" + settings.readSetting(ManualSettings.restarted) + ")");
+		str.append("<td><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins");
 		str.append("<td><b>archive</b><td>"+ archivelogs + Util.countMbytes("./log/archive") + "</a> mb</tr> \n" );
 
 		// camera | uptime | frames 

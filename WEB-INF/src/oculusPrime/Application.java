@@ -67,7 +67,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
-	private developer.Navigation navigation = null;
+	
+	// made static
+	// private developer.Navigation navigation = null;
 
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
@@ -308,7 +310,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.updateJetty();		 
 			
 		watchdog = new SystemWatchdog(this);
-		if(settings.getBoolean(GUISettings.navigation)) navigation = new developer.Navigation(this);
+		if(settings.getBoolean(GUISettings.navigation)) new developer.Navigation(this);
+		//avigation.setApp(this);
+		
 		
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
@@ -324,7 +328,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 		}
 		
-		if(navigation != null && state.equals(values.dockstatus, AutoDock.DOCKED)) navigation.runActiveRoute();
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
 		Util.log("application initialized", this);
 	}
 	
@@ -332,27 +336,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 		new Thread(new Runnable() { public void run(){
 			try {
 
-//				Util.log("--- starting to dock waiting ---", this);
-				
 				Util.delay(3000); // system settle 	
 				// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
 				NavigationLog.newItem("booted undocked, trying redock");
 				
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				
-//				if( ! new StateObserver().block(values.dockstatus, AutoDock.DOCKED, Util.TEN_MINUTES))
-//					Util.log("redockWaitRunRoute(): time out on dock status", this);
-				
-//				Util.log("--- blocking ---", this);
 				state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TEN_MINUTES);
-//				Util.log("--- blocking exit ---", this);
-
-				if(/*navigation != null && state.equals(values.wallpower, "true")*/ state.equals(values.dockstatus, AutoDock.DOCKED)){
+				if(( state.equals(values.wallpower, "true") && state.equals(values.dockstatus, AutoDock.DOCKED))){
 					
 //					Util.debug("..redockWaitRunRoutestarted(): run active routeC..");
 					Util.delay(5000); // system settle 		
 					Util.debug("redockWaitRunRoute(): run active route");
-					navigation.runActiveRoute();					
+					Navigation.runActiveRoute();					
 				}
 
 //				Util.log("--- redockWaitRunRoute(): exit ---", this); 		
@@ -502,7 +498,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
-	@SuppressWarnings({ "incomplete-switch", "static-access" })
+	@SuppressWarnings({ "incomplete-switch" })
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 		
 		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
@@ -541,13 +537,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		case move: {
 
-			if (settings.getBoolean(GUISettings.navigation)) navigation.navdockactive = false;
+			if (settings.getBoolean(GUISettings.navigation)) Navigation.navdockactive = false;
 
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
-					str.equals(ArduinoPrime.direction.stop.toString())) {
+					str.equals(ArduinoPrime.direction.stop.toString())){
+				
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user");
-				navigation.cancelAllRoutes();
+				Navigation.cancelAllRoutes();
 			
 			} else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
@@ -842,34 +839,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case gotowaypoint:
-			if (navigation != null) {
-				navigation.failed = true;
-				navigation.gotoWaypoint(str);
-			}
+			Navigation.gotoWaypoint(str);
 			break;
 		
 		case startnav:
-			if (navigation != null) navigation.startNavigation(); 
+			Navigation.startNavigation(); 
 			break;
 		
 		case stopnav:
-			if (navigation != null) navigation.stopNavigation();
+			Navigation.stopNavigation();
 			break;
 		
 		case gotodock:
-			if (navigation != null){
-				navigation.failed = true;
-				NavigationLog.newItem("Route canceled by user, failed");
-				navigation.dock(); 
-			}
+			NavigationLog.newItem("Route canceled by user, failed");
+			Navigation.dock(); 
 			break;
 			
 		case saveroute: 
-			if (navigation != null){
-				NavigationUtilities.saveRoute(str);
-				messageplayer("route saved", null, null);
+			NavigationUtilities.saveRoute(str);
+			messageplayer("route saved", null, null);
 				
-				Util.log("save route: " + str, this);
+			Util.log("save route: " + str, this);
 
 				// reset if existed
 				// TODO: TESTING... 
@@ -885,7 +875,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			//	Navigation.updateRouteEstimatess(str, 0, 0);
 			//	Navigation.updateRouteStats(str, 0, 0);
 				
-			}
+			
 			break;
 		
 		case routedata:
@@ -906,22 +896,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case runroute:
-			if (navigation != null && str != null){
+			if(str != null){
 				state.set(State.values.navigationroute, str);
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: " + str + " activated by user");
-				navigation.runRoute(str);
+				Navigation.runRoute(str);
 			}
 			break;
 
 		case cancelroute:
-			if (navigation != null && state.exists(values.navigationroute)) {
+			if(state.exists(values.navigationroute)) {
 				NavigationLog.newItem("All routes cancelled by user");
-				navigation.cancelAllRoutes();
+				Navigation.cancelAllRoutes();
 			}
 			break;
 
-		case startmapping: if (navigation != null) navigation.startMapping(); break;
-		case savemap: if (navigation != null) navigation.saveMap(); break;
+		case startmapping: Navigation.startMapping(); break;
+		case savemap: Navigation.saveMap(); break;
 		case clearmap: Mapper.clearMap(); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
@@ -1476,8 +1466,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("docking cancelled", "multiple", str);
 			state.set(State.values.docking, false);
 //			powerport.manualSetBatteryUnDocked();
-		}
-		
+		}	
 	}
 
 	private void statusCheck(String s) {
@@ -1573,6 +1562,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			int b = settings.getInteger(ManualSettings.restarted);
 			settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+			
+// THIS in developer mode, or just warning? 	
 //			if(settings.getInteger(ManualSettings.restarted) > 10){
 //			Util.log("restart called but reboot neededd, going down..", this);
 		}
@@ -1590,22 +1581,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 		shutdownApplication();
 	}
 	
-	public  void reboot(){
+	public void reboot(){
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		settings.writeSettings(ManualSettings.restarted, "0");
 
-		if (navigation != null) { // TODO: << condition required?
-			if (state.exists(values.odomlinearpwm)) {
-				settings.writeSettings(ManualSettings.odomlinearpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
-			}
-			if (state.exists(values.odomturnpwm)) {
-				settings.writeSettings(ManualSettings.odomturnpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
-			}
+		if(state.exists(values.odomlinearpwm)){
+			settings.writeSettings(ManualSettings.odomlinearpwm,
+				String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+		}
+		
+		if(state.exists(values.odomturnpwm)) {
+			settings.writeSettings(ManualSettings.odomturnpwm,
+				String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
 		}
 
 		Util.delay(1000);
@@ -1614,8 +1604,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 //		}
 //		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+		
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
-
 
 	}
 
@@ -1647,21 +1637,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (powerport.isConnected()) powerport.writeStatusToEeprom();
 		PowerLogger.close();
 		
-		if (navigation != null) {
-			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-				navigation.stopNavigation();
+		if( ! state.equals(values.navsystemstatus, Ros.navsystemstate.stopped.toString())) Navigation.stopNavigation();
 
-			if (state.exists(values.odomlinearpwm)) {
-				settings.writeSettings(ManualSettings.odomlinearpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
-			}
-			if (state.exists(values.odomturnpwm)) {
-				settings.writeSettings(ManualSettings.odomturnpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
-			}
-		}
-
-		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
+		if(state.exists(values.odomlinearpwm)) settings.writeSettings(ManualSettings.odomlinearpwm,
+			String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			
+		if (state.exists(values.odomturnpwm)) settings.writeSettings(ManualSettings.odomturnpwm,
+			String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			
+		/*if( ! settings.getBoolean(ManualSettings.debugenabled))*/ killGrabber();
 
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}
