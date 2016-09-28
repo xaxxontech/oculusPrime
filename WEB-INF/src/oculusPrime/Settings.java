@@ -24,7 +24,7 @@ public class Settings {
 	public static final String FALSE = "false";
 	public static final String TRUE = "true";	
 	public static final int ERROR = -1;
-	
+
 	private static Settings singleton = null;
 	public static Settings getReference() {
 		if (singleton == null) singleton = new Settings();

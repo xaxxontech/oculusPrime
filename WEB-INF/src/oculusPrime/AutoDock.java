@@ -26,7 +26,7 @@ public class AutoDock {
 	public enum dockgrabmodes{ calibrate, start, find, test };
 
 	private Settings settings = Settings.getReference();
-	private String docktarget = settings.readSetting(GUISettings.docktarget);;
+	private String docktarget = settings.readSetting(GUISettings.docktarget);
 	private State state = State.getReference();
 	private boolean autodockingcamctr = false;
 	private int lastcamctr = 0;

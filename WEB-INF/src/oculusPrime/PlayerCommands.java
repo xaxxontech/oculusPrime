@@ -58,8 +58,6 @@ public enum PlayerCommands {
 	// un-categorized
 	speech, serverbrowser, email, state, rssadd,
 
-
-
     // experimental (undocumented)
     opennisensor, clearmap, error,
 
@@ -69,7 +67,8 @@ public enum PlayerCommands {
     // undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
 	deletelogs, truncimages, truncros, truncarchive, archive,
-	archiveros, archiveimages, archivelogs, calibraterotation,
+	archiveros, archiveimages, archivelogs, calibraterotation, relayconnect,
+	relaydisconnect,
 
     ;
 	
@@ -84,7 +83,10 @@ public enum PlayerCommands {
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
 	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
-	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged;	
+	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged,
+		relayconnect, relaydisconnect,
+
+		;
 
 	}
 	

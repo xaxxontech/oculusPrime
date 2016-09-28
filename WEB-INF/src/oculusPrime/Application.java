@@ -10,15 +10,16 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
-
-import developer.Calibrate;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
+import org.red5.client.*;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
+import org.red5.server.net.rtmp.RTMPConnection;
 
+import developer.Calibrate;
 import developer.Navigation;
 import developer.NavigationLog;
 import developer.Ros;
@@ -43,21 +44,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
 	public static final String ARM = "arm";
-	
+	public static final String LOCALHOST = "127.0.0.1";
+
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
-	private boolean initialstatuscalled = false; 
+	protected boolean initialstatuscalled = false;
 	private boolean pendingplayerisnull = true;
-	public IConnection grabber = null;
-	private IConnection player = null;
+	public IConnection grabber = null;   // flash client on robot, camera capture (optional)
+	private IConnection player = null;   // client, typically remote flash plugin or air app
 	private String authtoken = null;
 	private String salt = null;
 	
 	private Settings settings = Settings.getReference();
 	private BanList banlist = BanList.getRefrence();
 	private State state = State.getReference();
-	private LoginRecords loginRecords = null;
+	protected LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
-	private SystemWatchdog watchdog = null;
+	protected SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
 	public Video video = null;
 
@@ -72,6 +74,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
 	public static BufferedImage videoOverlayImage = null;
+
+	private Red5Client red5client = null;
+	public IConnection relayclient = null;
 
 	public Application() {
 		super();
@@ -97,10 +102,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		}
 
 		// always accept local avconv/ffmpeg
-		if ((connection.getRemoteAddress()).equals("127.0.0.1") && params.length==0) {
+		if (params.length==0 && connection.getRemoteAddress().equals("127.0.0.1") ) {
 			grabber = Red5.getConnectionLocal();
 			return true;
 		}
+
+		// always accept relayclient avconv/ffmpeg
+		if (params.length==0 && state.exists(values.relayclient)) {
+			if (connection.getRemoteAddress().equals(state.get(values.relayclient)) ) {
+				grabber = Red5.getConnectionLocal();
+				return true;
+			}
+		}
+
+		// disallow normal connection if relay server active
+		if (state.exists(values.relayserver)) return false;
 
 		String logininfo[] = ((String) params[0]).split(" ");
 
@@ -140,6 +156,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	@Override
 	public void appDisconnect(IConnection connection) {
 		if(connection==null) { return; }
+
 		if (connection.equals(player)) {
 			String str = state.get(State.values.driver) + " disconnected";
 			
@@ -185,6 +202,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			player = null;
 			connection.close();
+
+			if (state.exists(values.relayclient)) {
+				IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
+				t.invoke("playerDisconnect");
+			}
 		}
 		
 		if (connection.equals(grabber)) {
@@ -206,6 +228,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 					}
 				}
 			}).start();
+			return;
+		}
+
+		if (connection.equals(relayclient)) {
+			relayclient = null;
+			state.delete(values.relayclient);
 			return;
 		}
 		
@@ -294,6 +322,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
+		// use relay server if set
+		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED)) {
+
+			red5client = new Red5Client(this); // connects to remote server
+			red5client.connectToRelay();
+		}
+
 		if (state.get(values.osarch).equals(ARM))
 			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 		if (!settings.getBoolean(ManualSettings.useflash))
@@ -322,7 +357,46 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 	}
 
+	// called by remote relay client
+	public void setRelayClient() {
+		IConnection c = Red5.getConnectionLocal();
+		if (c instanceof IServiceCapableConnection) {
+			relayclient = c;
+			state.set(values.relayclient, c.getRemoteAddress());
+			Util.log("relayclient connected from: " + state.get(values.relayclient), this);
+
+			if (state.exists(values.driver)) {
+				player.close();
+				player = null;
+				loginRecords.signoutDriver();
+			}
+		}
+	}
+
+	// // called by remote Red5Client.sendToRelay()
+	public void fromRelayClient(Object[] params) {
+		if ( !Red5.getConnectionLocal().equals(relayclient)) return;
+		String[] s= new String[params.length-1];
+
+		switch (params[0].toString()) {
+			case "messageplayer":
+				for (int i=1; i<params.length; i++) if (params[i]!=null) s[i-1]=params[i].toString();
+				messageplayer(s[0],s[1],s[2]);
+				break;
+			case "sendplayerfunction":
+				for (int i=1; i<params.length; i++) if (params[i]!=null) s[i-1]=params[i].toString();
+				sendplayerfunction(s[0], s[1]);
+				break;
+			case "grabberSetStream":
+				grabberSetStream(params[1].toString());
+		}
+	}
+
 	private void grabberInitialize() {
+
+		String host = LOCALHOST;
+		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED))
+			host = settings.readSetting(ManualSettings.relayserver);
 
 		video = new Video(this);
 
@@ -435,6 +509,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 //			state.delete(State.values.controlsinverted);
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
+
+			if (state.exists(values.relayclient)) {
+				IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
+				t.invoke("playerSignIn", new Object[] { state.get(values.driver)});
+			}
+
 		}
 	}
 
@@ -449,7 +529,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if (fn == null) return;
 		if (fn.equals("")) return;
-		
+
 		PlayerCommands cmd = null;
 		try {
 			cmd = PlayerCommands.valueOf(fn);
@@ -467,8 +547,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
+
+		// if acting as relay server, forward commands
+		if (state.exists(values.relayclient)) {
+			IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
+			sc.invoke("relayCallClient", new Object[] { fn, str });
+			return;
+		}
 		
-		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
+		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride) {
 			if ( ! loginRecords.isAdmin()){ 
 				Util.debug("playerCallServer(), must be an admin to do: " + fn.name() + " curent driver: " + state.get(State.values.driver), this);
 				return;
@@ -915,6 +1002,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 			new Calibrate(this).calibrateRotation();
 			break;
 
+		case relayconnect:
+			if (red5client == null) red5client = new Red5Client(this);
+			red5client.connectToRelay();
+			// TODO: stop any running streams
+			break;
+
+		case relaydisconnect:
+			if (state.exists(values.relayserver))
+				red5client.relayDisconnect();
+			else if (state.exists(values.relayclient)) {
+				IServiceCapableConnection rc = (IServiceCapableConnection) relayclient;
+				rc.invoke("disconnect");
+				state.delete(values.relayclient);
+			}
+			// TODO: stop any running streams
+			break;
+
 		}
 	}
 
@@ -1012,6 +1116,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
+					// notify all passengers and driver
 					Thread.sleep(STREAM_CONNECT_DELAY);
 //					if (stream.equals(streamstate.camandmic)); Thread.sleep(STREAM_CONNECT_DELAY*2); // longer delay required doesn't help
 					Collection<Set<IConnection>> concollection = getConnections();
@@ -1026,6 +1131,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 							}
 						}
 					}
+
+					// set stream on relayserver if necessary
+					if (state.exists(values.relayserver)) {
+						Util.delay(1000); // allow extra time for avconv to connect to remote server
+						red5client.sendToRelay("grabberSetStream", new Object[]{state.get(values.stream)});
+					}
+
 				} catch (Exception e) {
 					Util.printError(e);
 				}
@@ -1258,6 +1370,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	public void messageplayer(String str, String status, String value) {
+
+		if (state.exists(values.relayserver)) {
+			red5client.sendToRelay("messageplayer", new Object[] {str, status, value});
+		}
 		
 		if (player instanceof IServiceCapableConnection) {
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
@@ -1286,9 +1402,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
 			sc.invoke("playerfunction", new Object[] { fn, params });
 		}
-//		if(commandServer!=null) {
-//			commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " javascript function: " + fn + " "+ params);
-//		}
+
+		if (state.exists(values.relayserver)) {
+			red5client.sendToRelay("playerfunction", new Object[]{fn, params});
+		}
 	}
 
 	public void saySpeech(String str) {

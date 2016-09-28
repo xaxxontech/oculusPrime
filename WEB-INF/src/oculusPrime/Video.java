@@ -15,8 +15,7 @@ public class Video {
 
     private static State state = State.getReference();
     private Application app = null;
-    private String host = "127.0.0.1";
-    private String port = "1935";
+    private String port;
     private int devicenum = 0;  // should match lifecam cam
     private int adevicenum = 1; // should match lifecam mic
     private static final int defaultquality = 5;
@@ -49,7 +48,7 @@ public class Video {
 
     public Video(Application a) {
         app = a;
-
+        port = Settings.getReference().readRed5Setting("rtmp.port");
     }
 
     public void initAvconv() {
@@ -104,6 +103,10 @@ public class Video {
         final int q = lastquality;
 
         new Thread(new Runnable() { public void run() {
+
+            String host = "127.0.0.1";
+            if (state.exists(State.values.relayserver))
+                host = state.get(State.values.relayserver);
 
             // nuke currently running avconv if any
             if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
@@ -254,6 +257,10 @@ public class Video {
         }
 
         state.set(State.values.writingframegrabs, width);
+
+        String host = "127.0.0.1";
+        if (state.exists(State.values.relayserver))
+            host = state.get(State.values.relayserver);
 
         try {
             Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",

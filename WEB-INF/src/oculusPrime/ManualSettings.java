@@ -8,7 +8,8 @@ public enum ManualSettings {
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm, checkaddresses,
 	soundthreshold, motionthreshold, redockifweakconnection,
 
-	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, // undocumented
+	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, relayserver, // undocumented
+	relayserverauth,
 	;
 	
 	/** get basic settings, set defaults for all */
@@ -32,6 +33,8 @@ public enum ManualSettings {
 		config.setProperty(usearcmoves.name(), Settings.TRUE); // TODO: undocumented
 		config.setProperty(arcpwmthreshold.name(), "150");   // TODO: undocumented
 		config.setProperty(soundthresholdalt.name(), "-8");  // TODO: undocumented
+		config.setProperty(relayserver.name(), Settings.DISABLED);  // TODO: undocumented
+		config.setProperty(relayserverauth.name(), Settings.DISABLED);  // TODO: undocumented
 		return config;
 	}
 	

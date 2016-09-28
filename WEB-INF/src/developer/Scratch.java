@@ -29,14 +29,10 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        double mAhCapacity= 4520.0;
-        double newmAhCapacity = 7000;
-        if (Math.abs(newmAhCapacity-mAhCapacity)/mAhCapacity > 0.2) {
-            if (newmAhCapacity > mAhCapacity ) newmAhCapacity = mAhCapacity*1.2;
-            else newmAhCapacity = mAhCapacity*0.8;
-        }
 
-        System.out.println(newmAhCapacity);
+        Object asdf = "fdsa";
+
+        System.out.println(asdf);
 
     }
 }

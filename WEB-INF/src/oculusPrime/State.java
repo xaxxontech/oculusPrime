@@ -37,8 +37,7 @@ public class State {
 
 		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
 		localaddress, externaladdress, ssid, guinotify,
-		osarch,
-		waitingforcpu, // to be documented
+		osarch, waitingforcpu, relayserver, relayclient, // to be documented
 
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
