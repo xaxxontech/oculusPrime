@@ -30,33 +30,15 @@ import oculusPrime.Util;
 public class NavigationUtilities {
 
 	private static final String redhome = System.getenv("RED5_HOME");
-	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
-
+	
+//	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
+	 public static final File navroutesfile = new File("F:\\robot\\archive\\robot backup\\oculusPrime\\conf\\navigationroutes.xml");
+	
 	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
 	public static final String ROUTE_COUNT_TAG = "routecount";
 	public static final String ROUTE_FAIL_TAG = "routefail";
 	
-
-	//
-	// testing tool driver
-	//
-	public static void main(String args[]) throws Exception {
-	
-		final String xml = routesLoad("F:\\robot\\archive\\robot backup\\oculusPrime\\conf\\navigationroutes.xml");
-	
-		Vector<String> r = getRoutes(xml);
-		for(int i = 0 ; i < r.size() ; i++){
-			
-			System.out.println(r.get(i) + " -- " + getWaypointsForRoute(xml, r.get(i)));
-				
-		}
-		
-		System.out.println("red route: " + getWaypointsForRoute(xml, "red route") );
-		System.out.println("all route: " + getWaypointsAll(xml) );
-	}
-	
-
 	public static synchronized void saveRoute(final String str){
 		
 		final String current = routesLoad();
@@ -66,7 +48,7 @@ public class NavigationUtilities {
 			return;
 		}
 		
-		// TODO: COMPARE YTWO STRING... RETURN NAME OF ROUTE THAT WAS EDITED... ? or reset states, esitmates? 
+		// TODO: COMPARE TWO STRING... RETURN NAME OF ROUTE THAT WAS EDITED... ? or reset states, esitmates? 
 		
 		try {
 			FileWriter fw = new FileWriter(navroutesfile);
@@ -165,7 +147,7 @@ public class NavigationUtilities {
 		return ans;
 	}
 	*/
-	public static Vector<String> getWaypointsForRoute(final String xml, final String routename){
+	public static Vector<String> getWaypointsForRoute(final String routename, final String xml){
 		Document document = loadXMLFromString(xml);
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Vector<String> ans = new Vector<String>();
@@ -189,6 +171,7 @@ public class NavigationUtilities {
 		return getWaypointsForRoute(routesLoad(), getActiveRoute());
 	}
 	
+	// should take from waypoints text file?
 	public static Vector<String> getWaypointsAll(final String xml){
 		Document document = loadXMLFromString(xml);
 		NodeList routes = document.getDocumentElement().getChildNodes();
@@ -201,7 +184,6 @@ public class NavigationUtilities {
 		}		
 		return ans;
 	}
-	
 
 	public static void updateRouteEstimatess(final String name, final int seconds, final long mm){
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
@@ -231,12 +213,22 @@ public class NavigationUtilities {
 		}
 	}
 	
+	//---------------- route fails
+	
 	public static int getRouteFails(final String name){
 		return Integer.parseInt(getRouteFailsString(name));
 	}
 	
+	public static int getRouteFails(final String name, final String xml){
+		return Integer.parseInt(getRouteFailsString(name, xml));
+	}
+	
 	public static String getRouteFailsString(final String name){
-		NodeList routes = NavigationUtilities.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+		return getRouteFailsString(name, routesLoad());
+	}
+	
+	public static String getRouteFailsString(final String name, final String xml){
+		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
@@ -249,12 +241,10 @@ public class NavigationUtilities {
 		return "0";
 	}
 	
-	public static int getRouteCount(final String name){
-		return Integer.parseInt(getRouteCountString(name));
-	}
+	//--------------- route count
 	
-	public static String getRouteCountString(final String name){
-		NodeList routes = NavigationUtilities.loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+	public static String getRouteCountString(final String name, final String xml){
+		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
@@ -266,16 +256,22 @@ public class NavigationUtilities {
 		return "0";
 	}
 	
-	public static int getEstimatedMeters(){
-		return Integer.parseInt(Util.formatFloat(getRouteDistanceEstimate(getActiveRoute()), 0));
+	public static String getRouteCountString(final String name){
+		return getRouteCountString(name, routesLoad());
 	}
 	
-	public static int getEstimatedSeconds(){
-		return Integer.parseInt(getRouteTimeEstimate(getActiveRoute()));
+	public static int getRouteCount(final String name, final String xml){
+		return Integer.parseInt(getRouteCountString(name, xml));
 	}
 	
-	public static String getRouteDistanceEstimate(final String name){
-		NodeList routes = loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+	public static int getRouteCount(final String name){
+		return Integer.parseInt(getRouteCountString(name));
+	}
+	
+	//------------ distance 
+	
+	public static String getRouteDistanceEstimateString(final String name, final String xml){
+		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
@@ -286,9 +282,30 @@ public class NavigationUtilities {
 		}
 		return "0";
 	}
+		
+	public static String getRouteDistanceEstimateString(final String name){
+		return getRouteDistanceEstimateString(name, routesLoad());
+	}
 	
-	public static String getRouteTimeEstimate(final String name){
-		NodeList routes = loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
+	public static int getRouteDistanceEstimate(final String name, final String xml){
+		return Integer.parseInt(getRouteDistanceEstimateString(name, xml));
+	}
+	
+	public static int getRouteDistanceEstimate(final String name){
+		return Integer.parseInt(getRouteDistanceEstimateString(name));
+	}
+	
+	//------------------ 
+	
+	///public static int getEstimatedMeters(){
+	//	return Integer.parseInt(Util.formatFloat(getRouteDistanceEstimate(getActiveRoute()), 0));
+	//}
+	
+
+	//-------------------- time  
+
+	public static String getRouteTimeEstimateString(final String name, final String xml){
+		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
 			if (rname.equals(name)){
@@ -299,6 +316,20 @@ public class NavigationUtilities {
 		}
 		return "0";
 	}
+		
+	public static String getRouteTimeEstimateString(final String name){
+		return getRouteTimeEstimateString(name, routesLoad());
+	}
+		
+	public static int getRouteTimeEstimate(final String name, final String xml){
+		return Integer.parseInt(getRouteTimeEstimateString(name, xml));
+	}
+	
+	public static int getRouteTimeEstimate(final String name){
+		return Integer.parseInt(getRouteTimeEstimateString(name));
+	}
+	
+	//--------------
 	
 	public static void updateRouteStats(final String name, final int routecount, final int routefails){
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());

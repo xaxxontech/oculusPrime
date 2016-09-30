@@ -536,6 +536,8 @@ public class Navigation implements Observer {
  
 		final NodeList waypoints = navroute.getElementsByTagName("waypoint");	    	
     	int wpnum = 0;
+    	failed = false;
+    	
     	while(wpnum < waypoints.getLength()){
     		
     		if(failed){
@@ -739,6 +741,7 @@ public class Navigation implements Observer {
 				rotations = 0;
 				failed = false;
 
+				/*
 				new Thread(new Runnable() { public void run(){
 					if(state.block(values.navigationroute, (int) Util.TEN_MINUTES)){ 
 						Util.log(".............. nav changed, return", this);
@@ -748,7 +751,8 @@ public class Navigation implements Observer {
 						Util.log(".............nav timeout", this);
 					}
 				}}).start();
-					
+				*/
+				
 				visitWaypoints(name);	
 				if(failed){
 					
@@ -765,11 +769,11 @@ public class Navigation implements Observer {
 					if(!delayToNextRoute(name)) return;
 				 }					
 				
-				Util.log("runRoute (bottom of loop): " + name + " #" + consecutiveroute, this);
+				Util.log("..runRoute (bottom of loop): " + name + " #" + consecutiveroute, this);
 			}
 		}}).start();
 		
-		Util.fine("runRoute (exit): " + name);
+		Util.fine("..runRoute (exit): " + name);
 	}
 
 	public static void undockandlocalize(){ // blocking
@@ -801,7 +805,7 @@ public class Navigation implements Observer {
 		app.driverCallServer(PlayerCommands.messageclients, min +  msg);
 		long start = System.currentTimeMillis();
 		while (System.currentTimeMillis() - start < timebetween) {
-			if (!state.exists(values.navigationroute)) {
+			if( ! state.exists(values.navigationroute)) {
 				state.delete(values.nextroutetime);
 				return false;
 			}

@@ -37,13 +37,8 @@ public class Util {
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;
 
-	private static final boolean DEBUG_FINE = true;	
+	private static final boolean DEBUG_FINE = false;	
 
-	
-	
-//	private static Settings settings = Settings.getReference();
-//	private static State state = State.getReference();
-	
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
