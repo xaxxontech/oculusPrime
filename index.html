@@ -951,6 +951,34 @@ Delete user:
 <div id="deluserlist"></div>
 </div>
 
+<!-- relayserver login -->
+<div id="relayserverlogin" style="display: none;">
+<a class="blackbg"
+href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;server_commands&quot;).innerHTML);">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Login to relay server:<br>
+<table><tr><td style="height: 7px"></td></tr></table>
+address: <input id="relayserverhost" class="inputbox" type="text" size="10" 
+onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
+user name: <input id="relayserveruser" class="inputbox" type="text" size="10" 
+onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
+password: <input id="relayserverpassword" class="inputbox" type="password" name="password" size="10" 
+onfocus="keyboard('disable'); this.style.backgroundColor='#000000';" 
+onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
+<table><tr><td style="height: 7px"></td></tr></table>
+<a class="blackbg" href="javascript: relayserver('connect');">
+<span class="cancelbox">&#x2714;</span> connect</a> &nbsp;
+&nbsp; &nbsp;
+<a class="blackbg" href="javascript: callServer('relaydisable', '')">
+disable</a>
+
+</div>
+
 <!-- server commands -->
 <div id="server_commands" style="display: none;">
 <a class="blackbg" href= "javascript: mainmenu()"> 
@@ -963,6 +991,8 @@ Server Menu:<br>
 <a class="blackbg" href="javascript: softwareupdate('version','');">software version</a><br>
 <a class="blackbg" href="javascript: softwareupdate('check','');">check for software update</a><br>
 <a class="blackbg" href="javascript: serverlog();">server log</a><br>
+<a class="blackbg" href="javascript: relayserver();">relay server</a> &gt;<br> 
+
 <a class="blackbg" href="javascript: restart(); ">restart server application</a><br>
 <a class="blackbg" href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
 	callServer('reboot',''); }">reboot</a><br>

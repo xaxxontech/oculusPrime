@@ -477,7 +477,7 @@ public class Settings {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public boolean getBoolean(GUISettings setting) {
 		return getBoolean(setting.toString());
 	}

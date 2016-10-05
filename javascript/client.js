@@ -400,7 +400,7 @@ function setstatus(status, value) {
 		}
 	}
 	if (status=="vidctroffset") { ctroffset = parseInt(value); }
-	else if (status=="connection" && value == "connected" && !connected) { // initialize
+	else if (status=="connection" && (value == "connected" || value == "relay") && !connected) { // initialize
 		overlay("off");
 		countdowntostatuscheck(); 
 		connected = true;
@@ -2172,6 +2172,22 @@ function account(str) { // change_password, password_update  DONE
 //			popupmenu('menu', 'show', null, null, document.getElementById('account_settings').innerHTML);
 //			document.getElementById("extendedsettingsbox").style.display = "none";
 		}
+	}
+}
+
+function relayserver(str) {
+	if (str==null) {
+		callServer("readsetting", "relayserver");
+		var str = document.getElementById("relayserverlogin").innerHTML;
+		popupmenu("menu","show",null,null,str);
+	}
+	else if (str=="connect") {
+		callServer("relayconnect", document.getElementById('relayserverhost').value +" "+
+			document.getElementById('relayserveruser').value +" "+
+			document.getElementById('relayserverpassword').value);
+	}
+	else if (str=="disconnect") {
+		callServer("relaydisconnect", "");
 	}
 }
 

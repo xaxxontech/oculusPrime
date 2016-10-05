@@ -5,7 +5,7 @@ import java.util.Properties;
 public enum GUISettings {
 
 	/** these settings must be available in basic configuration */
-	skipsetup, speedslow, speedmed, nudgedelay, fullrotationdelay, onemeterdelay,
+	speedslow, speedmed, nudgedelay, fullrotationdelay, onemeterdelay,
 	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
 	maxclickcam, loginnotify, redock, navigation, telnetport,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
@@ -14,7 +14,6 @@ public enum GUISettings {
 	/** get basic settings */
 	public static Properties createDeaults() {
 		Properties config = new Properties();
-		config.setProperty(skipsetup.name() , Settings.FALSE);
 		config.setProperty(speedslow.name() , "50");
 		config.setProperty(speedmed.name() , "150");
 		config.setProperty(docktarget.name() , "1.6666666_0.27447918_0.22083333_0.28177083_125_115_80_48_-0.041666668");

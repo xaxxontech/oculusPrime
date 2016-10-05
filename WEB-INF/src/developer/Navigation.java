@@ -753,7 +753,7 @@ public class Navigation implements Observer {
 
 	private void undockandlocalize() { // blocking
 		state.set(State.values.motionenabled, true);
-		double distance = 1.0;
+		double distance = settings.getDouble(ManualSettings.undockdistance);
 		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
 		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString()))); // required for fast systems?!
 		long start = System.currentTimeMillis();

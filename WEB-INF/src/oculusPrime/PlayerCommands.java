@@ -68,12 +68,12 @@ public enum PlayerCommands {
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
 	deletelogs, truncimages, truncros, truncarchive, archive,
 	archiveros, archiveimages, archivelogs, calibraterotation, relayconnect,
-	relaydisconnect,
+	relaydisconnect, relaydisable,
 
     ;
 	
 	// sub-set that are restricted to "user0"
-	public enum AdminCommands {
+	private enum AdminCommands {
 		docklineposupdate, autodockcalibrate, getemailsettings, emailsettingsupdate,
 		getdrivingsettings, drivingsettingsupdate,  
 		systemcall, 
@@ -84,21 +84,27 @@ public enum PlayerCommands {
 	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
 	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
 	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged,
-		relayconnect, relaydisconnect,
+		relayconnect, relaydisconnect, relaydisable,
 
 		;
 
 	}
-	
+
+	// sub-set of commands that are NOT to be passed thru to relay client, if acting as relay server
+	private enum nonRelayCommands {
+		record, relaydisconnect,
+		;
+	}
+
 	// @return true if given command is in the sub-set
-	public static boolean requiresAdmin(final String str) {
+	public static boolean nonRelayCommands(final PlayerCommands cmd) {
 		try {
-			AdminCommands.valueOf(str);
+			nonRelayCommands.valueOf(cmd.name());
 		} catch (Exception e) {return false;}
-		
-		return true; 
-	} 
-	
+
+		return true;
+	}
+
 	// @return true if given command is in the sub-set 
 	public static boolean requiresAdmin(final PlayerCommands cmd) {
 		try {

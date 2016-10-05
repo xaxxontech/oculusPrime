@@ -181,7 +181,7 @@ public class TelnetServer implements Observer {
 			case chat: // overrides playercommands chat
 				String args = new String();
 				for(int i = 1 ; i < cmd.length ; i++) args += " " + cmd[i].trim();
-				if(args.length()>1) app.playerCallServer(PlayerCommands.chat, args);
+				if(args.length()>1) app.driverCallServer(PlayerCommands.chat, args);
 				return true;
 
 			case bye:
