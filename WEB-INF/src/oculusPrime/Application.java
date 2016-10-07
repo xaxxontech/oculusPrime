@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.*;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
 import org.red5.client.*;
@@ -19,10 +20,6 @@ import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
 import org.red5.server.net.rtmp.RTMPConnection;
 
-import developer.Calibrate;
-import developer.Navigation;
-import developer.NavigationLog;
-import developer.Ros;
 import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
@@ -77,6 +74,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	private Red5Client red5client = null;
 	public IConnection relayclient = null;
+	public NetworkUtils networkUtils = null;
 
 	public Application() {
 		super();
@@ -354,6 +352,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
 		Util.updateExternalIPAddress();
 		Util.updateLocalIPAddress();
+		networkUtils = new NetworkUtils(this);
+		if (!networkUtils.networkInfoToState()) networkUtils = null;
 
 		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
 		//else {

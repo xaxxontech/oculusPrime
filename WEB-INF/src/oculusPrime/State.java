@@ -14,36 +14,47 @@ import developer.Ros.navsystemstate;
 
 public class State {
 	
-	public enum values{ 
-		
-		motionenabled, moving, movingforward, motorport, cameratilt, motorspeed,   // motors
+	public enum values{
 
-		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics,   // dock
+		// motors
+		motionenabled, moving, movingforward, motorport, cameratilt, motorspeed,
 
-		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel,  // lights
+		// dock
+		dockgrabbusy, docking, dockstatus, autodocking, dockfound, dockmetrics,
 
-		driver, logintime, pendinguserconnected, telnetusers,  // users
-		
-		videosoundmode, stream, driverstream, volume,  // audio video
+		// lights
+		floodlightlevel, spotlightbrightness, strobeflashon, fwdfloodlevel,
+
+		// users
+		driver, logintime, pendinguserconnected, telnetusers,
+
+		// audio video
+		videosoundmode, stream, driverstream, volume,
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 		writingframegrabs, record, sounddetect,// undocumented
 
-		wallpower, batterylife, powerport, batteryinfo, batteryvolts,  // power
+		// power
+		wallpower, batterylife, powerport, batteryinfo, batteryvolts,
 		powererror, forceundock,
 		redockifweakconnection, // undocumented
 
-
-		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
-		localaddress, externaladdress, ssid, guinotify,
+		// system
+		javastartup, linuxboot, httpport, lastusercommand, cpu, guinotify,
 		osarch, waitingforcpu, relayserver, relayclient, // to be documented
 
-		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast, // odometry
+		// network
+		localaddress, externaladdress, ssid,
+		networksinrange, networksknown, gatewayaddress, // to be documented
+
+		// odometry
+		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast,
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
 		calibratingrotation, // undocumented
 
-		rosmapinfo, rosamcl, rosglobalpath, rosscan,  // navigation
+		// navigation
+		rosmapinfo, rosamcl, rosglobalpath, rosscan,
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
@@ -54,13 +65,20 @@ public class State {
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
 		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived, redockifweakconnection }
-	
+
+	public enum telnetBroadcastOnChangeOnly { ssid, gatewayaddress, networksknown, batterylife, }
+
 	/** @return true if given command is in the sub-set */
 	public static boolean isNonTelnetBroadCast(final String str) {
 		try { nonTelnetBroadcast.valueOf(str); } catch (Exception e) {return false;}
 		return true; 
 	}
-	
+
+	public static boolean isTeletBroadcastOnChangeOnly(final String str) {
+		try { telnetBroadcastOnChangeOnly.valueOf(str); } catch (Exception e) {return false;}
+		return true;
+	}
+
 	public static final int ERROR = -1;
 	
 	/** notify these on change events */

@@ -1,0 +1,265 @@
+package oculusPrime;
+
+import oculusPrime.commport.ArduinoPrime;
+import org.red5.client.net.rtmp.BaseRTMPClientHandler;
+import org.red5.client.net.rtmp.ClientExceptionHandler;
+import org.red5.client.net.rtmp.INetStreamEventHandler;
+import org.red5.client.net.rtmp.RTMPClient;
+import org.red5.io.utils.ObjectMap;
+import org.red5.server.api.IConnection;
+import org.red5.server.api.event.IEvent;
+import org.red5.server.api.event.IEventDispatcher;
+import org.red5.server.api.service.IPendingServiceCall;
+import org.red5.server.api.service.IPendingServiceCallback;
+import org.red5.server.api.service.IServiceCapableConnection;
+import org.red5.server.net.rtmp.Channel;
+import org.red5.server.net.rtmp.RTMPConnection;
+import org.red5.server.net.rtmp.event.Notify;
+import org.red5.server.net.rtmp.event.Ping;
+import org.red5.server.net.rtmp.message.Header;
+import org.red5.server.net.rtmp.status.StatusCodes;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+
+
+public class Red5Client extends RTMPClient {
+    private State state = State.getReference();
+    private Settings settings = Settings.getReference();
+    private Application app;
+    private NetworkServlet networkServlet = new NetworkServlet();
+
+    public Red5Client(Application a) {
+        app = a;
+
+        this.setConnectionClosedHandler(new Runnable() {
+            @Override
+            public void run() {
+
+                Util.log("relay server connection closed", this);
+                state.delete(State.values.relayserver);
+//                TODO: reconnect?
+            }
+        });
+
+        this.setServiceProvider(this);
+
+    }
+
+    public void connectToRelay() {
+        connectToRelay(null);
+    }
+
+    public void connectToRelay(String str) {
+
+        String[] hostuserpass = null;
+        if (str != null) {
+            hostuserpass = str.split(" ");
+            if (hostuserpass.length != 3) {
+                app.driverCallServer(PlayerCommands.messageclients, "invalid relay server login info");
+                return;
+            }
+            settings.writeSettings(ManualSettings.relayserver, hostuserpass[0]);
+            settings.writeSettings(ManualSettings.relayserverauth, Settings.DISABLED);
+            Util.log(hostuserpass[0]+hostuserpass[1]+hostuserpass[2], this); // TODO: testing
+        }
+
+        if (settings.getBoolean(ManualSettings.useflash)) {
+            state.set(State.values.guinotify, "relay server in use, setting &quot;useflash&quot; set to false");
+            Util.log("setting useflash false", this);
+            settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+        }
+
+        if (state.exists(State.values.relayserver)) {
+            app.driverCallServer(PlayerCommands.messageclients, "relay server already connected to: " +
+                state.get(State.values.relayserver));
+            return;
+        }
+
+        if (hostuserpass == null &&
+                (settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED) ||
+                settings.readSetting(ManualSettings.relayserverauth).equals(Settings.DISABLED)) ) {
+            app.driverCallServer(PlayerCommands.messageclients, "relay server not set");
+            return;
+        }
+
+        setExceptionHandler(new ClientExceptionHandler() {
+            @Override
+            public void handleException(Throwable throwable) {
+                Util.log("connectToRelay(): " + throwable.getLocalizedMessage(), this);
+//                throwable.printStackTrace();
+            }
+        });
+
+        String server = settings.readSetting(ManualSettings.relayserver);
+        String app = "oculusPrime";
+        int port = Integer.valueOf(settings.readRed5Setting("rtmp.port"));
+
+        String args[] = new String[1];
+        if (hostuserpass !=null) {
+            args[0] = hostuserpass[1]+" "+hostuserpass[2]+" remember";
+        }
+        else {
+            args[0] = settings.readSetting(ManualSettings.relayserverauth);
+        }
+
+        connect(server, port, makeDefaultConnectionParams(server, port, app), connectCallback, args);
+
+    }
+
+    private IPendingServiceCallback connectCallback = new IPendingServiceCallback() {
+        @Override
+        public void resultReceived(IPendingServiceCall call) {
+
+            ObjectMap<?, ?> map = (ObjectMap<?, ?>) call.getResult();
+            String code = (String) map.get("code");
+            Util.log("Red5Client connectCallback Response code: " + code, this);
+            if ("NetConnection.Connect.Success".equals(code)) { // success
+                Util.log("Remote relay server connect success", this);
+
+                if (state.exists(State.values.relayserver)) { // just in case
+                    Util.log("error, state relay server exists", this);
+                    return;
+                }
+
+                state.set(State.values.relayserver, settings.readSetting(ManualSettings.relayserver));
+                stayConnected();
+
+                app.driverCallServer(PlayerCommands.messageclients, "connected to relay server: " +
+                        state.get(State.values.relayserver));
+
+                // notify remote server that this is an authenticated relay client
+                invoke("setRelayClient", new IPendingServiceCallback() {
+                    @Override
+                    public void resultReceived(IPendingServiceCall iPendingServiceCall) {
+
+                    }
+                });
+
+
+            }
+            else if ("NetConnection.Connect.Rejected".equals(code)) {
+                disconnect();
+                Util.log("Red5Client connect rejected: " + map.get("description"), this);
+                state.delete(State.values.relayserver);
+            }
+
+            else {
+                Util.log("Remote relay server connect failed", this);
+                disconnect();
+                state.delete(State.values.relayserver);
+            }
+        }
+    };
+
+    private void stayConnected() {
+
+
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+
+                    while(!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED)) {
+
+                        Util.delay(100);
+                        if (conn.isDisconnected()) {
+                            Util.delay(10000);
+                            if (state.exists(State.values.relayserver)) {
+                                Util.log("NOTE: disconnected but state relayserver still exists", this);
+                                state.delete(State.values.relayserver);
+                                app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+                            }
+
+                            Util.log("attempting reconnect to relay", this);
+                            connectToRelay();
+                        }
+                    }
+
+                } catch (Exception e) {
+                    Util.printError(e);
+                }
+            }
+        }).start();
+    }
+
+    public void sendToRelay(String functionName, Object[] params) {
+
+        Object[] functionplusparams = new Object[params.length+1];
+        functionplusparams[0]=functionName;
+        for (int i=1; i<functionplusparams.length; i++) functionplusparams[i]=params[i-1];
+        invoke("fromRelayClient", functionplusparams, new IPendingServiceCallback() {
+            @Override
+            public void resultReceived(IPendingServiceCall iPendingServiceCall) {
+
+            }
+        });
+    }
+
+    public void relayDisconnect() {
+        state.delete(State.values.relayserver);
+        disconnect();
+    }
+
+    // called by relay server only
+    public void relayCallClient(Object[] params) {
+        String str = null;
+        if (params[1]!=null) str=params[1].toString();
+        app.driverCallServer(PlayerCommands.valueOf(params[0].toString()), str);
+    }
+
+    // called by relay server only
+    public void playerSignIn(Object[] params) {
+
+        // disonnect any drivers/passengers/pending
+        boolean delay = false;
+        Collection<Set<IConnection>> concollection = app.getConnections();
+        for (Set<IConnection> cc : concollection) {
+            for (IConnection con : cc) {
+                if (con instanceof IServiceCapableConnection && con != app.grabber) {
+                    con.close();
+                    delay = true;
+                }
+            }
+        }
+        if (delay) Util.delay(500); // allow player to logout TODO: blocking!
+
+        state.set(State.values.driver, params[0].toString());
+        app.initialstatuscalled = false;
+        Util.log("relay playersignin(): " + params[0].toString(), this);
+        app.loginRecords.beDriver();
+        if (settings.getBoolean(GUISettings.loginnotify))
+            app.driverCallServer(PlayerCommands.speech, state.get(State.values.driver));
+        app.watchdog.lastpowererrornotify = null;
+
+    }
+
+    // called by relay server only
+    public void playerDisconnect() {
+        app.loginRecords.signoutDriver();
+
+        //if autodocking, keep autodocking
+        if (!state.getBoolean(State.values.autodocking) &&
+                !(state.exists(State.values.navigationroute) && !state.exists(State.values.nextroutetime)) ) {
+
+            if (!state.get(State.values.driverstream).equals(Application.driverstreamstate.pending.toString())) {
+
+                if (state.get(State.values.stream) != null) {
+                    if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
+                        app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+                    }
+                }
+
+                app.driverCallServer(PlayerCommands.spotlight, "0");
+                app.driverCallServer(PlayerCommands.floodlight, "0");
+                app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+
+            }
+
+        }
+    }
+
+
+}

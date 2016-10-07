@@ -78,7 +78,7 @@ public class NetworkServlet extends HttpServlet {
                     response.sendRedirect(request.getRequestURL().toString());
                 }
                 else if(action != null) {
-                    if (!action.equals("status") && !action.equals("connect") &&
+                    if (!action.equals("status") && !action.equals("connect") && !action.equals("xmlinfo") &&
                             !action.equals("config") && !action.equals("wifiready")) {
 
                         response.sendRedirect(request.getRequestURL().toString());
