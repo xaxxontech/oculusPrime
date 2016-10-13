@@ -33,15 +33,19 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
 	
-	
+	private static final boolean DEBUG_FINE = true;	
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;
-
-	private static final boolean DEBUG_FINE = false;	
 
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
+	
+	static boolean debug = false;
+	
+	public Util(){
+		debug = Settings.getReference().getBoolean(ManualSettings.debugenabled);
+	}
 	
 	public static void delay(long delay) {
 		try { Thread.sleep(delay); } 
@@ -244,12 +248,11 @@ public class Util {
     
     public static void debug(String str) {
     	if(str == null) return;
-    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
+    	if(debug){
     		System.out.println("DEBUG: " + getTime() + ", " +str);
     		history.add(System.currentTimeMillis() + ", " +str);
     	}
-    }
-    
+    }    
 
     public static void fine(String str) {
     	if(str == null) return;

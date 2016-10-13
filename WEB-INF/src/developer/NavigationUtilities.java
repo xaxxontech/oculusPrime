@@ -22,23 +22,21 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import oculusPrime.State;
-import oculusPrime.State.values;
 import oculusPrime.Util;
 
-/** manage XML file for nanigation */
+/** manage XML file for navigation */
 public class NavigationUtilities {
 
-	private static final String redhome = System.getenv("RED5_HOME");
-	
-//	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
-	 public static final File navroutesfile = new File("F:\\robot\\archive\\robot backup\\oculusPrime\\conf\\navigationroutes.xml");
+	public static File navroutesfile = new File(System.getenv("RED5_HOME")+"/conf/navigationroutes.xml");
 	
 	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";
-	public static final String ROUTE_COUNT_TAG = "routecount";
+	public static final String ROUTE_COUNT_TAG = "routecount";	
 	public static final String ROUTE_FAIL_TAG = "routefail";
-	
+	public static final String WAYPOINT_NAME = "wpname";
+	public static final String ROUTE_NAME = "rname";
+	public static final String ACTIVE = "active";
+
 	public static synchronized void saveRoute(final String str){
 		
 		final String current = routesLoad();
@@ -57,6 +55,7 @@ public class NavigationUtilities {
 		} catch (Exception e){ Util.printError(e); }
 	}
 	
+	/** */
 	public static String XMLtoString(Document doc) {
 		String output = null;
 		try {
@@ -71,20 +70,7 @@ public class NavigationUtilities {
 		return output;
 	}
 	
-	public static synchronized String routesLoad(String path){
-		String result = "";
-		BufferedReader reader;
-		try {
-			reader = new BufferedReader(new FileReader(path));
-			String line = "";
-			while ((line = reader.readLine()) != null) 	result += line;
-			reader.close();
-		} catch (Exception e) {
-			return "<routeslist></routeslist>";
-		}
-		return result;
-	}
-	
+	/** */
 	public static String routesLoad(){
 		String result = "";
 		BufferedReader reader;
@@ -99,6 +85,7 @@ public class NavigationUtilities {
 		return result;
 	}
 	
+	/** */
 	public static Document loadXMLFromString(String xml){
 		try {    
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -110,34 +97,31 @@ public class NavigationUtilities {
 		return null;
 	}
 	
+	/** */
 	public static Vector<String> getRoutes(final String xml){
 		Vector<String> names = new Vector<String>();
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for(int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			names.add(rname);
 		}
 		return names;
 	}
 	
+	/** */
 	public static Vector<String> getRoutes(){
-		Vector<String> names = new Vector<String>();
-		NodeList routes = loadXMLFromString(routesLoad()).getDocumentElement().getChildNodes();
-		for(int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			names.add(rname);
-		}
-		return names;
+		return getRoutes(routesLoad());
 	}
+	
 	/*
 	public static Vector<String> getWaypointsForRouteList(final String xml, final String routename){
 		Document document = loadXMLFromString(xml);
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Vector<String> ans = new Vector<String>();
 		for(int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if(routename.equals(rname)){
-				NodeList wp = ((Element) routes.item(i)).getElementsByTagName("wpname");
+				NodeList wp = ((Element) routes.item(i)).getElementsByTagName("WAYPOINT_NAME");
 				for(int j = 0 ; j < wp.getLength() ; j++){
 					if(!ans.contains(wp.item(j).getTextContent())) 
 						ans.add(wp.item(j).getTextContent());
@@ -147,14 +131,16 @@ public class NavigationUtilities {
 		return ans;
 	}
 	*/
+	
+	/** */
 	public static Vector<String> getWaypointsForRoute(final String routename, final String xml){
 		Document document = loadXMLFromString(xml);
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Vector<String> ans = new Vector<String>();
 		for(int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if(routename.equals(rname)){
-	    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName("wpname");
+	    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName(WAYPOINT_NAME);
 	    		for(int j = 0 ; j < wp.getLength() ; j++){
 	        		ans.add(wp.item(j).getTextContent());
 	    		}
@@ -163,21 +149,24 @@ public class NavigationUtilities {
 		return ans;
 	}
 	
+	/** */
 	public static Vector<String> getWaypointsForRoute(final String routename){
 		return getWaypointsForRoute(routesLoad(), routename);
 	}
 	
+	/** */
 	public static Vector<String> getWaypointsForActiveRoute(){
 		return getWaypointsForRoute(routesLoad(), getActiveRoute());
 	}
 	
+	/** */
 	// should take from waypoints text file?
 	public static Vector<String> getWaypointsAll(final String xml){
 		Document document = loadXMLFromString(xml);
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Vector<String> ans = new Vector<String>();
 		for (int i = 0; i < routes.getLength(); i++){
-    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName("wpname");
+    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName(WAYPOINT_NAME);
     		for(int j = 0 ; j < wp.getLength() ; j++){
         		if(!ans.contains(wp.item(j).getTextContent())) ans.add(wp.item(j).getTextContent());
     		}
@@ -185,34 +174,6 @@ public class NavigationUtilities {
 		return ans;
 	}
 
-	public static void updateRouteEstimatess(final String name, final int seconds, final long mm){
-		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		Element route = null;
-		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			if (rname.equals(name)){
-				route = (Element) routes.item(i);				
-				try {	
-					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(mm / (double)1000, 0));
-				} catch (Exception e) { // create if not there 
-					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
-					dist.setTextContent(Util.formatFloat(mm / (double)1000, 1));
-					route.appendChild(dist);
-				}
-				try {
-					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
-				} catch (Exception e) { // create if not there 
-					Node time = document.createElement(ESTIMATED_TIME_TAG);
-					time.setTextContent(Integer.toString(seconds));
-					route.appendChild(time);
-				}
-				saveRoute(XMLtoString(document));
-				break;
-			}
-		}
-	}
-	
 	//---------------- route fails
 	
 	public static int getRouteFails(final String name){
@@ -230,7 +191,7 @@ public class NavigationUtilities {
 	public static String getRouteFailsString(final String name, final String xml){
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
 					return ((Element) routes.item(i)).getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent(); 
@@ -241,12 +202,98 @@ public class NavigationUtilities {
 		return "0";
 	}
 	
+	public static void setRouteFails(final String name, final int routefails){
+		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			if (rname.equals(name)){
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
+				} catch (Exception e) { // create if not there 
+					Node fail = document.createElement(ROUTE_FAIL_TAG);
+					fail.setTextContent(Integer.toString(routefails));
+					route.appendChild(fail);
+				}
+				saveRoute(XMLtoString(document));
+				break;
+			}
+		}
+	}
+	
+	/*
+	public static String updateRouteFails(final String xml, final String name, final int routefails){
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			if (rname.equals(name)){
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
+				} catch (Exception e) { // create if not there 
+					Node fail = document.createElement(ROUTE_FAIL_TAG);
+					fail.setTextContent(Integer.toString(routefails));
+					route.appendChild(fail);
+				}
+				break;
+			}
+		}
+		
+		return document;
+	}
+	
+	public static Document updateRouteFails(Document document, final String name, final int routefails){
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			if (rname.equals(name)){
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
+				} catch (Exception e) { // create if not there 
+					Node fail = document.createElement(ROUTE_FAIL_TAG);
+					fail.setTextContent(Integer.toString(routefails));
+					route.appendChild(fail);
+				}
+				break;
+			}
+		}
+		
+		return document;
+	}
+	*/
+	
 	//--------------- route count
+	
+	public static void setRouteCount(final String name, final int routecount){
+		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			if (rname.equals(name)){
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).setTextContent(Integer.toString(routecount));
+				} catch (Exception e) { // create if not there 
+					Node count = document.createElement(ROUTE_COUNT_TAG);
+					count.setTextContent(Integer.toString(routecount));
+					route.appendChild(count);
+				}
+				saveRoute(XMLtoString(document));
+				break;
+			}
+		}
+	}
 	
 	public static String getRouteCountString(final String name, final String xml){
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if (rname.equals(name)){
 				try {	
 					return ((Element) routes.item(i)).getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent(); 
@@ -268,12 +315,33 @@ public class NavigationUtilities {
 		return Integer.parseInt(getRouteCountString(name));
 	}
 	
-	//------------ distance 
+	//------------ distance -- units meters ---------//
+	
+	public static void setRouteDistanceEstimate(final String name, final int meters){
+		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			if (rname.equals(name)){
+				route = (Element) routes.item(i);				
+				try {	
+					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(meters, 0));
+				} catch (Exception e) { // create if not there 
+					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
+					dist.setTextContent(Util.formatFloat(meters, 1));
+					route.appendChild(dist);
+				}
+				saveRoute(XMLtoString(document));
+				break;
+			}
+		}
+	}
 	
 	public static String getRouteDistanceEstimateString(final String name, final String xml){
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
 					return ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent(); 
@@ -295,19 +363,33 @@ public class NavigationUtilities {
 		return Integer.parseInt(getRouteDistanceEstimateString(name));
 	}
 	
-	//------------------ 
-	
-	///public static int getEstimatedMeters(){
-	//	return Integer.parseInt(Util.formatFloat(getRouteDistanceEstimate(getActiveRoute()), 0));
-	//}
-	
+	//-------------------- time  -- units seconds --------------------//
 
-	//-------------------- time  
+	public static void setRouteTimeEstimate(final String name, final int seconds){
+		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		Element route = null;
+		for (int i = 0; i < routes.getLength(); i++){
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			if (rname.equals(name)){
+				route = (Element) routes.item(i);				
+				try {
+					route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).setTextContent(Integer.toString(seconds));
+				} catch (Exception e) { // create if not there 
+					Node time = document.createElement(ESTIMATED_TIME_TAG);
+					time.setTextContent(Integer.toString(seconds));
+					route.appendChild(time);
+				}
+				saveRoute(XMLtoString(document));
+				break;
+			}
+		}
+	}
 
 	public static String getRouteTimeEstimateString(final String name, final String xml){
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if (rname.equals(name)){
 				try {
 					return ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent(); 
@@ -329,43 +411,15 @@ public class NavigationUtilities {
 		return Integer.parseInt(getRouteTimeEstimateString(name));
 	}
 	
-	//--------------
-	
-	public static void updateRouteStats(final String name, final int routecount, final int routefails){
-		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		Element route = null;
-		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			if (rname.equals(name)){
-				route = (Element) routes.item(i);				
-				try {
-					route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).setTextContent(Integer.toString(routecount));
-				} catch (Exception e) { // create if not there 
-					Node count = document.createElement(ROUTE_COUNT_TAG);
-					count.setTextContent(Integer.toString(routecount));
-					route.appendChild(count);
-				}
-				try {
-					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
-				} catch (Exception e) { // create if not there 
-					Node fail = document.createElement(ROUTE_FAIL_TAG);
-					fail.setTextContent(Integer.toString(routefails));
-					route.appendChild(fail);
-				}
-				saveRoute(XMLtoString(document));
-				break;
-			}
-		}
-	}
+	//-------------- active route
 
 	public static String getActiveRoute(){
 		Document document = NavigationUtilities.loadXMLFromString(NavigationUtilities.routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++) {
-			String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-			String isactive = ((Element) routes.item(i)).getElementsByTagName("active").item(0).getTextContent();
-			if(isactive.equals("true")) return rname;
+			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+			String isactive = ((Element) routes.item(i)).getElementsByTagName(ACTIVE).item(0).getTextContent();
+			if(isactive.equals("true")) return rname;//Boolean.TRUE.toString())) return rname;  //-------------------------------------------------------------------- bpool?
 		}
 		return null;
 	}
@@ -374,7 +428,7 @@ public class NavigationUtilities {
 		Document document = loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0 ; i < routes.getLength(); i++) 
-			((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
+			((Element) routes.item(i)).getElementsByTagName(ACTIVE).item(0).setTextContent("false");
 		
 		String xmlString = XMLtoString(document);
 		saveRoute(xmlString);
@@ -385,81 +439,49 @@ public class NavigationUtilities {
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i < routes.getLength(); i++){
-    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
-    		((Element) routes.item(i)).getElementsByTagName("active").item(0).setTextContent("false");
+    		String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+    		((Element) routes.item(i)).getElementsByTagName(ACTIVE).item(0).setTextContent("false");
 			if(rname.equals(name)) route = (Element) routes.item(i); 
 		}
 			
-		route.getElementsByTagName("active").item(0).setTextContent("true");
+		route.getElementsByTagName(ACTIVE).item(0).setTextContent("true");
 		String xmlstring = XMLtoString(document);
 		saveRoute(xmlstring);
 	
+//		System.out.println("xml : " + xmlstring);
 	}
 
-	public static Element getRouteElement(String name){
-		Document document = loadXMLFromString(routesLoad());
+	public static Element getRouteElement(final String name){
+		return getRouteElement(name, routesLoad());
+	}
+
+	public static Element getRouteElement(final String name, final String xml ){
+		Document document = loadXMLFromString(xml);
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
 		for (int i = 0; i < routes.getLength(); i++){
-    		String rname = ((Element) routes.item(i)).getElementsByTagName("rname").item(0).getTextContent();
+    		String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			if(rname.equals(name)) route = (Element) routes.item(i); 
 		}
 		return route;
 	}
 
-
 	public static void routeFailed(String name){
-		Document document = loadXMLFromString(routesLoad());
-		
+		setRouteFails(name, getRouteFails(name)+1);		
 	}
 	
+	public static void routeCompleted(String name, int seconds, int meters){
+		setRouteCount(name, getRouteCount(name)+1);
+		
+		int sec = getRouteTimeEstimate(name); // average them 
+		setRouteTimeEstimate(name, (seconds+sec)/2);
+		
+		int distace = getRouteDistanceEstimate(name);
+		setRouteDistanceEstimate(name, (distace+meters)/2);
+	}
+
 	public static void routeCompleted(String name){
-		Document document = loadXMLFromString(routesLoad());
-		
+		setRouteCount(name, getRouteCount(name)+1);
 	}
 
-
-	public static void updateRouteInfo(){ // long routestarttime, String estimatedmeters){
-
-		/*
-		int seconds = (int)((System.currentTimeMillis()-routestarttime)/1000);
-		
-		Util.log("["+ name + "] estimated: " + estimatedmeters + " meters: " +
-				Util.formatFloat((double)routemillimeters/(double)1000) + 
-				" delta: " + Math.abs(estimatedmeters - routemillimeters/1000) + " meters ");
-		
-		Util.log("["+ name + "] estimated: " + estimatedtime   + " seconds : " + seconds     
-				+ " delta: " + Math.abs(estimatedtime - seconds) + " seconds ");
-		
-		if(estimatedtime == 0 && estimatedmeters > 0){
-			Util.log("route estimate is zero, meters = " + estimatedmeters, this);
-			NavigationUtilities.updateRouteEstimatess(name, seconds, ((estimatedmeters*1000 + routemillimeters/1000)/2));
-		} 
-		
-		if(estimatedmeters == 0 && estimatedtime > 0){
-			Util.log("route estimated distance is zero, seconds = " + seconds, this);
-			NavigationUtilities.updateRouteEstimatess(name, ((estimatedtime + seconds)/2), routemillimeters);
-		} 
-		
-		if(estimatedmeters > 0 && estimatedtime > 0){
-			Util.log("route distance and time greater zero.. compute average", this);
-			NavigationUtilities.updateRouteEstimatess(name, ((estimatedtime + seconds)/2),((estimatedmeters*1000 + routemillimeters)/2));
-		} 
-		
-		if(estimatedmeters == 0 && estimatedtime == 0){
-			Util.log("route distance and time are zero, use these values", this);
-			NavigationUtilities.updateRouteEstimatess(name, seconds, estimatedmeters + routemillimeters);
-		}						
-	
-			
-//		if(failed) NavigationUtilities.updateRouteStats(state.get(values.navigationroute), NavigationUtilities.getRouteCount(name)+1, NavigationUtilities.getRouteFails(name)+1);
-//		else NavigationUtilities.updateRouteStats(state.get(values.navigationroute), NavigationUtilities.getRouteCount(name)+1, NavigationUtilities.getRouteFails(name));
-	*/
-		
-		String name = State.getReference().get(values.navigationroute);
-		Util.log("........... [" + name + "] count: " + NavigationUtilities.getRouteCountString(name) + " fail: " + NavigationUtilities.getRouteFailsString(name), null);
-
-		
-	}
-	
 }

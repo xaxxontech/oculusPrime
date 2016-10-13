@@ -68,13 +68,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
 	
-	// made static
-	// private developer.Navigation navigation = null;
-
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
 	public static BufferedImage videoOverlayImage = null;
 
+	// for fine debugging 
+	private static final boolean DEBUG_PLAYER = false;
+	
 	public Application() {
 		super();
 		state.set(values.osarch, System.getProperty("os.arch"));
@@ -335,24 +335,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run(){
 			try {
-
 				Util.delay(3000); // system settle 	
-				// new SendMail("Oculus Prime rebooted undocked", ".. robot needs help finding home, trying redock! ");
 				NavigationLog.newItem("booted undocked, trying redock");
-				
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				
 				state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TEN_MINUTES);
 				if(( state.equals(values.wallpower, "true") && state.equals(values.dockstatus, AutoDock.DOCKED))){
 					
-//					Util.debug("..redockWaitRunRoutestarted(): run active routeC..");
 					Util.delay(5000); // system settle 		
 					Util.debug("redockWaitRunRoute(): run active route");
 					Navigation.runActiveRoute();					
-				}
-
-//				Util.log("--- redockWaitRunRoute(): exit ---", this); 		
-				
+				}				
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
@@ -851,7 +844,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case gotodock:
-			NavigationLog.newItem("Route canceled by user, failed");
+			NavigationLog.newItem("Route canceled by user (gotodock)");
 			Navigation.dock(); 
 			break;
 			
@@ -891,23 +884,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case resetroutedata: 
 			NavigationLog.newItem("User reset route info for: "+str);
 			messageplayer("User reset route status for: "+str, null, null);
-			NavigationUtilities.updateRouteEstimatess(str, 0, 0);
-			NavigationUtilities.updateRouteStats(str, 0, 0);
+			NavigationUtilities.setRouteFails(str, 0);
+			NavigationUtilities.setRouteCount(str, 0);
+			
 			break;
 			
 		case runroute:
-			if(str != null){
-				state.set(State.values.navigationroute, str);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: " + str + " activated by user");
-				Navigation.runRoute(str);
-			}
+			if(str != null) Navigation.runRoute(str);
 			break;
 
 		case cancelroute:
-			if(state.exists(values.navigationroute)) {
-				NavigationLog.newItem("All routes cancelled by user");
+			
+			
+			if(state.exists(values.navigationroute) && NavigationUtilities.getActiveRoute() != null){	
+				
+				Util.log("cancel route:: active route: " + NavigationUtilities.getActiveRoute());
+
+				NavigationLog.newItem("Route canceled by user: " + NavigationUtilities.getActiveRoute());
 				Navigation.cancelAllRoutes();
 			}
+			
+			else Util.log("no active route, skipping.. ");
+			
 			break;
 
 		case startmapping: Navigation.startMapping(); break;
@@ -1352,7 +1350,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if(str!=null){
 			if(! str.equals("status check received")) // basic ping from client, ignore
-				Util.fine("messageplayer: "+str+", "+status+", "+value);
+				if(DEBUG_PLAYER) Util.debug("messageplayer: "+str+", "+status+", "+value);
 		}
 
 	}

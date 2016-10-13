@@ -98,8 +98,8 @@ public class NavigationLog {
             if(Navigation.routemillimeters > 0 && !status.equals(INFOSTATUS.toString())) 
             	str += "Route distance: " + Util.formatFloat(Navigation.routemillimeters/(double)1000, 2) + " meters <br>\n";
             
-            if(Navigation.rotations > 0 && !status.equals(INFOSTATUS.toString())) 
-            	str += "Recovery Rotations: " + Navigation.rotations; 
+//            if(Navigation.rotations > 0 && !status.equals(INFOSTATUS.toString())) 
+//            	str += "Recovery Rotations: " + Navigation.rotations; 
             
             str += "</div>\n";
             writeFile(str);
