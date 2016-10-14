@@ -31,19 +31,21 @@ public class Red5Client extends RTMPClient {
     private Settings settings = Settings.getReference();
     private Application app;
     private NetworkServlet networkServlet = new NetworkServlet();
+    private long lastping;
+    private static final long PINGTIMEOUT = 10000;
+    private long stayConnectedId;
 
     public Red5Client(Application a) {
         app = a;
 
-        this.setConnectionClosedHandler(new Runnable() {
-            @Override
-            public void run() {
-
-                Util.log("relay server connection closed", this);
-                state.delete(State.values.relayserver);
-//                TODO: reconnect?
-            }
-        });
+//        this.setConnectionClosedHandler(new Runnable() {
+//            @Override
+//            public void run() {
+//
+//                Util.log("relay server connection closed", this);
+//                state.delete(State.values.relayserver);
+//            }
+//        });
 
         this.setServiceProvider(this);
 
@@ -64,7 +66,7 @@ public class Red5Client extends RTMPClient {
             }
             settings.writeSettings(ManualSettings.relayserver, hostuserpass[0]);
             settings.writeSettings(ManualSettings.relayserverauth, Settings.DISABLED);
-            Util.log(hostuserpass[0]+hostuserpass[1]+hostuserpass[2], this); // TODO: testing
+//            Util.log(hostuserpass[0]+hostuserpass[1]+hostuserpass[2], this);
         }
 
         if (settings.getBoolean(ManualSettings.useflash)) {
@@ -107,6 +109,7 @@ public class Red5Client extends RTMPClient {
         }
 
         connect(server, port, makeDefaultConnectionParams(server, port, app), connectCallback, args);
+        stayConnected();
 
     }
 
@@ -125,8 +128,12 @@ public class Red5Client extends RTMPClient {
                     return;
                 }
 
+                if (state.exists(State.values.driver)) {
+                    app.driverCallServer(PlayerCommands.messageclients, "connected to relay server, logging out this connection");
+                    app.driverCallServer(PlayerCommands.driverexit, null);
+                }
+
                 state.set(State.values.relayserver, settings.readSetting(ManualSettings.relayserver));
-                stayConnected();
 
                 app.driverCallServer(PlayerCommands.messageclients, "connected to relay server: " +
                         state.get(State.values.relayserver));
@@ -141,6 +148,7 @@ public class Red5Client extends RTMPClient {
 
 
             }
+
             else if ("NetConnection.Connect.Rejected".equals(code)) {
                 disconnect();
                 Util.log("Red5Client connect rejected: " + map.get("description"), this);
@@ -155,28 +163,61 @@ public class Red5Client extends RTMPClient {
         }
     };
 
+    // stay connected as long as relayserver setting set
     private void stayConnected() {
-
 
         new Thread(new Runnable() {
             public void run() {
                 try {
+                    long id = System.currentTimeMillis();
+                    stayConnectedId = id;
+                    lastping = id;
 
-                    while(!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED)) {
+                    Util.delay(5000); // allow time to connect
 
-                        Util.delay(100);
-                        if (conn.isDisconnected()) {
-                            Util.delay(10000);
-                            if (state.exists(State.values.relayserver)) {
-                                Util.log("NOTE: disconnected but state relayserver still exists", this);
-                                state.delete(State.values.relayserver);
-                                app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
-                            }
+                    while(!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED) &&
+                            stayConnectedId == id) {
 
-                            Util.log("attempting reconnect to relay", this);
-                            connectToRelay();
+                        if (System.currentTimeMillis() - lastping < PINGTIMEOUT &&
+                                state.exists(State.values.relayserver)) {
+                            // all is well
+
+                            // ping server
+                            Util.debug("ping server", this); // TODO: testing
+                            invoke("relayPing", new IPendingServiceCallback() {
+                                @Override
+                                public void resultReceived(IPendingServiceCall iPendingServiceCall) {
+
+                                }
+                            });
+
+                            Util.delay(1000);
+                            continue;
                         }
+
+                        if (stayConnectedId != id) break;
+
+                        // all is not well
+
+                        if (!state.exists(State.values.relayserver)) {
+                            Util.log("state relayserver null", this);
+                        }
+
+                        if (System.currentTimeMillis() - lastping > PINGTIMEOUT) {
+                            Util.log("ping timeout", this);
+                        }
+
+                        app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+                        state.delete(State.values.relayserver);
+
+                        Util.delay(10000);
+                        if (stayConnectedId != id) break;
+                        Util.log("attempting reconnect", this); // TODO: testing
+                        connectToRelay();
+
                     }
+
+                    Util.debug("stayConnected Thread exit", this); // TODO: testing
 
                 } catch (Exception e) {
                     Util.printError(e);
@@ -201,6 +242,12 @@ public class Red5Client extends RTMPClient {
     public void relayDisconnect() {
         state.delete(State.values.relayserver);
         disconnect();
+    }
+
+    // called by relay server only
+    public void relayPong() {
+        lastping = System.currentTimeMillis();
+
     }
 
     // called by relay server only

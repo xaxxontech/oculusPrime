@@ -13,12 +13,10 @@ import java.util.Set;
 import developer.*;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
-import org.red5.client.*;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
-import org.red5.server.net.rtmp.RTMPConnection;
 
 import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
@@ -74,7 +72,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	private Red5Client red5client = null;
 	public IConnection relayclient = null;
-	public NetworkUtils networkUtils = null;
+	public Network network = null;
 
 	public Application() {
 		super();
@@ -122,13 +120,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
+		if (params.length==0) return false;
+
 		String logininfo[] = ((String) params[0]).split(" ");
 
 		// always accept local grabber (flash)
 		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
 
 		// disallow normal connection if relay server active
-//		if (state.exists(values.relayserver)) return false;
+		if (state.exists(values.relayserver)) return false;
 
 		// TODO: if banned, but cookie exists?? 
 		if(banlist.isBanned(connection.getRemoteAddress())) return false;
@@ -241,6 +241,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (connection.equals(relayclient)) {
 			relayclient = null;
 			state.delete(values.relayclient);
+			Util.log("relay client disconnected", this);
+			if (state.exists(values.driver)) //messageplayer("relay client disconnected", "connection", "connected");
+				driverCallServer(PlayerCommands.driverexit, null);
+			if (!state.get(values.stream).equals(streamstate.stop.toString()))
+				driverCallServer(PlayerCommands.streammode, streamstate.stop.toString());
 			return;
 		}
 		
@@ -255,7 +260,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			state.delete(State.values.stream);
 		} else {
 //			state.set(State.values.stream, Application.streamstate.stop.toString());
-			driverCallServer(PlayerCommands.state, State.values.stream.toString()+" "+
+			driverCallServer(PlayerCommands.state, State.values.stream.toString() + " " +
 					Application.streamstate.stop.toString());
 		}
 		grabber = Red5.getConnectionLocal();
@@ -350,16 +355,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		docker = new AutoDock(this, comport, powerport);
 
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
-		Util.updateExternalIPAddress();
-		Util.updateLocalIPAddress();
-		networkUtils = new NetworkUtils(this);
-		if (!networkUtils.networkInfoToState()) networkUtils = null;
+//		Util.updateExternalIPAddress();
+//		Util.updateLocalIPAddress();
+		network = new Network(this);
 
-		// if(Util.getJettyPID() == null) Util.log("application.initalize(): wifi manager is not running!!", this);
-		//else {
-		Util.setJettyTelnetPort();
-		Util.updateJetty();		 
-		
 		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 		
 		watchdog = new SystemWatchdog(this);
@@ -386,12 +385,24 @@ public class Application extends MultiThreadedApplicationAdapter {
 				player.close();
 				player = null;
 				loginRecords.signoutDriver();
+				driverCallServer(PlayerCommands.publish, streamstate.stop.toString());
 			}
 
 		}
 	}
 
-	// // called by remote Red5Client.sendToRelay()
+	// called by remote relayclient
+	public void relayPing() {
+		Util.debug("ping from relayclient", this); // TODO: testing
+		if (relayclient == null) {
+			Util.log("error,relayclient null", this); // TODO: testing
+			return;
+		}
+		IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
+		sc.invoke("relayPong", new Object[] { });
+	}
+
+	// called by remote Red5Client.sendToRelay()
 	public void fromRelayClient(Object[] params) {
 		if ( !Red5.getConnectionLocal().equals(relayclient)) return;
 		String[] s= new String[params.length-1];
@@ -1021,9 +1032,23 @@ public class Application extends MultiThreadedApplicationAdapter {
 				IServiceCapableConnection rc = (IServiceCapableConnection) relayclient;
 				rc.invoke("disconnect");
 				state.delete(values.relayclient);
+				driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString()); // TODO: server doesn't get stream stop
 			}
 			break;
+
+		case networksettings:
+			network.getNetworkSettings();
+			break;
+
+		case networkconnect:
+//			if (state.exists(values.relayserver) || state.exists(values.relayclient))
+//				driverCallServer(PlayerCommands.relaydisconnect, null);
+			network.connectNetwork(str);
+			break;
+
 		}
+
+
 	}
 
 	/** put all commands here */
@@ -1399,7 +1424,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 
 		if (state.exists(values.relayserver)) {
-			red5client.sendToRelay("playerfunction", new Object[]{fn, params});
+			red5client.sendToRelay("sendplayerfunction", new Object[]{fn, params});
 		}
 	}
 
@@ -1580,7 +1605,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
-		Util.log("stream changed to " + str,this);
+		Util.log("stream changed to " + str, this);
 	}
 
 	private String streamSettings() {
@@ -1826,12 +1851,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer("controls hijacked", "hijacked", user);
 		if(player==null) return;
 		if(pendingplayer==null) { pendingplayerisnull = true; return; }
-			
+
+		String con = "connected";
+
+		if (state.exists(values.relayclient)) {
+			IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
+			t.invoke("playerSignIn", new Object[]{state.get(values.driver)});
+			con = "relay";
+		}
+
 		IConnection tmp = player;
 		player = pendingplayer;
 		pendingplayer = tmp;
 		state.set(State.values.driver, user);
-		String str = "connection connected streamsettings " + streamSettings();
+		String str = "connection "+con+" streamsettings " + streamSettings();
 		messageplayer(state.get(State.values.driver) + " connected to OCULUS", "multiple", str);
 		str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
 		Util.log("assumeControl(), " + str,this);
@@ -1843,6 +1876,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (settings.getBoolean(GUISettings.loginnotify)) {
 			saySpeech("lawg inn " + state.get(State.values.driver));
 		}
+
+
 	}
 
 	/** */
@@ -2110,7 +2145,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void passwordChange(final String user, final String pass) {
-		Util.debug(user+" "+pass, this);
+		Util.debug(user + " " + pass, this);
 		String message = "password updated";
 		if (pass.matches("\\w+")) {
 			String p = user + salt + pass;

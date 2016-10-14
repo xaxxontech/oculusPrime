@@ -33,6 +33,7 @@ import org.xml.sax.InputSource;
 import developer.NavigationLog;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
+import org.xml.sax.SAXParseException;
 
 public class Util {
 	
@@ -147,35 +148,6 @@ public class Util {
 		}
 	}
 
-	/*
-	public static boolean copyfile(String srFile, String dtFile) {
-		try {
-			
-			File f1 = new File(srFile);
-			File f2 = new File(dtFile);
-			InputStream in = new FileInputStream(f1);
-
-			// Append
-			OutputStream out = new FileOutputStream(f2, true);
-
-			byte[] buf = new byte[1024];
-			int len;
-			while ((len = in.read(buf)) > 0) {
-				out.write(buf, 0, len);
-			}
-			in.close();
-			out.close();
-
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-			return false;
-		}
-
-		// file copied
-		return true;
-	}
-	*/
-	
 	/**
 	 * Run the given text string as a command on the host computer. 
 	 * 
@@ -231,22 +203,30 @@ public class Util {
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
-	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
-        BufferedInputStream in = null;
-        FileOutputStream fout = null;
-        try{
-                in = new BufferedInputStream(new URL(urlString).openStream());
-                fout = new FileOutputStream(filename);
-                byte data[] = new byte[1024];
-                int count;
-                while ((count = in.read(data, 0, 1024)) != -1)
-                	fout.write(data, 0, count);	
-                
-        } finally {    
-        	if (in != null) in.close();
-            if (fout != null) fout.close();
-        }
-    }
+	public static String readUrlToString(String urlString) {
+
+		try {
+			URL website = new URL(urlString);
+			URLConnection connection = website.openConnection();
+			BufferedReader in = new BufferedReader( new InputStreamReader( connection.getInputStream()));
+
+			StringBuilder response = new StringBuilder();
+			String inputLine;
+
+			while ((inputLine = in.readLine()) != null)
+				response.append(inputLine);
+
+			in.close();
+
+			return response.toString();
+
+		} catch (Exception e) {
+//			printError(e);
+			Util.log("Util.readUrlToString() parse error", null);
+			return null;
+		}
+
+	}
 	
 	public static String tail(int lines){
 		int i = 0;
@@ -319,17 +299,21 @@ public class Util {
 		return str;
     }
 	
-	public static Document loadXMLFromString(String xml){
+	public static Document loadXMLFromString(String xml) {
 		try {
-	    
+
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder;
-		
+
 			builder = factory.newDocumentBuilder();
 			InputSource is = new InputSource(new StringReader(xml));
 			return builder.parse(is);
-		
-		} catch (Exception e) {
+
+		}
+		catch (SAXParseException pe) {
+			Util.log("Util.loadXMLFromString() parse error:\n"+xml, null);
+		}
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -423,18 +407,18 @@ public class Util {
 		}
 
 		return null;
-	}	
-	
+	}
+
 	public static boolean testHTTP(){
-		
-		final String ext = State.getReference().get(values.externaladdress); 
+
+		final String ext = State.getReference().get(values.externaladdress);
 		final String http = State.getReference().get(State.values.httpport);
 		final String url = "http://"+ext+":"+ http +"/oculusPrime";
-		
+
 		if(ext == null || http == null) return false;
-	
+
 		try {
-			
+
 			log("testPortForwarding(): "+url, "testHTTP()");
 			URLConnection connection = (URLConnection) new URL(url).openConnection();
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -444,11 +428,11 @@ public class Util {
 			 log("testPortForwarding(): failed: " + url, "testHTTP()");
 			return false;
 		}
-		
+
 		return true;
 	}
-	
-	public static boolean testTelnetRouter(){			
+
+	public static boolean testTelnetRouter(){
 		try {
 
 			// "127.0.0.1"; //
@@ -457,7 +441,7 @@ public class Util {
 			log("...telnet test: " +ext +" "+ port, null);
 			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + port);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			
+
 			String line = procReader.readLine();
 			if(line.toLowerCase().contains("trying")){
 				line = procReader.readLine();
@@ -473,16 +457,16 @@ public class Util {
 		log("telnet test fail...", null);
 		return false;
 	}
-	
 
-	public static boolean testRTMP(){	
+
+	public static boolean testRTMP(){
 		try {
 
-			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //	
+			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //
 			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
 
 			log("testRTMP(): http = " +ext, null);
-			
+
 			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + rtmp);
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 
@@ -491,36 +475,36 @@ public class Util {
 			line = procReader.readLine();
 			log("testRTMP():" + line, null);
 			log("testRTMP(): process exit value = " + proc.exitValue(), null);
-			
+
 			if(line == null) return false;
 			else if(line.contains("Connected")) return true;
-			
+
 		} catch (Exception e) {
 			return false;
 		}
-		
+
 		return true;
 	}
-	
+
 	public static String getJavaStatus(){
-		
+
 		if(redPID==null) return "jetty not running";
-		
+
 		String line = null;
 		try {
-			
+
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ redPID +"/stat")));
 			line = reader.readLine();
 			reader.close();
 			log("getJavaStatus:" + line, null);
-					
+
 		} catch (Exception e) {
 			printError(e);
 		}
-		
+
 		return line;
 	}
-	
+
 	public static String getRed5PID(){	
 		
 		if(redPID!=null) return redPID;
@@ -612,7 +596,10 @@ public class Util {
 					String addr = line.substring(line.indexOf(":")+1); 
 					addr = addr.substring(0, addr.indexOf(" ")).trim();
 									
-					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
+					if(validIP(addr)) {
+						if (!addr.equals(state.get(values.localaddress)))
+							state.set(values.localaddress, addr);
+					}
 					else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
 				}
 			}
@@ -669,7 +656,7 @@ public class Util {
 
 
 	public static void updateExternalIPAddress(){
-		new Thread(new Runnable() { public void run() {
+//		new Thread(new Runnable() { public void run() {
 
 			State state = State.getReference();
 
@@ -682,89 +669,27 @@ public class Util {
 //				}
 //			}
 
-			try {
+//			try {
+//
+//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
+//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+//
+//				int i;
+//				String address = "";
+//				while ((i = in.read()) != -1) address += (char)i;
+//				in.close();
+//
+				String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
 
-				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
 
-				int i;
-				String address = "";
-				while ((i = in.read()) != -1) address += (char)i;
-				in.close();
-
-				if(Util.validIP(address)) state.set(values.externaladdress, address);
+				if(validIP(address)) state.set(values.externaladdress, address);
 				else state.delete(values.externaladdress);
 
-			} catch (Exception e) {
-				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
-				state.delete(values.externaladdress);
-			}
-		} }).start();
-	}
-
-	/*
-	public static String getJettyPID(){	
-		
-	//	if(jettyPID!=null) return jettyPID;
-		
-		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
-		
-		Process proc = null;
-		try { 
-			proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-		} catch (Exception e) {
-			Util.log("getJettyPID(): "+ e.getMessage(), null);
-			return null;
-		}  
-		
-		String line = null;
-		String[] tokens = null;
-		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-		
-		try {
-			while ((line = procReader.readLine()) != null){
-				if(line.contains("start.jar")) {
-					tokens = line.split(" ");
-					if(tokens[0].equals("root"))
-					for(int i = 1 ; i < tokens.length ; i++) {
-						if(tokens[i].trim().length() > 0) {
-							if(jettyPID==null) jettyPID = tokens[i].trim();							
-						}
-					}
-				}	
-			}
-		} catch (IOException e) {
-			Util.log("getJettyPID(): ", e.getMessage());
-		}
-
-		return jettyPID;
-	}	
-	*/
-	
-	public static void setJettyTelnetPort() {
-		new Thread(new Runnable() { public void run() {
-			Settings settings = Settings.getReference();
-			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(GUISettings.telnetport);
-			try {
-				URLConnection connection = (URLConnection) new URL(url).openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-				while ((in.read()) != -1); 
-				in.close();	
-			} catch (Exception e) {}
-		} }).start();
-	}
-	
-	public static void updateJetty() {
-		new Thread(new Runnable() { public void run() {
-			try {
-				String url = "http://127.0.0.1/?action=push";
-				URLConnection connection = (URLConnection) new URL(url).openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-				while ((in.read()) != -1);
-				in.close();
-			} catch (Exception e) {}
-		} }).start();
+//			} catch (Exception e) {
+//				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
+//				state.delete(values.externaladdress);
+//			}
+//		} }).start();
 	}
 
 	public static String getJettyStatus() {

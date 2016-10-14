@@ -30,9 +30,9 @@ public class Scratch {
 //        new Scratch().regexp();
 
 
-        Object asdf = "fdsa";
-
-        System.out.println(asdf);
+        String[] asdf = new String[0];
+        asdf = "lasdfjlksdf ewer7s98e wer78w90e8r".split(" ");
+        System.out.println(asdf.length);
 
     }
 }

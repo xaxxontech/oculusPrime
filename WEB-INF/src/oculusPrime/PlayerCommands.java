@@ -68,7 +68,7 @@ public enum PlayerCommands {
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
 	deletelogs, truncimages, truncros, truncarchive, archive,
 	archiveros, archiveimages, archivelogs, calibraterotation, relayconnect,
-	relaydisconnect, relaydisable,
+	relaydisconnect, relaydisable, networksettings, networkconnect,
 
     ;
 	
@@ -84,7 +84,7 @@ public enum PlayerCommands {
 	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
 	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
 	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged,
-		relayconnect, relaydisconnect, relaydisable,
+		relayconnect, relaydisconnect, relaydisable, networksettings, networkconnect,
 
 		;
 
@@ -92,7 +92,7 @@ public enum PlayerCommands {
 
 	// sub-set of commands that are NOT to be passed thru to relay client, if acting as relay server
 	private enum nonRelayCommands {
-		record, relaydisconnect,
+		record, relaydisconnect, chat, beapassenger, assumecontrol,
 		;
 	}
 

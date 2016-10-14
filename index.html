@@ -954,7 +954,7 @@ Delete user:
 <!-- relayserver login -->
 <div id="relayserverlogin" style="display: none;">
 <a class="blackbg"
-href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;server_commands&quot;).innerHTML);">
+href="javascript:  networksettings('loading...'); callServer('networksettings');">
 <span class="cancelbox"><b>&lt;</b></span> BACK</a>
 <a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
 &nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
@@ -972,11 +972,21 @@ onfocus="keyboard('disable'); this.style.backgroundColor='#000000';"
 onblur="keyboard('enable'); this.style.backgroundColor='#151515';"><br>
 <table><tr><td style="height: 7px"></td></tr></table>
 <a class="blackbg" href="javascript: relayserver('connect');">
-<span class="cancelbox">&#x2714;</span> connect</a> &nbsp;
-&nbsp; &nbsp;
-<a class="blackbg" href="javascript: callServer('relaydisable', '')">
-disable</a>
+<span class="cancelbox">&#x2714;</span> connect</a>
+</div>
 
+<div id="networkmenu" style="display: none">
+<a class="blackbg"
+href="javascript: popupmenu('menu', 'show', null, null, document.getElementById(&quot;server_commands&quot;).innerHTML);">
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+<a class="blackbg" href= "javascript: popupmenu('menu', 'close')">
+&nbsp; <span class="cancelbox"><b>X</b></span> CLOSE</a>
+<table><tr><td style="height: 10px"></td></tr></table>
+Network Menu:
+<table><tr><td style="height: 10px"></td></tr></table>
+<div id="networkmenuinner"></div>
+<table><tr><td style="height: 10px"></td></tr></table>
+<a class="blackbg" href="javascript: callServer('networksettings');">refresh</a>
 </div>
 
 <!-- server commands -->
@@ -991,14 +1001,13 @@ Server Menu:<br>
 <a class="blackbg" href="javascript: softwareupdate('version','');">software version</a><br>
 <a class="blackbg" href="javascript: softwareupdate('check','');">check for software update</a><br>
 <a class="blackbg" href="javascript: serverlog();">server log</a><br>
-<a class="blackbg" href="javascript: relayserver();">relay server</a> &gt;<br> 
 
 <a class="blackbg" href="javascript: restart(); ">restart server application</a><br>
 <a class="blackbg" href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
 	callServer('reboot',''); }">reboot</a><br>
 <a class="blackbg" href="javascript: if (confirm(&quot;power down\nare you sure?&quot;)) {
 	callServer('powershutdown',''); }">power down</a><br>
-<a class="blackbg" href="network" target="_blank">network</a><br>
+<a class="blackbg" href="javascript:  networksettings('loading...'); callServer('networksettings');">network</a> &gt;<br>
 
 </div>
 

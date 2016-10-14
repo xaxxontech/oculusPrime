@@ -10,7 +10,7 @@ import oculusPrime.commport.PowerLogger;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class SystemWatchdog implements Observer {
+public class SystemWatchdog {
 	
 	private final Settings settings = Settings.getReference();
 	protected Application application = null;
@@ -36,29 +36,12 @@ public class SystemWatchdog implements Observer {
 	
 	SystemWatchdog(Application a){ 
 		application = a;
-		state.addObserver(this);
-		Util.updateExternalIPAddress();
-		Util.updateLocalIPAddress();
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
-	}
-
-	@Override
-	public void updated(String key) {
-		if(key.equals(values.ssid.name())){
-			if (state.get(values.ssid).equals(ssid)) return; // only on change
-			ssid = state.get(values.ssid);
-			Util.updateExternalIPAddress();
-			Util.updateLocalIPAddress();
-		}
 	}
 
 	private class Task extends TimerTask {
 		public void run() {
 
-			if(! state.exists(values.localaddress)) Util.updateLocalIPAddress();
-			else if(state.equals(values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
-			if(! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
-			
 			// regular reboot if set 
 			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
 					&& !state.exists(State.values.driver.toString()) &&

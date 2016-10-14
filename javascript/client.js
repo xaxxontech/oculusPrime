@@ -37,6 +37,7 @@ var broadcastmicon = false;
 var clicksteeron = true;
 var maxmessagecontents = 50000; // was 150000
 var maxmessageboxsize = 4000;
+var relay = false;
 
 var tempimage = new Image();
 tempimage.src = 'images/eye.gif';
@@ -408,6 +409,7 @@ function setstatus(status, value) {
 		setTimeout("videomouseaction = true;",30); // firefox screen glitch fix
 		clearTimeout(logintimer);
 		callServer("videosoundmode", "high");
+		if (value == "relay") { relay = true; }
 	}
 	else if (status == "storecookie") {
 		createCookie("auth",value,30); 
@@ -450,7 +452,7 @@ function setstatus(status, value) {
 	else if (status == "developer") { 
 		document.getElementById("developermenu").style.display = "";
 	}
-	else if (status == "navigation") {
+	else if (status == "navigation"  && relay != true) {
 		document.getElementById("navigationmenu").style.display = "";
 	}
 	else if (status == "debug") { debug(value); }
@@ -2177,7 +2179,7 @@ function account(str) { // change_password, password_update  DONE
 
 function relayserver(str) {
 	if (str==null) {
-		callServer("readsetting", "relayserver");
+		// callServer("readsetting", "relayserver");
 		var str = document.getElementById("relayserverlogin").innerHTML;
 		popupmenu("menu","show",null,null,str);
 	}
@@ -2186,8 +2188,10 @@ function relayserver(str) {
 			document.getElementById('relayserveruser').value +" "+
 			document.getElementById('relayserverpassword').value);
 	}
-	else if (str=="disconnect") {
-		callServer("relaydisconnect", "");
+	else if (str=="disable") {
+		callServer("relaydisable", "");
+		relay = false;
+		setstatus("connection","connected");
 	}
 }
 
@@ -2577,14 +2581,23 @@ function loadwindowpositions() {
 	
 }
 
-if (!Array.prototype.indexOf) {
-    Array.prototype.indexOf = function(obj, start) {
-         for (var i = (start || 0), j = this.length; i < j; i++) {
-             if (this[i] === obj) { return i; }
-         }
-         return -1;
-    }
+function networksettings(str) {
+	mainmenu(''); 
+
+	document.getElementById("networkmenuinner").innerHTML = str;
+	popupmenu("menu","show",null,null,document.getElementById("networkmenu").innerHTML);
 }
+
+
+// ?
+// if (!Array.prototype.indexOf) {
+    // Array.prototype.indexOf = function(obj, start) {
+         // for (var i = (start || 0), j = this.length; i < j; i++) {
+             // if (this[i] === obj) { return i; }
+         // }
+         // return -1;
+    // }
+// }
 
 /*
  * dev functions follow

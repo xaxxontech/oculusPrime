@@ -64,19 +64,14 @@ public class State {
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived, redockifweakconnection }
-
-	public enum telnetBroadcastOnChangeOnly { ssid, gatewayaddress, networksknown, batterylife, }
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived,
+		redockifweakconnection, networksinrange,
+	}
 
 	/** @return true if given command is in the sub-set */
 	public static boolean isNonTelnetBroadCast(final String str) {
 		try { nonTelnetBroadcast.valueOf(str); } catch (Exception e) {return false;}
 		return true; 
-	}
-
-	public static boolean isTeletBroadcastOnChangeOnly(final String str) {
-		try { telnetBroadcastOnChangeOnly.valueOf(str); } catch (Exception e) {return false;}
-		return true;
 	}
 
 	public static final int ERROR = -1;
