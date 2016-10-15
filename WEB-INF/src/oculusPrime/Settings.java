@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import oculusPrime.State.values;
+import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 
 public class Settings {
 
@@ -36,7 +37,7 @@ public class Settings {
 	private Settings(){
 		
 		// be sure of basic configuration 
-		if(! new File(settingsfile).exists()) createFile(settingsfile); 
+		if(! new File(settingsfile).exists()) createFile(settingsfile);
 		
 		importFile();
 	}
@@ -236,13 +237,17 @@ public class Settings {
 
 			fw.append("# user list \r\n");
 			if(readSetting("salt") != null) { fw.append("salt " + readSetting("salt") + "\r\n"); }
+			else fw.append("salt "+UUID.randomUUID().toString() + "\r\n");
+
 			if(readSetting("user0")!=null){
 				String[][] users = getUsers();
 				for (int j = 0; j < users.length; j++) {
 					fw.append("user" + j + " " + users[j][0] + "\r\n");
 					fw.append("pass" + j + " " + users[j][1] + "\r\n");
 				}
-			} 
+			} else {
+
+			}
 			fw.close();
 			
 			// now swap temp for real file
@@ -305,6 +310,9 @@ public class Settings {
 				
 		setting = setting.trim();
 		value = value.trim();
+
+		Util.debug("writeSettings(): "+setting+" "+value, this);
+		if(settings.get(setting) == null) Util.debug("settings.get(setting) == null", this);
 		
 		//TODO: revisit -- test if is existing setting already 
 		if(settings.get(setting).equals(value)) {
@@ -366,6 +374,7 @@ public class Settings {
 				}
 			}
 			filein.close();
+			settings.put(setting, value);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

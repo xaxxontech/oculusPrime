@@ -59,7 +59,7 @@ public enum PlayerCommands {
 	speech, serverbrowser, email, state, rssadd,
 
     // experimental (undocumented)
-    opennisensor, clearmap, error,
+    opennisensor, clearmap, test,
 
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness,
@@ -84,7 +84,7 @@ public enum PlayerCommands {
 	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
 	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
 	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged,
-		relayconnect, relaydisconnect, relaydisable, networksettings, networkconnect,
+		relayconnect, relaydisconnect, relaydisable, networksettings, networkconnect, test,
 
 		;
 

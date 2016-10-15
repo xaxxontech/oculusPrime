@@ -305,6 +305,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 
+		if (settings.readSetting("user0") == null) {
+			driverCallServer(PlayerCommands.new_user_add, "oculus robot");
+//			String p = "oculus" + salt + "robot"; // default
+//			String encryptedPassword = passwordEncryptor.encryptPassword(p);
+//			settings.newSetting("user0", "oculus");
+//			settings.newSetting("pass0", encryptedPassword);
+		}
+
 		comport = new ArduinoPrime(this);   // note: blocking
 		powerport = new ArduinoPower(this); // note: blocking
 
@@ -426,13 +434,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		String host = LOCALHOST;
 //		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED))
 //			host = settings.readSetting(ManualSettings.relayserver);
-
-		if (settings.readSetting("user0") == null) {
-			String p = "oculus" + salt + "robot"; // default
-			String encryptedPassword = passwordEncryptor.encryptPassword(p);
-			settings.newSetting("user0", "oculus");
-			settings.newSetting("pass0", encryptedPassword);
-		}
 
 		video = new Video(this);
 
@@ -970,10 +971,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case waitforcpu: watchdog.waitForCpuThread();  break;
 
 		// dev tool only
-		case error:
+		case test:
 			try {
-				state.set(values.roscurrentgoal, "");
-				messageplayer("*"+state.get(values.roscurrentgoal)+"*", null, null);
+
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 
@@ -2012,134 +2012,133 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	private void account(String fn, String str) {
 		if (fn.equals("password_update")) passwordChange(state.get(State.values.driver), str);
-		
-		if (loginRecords.isAdmin()){ 
-			if (fn.equals("new_user_add")) {
-				String message = "";
-				Boolean oktoadd = true;
-				String u[] = str.split(" ");
-				if (!u[0].matches("\\w+")) {
-					message += "error: username must be letters/numbers only ";
+
+
+		if (fn.equals("new_user_add")) {
+			String message = "";
+			Boolean oktoadd = true;
+			String u[] = str.split(" ");
+			if (!u[0].matches("\\w+")) {
+				message += "error: username must be letters/numbers only ";
+				oktoadd = false;
+			}
+			if (!u[1].matches("\\w+")) {
+				message += "error: password must be letters/numbers only ";
+				oktoadd = false;
+			}
+			int i = 0;
+			String s;
+			while (true) {
+				s = settings.readSetting("user" + i);
+				if (s == null) break;
+				if ((s.toUpperCase()).equals((u[0]).toUpperCase())) {
+					message += "ERROR: user name already exists ";
 					oktoadd = false;
 				}
-				if (!u[1].matches("\\w+")) {
-					message += "error: password must be letters/numbers only ";
-					oktoadd = false;
-				}
-				int i = 0;
-				String s;
-				while (true) {
-					s = settings.readSetting("user" + i);
-					if (s == null) break;
-					if ((s.toUpperCase()).equals((u[0]).toUpperCase())) {
-						message += "ERROR: user name already exists ";
-						oktoadd = false;
-					}
-					i++;
-				}
-				// add check for existing user, user loop below to get i while you're at it
-				if (oktoadd) {
-					message += "added user " + u[0];
-					settings.newSetting("user" + i, u[0]);
-					String p = u[0] + salt + u[1];
-					String encryptedPassword = passwordEncryptor.encryptPassword(p);
-					settings.newSetting("pass" + i, encryptedPassword);
-				}
-				messageplayer(message, null, null);
+				i++;
 			}
-			if (fn.equals("user_list")) {
-				int i = 1;
-				String users = "";
-				String u;
-				while (true) {
-					u = settings.readSetting("user" + i);
-					if (u == null) {
-						break;
-					} else {
-						users += u + " ";
-					}
-					i++;
-				}
-				sendplayerfunction("userlistpopulate", users);
+			// add check for existing user, user loop below to get i while you're at it
+			if (oktoadd) {
+				message += "added user " + u[0];
+				settings.newSetting("user" + i, u[0]);
+				String p = u[0] + salt + u[1];
+				String encryptedPassword = passwordEncryptor.encryptPassword(p);
+				settings.newSetting("pass" + i, encryptedPassword);
 			}
-			if (fn.equals("delete_user")) {
-				int i = 1;
-				int usernum = -1;
-				int maxusernum = -1;
-				String[] allusers = new String[999];
-				String[] allpasswords = new String[999];
-				String u;
-				while (true) { 
-					// read & store all users+passwords, note number to be deleted, and max number
-					u = settings.readSetting("user" + i);
-					if (u == null) {
-						maxusernum = i - 1;
-						break;
-					}
-					if (u.equals(str)) {
-						usernum = i;
-					}
-					allusers[i] = u;
-					allpasswords[i] = settings.readSetting("pass" + i);
-					i++;
-				}
-				if (usernum > 0) {
-					i = usernum;
-					while (i <= maxusernum) { // delete user to be delted + all after
-						settings.deleteSetting("user" + i);
-						settings.deleteSetting("pass" + i);
-						i++;
-					}
-					i = usernum + 1;
-					while (i <= maxusernum) { // shuffle remaining past deleted one, down one
-						settings.newSetting("user" + (i - 1), allusers[i]);
-						settings.newSetting("pass" + (i - 1), allpasswords[i]);
-						i++;
-					}
-				}
-				messageplayer(str + " deleted.", null, null);
-			}
-			if (fn.equals("extrauser_password_update")) {
-				String s[] = str.split(" ");
-				passwordChange(s[0], s[1]);
-			}
-			if (fn.equals("username_update")) {
-				String u[] = str.split(" ");
-				String message = "";
-				Boolean oktoadd = true;
-				if (!u[0].matches("\\w+")) {
-					message += "error: username must be letters/numbers only ";
-					oktoadd = false;
-				}
-				int i = 1;
-				String s;
-				while (true) {
-					s = settings.readSetting("user" + i);
-					if (s == null) {
-						break;
-					}
-					if ((s.toUpperCase()).equals(u[0].toUpperCase())) {
-						message += "error: user name already exists ";
-						oktoadd = false;
-					}
-					i++;
-				}
-				String encryptedPassword = (passwordEncryptor.encryptPassword(state.get(State.values.driver) + salt + u[1])).trim();
-				if (logintest(state.get(State.values.driver), encryptedPassword) == null) {
-					message += "error: wrong password";
-					oktoadd = false;
-				}
-				if (oktoadd) {
-					message += "username changed to: " + u[0];
-					messageplayer("username changed to: " + u[0], "user", u[0]);
-					settings.writeSettings("user0", u[0]);
-					state.set(State.values.driver, u[0]);
-					String p = u[0] + salt + u[1];
-					encryptedPassword = passwordEncryptor.encryptPassword(p);
-					settings.writeSettings("pass0", encryptedPassword);
+			messageplayer(message, null, null);
+		}
+		if (fn.equals("user_list")) {
+			int i = 1;
+			String users = "";
+			String u;
+			while (true) {
+				u = settings.readSetting("user" + i);
+				if (u == null) {
+					break;
 				} else {
-					messageplayer(message, null, null);
+					users += u + " ";
 				}
+				i++;
+			}
+			sendplayerfunction("userlistpopulate", users);
+		}
+		if (fn.equals("delete_user")) {
+			int i = 1;
+			int usernum = -1;
+			int maxusernum = -1;
+			String[] allusers = new String[999];
+			String[] allpasswords = new String[999];
+			String u;
+			while (true) {
+				// read & store all users+passwords, note number to be deleted, and max number
+				u = settings.readSetting("user" + i);
+				if (u == null) {
+					maxusernum = i - 1;
+					break;
+				}
+				if (u.equals(str)) {
+					usernum = i;
+				}
+				allusers[i] = u;
+				allpasswords[i] = settings.readSetting("pass" + i);
+				i++;
+			}
+			if (usernum > 0) {
+				i = usernum;
+				while (i <= maxusernum) { // delete user to be delted + all after
+					settings.deleteSetting("user" + i);
+					settings.deleteSetting("pass" + i);
+					i++;
+				}
+				i = usernum + 1;
+				while (i <= maxusernum) { // shuffle remaining past deleted one, down one
+					settings.newSetting("user" + (i - 1), allusers[i]);
+					settings.newSetting("pass" + (i - 1), allpasswords[i]);
+					i++;
+				}
+			}
+			messageplayer(str + " deleted.", null, null);
+		}
+		if (fn.equals("extrauser_password_update")) {
+			String s[] = str.split(" ");
+			passwordChange(s[0], s[1]);
+		}
+		if (fn.equals("username_update")) {
+			String u[] = str.split(" ");
+			String message = "";
+			Boolean oktoadd = true;
+			if (!u[0].matches("\\w+")) {
+				message += "error: username must be letters/numbers only ";
+				oktoadd = false;
+			}
+			int i = 1;
+			String s;
+			while (true) {
+				s = settings.readSetting("user" + i);
+				if (s == null) {
+					break;
+				}
+				if ((s.toUpperCase()).equals(u[0].toUpperCase())) {
+					message += "error: user name already exists ";
+					oktoadd = false;
+				}
+				i++;
+			}
+			String encryptedPassword = (passwordEncryptor.encryptPassword(state.get(State.values.driver) + salt + u[1])).trim();
+			if (logintest(state.get(State.values.driver), encryptedPassword) == null) {
+				message += "error: wrong password";
+				oktoadd = false;
+			}
+			if (oktoadd) {
+				message += "username changed to: " + u[0];
+				messageplayer("username changed to: " + u[0], "user", u[0]);
+				settings.writeSettings("user0", u[0]);
+				state.set(State.values.driver, u[0]);
+				String p = u[0] + salt + u[1];
+				encryptedPassword = passwordEncryptor.encryptPassword(p);
+				settings.writeSettings("pass0", encryptedPassword);
+			} else {
+				messageplayer(message, null, null);
 			}
 		}
 	}
