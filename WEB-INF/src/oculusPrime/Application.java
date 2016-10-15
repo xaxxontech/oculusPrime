@@ -311,8 +311,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		watchdog = new SystemWatchdog(this);
 		if(settings.getBoolean(GUISettings.navigation)) new developer.Navigation(this);
-		//avigation.setApp(this);
-		
 		
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
@@ -844,7 +842,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case gotodock:
+			Util.log("Route canceled by user (gotodock)", this);
 			NavigationLog.newItem("Route canceled by user (gotodock)");
+			Navigation.failed = true;
 			Navigation.dock(); 
 			break;
 			

@@ -445,7 +445,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append( nlink + "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>" ); 		
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(22) + "\n");
+		str.append(getTail(15) + "\n");
 		return str.toString();
 	}
 	
@@ -473,7 +473,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getActiveRoute(){  	
 		String rname = NavigationUtilities.getActiveRoute(); 
-		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) +  " sec";
+		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) + " ";
 		String next = state.get(values.roswaypoint);
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)){
@@ -486,13 +486,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		String link = "\n\n<td><b>next</b><td>" + next; 
 		link += "<td><b>meters</b><td>" 
-				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0)  
-				+ "<td><b>time</b><td>" + time;
-		
+				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + " | " +  NavigationUtilities.getRouteDistanceEstimate(rname)
+				+ "<td><b>time</b><td>" + time + "| " +  NavigationUtilities.getRouteTimeEstimate(rname);
+/*		
 		link += "<tr><td><b>stats</b><td>" + NavigationUtilities.getRouteFailsString(rname)
 			+ " / " + NavigationUtilities.getRouteCountString(rname) 
 			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname) // + " " + state.get(values.navigationrouteid)
 			+ "<td><b>sec</b><td>" + NavigationUtilities.getRouteTimeEstimate(rname);
+*/
 		
 		return link.trim(); 
 	}

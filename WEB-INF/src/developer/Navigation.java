@@ -28,7 +28,7 @@ public class Navigation implements Observer {
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 20;  // TODO: set to 15 in production
-	public static final int MIN_BATTERY_LIFE = 40;               // TODO: CALCULATE THIS FROM ROUTE INFO?
+	public static final int MIN_BATTERY_LIFE = 50;               // TODO: CALCULATE THIS FROM ROUTE INFO?
 	public static final String DOCK = "dock";                    // waypoint name
 	
 	private static Settings settings = Settings.getReference();
@@ -678,12 +678,20 @@ public class Navigation implements Observer {
 		}
 		
 		// set as active and start route
+		if(state.exists(values.navigationroute)){
+			Util.log(".. route in progress, need to cancel first:  "+state.get(values.navigationroute));
+			cancelAllRoutes();
+			state.block(values.navigationroute, 5000);
+			Util.log(".. done cancel first, now set active.. ");
+	//		Util.delay(3000);
+		}
 		NavigationUtilities.setActiveRoute(name);		
 		state.set(values.navigationroute, name);
 		navroute = NavigationUtilities.getRouteElement(name);
 	
 		new Thread(new Runnable() { public void run() {
 			
+			Util.log("Route: " + name + "  Activated by user");
 			NavigationLog.newItem("Route: " + name + "  Activated by user");
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
 			
@@ -701,9 +709,21 @@ public class Navigation implements Observer {
 				}
 
 				// check if cancelled while waiting
-				if( ! state.exists(State.values.navigationroute)) return;
-				if(failed) return;
-
+				if( ! state.exists(State.values.navigationroute)){
+					Util.fine("..runRoute (canceled): " + name);
+					return;
+				}
+				
+//				if( ! state.exists(values.navigationroute) || NavigationUtilities.getActiveRoute() != null){
+//					Util.fine("..runRoute (canceled): " + name);
+//					return;
+//				}
+	
+				if(failed){
+					Util.fine("..runRoute (failed): " + name);
+					return;
+				}
+				
 				// developer 
 				if(settings.getBoolean(ManualSettings.developer.name())){
 					if(batteryTooLow()){
@@ -727,7 +747,10 @@ public class Navigation implements Observer {
 
 				// check if cancelled while waiting
 				if( ! state.exists(values.navigationroute)) return;
-				if(failed) return;
+				if(failed){
+					Util.fine("..runRoute (failed): " + name);
+					return;
+				}
 				
 				// start 
 				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.name());
