@@ -21,6 +21,7 @@ import developer.NavigationLog;
 import developer.Ros;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
+import org.xml.sax.SAXParseException;
 
 public class Util {
 	
@@ -140,7 +141,7 @@ public class Util {
 			return text;
 		}
 	}
-	
+
 	/** Run the given text string as a command on the host computer. */
 	public static void systemCallBlocking(final String args) {
 		try {	
@@ -188,6 +189,31 @@ public class Util {
             if (fout != null) fout.close();
         }
     }
+
+	public static String readUrlToString(String urlString) {
+
+		try {
+			URL website = new URL(urlString);
+			URLConnection connection = website.openConnection();
+			BufferedReader in = new BufferedReader( new InputStreamReader( connection.getInputStream()));
+
+			StringBuilder response = new StringBuilder();
+			String inputLine;
+
+			while ((inputLine = in.readLine()) != null)
+				response.append(inputLine);
+
+			in.close();
+
+			return response.toString();
+
+		} catch (Exception e) {
+//			printError(e);
+			Util.log("Util.readUrlToString() parse error", null);
+			return null;
+		}
+
+	}
 	
 	public static String tail(int lines){
 		int i = 0;
@@ -271,7 +297,7 @@ public class Util {
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-	
+
 	// replaces standard e.printStackTrace();
 	public static void printError(Exception e) {
 		System.err.println("error "+getTime()+ ":");
@@ -319,6 +345,158 @@ public class Util {
 		return percent;
 	}
 
+	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
+	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
+	/*
+	public static String getCPUTop(){
+		try {
+
+			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 5 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			return procReader.readLine();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public static boolean testHTTP(){
+
+		final String ext = State.getReference().get(values.externaladdress);
+		final String http = State.getReference().get(State.values.httpport);
+		final String url = "http://"+ext+":"+ http +"/oculusPrime";
+
+		if(ext == null || http == null) return false;
+
+		try {
+
+			log("testPortForwarding(): "+url, "testHTTP()");
+			URLConnection connection = (URLConnection) new URL(url).openConnection();
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			log("testPortForwarding(): "+procReader.readLine(), "testHTTP()");
+
+		} catch (Exception e) {
+			 log("testPortForwarding(): failed: " + url, "testHTTP()");
+			return false;
+		}
+
+		return true;
+	}
+
+	public static boolean testTelnetRouter(){
+		try {
+
+			// "127.0.0.1"; //
+			final String port = Settings.getReference().readSetting(GUISettings.telnetport);
+			final String ext =State.getReference().get(values.externaladdress);
+			log("...telnet test: " +ext +" "+ port, null);
+			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + port);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+			String line = procReader.readLine();
+			if(line.toLowerCase().contains("trying")){
+				line = procReader.readLine();
+				if(line.toLowerCase().contains("connected")){
+					log("telnet test pass...", null);
+					return true;
+				}
+			}
+		} catch (Exception e) {
+			log("telnet test fail..."+e.getLocalizedMessage(), null);
+			return false;
+		}
+		log("telnet test fail...", null);
+		return false;
+	}
+
+
+	public static boolean testRTMP(){
+		try {
+
+			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //
+			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
+
+			log("testRTMP(): http = " +ext, null);
+
+			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + rtmp);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+			String line = procReader.readLine();
+			log("testRTMP(): " + line, null);
+			line = procReader.readLine();
+			log("testRTMP():" + line, null);
+			log("testRTMP(): process exit value = " + proc.exitValue(), null);
+
+			if(line == null) return false;
+			else if(line.contains("Connected")) return true;
+
+		} catch (Exception e) {
+			return false;
+		}
+
+		return true;
+	}
+
+	public static String getJavaStatus(){
+
+		if(redPID==null) return "jetty not running";
+
+		String line = null;
+		try {
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ redPID +"/stat")));
+			line = reader.readLine();
+			reader.close();
+			log("getJavaStatus:" + line, null);
+
+		} catch (Exception e) {
+			printError(e);
+		}
+
+		return line;
+	}
+
+	public static String getRed5PID(){	
+		
+		if(redPID!=null) return redPID;
+		
+		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
+		
+		Process proc = null;
+		try { 
+			proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+		} catch (Exception e) {
+			Util.log("getRed5PID(): "+ e.getMessage(), null);
+			return null;
+		}  
+		
+		String line = null;
+		String[] tokens = null;
+		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+		
+		try {
+			while ((line = procReader.readLine()) != null){
+				if(line.contains("red5")) {
+					tokens = line.split(" ");
+					for(int i = 1 ; i < tokens.length ; i++) {
+						if(tokens[i].trim().length() > 0) {
+							if(redPID==null) redPID = tokens[i].trim();							
+						}
+					}
+				}	
+			}
+		} catch (IOException e) {
+			Util.log("getRed5PID(): ", e.getMessage());
+		}
+
+		return redPID;
+	}	
+	*/
+	
 	public static String pingWIFI(final String addr){
 		if(addr==null) return null;	
 		String[] cmd = new String[]{"ping", "-c1", "-W1", addr};
@@ -372,7 +550,10 @@ public class Util {
 					String addr = line.substring(line.indexOf(":")+1); 
 					addr = addr.substring(0, addr.indexOf(" ")).trim();
 									
-					if(validIP(addr)) State.getReference().set(values.localaddress, addr);
+					if(validIP(addr)) {
+						if (!addr.equals(state.get(values.localaddress)))
+							state.set(values.localaddress, addr);
+					}
 					else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
 				}
 			}
@@ -439,23 +620,42 @@ public class Util {
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 			State state = State.getReference();
-			try {
-				
-				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+//			try {			
+//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
+//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+//		new Thread(new Runnable() { public void run() {
 
-				int i;
-				String address = "";
-				while ((i = in.read()) != -1) address += (char)i;
-				in.close();
+//			State state = State.getReference();
 
-				if(Util.validIP(address)) state.set(values.externaladdress, address);
+//  --- changed: updated only called on ssid change from non null
+//			if(state.exists(values.externaladdress)) {
+//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
+//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
+//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
+//					return;
+//				}
+//			}
+
+//			try {
+//
+//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
+//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
+//
+//				int i;
+//				String address = "";
+//				while ((i = in.read()) != -1) address += (char)i;
+//				in.close();
+//
+				String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
+
+
+				if(validIP(address)) state.set(values.externaladdress, address);
 				else state.delete(values.externaladdress);
 
-			} catch (Exception e) {
-				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
-				state.delete(values.externaladdress);
-			}
+//			} catch (Exception e) {
+//				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
+//				state.delete(values.externaladdress);
+//			}
 		} }).start();
 	}
 

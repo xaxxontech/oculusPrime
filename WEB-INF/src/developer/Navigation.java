@@ -403,10 +403,11 @@ public class Navigation implements Observer {
 	// dock detect, rotate if necessary
 	private static boolean finddock(String resolution, boolean rotate) {
 		int rot = 0;
-		while (navdockactive){
-			
-			SystemWatchdog.waitForCpu(); // added stricter 40% check, lots of missed dock grabs here
+	
+		SystemWatchdog.waitForCpu(); // added stricter 40% check, lots of missed dock grabs here
 
+		while (navdockactive) {
+			SystemWatchdog.waitForCpu();
 			app.driverCallServer(PlayerCommands.dockgrab, resolution);
 			long start = System.currentTimeMillis();
 			while (!state.exists(values.dockfound.name()) && System.currentTimeMillis() - start < Util.ONE_MINUTE)
@@ -790,16 +791,20 @@ public class Navigation implements Observer {
 		Util.fine("..runRoute (exit): " + name);
 	}
 
-	public static void undockandlocalize(){ // blocking
-		state.set(values.motionenabled, true);
-		double distance = 1.0;
+	private static void undockandlocalize() { // blocking
+		state.set(State.values.motionenabled, true);
+		double distance = settings.getDouble(ManualSettings.undockdistance);
 		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
-		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.name())) + 2000);
+		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString()))); // required for fast systems?!
+		long start = System.currentTimeMillis();
+		while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
+				&& System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
+		Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
 		// rotate to localize
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
 		app.driverCallServer(PlayerCommands.left, "360");
-		Util.delay((long)(360 / state.getDouble(values.odomturndpms.name())) + 2000);
+		Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 1000);
 	}
 
 	private static boolean delayToNextRoute(final String name){

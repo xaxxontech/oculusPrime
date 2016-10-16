@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
+import developer.*;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
@@ -43,21 +44,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
 	public static final String ARM = "arm";
-	
+	public static final String LOCALHOST = "127.0.0.1";
+
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
-	private boolean initialstatuscalled = false; 
+	protected boolean initialstatuscalled = false;
 	private boolean pendingplayerisnull = true;
-	public IConnection grabber = null;
-	private IConnection player = null;
+	public IConnection grabber = null;   // flash client on robot, camera capture (optional)
+	private IConnection player = null;   // client, typically remote flash plugin or air app
 	private String authtoken = null;
 	private String salt = null;
 	
 	private Settings settings = Settings.getReference();
 	private BanList banlist = BanList.getRefrence();
 	private State state = State.getReference();
-	private LoginRecords loginRecords = null;
+	protected LoginRecords loginRecords = null;
 	private IConnection pendingplayer = null;
-	private SystemWatchdog watchdog = null;
+	protected SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
 	public Video video = null;
 
@@ -75,6 +77,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	// for fine debugging 
 	private static final boolean DEBUG_PLAYER = false;
 	
+	private Red5Client red5client = null;
+	public IConnection relayclient = null;
+	public Network network = null;
+
 	public Application() {
 		super();
 		state.set(values.osarch, System.getProperty("os.arch"));
@@ -94,6 +100,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	@Override
 	public boolean appConnect(IConnection connection, Object[] params) {
 
+		authtoken = null;
+
 		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
 //		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
 //			Util.log("localhost/LAN/known netstream connect, no params", this);
@@ -101,15 +109,35 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		}
 
 		// always accept local avconv/ffmpeg
-		if ((connection.getRemoteAddress()).equals("127.0.0.1") && params.length==0) {
+		if (params.length==0 && connection.getRemoteAddress().equals("127.0.0.1") ) {
 			grabber = Red5.getConnectionLocal();
 			return true;
 		}
+
+		// always accept relayclient avconv/ffmpeg
+		if (params.length==0 && state.exists(values.relayclient)) {
+			if (connection.getRemoteAddress().equals(state.get(values.relayclient)) ) {
+				grabber = Red5.getConnectionLocal();
+
+				if (settings.getBoolean(ManualSettings.useflash)) {
+					driverCallServer(PlayerCommands.messageclients, "relay server in use, setting &quot;useflash&quot; set to false");
+					Util.log("setting useflash false", this);
+					settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+				}
+
+				return true;
+			}
+		}
+
+		if (params.length==0) return false;
 
 		String logininfo[] = ((String) params[0]).split(" ");
 
 		// always accept local grabber (flash)
 		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
+
+		// disallow normal connection if relay server active
+		if (state.exists(values.relayserver)) return false;
 
 		// TODO: if banned, but cookie exists?? 
 		if(banlist.isBanned(connection.getRemoteAddress())) return false;
@@ -144,6 +172,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	@Override
 	public void appDisconnect(IConnection connection) {
 		if(connection==null) { return; }
+
 		if (connection.equals(player)) {
 			String str = state.get(State.values.driver) + " disconnected";
 			
@@ -189,6 +218,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			player = null;
 			connection.close();
+
+			if (state.exists(values.relayclient)) {
+				IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
+				t.invoke("playerDisconnect");
+			}
 		}
 		
 		if (connection.equals(grabber)) {
@@ -212,6 +246,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}).start();
 			return;
 		}
+
+		if (connection.equals(relayclient)) {
+			relayclient = null;
+			state.delete(values.relayclient);
+			Util.log("relay client disconnected", this);
+			if (state.exists(values.driver)) //messageplayer("relay client disconnected", "connection", "connected");
+				driverCallServer(PlayerCommands.driverexit, null);
+			if (!state.get(values.stream).equals(streamstate.stop.toString()))
+				driverCallServer(PlayerCommands.streammode, streamstate.stop.toString());
+			return;
+		}
 		
 		state.delete(State.values.pendinguserconnected);
 		//TODO: extend IConnection class, associate loginRecord  (to get passenger info)
@@ -223,7 +268,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (mode.equals("init")) {
 			state.delete(State.values.stream);
 		} else {
-			state.set(State.values.stream, Application.streamstate.stop.toString());
+//			state.set(State.values.stream, Application.streamstate.stop.toString());
+			driverCallServer(PlayerCommands.state, State.values.stream.toString() + " " +
+					Application.streamstate.stop.toString());
 		}
 		grabber = Red5.getConnectionLocal();
 		String str = "awaiting&nbsp;connection";
@@ -267,6 +314,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 
+		if (settings.readSetting("user0") == null) {
+			driverCallServer(PlayerCommands.new_user_add, "oculus robot");
+//			String p = "oculus" + salt + "robot"; // default
+//			String encryptedPassword = passwordEncryptor.encryptPassword(p);
+//			settings.newSetting("user0", "oculus");
+//			settings.newSetting("pass0", encryptedPassword);
+		}
+
 		comport = new ArduinoPrime(this);   // note: blocking
 		powerport = new ArduinoPower(this); // note: blocking
 
@@ -297,6 +352,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (!settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
 		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
+		// use relay server if set
+		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED)) {
+			red5client = new Red5Client(this); // connects to remote server
+			red5client.connectToRelay();
+		}
+
+		if (state.get(values.osarch).equals(ARM))
+			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if (!settings.getBoolean(ManualSettings.useflash))
+			state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else
+			state.set(State.values.driverstream, driverstreamstate.stop.toString());
+
 		if (state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 		
 		grabberInitialize();
@@ -304,11 +372,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		docker = new AutoDock(this, comport, powerport);
 		
 		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
-		Util.updateExternalIPAddress();
-		Util.updateLocalIPAddress();	
-		Util.setJettyTelnetPort();
-		Util.updateJetty();		 
+//		Util.updateExternalIPAddress();
+//		Util.updateLocalIPAddress();	
+//		Util.setJettyTelnetPort();
+//		Util.updateJetty();		 
 			
+//		Util.updateExternalIPAddress();
+//		Util.updateLocalIPAddress();
+		network = new Network(this);
+
+		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+		
 		watchdog = new SystemWatchdog(this);
 		if(settings.getBoolean(GUISettings.navigation)) new developer.Navigation(this);
 		
@@ -348,40 +422,77 @@ public class Application extends MultiThreadedApplicationAdapter {
 		} }).start();
 	}
 
-	private void grabberInitialize() {
+	// called by remote relay client
+	public void setRelayClient() {
+		IConnection c = Red5.getConnectionLocal();
+		if (c instanceof IServiceCapableConnection) {
+			relayclient = c;
+			state.set(values.relayclient, c.getRemoteAddress());
+			Util.log("relayclient connected from: " + state.get(values.relayclient), this);
 
-		// non flash, no gui
-		if (!settings.getBoolean(ManualSettings.useflash)) {
-			video = new Video(this);
-			if (!settings.getBoolean(GUISettings.skipsetup)) {
-				if (settings.readSetting("user0") == null) {
-					String p = "oculus" + salt + "robot"; // default
-					String encryptedPassword = passwordEncryptor.encryptPassword(p);
-					settings.newSetting("user0", "oculus");
-					settings.newSetting("pass0", encryptedPassword);
-				}
+			if (authtoken != null) {
+				IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
+				sc.invoke("relayCallClient", new Object[] { "writesetting",
+						ManualSettings.relayserverauth.toString()+" "+authtoken });
 			}
-			return;
-		}
 
-		if (settings.getBoolean(GUISettings.skipsetup)) grabber_launch("");
-		else initialize_launch();
+			if (state.exists(values.driver)) {
+				player.close();
+				player = null;
+				loginRecords.signoutDriver();
+				driverCallServer(PlayerCommands.publish, streamstate.stop.toString());
+			}
+
+		}
 	}
 
-	public void initialize_launch() {
-		new Thread(new Runnable() {
-			public void run() {
-				try {
-					String address = "127.0.0.1:" + state.get(State.values.httpport);
+	// called by remote relayclient
+	public void relayPing() {
+		Util.debug("ping from relayclient", this); // TODO: testing
+		if (relayclient == null) {
+			Util.log("error,relayclient null", this); // TODO: testing
+			return;
+		}
+		IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
+		sc.invoke("relayPong", new Object[] { });
+	}
 
-//					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/initialize.html");
-					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/initialize.html");
+	// called by remote Red5Client.sendToRelay()
+	public void fromRelayClient(Object[] params) {
+		if ( !Red5.getConnectionLocal().equals(relayclient)) return;
+		String[] s= new String[params.length-1];
 
-				} catch (Exception e) {
-					Util.printError(e);
-				}
-			}
-		}).start();
+		switch (params[0].toString()) {
+			case "messageplayer":
+				for (int i=1; i<params.length; i++) if (params[i]!=null) s[i-1]=params[i].toString();
+				messageplayer(s[0],s[1],s[2]);
+				break;
+			case "sendplayerfunction":
+				for (int i=1; i<params.length; i++) if (params[i]!=null) s[i-1]=params[i].toString();
+				sendplayerfunction(s[0], s[1]);
+				break;
+			case "grabberSetStream":
+				grabberSetStream(params[1].toString());
+		}
+	}
+
+	private void grabberInitialize() {
+
+//		String host = LOCALHOST;
+//		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED))
+//			host = settings.readSetting(ManualSettings.relayserver);
+
+		video = new Video(this);
+
+		// non flash, no gui
+		if (!settings.getBoolean(ManualSettings.useflash))   video.initAvconv();
+		else {
+//			if (host.equals(LOCALHOST)) grabber_launch("");
+//			else grabber_launch("?host="+host);
+
+			grabber_launch("");
+		}
+
 	}
 
 	public void grabber_launch(final String str) {
@@ -391,7 +502,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 					// stream = "stop";
 					String address = "127.0.0.1:" + state.get(State.values.httpport);
-//					Runtime.getRuntime().exec("xdg-open http://" + address + "/oculusPrime/server.html");
 					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html"+str);
 
 				} catch (Exception e) {
@@ -435,7 +545,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			player = Red5.getConnectionLocal();
 			state.set(State.values.driver, state.get(State.values.pendinguserconnected));
 			state.delete(State.values.pendinguserconnected);
-			String str = "connection connected user " + state.get(values.driver);
+			String conn = "connected";
+			if (state.exists(values.relayclient)) conn="relay";
+			String str = "connection "+conn+" user " + state.get(values.driver);
 			if (authtoken != null) {
 				str += " storecookie " + authtoken;
 				authtoken = null;
@@ -459,6 +571,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 //			state.delete(State.values.controlsinverted);
 			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
+
+			if (state.exists(values.relayclient)) {
+				IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
+				t.invoke("playerSignIn", new Object[] { state.get(values.driver)});
+			}
+
 		}
 	}
 
@@ -473,7 +591,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if (fn == null) return;
 		if (fn.equals("")) return;
-		
+
 		PlayerCommands cmd = null;
 		try {
 			cmd = PlayerCommands.valueOf(fn);
@@ -489,10 +607,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, false);
 	}
 
-	@SuppressWarnings({ "incomplete-switch" })
+	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
-		
-		if (PlayerCommands.requiresAdmin(fn.name()) && !passengerOverride){
+
+		if (PlayerCommands.requiresAdmin(fn) && !passengerOverride) {
 			if ( ! loginRecords.isAdmin()){ 
 				Util.debug("playerCallServer(), must be an admin to do: " + fn.name() + " curent driver: " + state.get(State.values.driver), this);
 				return;
@@ -501,7 +619,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		// skip telnet ping broadcast
 		if(fn != PlayerCommands.statuscheck) state.set(State.values.lastusercommand, System.currentTimeMillis());
-		
+
+		// if acting as relay server, forward commands
+		if (state.exists(values.relayclient) && !PlayerCommands.nonRelayCommands(fn)) {
+			IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
+			sc.invoke("relayCallClient", new Object[] { fn, str });
+			return;
+		}
+
 		String[] cmd = null;
 		if(str!=null) cmd = str.split(" ");
 
@@ -730,13 +855,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case opennisensor:
 			if(str.equals("on")) { 
-				if (openNIRead.startDepthCam())
-					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
-				else  messageplayer("roslaunch already running, abort", null, null);
+				if (openNIRead.startDepthCam()) {
+//					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
+				 }
+				else
+						messageplayer("roslaunch already running, abort", null, null);
 			}
 			else { 
 				openNIRead.stopDepthCam(); 
-				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
+//				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
 			}			
 			messageplayer("openNI camera "+str, null, null);
 			break;
@@ -932,10 +1059,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case waitforcpu: watchdog.waitForCpuThread();  break;
 
 		// dev tool only
-		case error:
+		case test:
 			try {
-				state.set(values.roscurrentgoal, "");
-				messageplayer("*"+state.get(values.roscurrentgoal)+"*", null, null);
+
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 
@@ -988,7 +1114,47 @@ public class Application extends MultiThreadedApplicationAdapter {
 			grabberSetStream(str);
 			break;
 
+		case calibraterotation:
+			new Calibrate(this).calibrateRotation();
+			break;
+
+		case relayconnect:
+			if (red5client == null) red5client = new Red5Client(this);
+			if (!str.equals("")) { red5client.connectToRelay(str); break; }
+			red5client.connectToRelay();
+			// TODO: stop any running streams
+			break;
+
+		case relaydisable:
+			driverCallServer(PlayerCommands.writesetting, ManualSettings.relayserver.toString()+" "+Settings.DISABLED);
+			driverCallServer(PlayerCommands.writesetting, ManualSettings.relayserverauth.toString()+" "+Settings.DISABLED);
+			// break omitted on purpose
+
+		case relaydisconnect:
+			driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString()); // TODO: server doesn't get stream stop
+			if (state.exists(values.relayserver))
+				red5client.relayDisconnect();
+			else if (state.exists(values.relayclient)) {
+				IServiceCapableConnection rc = (IServiceCapableConnection) relayclient;
+				rc.invoke("disconnect");
+				state.delete(values.relayclient);
+				driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString()); // TODO: server doesn't get stream stop
+			}
+			break;
+
+		case networksettings:
+			network.getNetworkSettings();
+			break;
+
+		case networkconnect:
+//			if (state.exists(values.relayserver) || state.exists(values.relayclient))
+//				driverCallServer(PlayerCommands.relaydisconnect, null);
+			network.connectNetwork(str);
+			break;
+
 		}
+
+
 	}
 
 	/** put all commands here */
@@ -1036,12 +1202,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			case streammode:
 				grabberSetStream(str);
 				break;
-			case saveandlaunch:
-				saveAndLaunch(str);
-				break;
-			case populatesettings:
-				populateSettings();
-				break;
 			case systemcall:
 				Util.systemCall(str);
 				break;
@@ -1052,12 +1212,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 				docker.autoDock("dockgrabbed " + str);
 				state.set(State.values.dockgrabbusy.name(), false);
 				break;
-			case autodock:
-				docker.autoDock(str);
-				break;
-			case factoryreset:
-				factoryReset();
-				break;
+//			case autodock:
+//				docker.autoDock(str);
+//				break;
 			case restart:
 				restart();
 				break;
@@ -1085,6 +1242,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
+					// notify all passengers and driver
 					Thread.sleep(STREAM_CONNECT_DELAY);
 //					if (stream.equals(streamstate.camandmic)); Thread.sleep(STREAM_CONNECT_DELAY*2); // longer delay required doesn't help
 					Collection<Set<IConnection>> concollection = getConnections();
@@ -1099,6 +1257,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 							}
 						}
 					}
+
+					// set stream on relayserver if necessary
+					if (state.exists(values.relayserver)) {
+						Util.delay(1000); // allow extra time for avconv to connect to remote server
+						red5client.sendToRelay("grabberSetStream", new Object[]{state.get(values.stream)});
+					}
+
 				} catch (Exception e) {
 					Util.printError(e);
 				}
@@ -1332,6 +1497,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	public void messageplayer(String str, String status, String value) {
+
+		if (state.exists(values.relayserver)) {
+			red5client.sendToRelay("messageplayer", new Object[] {str, status, value});
+		}
 		
 		if (player instanceof IServiceCapableConnection) {
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
@@ -1360,14 +1529,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			IServiceCapableConnection sc = (IServiceCapableConnection) player;
 			sc.invoke("playerfunction", new Object[] { fn, params });
 		}
-//		if(commandServer!=null) {
-//			commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " javascript function: " + fn + " "+ params);
-//		}
+
+		if (state.exists(values.relayserver)) {
+			red5client.sendToRelay("sendplayerfunction", new Object[]{fn, params});
+		}
 	}
 
 	public void saySpeech(String str) {
 
-		Util.debug("SPEECH sayspeech: "+str, this);
+		Util.debug("SPEECH sayspeech: " + str, this);
 		
 		try {
 			String strarr[] = {"espeak",str};
@@ -1464,7 +1634,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("docking cancelled", "multiple", str);
 			state.set(State.values.docking, false);
 //			powerport.manualSetBatteryUnDocked();
-		}	
+		}
 	}
 
 	private void statusCheck(String s) {
@@ -1542,7 +1712,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			s += "<br>restarting stream";
 		}
 		messageplayer(s, null, null);
-		Util.log("stream changed to " + str,this);
+		Util.log("stream changed to " + str, this);
 	}
 
 	private String streamSettings() {
@@ -1653,6 +1823,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (str.equals(ArduinoPrime.direction.stop.name())) {
 			if (state.getBoolean(State.values.autodocking))
 				docker.autoDockCancel();
+			state.set(values.calibratingrotation, false);
 
 			comport.stopGoing();
 			moveMacroCancel();
@@ -1793,12 +1964,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer("controls hijacked", "hijacked", user);
 		if(player==null) return;
 		if(pendingplayer==null) { pendingplayerisnull = true; return; }
-			
+
+		String con = "connected";
+
+		if (state.exists(values.relayclient)) {
+			IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
+			t.invoke("playerSignIn", new Object[]{state.get(values.driver)});
+			con = "relay";
+		}
+
 		IConnection tmp = player;
 		player = pendingplayer;
 		pendingplayer = tmp;
 		state.set(State.values.driver, user);
-		String str = "connection connected streamsettings " + streamSettings();
+		String str = "connection "+con+" streamsettings " + streamSettings();
 		messageplayer(state.get(State.values.driver) + " connected to OCULUS", "multiple", str);
 		str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
 		Util.log("assumeControl(), " + str,this);
@@ -1810,6 +1989,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (settings.getBoolean(GUISettings.loginnotify)) {
 			saySpeech("lawg inn " + state.get(State.values.driver));
 		}
+
+
 	}
 
 	/** */
@@ -1944,140 +2125,139 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	private void account(String fn, String str) {
 		if (fn.equals("password_update")) passwordChange(state.get(State.values.driver), str);
-		
-		if (loginRecords.isAdmin()){ 
-			if (fn.equals("new_user_add")) {
-				String message = "";
-				Boolean oktoadd = true;
-				String u[] = str.split(" ");
-				if (!u[0].matches("\\w+")) {
-					message += "error: username must be letters/numbers only ";
+
+
+		if (fn.equals("new_user_add")) {
+			String message = "";
+			Boolean oktoadd = true;
+			String u[] = str.split(" ");
+			if (!u[0].matches("\\w+")) {
+				message += "error: username must be letters/numbers only ";
+				oktoadd = false;
+			}
+			if (!u[1].matches("\\w+")) {
+				message += "error: password must be letters/numbers only ";
+				oktoadd = false;
+			}
+			int i = 0;
+			String s;
+			while (true) {
+				s = settings.readSetting("user" + i);
+				if (s == null) break;
+				if ((s.toUpperCase()).equals((u[0]).toUpperCase())) {
+					message += "ERROR: user name already exists ";
 					oktoadd = false;
 				}
-				if (!u[1].matches("\\w+")) {
-					message += "error: password must be letters/numbers only ";
-					oktoadd = false;
-				}
-				int i = 0;
-				String s;
-				while (true) {
-					s = settings.readSetting("user" + i);
-					if (s == null) break;
-					if ((s.toUpperCase()).equals((u[0]).toUpperCase())) {
-						message += "ERROR: user name already exists ";
-						oktoadd = false;
-					}
-					i++;
-				}
-				// add check for existing user, user loop below to get i while you're at it
-				if (oktoadd) {
-					message += "added user " + u[0];
-					settings.newSetting("user" + i, u[0]);
-					String p = u[0] + salt + u[1];
-					String encryptedPassword = passwordEncryptor.encryptPassword(p);
-					settings.newSetting("pass" + i, encryptedPassword);
-				}
-				messageplayer(message, null, null);
+				i++;
 			}
-			if (fn.equals("user_list")) {
-				int i = 1;
-				String users = "";
-				String u;
-				while (true) {
-					u = settings.readSetting("user" + i);
-					if (u == null) {
-						break;
-					} else {
-						users += u + " ";
-					}
-					i++;
-				}
-				sendplayerfunction("userlistpopulate", users);
+			// add check for existing user, user loop below to get i while you're at it
+			if (oktoadd) {
+				message += "added user " + u[0];
+				settings.newSetting("user" + i, u[0]);
+				String p = u[0] + salt + u[1];
+				String encryptedPassword = passwordEncryptor.encryptPassword(p);
+				settings.newSetting("pass" + i, encryptedPassword);
 			}
-			if (fn.equals("delete_user")) {
-				int i = 1;
-				int usernum = -1;
-				int maxusernum = -1;
-				String[] allusers = new String[999];
-				String[] allpasswords = new String[999];
-				String u;
-				while (true) { 
-					// read & store all users+passwords, note number to be deleted, and max number
-					u = settings.readSetting("user" + i);
-					if (u == null) {
-						maxusernum = i - 1;
-						break;
-					}
-					if (u.equals(str)) {
-						usernum = i;
-					}
-					allusers[i] = u;
-					allpasswords[i] = settings.readSetting("pass" + i);
-					i++;
-				}
-				if (usernum > 0) {
-					i = usernum;
-					while (i <= maxusernum) { // delete user to be delted + all after
-						settings.deleteSetting("user" + i);
-						settings.deleteSetting("pass" + i);
-						i++;
-					}
-					i = usernum + 1;
-					while (i <= maxusernum) { // shuffle remaining past deleted one, down one
-						settings.newSetting("user" + (i - 1), allusers[i]);
-						settings.newSetting("pass" + (i - 1), allpasswords[i]);
-						i++;
-					}
-				}
-				messageplayer(str + " deleted.", null, null);
-			}
-			if (fn.equals("extrauser_password_update")) {
-				String s[] = str.split(" ");
-				passwordChange(s[0], s[1]);
-			}
-			if (fn.equals("username_update")) {
-				String u[] = str.split(" ");
-				String message = "";
-				Boolean oktoadd = true;
-				if (!u[0].matches("\\w+")) {
-					message += "error: username must be letters/numbers only ";
-					oktoadd = false;
-				}
-				int i = 1;
-				String s;
-				while (true) {
-					s = settings.readSetting("user" + i);
-					if (s == null) {
-						break;
-					}
-					if ((s.toUpperCase()).equals(u[0].toUpperCase())) {
-						message += "error: user name already exists ";
-						oktoadd = false;
-					}
-					i++;
-				}
-				String encryptedPassword = (passwordEncryptor.encryptPassword(state.get(State.values.driver) + salt + u[1])).trim();
-				if (logintest(state.get(State.values.driver), encryptedPassword) == null) {
-					message += "error: wrong password";
-					oktoadd = false;
-				}
-				if (oktoadd) {
-					message += "username changed to: " + u[0];
-					messageplayer("username changed to: " + u[0], "user", u[0]);
-					settings.writeSettings("user0", u[0]);
-					state.set(State.values.driver, u[0]);
-					String p = u[0] + salt + u[1];
-					encryptedPassword = passwordEncryptor.encryptPassword(p);
-					settings.writeSettings("pass0", encryptedPassword);
+			messageplayer(message, null, null);
+		}
+		if (fn.equals("user_list")) {
+			int i = 1;
+			String users = "";
+			String u;
+			while (true) {
+				u = settings.readSetting("user" + i);
+				if (u == null) {
+					break;
 				} else {
-					messageplayer(message, null, null);
+					users += u + " ";
 				}
+				i++;
+			}
+			sendplayerfunction("userlistpopulate", users);
+		}
+		if (fn.equals("delete_user")) {
+			int i = 1;
+			int usernum = -1;
+			int maxusernum = -1;
+			String[] allusers = new String[999];
+			String[] allpasswords = new String[999];
+			String u;
+			while (true) {
+				// read & store all users+passwords, note number to be deleted, and max number
+				u = settings.readSetting("user" + i);
+				if (u == null) {
+					maxusernum = i - 1;
+					break;
+				}
+				if (u.equals(str)) {
+					usernum = i;
+				}
+				allusers[i] = u;
+				allpasswords[i] = settings.readSetting("pass" + i);
+				i++;
+			}
+			if (usernum > 0) {
+				i = usernum;
+				while (i <= maxusernum) { // delete user to be delted + all after
+					settings.deleteSetting("user" + i);
+					settings.deleteSetting("pass" + i);
+					i++;
+				}
+				i = usernum + 1;
+				while (i <= maxusernum) { // shuffle remaining past deleted one, down one
+					settings.newSetting("user" + (i - 1), allusers[i]);
+					settings.newSetting("pass" + (i - 1), allpasswords[i]);
+					i++;
+				}
+			}
+			messageplayer(str + " deleted.", null, null);
+		}
+		if (fn.equals("extrauser_password_update")) {
+			String s[] = str.split(" ");
+			passwordChange(s[0], s[1]);
+		}
+		if (fn.equals("username_update")) {
+			String u[] = str.split(" ");
+			String message = "";
+			Boolean oktoadd = true;
+			if (!u[0].matches("\\w+")) {
+				message += "error: username must be letters/numbers only ";
+				oktoadd = false;
+			}
+			int i = 1;
+			String s;
+			while (true) {
+				s = settings.readSetting("user" + i);
+				if (s == null) {
+					break;
+				}
+				if ((s.toUpperCase()).equals(u[0].toUpperCase())) {
+					message += "error: user name already exists ";
+					oktoadd = false;
+				}
+				i++;
+			}
+			String encryptedPassword = (passwordEncryptor.encryptPassword(state.get(State.values.driver) + salt + u[1])).trim();
+			if (logintest(state.get(State.values.driver), encryptedPassword) == null) {
+				message += "error: wrong password";
+				oktoadd = false;
+			}
+			if (oktoadd) {
+				message += "username changed to: " + u[0];
+				messageplayer("username changed to: " + u[0], "user", u[0]);
+				settings.writeSettings("user0", u[0]);
+				state.set(State.values.driver, u[0]);
+				String p = u[0] + salt + u[1];
+				encryptedPassword = passwordEncryptor.encryptPassword(p);
+				settings.writeSettings("pass0", encryptedPassword);
+			} else {
+				messageplayer(message, null, null);
 			}
 		}
 	}
 
 	private void passwordChange(final String user, final String pass) {
-		Util.debug(user+" "+pass, this);
+		Util.debug(user + " " + pass, this);
 		String message = "password updated";
 		if (pass.matches("\\w+")) {
 			String p = user + salt + pass;
@@ -2143,118 +2323,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (!str.equals("")) { lines = Integer.parseInt(str); }
 		String header = "last "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
 		sendplayerfunction("showserverlog", header + Util.tail(lines));
-	}
-
-	private void saveAndLaunch(String str) {
-		Util.log("saveandlaunch: " + str,this);
-		String message = "";
-		Boolean oktoadd = true;
-		Boolean restartrequired = false;
-		String user = null;
-		String password = null;
-		String httpport = null;
-		String rtmpport = null;
-		String skipsetup = null;
-
-		String s[] = str.split(" ");
-		for (int n = 0; n < s.length; n = n + 2) {
-			// user password comport httpport rtmpport skipsetup developer
-			if (s[n].equals("user")) {
-				user = s[n + 1];
-			}
-			if (s[n].equals("password")) {
-				password = s[n + 1];
-			}
-			if (s[n].equals("httpport")) {
-				httpport = s[n + 1];
-			}
-			if (s[n].equals("rtmpport")) {
-				rtmpport = s[n + 1];
-			}
-			if (s[n].equals("skipsetup")) {
-				skipsetup = s[n + 1];
-			}
-		}
-
-		// user & password
-		if (user != null) {
-			if (!user.matches("\\w+")) {
-				message += "Error: username must be letters/numbers only ";
-				oktoadd = false;
-			}
-			if (!password.matches("\\w+")) {
-				message += "Error: password must be letters/numbers only ";
-				oktoadd = false;
-			}
-			int i = 1; // admin user = 0, start from 1 (non admin)
-			String name;
-			while (true) {
-				name = settings.readSetting("user" + i);
-				if (name == null) {
-					break;
-				}
-				if ((name.toUpperCase()).equals((user).toUpperCase())) {
-					message += "Error: non-admin user name already exists ";
-					oktoadd = false;
-				}
-				i++;
-			}
-			if (oktoadd) {
-				String p = user + salt + password;
-				String encryptedPassword = passwordEncryptor.encryptPassword(p);
-				if (settings.readSetting("user0") == null) {
-					settings.newSetting("user0", user);
-					settings.newSetting("pass0", encryptedPassword);
-				} else {
-					settings.writeSettings("user0", user);
-					settings.writeSettings("pass0", encryptedPassword);
-				}
-			}
-		} else {
-			if (settings.readSetting("user0") == null) {
-				oktoadd = false;
-				message += "Error: admin user not defined ";
-			}
-		}
-
-		// httpport
-		if (httpport != null) {
-			if (!(settings.readRed5Setting("http.port")).equals(httpport)) {
-				restartrequired = true;
-			}
-			settings.writeRed5Setting("http.port", httpport);
-		}
-		// rtmpport
-		if (rtmpport != null) {
-			if (!(settings.readRed5Setting("rtmp.port")).equals(rtmpport)) {
-				restartrequired = true;
-			}
-			settings.writeRed5Setting("rtmp.port", rtmpport);
-		}
-
-		if (oktoadd) {
-			if (skipsetup != null) settings.writeSettings(GUISettings.skipsetup, skipsetup);
-			message = "launch server";
-			if (restartrequired) {
-				message = "shutdown";
-				restart();
-			}
-		}
-		messageGrabber(message, null);
-	}
-
-	/** */
-	private void populateSettings() {
-		settings.writeSettings(GUISettings.skipsetup, Settings.FALSE);
-		String result = "populatevalues ";
-
-		String str = settings.readSetting("user0");
-		if(str != null) result += "username " + str + " ";
-
-		messageGrabber(result, null);
-		
-		Util.log("populate settings: " + result, this);
-		
 	}
 
 	public void softwareUpdate(String str) {
@@ -2330,8 +2398,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	private void setStreamActivityThreshold(String str) {
-
-
 
 		String val[] = str.split("\\D+");
 		if (val.length != 2) { return; } 

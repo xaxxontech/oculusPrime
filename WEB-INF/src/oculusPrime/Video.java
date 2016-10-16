@@ -15,15 +15,17 @@ public class Video {
 
     private static State state = State.getReference();
     private Application app = null;
-    private String host = "127.0.0.1";
-    private String port = "1935";
+    private String port;
     private int devicenum = 0;  // should match lifecam cam
     private int adevicenum = 1; // should match lifecam mic
     private static final int defaultquality = 5;
     private static final int quality720p = 7;
     private static final int defaultwidth=640;
- //   private static final int defaultheight=480;
-    private static final int lowreswidth=320;
+//  private static final int defaultheight=480;
+//  private static final int lowreswidth=320;
+    private static final int defaultheight=480;
+    public static final int lowreswidth=320;
+
     private static final int lowresheight=240;
     private static final String PATH="/dev/shm/avconvframes/";
     private static final String EXT=".bmp";
@@ -49,6 +51,10 @@ public class Video {
 
     public Video(Application a) {
         app = a;
+        port = Settings.getReference().readRed5Setting("rtmp.port");
+    }
+
+    public void initAvconv() {
         state.set(State.values.stream, Application.streamstate.stop.toString());
         setAudioDevice();
         if (state.get(State.values.osarch).equals(Application.ARM)) {
@@ -99,6 +105,10 @@ public class Video {
         final int q = lastquality;
 
         new Thread(new Runnable() { public void run() {
+
+            String host = "127.0.0.1";
+            if (state.exists(State.values.relayserver))
+                host = state.get(State.values.relayserver);
 
             // nuke currently running avconv if any
             if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
@@ -249,6 +259,10 @@ public class Video {
         }
 
         state.set(State.values.writingframegrabs, width);
+
+        String host = "127.0.0.1";
+        if (state.exists(State.values.relayserver))
+            host = state.get(State.values.relayserver);
 
         try {
             Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",

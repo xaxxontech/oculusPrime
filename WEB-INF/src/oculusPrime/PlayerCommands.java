@@ -61,16 +61,26 @@ public enum PlayerCommands {
     // experimental (undocumented)
     opennisensor, clearmap, error, resetroutedata,
 
+    // experimental (undocumented)
+    // opennisensor, clearmap, test,
+
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness, 
     
     // undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, archivelogs, deletelogs, routedata, wait
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, deletelogs, routedata, wait, test,
     
+//    statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
+//	deletelogs, 
+//    truncimages, 
+    truncros, truncarchive, archive,
+	archiveros, archiveimages, archivelogs, calibraterotation, relayconnect,
+	relaydisconnect, relaydisable, networksettings, networkconnect,
+
     ;
 
 	// sub-set that are restricted to "user0"
-	public enum AdminCommands {
+	private enum AdminCommands {
 		docklineposupdate, autodockcalibrate, getemailsettings, emailsettingsupdate,
 		getdrivingsettings, drivingsettingsupdate,  
 		systemcall, 
@@ -80,19 +90,28 @@ public enum PlayerCommands {
 	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
 	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
-	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged;	
+	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged,
+		relayconnect, relaydisconnect, relaydisable, networksettings, networkconnect, test,
+
+		;
 
 	}
-	
+
+	// sub-set of commands that are NOT to be passed thru to relay client, if acting as relay server
+	private enum nonRelayCommands {
+		record, relaydisconnect, chat, beapassenger, assumecontrol,
+		;
+	}
+
 	// @return true if given command is in the sub-set
-	public static boolean requiresAdmin(final String str) {
+	public static boolean nonRelayCommands(final PlayerCommands cmd) {
 		try {
-			AdminCommands.valueOf(str);
+			nonRelayCommands.valueOf(cmd.name());
 		} catch (Exception e) {return false;}
-		
-		return true; 
-	} 
-	
+
+		return true;
+	}
+
 	// @return true if given command is in the sub-set 
 	public static boolean requiresAdmin(final PlayerCommands cmd) {
 		try {

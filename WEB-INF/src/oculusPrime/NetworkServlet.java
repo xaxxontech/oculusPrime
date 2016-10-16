@@ -1,5 +1,7 @@
 package oculusPrime;
 
+import org.red5.server.api.service.IServiceCapableConnection;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -38,25 +40,8 @@ public class NetworkServlet extends HttpServlet {
             return;
         }
 
-//        Util.log ("getRequestURL: "+request.getRequestURL().toString(), this);
-//        Util.log("getQueryString: "+request.getQueryString(), this);
-//        Util.log("getRequestURI: "+request.getRequestURI(), this);
-//        Util.log("getScheme: "+request.getScheme(), this);
-//        Util.log("getServerName: "+ request.getServerName(), this);
-//        Util.log("getServerPort: "+ request.getServerPort(), this);
-//        Util.log("getContextPath: "+request.getContextPath(), this);
-//        Util.log("getServletPath: "+request.getServletPath(), this);
-//        Util.log("getPathInfo: "+request.getPathInfo(), this);
-//        Util.log("getQueryString: "+request.getQueryString(), this);
-
-//        response.sendRedirect(request.getRequestURL().toString());
-
         try {
             String url = "http://localhost";
-
-//            String params = request.getQueryString();
-// //           if (params != null) url += "?"+params;
-//            Util.log(url+"?"+params, this);
 
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
 
@@ -66,17 +51,13 @@ public class NetworkServlet extends HttpServlet {
             while (parameterNames.hasMoreElements()) {
                 if (postData.length()!=0) postData += "&";
                 String paramName = parameterNames.nextElement();
-//                Util.log("paramName: "+paramName, this);
                 postData += paramName;
                 String[] paramValues = request.getParameterValues(paramName);
                 for (int i = 0; i < paramValues.length; i++) {
                     postData += "=";
-//                    Util.log("paramValue: "+paramValues[i], this);
                     postData += paramValues[i];
                 }
             }
-
-//            Util.log("PostData: "+postData, this); // careful, contains plain text password
 
             // manage params if any
             if (postData.length() != 0) {
@@ -97,7 +78,7 @@ public class NetworkServlet extends HttpServlet {
                     response.sendRedirect(request.getRequestURL().toString());
                 }
                 else if(action != null) {
-                    if (!action.equals("status") && !action.equals("connect") &&
+                    if (!action.equals("status") && !action.equals("connect") && !action.equals("xmlinfo") &&
                             !action.equals("config") && !action.equals("wifiready")) {
 
                         response.sendRedirect(request.getRequestURL().toString());

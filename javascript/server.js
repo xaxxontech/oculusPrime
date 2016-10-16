@@ -7,11 +7,6 @@ var username = false;
 function server_loaded() {
 }
 
-function initialize_loaded() {
-	// window.open('server.html','_self'); // bypass init
-	initialize = true;
-}
-
 function flashloaded() {
 	if (!initialize) { setTimeout("reload();", reloadinterval); }
 //	setTimeout("callServer('checkforbattery','init')",2000);
@@ -47,7 +42,6 @@ function rtmpPortReturned() { //xmlhttp event handler
 	}
 }
 
-
 function reload() {
 	if (stream == "stop") {
 		message("refreshing page", null);
@@ -57,7 +51,6 @@ function reload() {
 }
 
 function message(message,status) {
-	if (/^populatevalues/.test(message)) { populatevalues(message); message=""; }
 	if (/^<CHAT>/.test(message)) {
 		message = "<span style='font-size: 20px'>"+message.slice(6)+"</span>";
 	}
@@ -86,10 +79,7 @@ function message(message,status) {
 		a.innerHTML = "<table><tr valign='top'><td class='message'>&bull; </td><td class='message'>"+message+" " +
 				datetime + "</td></td></table>" + str;
 	}
-	
-	if (/^connected/.test(message)) { // some things work better if down here -wtf???
-		init(); 
-	}
+
 	if (message=="launch server") { window.open('server.html','_self'); }
 	if (/^streaming/.test(message)) { 
 		var b = message.split(" ");
@@ -120,110 +110,6 @@ function getFlashMovie(movieName) {
 function callServer(fn, str) {
 	getFlashMovie("oculusPrime_grabber").flashCallServer(fn,str);
 } 
-
-function saveandlaunch() {
-	str = "";
-	var s;
-	var oktosend = true;
-	var msg = "";
-	//user password
-	var user = document.getElementById("newusername").value;
-	if (user != "") {
-		var pass = document.getElementById("userpass").value;
-		var passagain = document.getElementById("userpassagain").value;
-		if (pass != passagain || pass=="") {
-			oktosend = false;
-			msg += "*error: passwords didn't match, try again "; 
-		}
-		if (/\s+/.test(user)) { 
-			oktosend = false;
-			msg += "*error: no spaces allowed in user name "; 
-		} 
-		if (/\s+/.test(pass)) { 
-			oktosend = false;
-			msg += "*error: no spaces allowed in password "; 
-		}
-		str += "user " + user + " password " + pass + " ";  
-	}
-	
-	//skipsetup
-	if (document.getElementById("skipsetup").checked) {str += "skipsetup true "; }
-	else { str += "skipsetup false "; }
-
-	if (msg != "") { message(msg); }
-	if (oktosend) {
-		message("submitting info",null);
-		callServer("saveandlaunch",str);
-	}
-}
-
-function init() {
-	if (initialize) {
-		getFlashMovie("oculusPrime_grabber").playlocal();
-		callServer("populatesettings","");
-	}
-	else { callServer("autodock","getdocktarget"); } // sets variables
-}
-
-function populatevalues(values) {
-	splitstr = values.split(" ");
-	for (var n=1; n<splitstr.length; n=n+2) { // username battery comport httpport rtmpport
-		if (splitstr[n] == "username") {  
-			username = true;
-			document.getElementById("username").innerHTML = "<b>"+splitstr[n+1]+"</b>"; 
-		}
-	//	if (splitstr[n]== "battery") {
-	//		var a=document.getElementById("battery");
-	//		var str = splitstr[n+1];
-	//		if (str == "nil") { a.innerHTML="not found"; }
-	//		else { a.innerHTML = "present"; }
-	//	}
-		if (splitstr[n]=="comport") {
-			a = document.getElementById("comport");
-			var str = splitstr[n+1];
-			if (str == "nil") { a.innerHTML="not found <a href=\"http://www.xaxxon.com/shop\" target=\"_blank\">buy now</a>"; }
-			else { a.innerHTML = "found on "+str; }
-		}
-		if (splitstr[n]=="lightport") {
-			a = document.getElementById("lightport");
-			var str = splitstr[n+1];
-			if (str == "nil") { a.innerHTML="not found <a href=\"http://www.xaxxon.com/shop\" target=\"_blank\">buy now</a>"; }
-			else {
-				document.getElementById("lightdiv").style.display = "";
-				a.innerHTML = "found on "+str; 
-			}
-		}
-		if (splitstr[n]=="lanaddress") {
-			a = document.getElementById("lanaddress");
-			var str = splitstr[n+1];
-			if (str == "nil") { a.innerHTML="not found"; }
-			else { a.innerHTML = str; }
-		}
-		if (splitstr[n]=="wanaddress") {
-			a = document.getElementById("wanaddress");
-			var str = splitstr[n+1];
-			if (str == "nil") { a.innerHTML="not found"; }
-			else { a.innerHTML = str; }
-		}
-		if (splitstr[n]=="httpport") { document.getElementById("httpport").value = splitstr[n+1]; }
-		if (splitstr[n]=="rtmpport") { document.getElementById("rtmpport").value = splitstr[n+1]; }
-	}
-	if (!username) { 
-		document.getElementById("username").innerHTML = "<b>"+splitstr[n+1]+"</b>"; 
-		userbox("show");
-	}
-}
-
-function userbox(state) {
-	if (state=="show") {
-		document.getElementById('changeuserbox').style.display='';
-		document.getElementById('changeuserboxlink').style.display='none';
-	}
-	else {
-		document.getElementById('changeuserbox').style.display='none';
-		document.getElementById('changeuserboxlink').style.display='';
-	}
-}
 
 function ifnotshow() {
 	document.getElementById('ifnot').style.display='';
@@ -277,13 +163,6 @@ function keypress(e) {
 //	else { document.getElementById("flashoverlay").style.display = "none"; } 
 //}
 
-
-function factoryreset(){
-	if(confirm("Restore factory default settings?\n(A backup file will be created and application restarted)")){
-		callServer('factoryreset','');
-	}
-}
-
 function screensize(mode) {
 	var l = document.getElementById('leftsidebar')
 	var r = document.getElementById('rightsidebar');
@@ -323,5 +202,5 @@ function screensize(mode) {
 }
 
 function debug(str) {
-	document.getElementById('debugbox').innerHTML = str;	
+	document.getElementById('debugbox').innerHTML = window.location.search;
 }

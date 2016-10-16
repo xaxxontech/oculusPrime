@@ -29,8 +29,10 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        double n = -0.45;
-        System.out.println("card 0123123"+n);
+
+        String[] asdf = new String[0];
+        asdf = "lasdfjlksdf ewer7s98e wer78w90e8r".split(" ");
+        System.out.println(asdf.length);
 
     }
 }

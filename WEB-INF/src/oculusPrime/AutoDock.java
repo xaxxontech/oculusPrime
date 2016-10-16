@@ -9,8 +9,10 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+
 import developer.NavigationLog;
 import oculusPrime.State.values;
+import developer.Ros;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
@@ -27,7 +29,7 @@ public class AutoDock {
 	public enum dockgrabmodes{ calibrate, start, find, test };
 
 	private Settings settings = Settings.getReference();
-	private String docktarget = settings.readSetting(GUISettings.docktarget);;
+	private String docktarget = settings.readSetting(GUISettings.docktarget);
 	private State state = State.getReference();
 	private boolean autodockingcamctr = false;
 	private int lastcamctr = 0;
@@ -77,6 +79,10 @@ public class AutoDock {
 			if (state.getBoolean(State.values.odometry)) {
 				app.message("odometry running, disabling", null, null);
 				app.driverCallServer(PlayerCommands.odometrystop, null);
+			}
+			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+				app.message("navigation running, disabling", null, null);
+				app.driverCallServer(PlayerCommands.stopnav, null);
 			}
 
 			lowres=true;

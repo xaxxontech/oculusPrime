@@ -366,20 +366,20 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 //			state.set(State.values.lastodomreceived, System.currentTimeMillis());
 			
 			// testing only ----------------
-			if (settings.getBoolean(ManualSettings.developer.name())) {
-				if (Application.openNIRead.depthCamGenerating) {
-					if (!state.exists(State.values.distanceanglettl.toString())) {
-						state.set(State.values.distanceanglettl, "0 0");
-					}
-					
-					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
-					dttl += lastodomlinear;
-					attl += lastodomangle;
-					String dattl = dttl+" "+attl;
-					state.set(State.values.distanceanglettl,dattl);
-				}
-			}
+//			if (settings.getBoolean(ManualSettings.developer.name())) {
+//				if (Application.openNIRead.depthCamGenerating) {
+//					if (!state.exists(State.values.distanceanglettl.toString())) {
+//						state.set(State.values.distanceanglettl, "0 0");
+//					}
+//
+//					int dttl = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+//					double attl = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+//					dttl += lastodomlinear;
+//					attl += lastodomangle;
+//					String dattl = dttl+" "+attl;
+//					state.set(State.values.distanceanglettl,dattl);
+//				}
+//			}
 			// end of testing only ----------------
 
 		}
@@ -1375,17 +1375,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	@SuppressWarnings("incomplete-switch")
 	public void nudge(final direction dir) {
 		
-		if (settings.getBoolean(ManualSettings.developer.name())) {
-			if (Application.openNIRead.depthCamGenerating ) {
-				switch (dir) {
-				case right:
-				case left:  rotate(dir, 15); break;
-				case forward: 
-				case backward: movedistance(dir, 0.4); break;
-				}
-				return;
-			}
-		}
+//		if (settings.getBoolean(ManualSettings.developer.name())) {
+//			if (Application.openNIRead.depthCamGenerating ) {
+//				switch (dir) {
+//				case right:
+//				case left:  rotate(dir, 15); break;
+//				case forward:
+//				case backward: movedistance(dir, 0.4); break;
+//				}
+//				return;
+//			}
+//		}
 		
 		new Thread(new Runnable() {
 			public void run() {
@@ -1435,15 +1435,15 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				state.set(State.values.motorspeed, speedfast);
 				
 				
-				if (settings.getBoolean(ManualSettings.developer.name())) {
-					if (Application.openNIRead.depthCamGenerating) { // openni
-						short[] depthFrameBefore = Application.openNIRead.readFullFrame();						
-						if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0); 
-						if (!state.getBoolean(State.values.odometry)) odometryStart();
-						state.delete(State.values.distanceanglettl);
-					}
-					
-				}
+//				if (settings.getBoolean(ManualSettings.developer.name())) {
+//					if (Application.openNIRead.depthCamGenerating) { // openni
+//						short[] depthFrameBefore = Application.openNIRead.readFullFrame();
+//						if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
+//						if (!state.getBoolean(State.values.odometry)) odometryStart();
+//						state.delete(State.values.distanceanglettl);
+//					}
+//
+//				}
 				
 				switch (dir) {
 					case right: turnRight(); break;
@@ -1461,19 +1461,19 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				stopGoing();
 				
 				String msg = "";
-				if (settings.getBoolean(ManualSettings.developer.name())) {
-
-					if (Application.openNIRead.depthCamGenerating) { // openni 
-						Util.delay(500); // allow for slow to stop
-						short[] depthFrameAfter = Application.openNIRead.readFullFrame();
-
-						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
-						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-						Mapper.addMove(depthFrameAfter, 0, angle);
-						msg += "angle moved via gyro: "+angle;
-					}
-
-				}
+//				if (settings.getBoolean(ManualSettings.developer.name())) {
+//
+//					if (Application.openNIRead.depthCamGenerating) { // openni
+//						Util.delay(500); // allow for slow to stop
+//						short[] depthFrameAfter = Application.openNIRead.readFullFrame();
+//
+//						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
+//						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+//						Mapper.addMove(depthFrameAfter, 0, angle);
+//						msg += "angle moved via gyro: "+angle;
+//					}
+//
+//				}
 				
 				if (msg.equals("")) msg = null;
 				state.set(State.values.motorspeed, tempspeed);
@@ -1505,14 +1505,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					case forward:
 
 						// openni, experimental
-						if (settings.getBoolean(ManualSettings.developer.name())) {
-							if (Application.openNIRead.depthCamGenerating) {   // openni
-								depthFrameBefore = Application.openNIRead.readFullFrame();	
-								if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
-	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-	        					state.delete(State.values.distanceanglettl);
-							}
-						}
+//						if (settings.getBoolean(ManualSettings.developer.name())) {
+//							if (Application.openNIRead.depthCamGenerating) {   // openni
+//								depthFrameBefore = Application.openNIRead.readFullFrame();
+//								if (Mapper.map.length==0)  Mapper.addMove(depthFrameBefore, 0, 0);
+//	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+//	        					state.delete(State.values.distanceanglettl);
+//							}
+//						}
 
                         goForward(); 
 						break;
@@ -1520,15 +1520,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					case backward:
 
 						// openni, experimental
-						if (settings.getBoolean(ManualSettings.developer.name())) {
-							if (Application.openNIRead.depthCamGenerating) {  // openni
-								depthFrameAfter = Application.openNIRead.readFullFrame();						
-								if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
-	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
-	        					state.delete(State.values.distanceanglettl);
-							}
-
-						}
+//						if (settings.getBoolean(ManualSettings.developer.name())) {
+//							if (Application.openNIRead.depthCamGenerating) {  // openni
+//								depthFrameAfter = Application.openNIRead.readFullFrame();
+//								if (Mapper.map.length==0)  Mapper.addMove(depthFrameAfter, 0, 0);
+//	        					if (!state.getBoolean(State.values.odometry)) odometryStart();
+//	        					state.delete(State.values.distanceanglettl);
+//							}
+//						}
                         
 						goBackward();
 						break;
@@ -1556,34 +1555,34 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				String msg = null;
 
 				// openni, experimental
-				if (settings.getBoolean(ManualSettings.developer.name())) {
-
-					if (depthFrameBefore != null) { // went forward, openni
-						Util.delay(750); // allow for slow to stop
-	
-						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
-						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-						
-						depthFrameAfter = Application.openNIRead.readFullFrame();
-						
-	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-						msg = "distance moved d: "+distance+", angle:"+angle;
-						Mapper.addMove(depthFrameAfter, distance, angle);
-					}
-					else if (depthFrameAfter != null) { // went backward, openni
-						Util.delay(750);
-						
-						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(10); } //wait TODO: add timer
-						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]); 
-						
-						depthFrameBefore = Application.openNIRead.readFullFrame();
-						
-	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
-						msg = "distance moved d: "+distance+", angle:"+angle;
-						Mapper.addMove(depthFrameBefore, distance, angle);
-					}
-
-				}
+//				if (settings.getBoolean(ManualSettings.developer.name())) {
+//
+//					if (depthFrameBefore != null) { // went forward, openni
+//						Util.delay(750); // allow for slow to stop
+//
+//						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(1); } //wait TODO: add timer
+//						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+//
+//						depthFrameAfter = Application.openNIRead.readFullFrame();
+//
+//	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+//						msg = "distance moved d: "+distance+", angle:"+angle;
+//						Mapper.addMove(depthFrameAfter, distance, angle);
+//					}
+//					else if (depthFrameAfter != null) { // went backward, openni
+//						Util.delay(750);
+//
+//						while (!state.exists(State.values.distanceanglettl.toString())) {  Util.delay(10); } //wait TODO: add timer
+//						double angle = Double.parseDouble(state.get(State.values.distanceanglettl).split(" ")[1]);
+//
+//						depthFrameBefore = Application.openNIRead.readFullFrame();
+//
+//	                    int distance = Integer.parseInt(state.get(State.values.distanceanglettl).split(" ")[0]);
+//						msg = "distance moved d: "+distance+", angle:"+angle;
+//						Mapper.addMove(depthFrameBefore, distance, angle);
+//					}
+//
+//				}
 				
 				state.set(State.values.motorspeed, tempspeed);
 				application.message(msg, "motion", "stopped");

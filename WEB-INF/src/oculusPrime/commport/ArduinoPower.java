@@ -37,6 +37,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte READ_SAFECURRENT = 'G';
 	public static final byte READ_DOCKVOLTAGE = 'E';
 	public static final int COMM_LOST = -99;
+	public static final int LOWBATTPERCENTAGE = 30; // same or less than firmware var: gettingLowCell to enable capacity recalc
 	
 	protected Application application = null;
 	protected State state = State.getReference();
@@ -65,6 +66,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
+	private boolean batterypresent = true;
 
 	public ArduinoPower(Application app) {
 		application = app;	
@@ -125,6 +127,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public void initialize() {
 		
 		Util.debug("initialize", this);
+		batterypresent = true;
 		sendCommand(READERROR);
 		lastReset = System.currentTimeMillis();
 		sendCommand(READCAPACITY);
@@ -393,11 +396,14 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!s[1].contains(",")) {
 				int e = Integer.parseInt(s[1]);
 				if (IGNORE_ERROR.contains(e) && !state.exists(State.values.powererror.toString())) {
-					if (e != ERROR_NO_BATTERY_CONNECTED) {
-						state.set(State.values.batterylife, "NOT_CONNECTED");
+
+					if (e == ERROR_NO_BATTERY_CONNECTED)   batterypresent = false;
+					else {
 						sendCommand(CLEARALLWARNINGERRORS);
+						batterypresent = true;
 					}
-					Util.log("Power warning "+e+", "+pwrerr.get(e)+", cleared", this); 
+
+					Util.log("Power warning " + e + ", "+pwrerr.get(e)+", cleared", this);
 					PowerLogger.append("Power warning "+e+", "+pwrerr.get(e)+", cleared", this);
 					return;
 				}
@@ -447,7 +453,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				// redock if unplanned and redock set
 				if (!state.exists(State.values.telnetusers.toString())) state.set(State.values.telnetusers, 0);
 				if (!state.exists(State.values.driver.toString()) && state.getInteger(State.values.telnetusers) == 0 &&
-						settings.getBoolean(GUISettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) { 
+						settings.getBoolean(GUISettings.redock) && state.get(State.values.dockstatus).equals(AutoDock.DOCKED) &&
+						 !state.getBoolean(State.values.forceundock) ) {
 					Util.log("unplanned undock, trying redock",this);
 					PowerLogger.append("unplanned undock, trying redock",this);
 					application.driverCallServer(PlayerCommands.redock, null);
@@ -509,11 +516,12 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 		
 		if (s.length>2) {
-			String battinfo = s[1]; 
-			battinfo = battinfo.replaceFirst("\\.\\d*", "");
+			String battinfo = s[1];
+			if (batterypresent)
+				battinfo = battinfo.replaceFirst("\\.\\d*", "");
+			else battinfo = "DISCONNECTED";
 			if (!state.get(State.values.batterylife).equals(battinfo)) {
 				state.set(State.values.batterylife, battinfo);
-			
 			}
 	
 			String extinfo = s[2];

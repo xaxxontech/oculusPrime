@@ -34,9 +34,6 @@ public class SystemWatchdog implements Observer {
 	
 	SystemWatchdog(Application a){ 
 		application = a;
-		state.addObserver(this);
-		Util.updateExternalIPAddress();
-		Util.updateLocalIPAddress();
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
 		// new Timer().scheduleAtFixedRate(new cpuTask(), 0, DELAY*4);
 		// poll cpu at slower rate, waitforcpu() update state value on each call too 
@@ -57,10 +54,6 @@ public class SystemWatchdog implements Observer {
 		}
 	}
 
-//	private class cpuTask extends TimerTask {
-//		public void run(){ Util.getCPU(); }
-//	}
-	
 	private class Task extends TimerTask {
 		public void run(){
 				
@@ -69,7 +62,7 @@ public class SystemWatchdog implements Observer {
 			if(! state.exists(values.localaddress)) Util.updateLocalIPAddress();
 			else if(state.equals(values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
 			if(! state.exists(values.externaladdress)) Util.updateExternalIPAddress();
-			
+		
 			// regular reboot if set 
 			if (System.currentTimeMillis() - state.getLong(values.linuxboot) > STALE
 					&& !state.exists(State.values.driver.toString()) &&
@@ -125,7 +118,8 @@ public class SystemWatchdog implements Observer {
 				if (!state.exists(State.values.driver) &&
 						System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN &&
 						redocking == false &&
-						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", "")) <= 35 && // was 10%
+						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", ""))
+								< ArduinoPower.LOWBATTPERCENTAGE &&
 						state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						settings.getBoolean(GUISettings.redock)
 						) {
