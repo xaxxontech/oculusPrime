@@ -64,8 +64,8 @@ public class Red5Client extends RTMPClient {
                 app.driverCallServer(PlayerCommands.messageclients, "invalid relay server login info");
                 return;
             }
-            settings.writeSettings(ManualSettings.relayserver, hostuserpass[0]);
-            settings.writeSettings(ManualSettings.relayserverauth, Settings.DISABLED);
+            settings.writeSettings(GUISettings.relayserver, hostuserpass[0]);
+            settings.writeSettings(GUISettings.relayserverauth, Settings.DISABLED);
 //            Util.log(hostuserpass[0]+hostuserpass[1]+hostuserpass[2], this);
         }
 
@@ -82,8 +82,8 @@ public class Red5Client extends RTMPClient {
         }
 
         if (hostuserpass == null &&
-                (settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED) ||
-                settings.readSetting(ManualSettings.relayserverauth).equals(Settings.DISABLED)) ) {
+                (settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED) ||
+                settings.readSetting(GUISettings.relayserverauth).equals(Settings.DISABLED)) ) {
             app.driverCallServer(PlayerCommands.messageclients, "relay server not set");
             return;
         }
@@ -96,7 +96,7 @@ public class Red5Client extends RTMPClient {
             }
         });
 
-        String server = settings.readSetting(ManualSettings.relayserver);
+        String server = settings.readSetting(GUISettings.relayserver);
         String app = "oculusPrime";
         int port = Integer.valueOf(settings.readRed5Setting("rtmp.port"));
 
@@ -105,7 +105,7 @@ public class Red5Client extends RTMPClient {
             args[0] = hostuserpass[1]+" "+hostuserpass[2]+" remember";
         }
         else {
-            args[0] = settings.readSetting(ManualSettings.relayserverauth);
+            args[0] = settings.readSetting(GUISettings.relayserverauth);
         }
 
         connect(server, port, makeDefaultConnectionParams(server, port, app), connectCallback, args);
@@ -133,7 +133,7 @@ public class Red5Client extends RTMPClient {
                     app.driverCallServer(PlayerCommands.driverexit, null);
                 }
 
-                state.set(State.values.relayserver, settings.readSetting(ManualSettings.relayserver));
+                state.set(State.values.relayserver, settings.readSetting(GUISettings.relayserver));
 
                 app.driverCallServer(PlayerCommands.messageclients, "connected to relay server: " +
                         state.get(State.values.relayserver));
@@ -175,7 +175,7 @@ public class Red5Client extends RTMPClient {
 
                     Util.delay(5000); // allow time to connect
 
-                    while(!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED) &&
+                    while(!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED) &&
                             stayConnectedId == id) {
 
                         if (System.currentTimeMillis() - lastping < PINGTIMEOUT &&

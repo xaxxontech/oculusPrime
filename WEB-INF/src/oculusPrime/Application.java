@@ -345,7 +345,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
 		// use relay server if set
-		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED)) {
+		if (!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
 
 			red5client = new Red5Client(this); // connects to remote server
 			red5client.connectToRelay();
@@ -386,7 +386,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (authtoken != null) {
 				IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
 				sc.invoke("relayCallClient", new Object[] { "writesetting",
-						ManualSettings.relayserverauth.toString()+" "+authtoken });
+						GUISettings.relayserverauth.toString()+" "+authtoken });
 			}
 
 			if (state.exists(values.driver)) {
@@ -1020,8 +1020,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case relaydisable:
-			driverCallServer(PlayerCommands.writesetting, ManualSettings.relayserver.toString()+" "+Settings.DISABLED);
-			driverCallServer(PlayerCommands.writesetting, ManualSettings.relayserverauth.toString()+" "+Settings.DISABLED);
+			driverCallServer(PlayerCommands.writesetting, GUISettings.relayserver.toString()+" "+Settings.DISABLED);
+			driverCallServer(PlayerCommands.writesetting, GUISettings.relayserverauth.toString()+" "+Settings.DISABLED);
 			// break omitted on purpose
 
 		case relaydisconnect:

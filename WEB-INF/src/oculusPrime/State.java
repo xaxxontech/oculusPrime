@@ -33,25 +33,29 @@ public class State {
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
-		writingframegrabs, record, sounddetect,// undocumented
+		record, sounddetect,
+		// not typically used by scripts, undocumented:
+		writingframegrabs,
 
 		// power
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,
 		powererror, forceundock,
+		// not typically used by scripts, undocumented:
 		redockifweakconnection, // undocumented
 
 		// system
-		javastartup, linuxboot, httpport, lastusercommand, cpu, guinotify,
-		osarch, waitingforcpu, relayserver, relayclient, // to be documented
+		javastartup, linuxboot, httpport, lastusercommand, cpu, guinotify, waitingforcpu, osarch,
+
 
 		// network
 		localaddress, externaladdress, ssid,
-		networksinrange, networksknown, gatewayaddress, // to be documented
+		networksinrange, networksknown, gatewayaddress, relayserver, relayclient,
 
 		// odometry
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast,
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
-		calibratingrotation, // undocumented
+		// not typically used by scripts, undocumented:
+		calibratingrotation,
 
 		// navigation
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,

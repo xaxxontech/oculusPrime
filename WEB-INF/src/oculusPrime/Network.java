@@ -247,7 +247,7 @@ public class Network {
         if (!state.exists(State.values.relayserver))
             str += "<br><a class=\"blackbg\" href=\"network\" target=\"_blank\">more network controls</a><br>\n";
 
-        String server = settings.readSetting(ManualSettings.relayserver);
+        String server = settings.readSetting(GUISettings.relayserver);
         str += "<br>relay server: "+server;
         if (state.exists(State.values.relayserver)) {
             str += "<br> &nbsp; status: connected to server";

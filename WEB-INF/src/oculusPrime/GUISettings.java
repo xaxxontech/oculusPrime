@@ -9,7 +9,9 @@ public enum GUISettings {
 	docktarget, vidctroffset, vlow, vmed, vhigh, vfull, vcustom, vset, maxclicknudgedelay, steeringcomp, 
 	maxclickcam, loginnotify, redock, navigation, telnetport,
 	email_smtp_server, email_smtp_port, email_username, email_password, email_from_address, email_to_address,
-	volume, reboot, camhoriz, camreverse; 
+	volume, reboot, camhoriz, camreverse,
+	relayserver, relayserverauth, // undocumented
+	;
 	
 	/** get basic settings */
 	public static Properties createDeaults() {
@@ -44,6 +46,8 @@ public enum GUISettings {
 		config.setProperty(email_from_address.name(), Settings.DISABLED);
 		config.setProperty(email_to_address.name(), Settings.DISABLED);
 		config.setProperty(telnetport.name(), Settings.DISABLED);
+		config.setProperty(relayserver.name(), Settings.DISABLED);
+		config.setProperty(relayserverauth.name(), Settings.DISABLED);
 
 		return config;
 	}
