@@ -370,54 +370,55 @@ public class Application extends MultiThreadedApplicationAdapter {
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
-		
-		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
-//		Util.updateExternalIPAddress();
-//		Util.updateLocalIPAddress();	
-//		Util.setJettyTelnetPort();
-//		Util.updateJetty();		 
-			
-//		Util.updateExternalIPAddress();
-//		Util.updateLocalIPAddress();
 		network = new Network(this);
-
-		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
-		
 		watchdog = new SystemWatchdog(this);
 		if(settings.getBoolean(GUISettings.navigation)) new developer.Navigation(this);
 		
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
 			// extra logging info 
+			Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
 			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
-			// Util.logLinuxRelease(); 
+			Util.logLinuxRelease(); 
 			
 			// developer debugging info, warning to reboot after many restarts
-			if(settings.getInteger(ManualSettings.restarted) > 5)
-				NavigationLog.newItem("WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			//if(settings.getInteger(ManualSettings.restarted) > 5)
+				
+			NavigationLog.newItem(NavigationLog.ALERTSTATUS, "WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// try re-docking, then start routes again 
 			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 		}
 		
+		// start active route 
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
-		Util.log("application initialized", this);
+		Util.log("application initialized", this);		
+		
 	}
 	
 	private void redockWaitRunRoute(){
-		new Thread(new Runnable() { public void run(){
+		new Thread(new Runnable() { public void run() {
 			try {
-				Util.delay(3000); // system settle 	
-				NavigationLog.newItem("booted undocked, trying redock");
-				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				
-				state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TEN_MINUTES);
-				if(( state.equals(values.wallpower, "true") && state.equals(values.dockstatus, AutoDock.DOCKED))){
-					
-					Util.delay(5000); // system settle 		
-					Util.debug("redockWaitRunRoute(): run active route");
-					Navigation.runActiveRoute();					
-				}				
+				Util.delay(5000); // system settle 	
+				
+				Util.debug(".... booted undocked, trying redock, waiting....", this);		
+				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
+				if(state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TEN_MINUTES)){
+					if(( /* state.equals(values.wallpower, "true") && */ state.equals(values.dockstatus, AutoDock.DOCKED))){
+								
+						Util.debug(".... booted undocked, trying redock, done waiting....", this);		
+	
+						Util.delay(15000); // system settle 	
+						
+						Util.debug(".... redockWaitRunRoute(): run active route: " + NavigationUtilities.getActiveRoute() + " " + state.get(values.navigationroute));
+						Navigation.runActiveRoute();	
+						
+					}				
+				} else {
+					NavigationLog.newItem(NavigationLog.ALERTSTATUS, "redockWaitRunRoute(): failed to dock");
+					new SendMail("oculus can't dock", "redockWaitRunRoute() failed: " + state.toString().replaceAll("<br>", "\n"));
+				}
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
@@ -659,13 +660,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 					str.equals(ArduinoPrime.direction.stop.toString())){
 				
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user");
+//				NavigationLog.newItem(/*NavigationLog.INFOSTATUS, */"Route cancelled by user");
 				Navigation.cancelAllRoutes();
 			
-			} else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
+			} /*else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
-			}
+			} removed by brad */
 
 			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
 			move(str); 
@@ -969,9 +970,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case gotodock:
-			Util.log("Route canceled by user (gotodock)", this);
-			NavigationLog.newItem("Route canceled by user (gotodock)");
-			Navigation.failed = true;
+	//		Util.log("Route canceled by user (gotodock)", this);
+	//		NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route canceled by user (gotodock)");
+	//		Navigation.cancelAllRoutes();
 			Navigation.dock(); 
 			break;
 			
@@ -1009,7 +1010,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case resetroutedata: 
-			NavigationLog.newItem("User reset route info for: "+str);
+			NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route info for: "+str);
 			messageplayer("User reset route status for: "+str, null, null);
 			NavigationUtilities.setRouteFails(str, 0);
 			NavigationUtilities.setRouteCount(str, 0);
@@ -1017,22 +1018,20 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case runroute:
-			if(str != null) Navigation.runRoute(str);
+			if(str == null) return;
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+				Util.log("..must be docked to start new route, but setting active: " + str, this);
+				NavigationUtilities.saveRoute(str);
+				return;					
+			}
+			NavigationLog.newItem("Route: " + str + "  Activated by user");
+			Navigation.runRoute(str);
 			break;
 
 		case cancelroute:
-			
-			
-			if(state.exists(values.navigationroute) && NavigationUtilities.getActiveRoute() != null){	
-				
-				Util.log("cancel route:: active route: " + NavigationUtilities.getActiveRoute());
-
-				NavigationLog.newItem("Route canceled by user: " + NavigationUtilities.getActiveRoute());
-				Navigation.cancelAllRoutes();
-			}
-			
-			else Util.log("no active route, skipping.. ");
-			
+			Util.log("cancel route:: active route: " + NavigationUtilities.getActiveRoute() + " state: " + state.get(values.navigationroute), this);
+			NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: canceled by user");
+			Navigation.cancelAllRoutes();
 			break;
 
 		case startmapping: Navigation.startMapping(); break;

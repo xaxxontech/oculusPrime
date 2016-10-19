@@ -107,6 +107,8 @@ public class NavigationLog {
         } }).start();
     }
 
+    /*   */
+    
     public static synchronized void newItem(final String msg){ 
         new Thread(new Runnable() { public void run() {
             long timeout = System.currentTimeMillis() + 5000;
@@ -121,7 +123,7 @@ public class NavigationLog {
             newItemBusy = false;
         } }).start();
     }
-    
+ 
     private static void writeFile(String newitem){
   
 // in development mode... backup by renaming index.html to xxx.html 

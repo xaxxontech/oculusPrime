@@ -39,8 +39,10 @@ public enum PlayerCommands {
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed, forwardtimed,
 	arcmove,
-    // lights and camera tilt
+    
+	// lights and camera tilt
     strobeflash, spotlight, floodlight, cameracommand, camtilt,
+    
 	// undocumented (unused):
     fwdflood,
 
@@ -52,6 +54,7 @@ public enum PlayerCommands {
 	getlightlevel, setstreamactivitythreshold,
 	objectdetect, objectdetectcancel,
 	motiondetect, motiondetectcancel,
+	
 	// undocumented:
 	objectdetectstream, motiondetectstream, sounddetect,
 
@@ -59,25 +62,16 @@ public enum PlayerCommands {
 	speech, serverbrowser, email, state, rssadd,
     
     // experimental (undocumented)
-    opennisensor, clearmap, error, resetroutedata,
+    opennisensor, clearmap, error, resetroutedata, wait, test,
 
-    // experimental (undocumented)
-    // opennisensor, clearmap, test,
-
-    // deprecated (kept for mobile client compatibility, undocumented)
-    spotlightsetbrightness, 
+    // undocumented
+    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, deletelogs, routedata, 
     
-    // undocumented    
-    statuscheck, block, unblock, getemailsettings, emailsettingsupdate, deletelogs, routedata, wait, test,
-    
-//    statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
-//	deletelogs, 
-//    truncimages, 
-    truncros, truncarchive, archive,
 	archiveros, archiveimages, archivelogs, calibraterotation, relayconnect,
 	relaydisconnect, relaydisable, networksettings, networkconnect,
-
-    ;
+ 
+	// deprecated (kept for mobile client compatibility, undocumented)
+    spotlightsetbrightness;
 
 	// sub-set that are restricted to "user0"
 	private enum AdminCommands {

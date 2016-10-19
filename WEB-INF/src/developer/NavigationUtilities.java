@@ -189,6 +189,7 @@ public class NavigationUtilities {
 	}
 	
 	public static String getRouteFailsString(final String name, final String xml){
+		if(name == null || xml == null) return "-1";
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
@@ -203,6 +204,7 @@ public class NavigationUtilities {
 	}
 	
 	public static void setRouteFails(final String name, final int routefails){
+		if(name == null) return;
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -270,6 +272,7 @@ public class NavigationUtilities {
 	//--------------- route count
 	
 	public static void setRouteCount(final String name, final int routecount){
+		if(name == null) return;
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -291,6 +294,7 @@ public class NavigationUtilities {
 	}
 	
 	public static String getRouteCountString(final String name, final String xml){
+		if(name == null || xml == null) return "-1";
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
@@ -339,6 +343,7 @@ public class NavigationUtilities {
 	}
 	
 	public static String getRouteDistanceEstimateString(final String name, final String xml){
+		if(name == null || xml == null) return "-1";
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
@@ -366,6 +371,7 @@ public class NavigationUtilities {
 	//-------------------- time  -- units seconds --------------------//
 
 	public static void setRouteTimeEstimate(final String name, final int seconds){
+		if(name == null) return;
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -387,6 +393,7 @@ public class NavigationUtilities {
 	}
 
 	public static String getRouteTimeEstimateString(final String name, final String xml){
+		if(name == null) return "-1";
 		NodeList routes = loadXMLFromString(xml).getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
 			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
@@ -435,6 +442,7 @@ public class NavigationUtilities {
 	}
 
 	public static void setActiveRoute(String name){
+		if(name == null) return;;
 		Document document = loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		Element route = null;
@@ -447,8 +455,6 @@ public class NavigationUtilities {
 		route.getElementsByTagName(ACTIVE).item(0).setTextContent("true");
 		String xmlstring = XMLtoString(document);
 		saveRoute(xmlstring);
-	
-//		System.out.println("xml : " + xmlstring);
 	}
 
 	public static Element getRouteElement(final String name){

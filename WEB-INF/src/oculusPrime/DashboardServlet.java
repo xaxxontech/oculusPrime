@@ -24,7 +24,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	
-	private static final int MAX_STATE_HISTORY = 25;
+	private static final int MAX_STATE_HISTORY = 40;
 	private static final String HTTP_REFRESH_DELAY_SECONDS = "6"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
@@ -280,6 +280,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosscan.name())) key = i.next();
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
+				if(key.equals(values.networksinrange.name())) key = i.next();
 				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "</a>");
 				
 				if( !i.hasNext()) break;
@@ -290,6 +291,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosscan.name())) key = i.next();
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
+				if(key.equals(values.networksinrange.name())) key = i.next();
 				str.append("<td><b>" + key + "</b><td>" + props.get(key) + "</a>");
 				if( !i.hasNext()) break;
 				
@@ -372,10 +374,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
 		
 		// version | ssid | ping delay
-		String[] jetty = Util.getJettyStatus().split(",");
+		// String[] jetty = Util.getJettyStatus().split(",");
 		str.append("\n<tr><td><b>version</b><td>" + VERSION); 
-		str.append("\n<td><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\">" + jetty[1]); 
-		str.append("\n<td><b>ping</b><td>" + jetty[3]); 
+		str.append("\n<td><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\">" + "fuck"); 
+		str.append("\n<td><b>ping</b><td>" + "fuck"); 
 
 		// motor | wan | hdd 		
 		str.append("\n<tr>");
@@ -445,7 +447,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append( nlink + "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>" ); 		
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(15) + "\n");
+		str.append(getTail(25) + "\n");
 		return str.toString();
 	}
 	
@@ -458,7 +460,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(state.exists(values.navigationroute)) link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">(cancel)</a>";
 		
-		link += " f: " + Navigation.failed;
+//		link += " f: " + Navigation.failed;
 		link += "  |  ";
 		for(int i = 0; i < list.size(); i++){
 			//if( ! list.get(i).equals(active))
@@ -472,7 +474,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	}
 	
 	private String getActiveRoute(){  	
-		String rname = NavigationUtilities.getActiveRoute(); 
+		String rname = "none";
+		try {
+			rname = NavigationUtilities.getActiveRoute();
+		} catch (Exception e) {
+			Util.log(e.getMessage());
+		} 
 		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) + " ";
 		String next = state.get(values.roswaypoint);
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
@@ -483,12 +490,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} 
 		
 		if(next==null) time = "";
-		
+	
 		String link = "\n\n<td><b>next</b><td>" + next; 
-		link += "<td><b>meters</b><td>" 
+	/*			link += "<td><b>meters</b><td>" 
 				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + " | " +  NavigationUtilities.getRouteDistanceEstimate(rname)
 				+ "<td><b>time</b><td>" + time + "| " +  NavigationUtilities.getRouteTimeEstimate(rname);
-/*		
+	
 		link += "<tr><td><b>stats</b><td>" + NavigationUtilities.getRouteFailsString(rname)
 			+ " / " + NavigationUtilities.getRouteCountString(rname) 
 			+ "<td><b>est</b><td>" +  NavigationUtilities.getRouteDistanceEstimate(rname) // + " " + state.get(values.navigationrouteid)
@@ -541,31 +548,23 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	@Override
 	public void updated(String key){
-	/*
-		if(key.equals(values.dockstatus.name())){
-			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
 		
-				Util.fine("dashboard....... docked.... ");
-
-			
-			}
-		}
-		*/
-		
-
 		if(key.equals(values.roswaypoint.name())){
 			
 			Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);
 			nextWapoint = state.get(values.roswaypoint);
+			
 		}
 		
 		if(state.getBoolean(values.routeoverdue)) 
 			state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
-		
+
+		if(key.equals(values.networksinrange.name())) return;
 		if(key.equals(values.batteryinfo.name())) return;
 		if(key.equals(values.batterylife.name())) return;		
  		if(key.equals(values.batteryvolts.name())) return; 		
  		if(key.equals(values.cpu.name())) return; 
+
 
 //		if(key.equals(values.framegrabbusy.name())) return;
 //		if(key.equals(values.rosglobalpath.name())) return;

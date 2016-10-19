@@ -26,17 +26,20 @@ import oculusPrime.commport.ArduinoPrime;
 public class Navigation implements Observer {
 	
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
-	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
+	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;	
+	
+	private static final int LIGHT_LEVEL_TOO_LOW = 25;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 20;  // TODO: set to 15 in production
 	public static final int MIN_BATTERY_LIFE = 50;               // TODO: CALCULATE THIS FROM ROUTE INFO?
 	public static final String DOCK = "dock";                    // waypoint name
 	
 	private static Settings settings = Settings.getReference();
 	private static State state = State.getReference();
-	public static boolean navdockactive = false;
-	public static boolean failed = false; 
+	private static boolean failed = false; 
 	private static Application app = null;	
-	private static Element navroute = null;
+	private static Element navroute = null;	
+	
+	public static boolean navdockactive = false;
 	public static long routemillimeters = 0;  
 	public static long routestarttime = 0;
 	public static int consecutiveroute = 1;  
@@ -69,11 +72,16 @@ public class Navigation implements Observer {
 		
 		if(key.equals(values.roswaypoint.name())){
 			Util.log("point: " + state.get(values.roswaypoint), this);
-		}
-		
+		}	
 		
 		if(key.equals(values.navigationroute.name())){
 			Util.log("NAV ROUTE: " + state.get(values.navigationroute), this);
+			if( ! state.exists(values.navigationroute)){
+				
+				Util.log("......... route null: failed or canceled?? ", this);
+				failed = true;
+				
+			}
 		}
 		
 		if(key.equals(values.dockstatus.name())){
@@ -277,10 +285,14 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
+		
+	//	if( ! state.block(values.processWayPointBusy, "false", (int)Util.FIVE_MINUTES))
+	//		Util.log("Navigation.dock(): timed out waiting for processWayPointBusy flag");
 
 		SystemWatchdog.waitForCpu();
 		Ros.setWaypointAsGoal(DOCK);
 		state.set(values.roscurrentgoal, "pending");
+		SystemWatchdog.waitForCpu();
 
 		new Thread(new Runnable() { public void run() {
 
@@ -295,13 +307,17 @@ public class Navigation implements Observer {
 				try {
 					if(!state.equals(values.roscurrentgoal, goalcoords)){
 						Util.log("Navigation.dock(): waypoint changed while waiting", this);
+//						failed = true; // ??? 
+	
+						Util.log("Navigation.dock(): is this a route failure? ");
+
 						return;
 					}
 				} catch (Exception e) {Util.printError(e);}
 				Util.delay(10);
 			}
 
-			if ( !state.exists(values.rosgoalstatus)) { 
+			if ( ! state.exists(values.rosgoalstatus)) { 
 				//this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 				Util.log("error, rosgoalstatus null, setting to empty string", this); 
 				state.set(values.rosgoalstatus, "");
@@ -320,6 +336,7 @@ public class Navigation implements Observer {
 			stopNavigation();
 			Util.delay(Ros.ROSSHUTDOWNDELAY/2); 
 			// 5000 too low, massive cpu sometimes here
+			SystemWatchdog.waitForCpu();
 			SystemWatchdog.waitForCpu();
 			SystemWatchdog.waitForCpu();
 
@@ -381,20 +398,22 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.autodock, autodockmodes.go.name());
 
 			// ------------------------------------------------------------------------------------------------------------------------
+			// updated blocking call 
 			// wait while autodocking does its thing
-			// state.block(values.autodocking, "true", (int)SystemWatchdog.AUTODOCKTIMEOUT, 100);
+
 			state.block(values.autodocking, "false", (int)SystemWatchdog.AUTODOCKTIMEOUT, 100);
 			
+			// --- was before 
 			//start = System.currentTimeMillis();
 			//while (state.getBoolean(values.autodocking) &&
-			///		System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT) Util.delay(100);
+			//		System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT) Util.delay(100);
 
-			if (!navdockactive) return;
+			if( ! navdockactive) return;
 
 			if (state.equals(values.dockstatus, AutoDock.DOCKED)) {
 				Util.delay(2000);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.name());
-			} else  Util.log("Navigation.dock() - unable to dock", this);
+			} else Util.log("Navigation.dock() - unable to dock", this);
 		}}).start();
 
 		navdockactive = false;
@@ -447,6 +466,7 @@ public class Navigation implements Observer {
 		if( route != null ){
 			runRoute(route);
 			Util.log("Navigation.runActiveRoute(): Auto-starting nav route: "+route);
+			NavigationLog.newItem("Route: " + route + "  Auto-Started");
 		}
 	}
 	
@@ -659,7 +679,7 @@ public class Navigation implements Observer {
 
 	public static void runRoute(final String name){
 		
-		Util.log("runRoute().. runRoute: " + name);
+		Util.log("-----------runRoute(): runRoute: " + name);
 
 		if(state.getBoolean(values.autodocking)){
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
@@ -678,14 +698,6 @@ public class Navigation implements Observer {
 			return;
 		}
 		
-		// set as active and start route
-		if(state.exists(values.navigationroute)){
-			Util.log(".. route in progress, need to cancel first:  "+state.get(values.navigationroute));
-			cancelAllRoutes();
-			state.block(values.navigationroute, 5000);
-			Util.log(".. done cancel first, now set active.. ");
-	//		Util.delay(3000);
-		}
 		NavigationUtilities.setActiveRoute(name);		
 		state.set(values.navigationroute, name);
 		navroute = NavigationUtilities.getRouteElement(name);
@@ -693,7 +705,7 @@ public class Navigation implements Observer {
 		new Thread(new Runnable() { public void run() {
 			
 			Util.log("Route: " + name + "  Activated by user");
-			NavigationLog.newItem("Route: " + name + "  Activated by user");
+//				NavigationLog.newItem("Route: " + name + "  Activated by user");
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + name);
 			
 			while(true){ // repeat route schedule forever until cancelled
@@ -715,17 +727,12 @@ public class Navigation implements Observer {
 					return;
 				}
 				
-//				if( ! state.exists(values.navigationroute) || NavigationUtilities.getActiveRoute() != null){
-//					Util.fine("..runRoute (canceled): " + name);
-//					return;
-//				}
-	
 				if(failed){
 					Util.fine("..runRoute (failed): " + name);
 					return;
 				}
 				
-				// developer 
+				// developer -- skip route if battery low 
 				if(settings.getBoolean(ManualSettings.developer.name())){
 					if(batteryTooLow()){
 						Util.log("battery too low: " + state.get(values.batterylife) + " needs to be: " + MIN_BATTERY_LIFE, this);
@@ -745,9 +752,13 @@ public class Navigation implements Observer {
 					if( ! delayToNextRoute(name)) return;
 					continue;
 				}
-
+				
 				// check if cancelled while waiting
-				if( ! state.exists(values.navigationroute)) return;
+				if( ! state.exists(State.values.navigationroute)){
+					Util.fine("..runRoute (canceled): " + name);
+					return;
+				}
+				
 				if(failed){
 					Util.fine("..runRoute (failed): " + name);
 					return;
@@ -758,7 +769,7 @@ public class Navigation implements Observer {
 				routestarttime = System.currentTimeMillis(); 
 				state.delete(values.recoveryrotation);
 				state.delete(values.routeoverdue);
-				routemillimeters = 0; // count distance from dock too
+				routemillimeters = 0; // count distance from dock too, do before localize 
 //				rotations = 0;
 				failed = false;
 				
@@ -776,7 +787,7 @@ public class Navigation implements Observer {
 				
 				 } else {
 					
-					 Util.log("route completed: " + name + " " + (int)(System.currentTimeMillis() - routestarttime)/1000 + " seconds " + (int)routemillimeters/1000 + " meters"  , this);
+					 Util.log("route [" + name + "] completed: " + name + " " + (int)(System.currentTimeMillis() - routestarttime)/1000 + " seconds " + (int)routemillimeters/1000 + " meters"  , this);
 					 NavigationUtilities.routeCompleted(name, (int)(System.currentTimeMillis() - routestarttime)/1000, (int)routemillimeters/1000);
 					 NavigationLog.newItem(NavigationLog.COMPLETEDSTATUS, null);
 					 consecutiveroute++;
@@ -788,7 +799,7 @@ public class Navigation implements Observer {
 			}
 		}}).start();
 		
-		Util.fine("..runRoute (exit): " + name);
+		Util.fine("--------------------runRoute (exit): " + name);
 	}
 
 	private static void undockandlocalize() { // blocking
@@ -870,6 +881,7 @@ public class Navigation implements Observer {
 		 */
     	// takes 5-10 seconds to init if mic is on (mic only, or mic + camera)
 
+		state.set(values.processWayPointBusy, "true");
 		
 		boolean rotate = false;
 		boolean email = false;
@@ -1193,71 +1205,87 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.name());
 		}
-		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode) ;
+		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
+		
+		state.set(values.processWayPointBusy, "true");
+
 	}
 
 	public static boolean turnLightOnIfDark(){
 		
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
-		
+
+		/*  */
 		state.delete(values.lightlevel);
 		app.driverCallServer(PlayerCommands.getlightlevel, null); // get new value 
-		state.block(values.lightlevel, 5000);
+		state.block(values.lightlevel, 10000);
 
-		// be sure 
-		if(state.getInteger(values.lightlevel) == State.ERROR) {
-			app.driverCallServer(PlayerCommands.getlightlevel, null);	state.block(values.lightlevel, 5000);
-			Util.fine(" 0 -- error -- Navigation.turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel));
+		// be sure was real value 
+		if(state.getInteger(values.lightlevel) == State.ERROR){
+			
+			Util.fine("Navigation.turnLightOnIfDark(): error: light too low = " + state.getInteger(values.lightlevel));
+			state.delete(values.lightlevel);
+			app.driverCallServer(PlayerCommands.getlightlevel, null); // get new value 
+			state.block(values.lightlevel, 10000);
+			
+			if(state.getInteger(values.lightlevel) == State.ERROR){
+				
+				Util.fine("Navigation.turnLightOnIfDark(): error again: light too low = " + state.getInteger(values.lightlevel));
+				state.delete(values.lightlevel);
+				app.driverCallServer(PlayerCommands.getlightlevel, null); // get new value 
+				state.block(values.lightlevel, 10000);
+				
+			}
 		}
 		
-		if(state.getInteger(values.lightlevel) < 30){
-			Util.fine(" 1 Navigation.turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel));
+		if(state.getInteger(values.lightlevel) < LIGHT_LEVEL_TOO_LOW){
 			
-			if(state.getInteger(values.lightlevel) == State.ERROR) app.driverCallServer(PlayerCommands.getlightlevel, null);
-			state.block(values.lightlevel, 5000);
+			Util.fine("Navigation.turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel));
+			app.driverCallServer(PlayerCommands.spotlight, "100"); // turn light on
+			return true;
 
-			if(state.getInteger(values.lightlevel) < 30){
-
-				Util.fine(" 2 Navigation.turnLightOnIfDark(): light too low = " + state.getInteger(values.lightlevel));
-
-				app.driverCallServer(PlayerCommands.spotlight, "100"); // light on
-				return true;
-			}
 		}
 		
 		return false;
 	}
 
+	/*
 	public static void goalCancel(){
 		state.set(values.rosgoalcancel, true); // pass info to ros node
 		state.delete(values.roswaypoint);
 	}
+	*/
 	
-	public static void cancelAllRoutes(){	
-		
-		if( ! state.exists(values.navigationroute)){
-			Util.log("..........skipping, nothing active");
-
-			return;
-		}
-		
-		else {
+	public static synchronized void cancelAllRoutes(){	
+			
+		Util.log("cancelAllRoutes(): all routes cancelled", null);	
+		NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user");
+//		state.set(values.rosgoalcancel, true); // pass info to ros node
+		NavigationUtilities.deactivateAllRoutes();
+		state.delete(values.navigationroute);
+		state.delete(values.nextroutetime);
+		navroute = null;
+	
+		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)){
+			
+			app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled, going to the dock");
 			
 			Util.log("...........all routes cancelled, avtive == " + NavigationUtilities.getActiveRoute(), null);
-
 			
+			failed = true;
+			dock();
+			
+	//		state.block(values.navigationroute, (int)Util.FIVE_MINUTES);
+			
+	//		Util.log("........-----...all routes cancelled, avtive == " + NavigationUtilities.getActiveRoute(), null);
+
+		
+		} else {
+			
+			
+			app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
+
 		}
-		
-		failed = true;
-		navroute = null;
-		goalCancel();
-		state.delete(values.nextroutetime);
-		NavigationUtilities.deactivateAllRoutes();
-		Util.log("all routes cancelled", null);
-		
-	
-		
-		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 	}
 
 	public static void saveMap() {

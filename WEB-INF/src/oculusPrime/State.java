@@ -42,20 +42,15 @@ public class State {
 		localaddress, externaladdress, ssid, guinotify,
 		osarch,
 
-		// system
-		// javastartup, linuxboot, httpport, lastusercommand, cpu, guinotify,
-		// osarch, waitingforcpu, 
-		
 		relayserver, relayclient, // to be documented
 
 		// network
-		// localaddress, externaladdress, ssid,
 		networksinrange, networksknown, gatewayaddress, // to be documented
 
 		// odometry
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast,
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
-		calibratingrotation, // undocumented
+		calibratingrotation,
 
 		// navigation
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,
@@ -63,7 +58,7 @@ public class State {
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		roswaypoint, nextroutetime, //navigationrouteid
 		
-		rosarcmove, routeoverdue, recoveryrotation, waitingforcpu, sounddetect, // to be documented
+		rosarcmove, routeoverdue, recoveryrotation, waitingforcpu, sounddetect, processWayPointBusy, // to be documented
 
 	}
 
@@ -168,7 +163,7 @@ public class State {
 			current = get(member); 
 			if(current!=null){
 				if(target.equalsIgnoreCase(current)){
-					Util.debug("block() timeout in:  " + ((System.currentTimeMillis()-start)) + " ms for member: " + member.name(), this);
+					Util.debug("block() cleared in:  " + ((System.currentTimeMillis()-start)) + " ms for member: " + member.name(), this);
 					return true;
 				}
 			}
@@ -193,9 +188,9 @@ public class State {
 			String current = get(member); 
 			if(current!=null){
 				if(starting != current){	
-					Util.debug("block() updated: " + member, this);
-					Util.debug("block() changed in: " + ((System.currentTimeMillis()-start))/1000 + " seconds", this);
-					Util.debug("block() was: [" + starting + "] now: [" + current + "]", this);
+					// Util.debug("block() updated: " + member, this);
+					Util.debug("block() changed in: " + ((System.currentTimeMillis()-start))/1000 + " seconds for member: " + member, this);
+					// Util.debug("block() was: [" + starting + "] now: [" + current + "]", this);
 					return true;
 				}
 			}

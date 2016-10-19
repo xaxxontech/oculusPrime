@@ -21,7 +21,6 @@ import developer.NavigationLog;
 import developer.Ros;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
-import org.xml.sax.SAXParseException;
 
 public class Util {
 	
@@ -620,45 +619,13 @@ public class Util {
 	public static void updateExternalIPAddress(){
 		new Thread(new Runnable() { public void run() {
 			State state = State.getReference();
-//			try {			
-//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-//		new Thread(new Runnable() { public void run() {
-
-//			State state = State.getReference();
-
-//  --- changed: updated only called on ssid change from non null
-//			if(state.exists(values.externaladdress)) {
-//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
-//					return;
-//				}
-//			}
-
-//			try {
-//
-//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-//
-//				int i;
-//				String address = "";
-//				while ((i = in.read()) != -1) address += (char)i;
-//				in.close();
-//
-				String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
-
-
-				if(validIP(address)) state.set(values.externaladdress, address);
-				else state.delete(values.externaladdress);
-
-//			} catch (Exception e) {
-//				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
-//				state.delete(values.externaladdress);
-//			}
+			String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
+			if(validIP(address)) state.set(values.externaladdress, address);
+			else state.delete(values.externaladdress);
 		} }).start();
 	}
 
+	/*
 	public static void setJettyTelnetPort() {
 		new Thread(new Runnable() { public void run() {
 			Settings settings = Settings.getReference();
@@ -697,7 +664,8 @@ public class Util {
 			return new Date().toString() + " DISABLED";
 		}
 	}
-
+	*/
+	
 	public static void deleteLogFiles(){
 	
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -890,6 +858,7 @@ public class Util {
 		
 	}
 	
+	// TODO: THIS IS STUPID 
 	public static String getRosCheck(){	
 		
 		if(rosinfor!=null) return rosinfor;
@@ -928,7 +897,8 @@ public class Util {
 				
 		} catch (Exception e){ rosinfor = "-0.00"; }
 		
-		Util.log(".........ros dir = " + Ros.getRosPackageDir(), null);
+//	        .........ros dir = /home/brad/catkin_ws/src/oculusprime_ros
+//  		Util.log(".........ros dir = " + Ros.getRosPackageDir(), null);
 		
 		try {
 			new Thread(new Runnable() { public void run() {
