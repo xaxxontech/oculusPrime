@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.InputStreamReader;
 
 import oculusPrime.ManualSettings;
@@ -161,6 +162,18 @@ public class NavigationLog {
             fw.close();
         } catch (Exception e) { Util.printError(e); }
     }
+    
+    public static File[] getArchiveLogs() {
+
+		File dir = new File(navigationlogpath.replace("index.html", ""));
+		File[] files = dir.listFiles(new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				return name.toLowerCase().endsWith(".html");
+			}
+		});
+
+		return files;
+	}
 
     private static String createFile(File file) {
         String str = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
@@ -219,7 +232,7 @@ public class NavigationLog {
         str += "</head><body onload=\"loaded();\">\n";
         str += "<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; cursor: pointer;' ";
         str += "onclick=\"window.open(document.URL.replace(/#.*$/, ''), '_self'); \" ";
-        str += ">Oculus Prime Navigation Log</div>\n";
+        str += ">Oculus Prime Navigation Log "+ getArchiveLogs().length +"</div>\n";
         str += FILEEND;
         return str;
     }

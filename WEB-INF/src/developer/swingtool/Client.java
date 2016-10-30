@@ -46,8 +46,7 @@ public class Client {
 					// block on input and then update text area
 					input = in.readLine();
 
-					if (input == null)
-						break;
+					if (input == null) break;
 
 					input = input.trim();
 

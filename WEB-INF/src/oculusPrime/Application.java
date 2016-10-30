@@ -358,14 +358,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			red5client.connectToRelay();
 		}
 
-		if (state.get(values.osarch).equals(ARM))
-			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if (!settings.getBoolean(ManualSettings.useflash))
-			state.set(values.driverstream, driverstreamstate.disabled.toString());
-		else
-			state.set(State.values.driverstream, driverstreamstate.stop.toString());
-
-		if (state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		
+		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 		
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
@@ -382,9 +379,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.logLinuxRelease(); 
 			
 			// developer debugging info, warning to reboot after many restarts
-			//if(settings.getInteger(ManualSettings.restarted) > 5)
+			// if(settings.getInteger(ManualSettings.restarted) > 5)
 				
-			NavigationLog.newItem(NavigationLog.ALERTSTATUS, "WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			NavigationLog.newItem("WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// try re-docking, then start routes again 
 			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
@@ -392,7 +389,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		// start active route 
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
-		Util.log("application initialized", this);		
+		Util.log("java application initialized", this);		
 		
 	}
 	
@@ -660,13 +657,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 					str.equals(ArduinoPrime.direction.stop.toString())){
 				
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
-//				NavigationLog.newItem(/*NavigationLog.INFOSTATUS, */"Route cancelled by user");
+				NavigationLog.newItem("Route cancelled by user");
 				Navigation.cancelAllRoutes();
 			
-			} /*else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
+			}  else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
-			} removed by brad */
+			} 
 
 			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
 			move(str); 
@@ -999,7 +996,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			break;
 		
-		case routedata:
+		case routedata: // TODO: makes this xml !!
 			String r = "count: " + NavigationUtilities.getRouteCountString(str) 
 			 			+ " fail: " + NavigationUtilities.getRouteFailsString(str)
 			 			+ " meters: " + NavigationUtilities.getRouteDistanceEstimate(str)
@@ -1014,24 +1011,31 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("User reset route status for: "+str, null, null);
 			NavigationUtilities.setRouteFails(str, 0);
 			NavigationUtilities.setRouteCount(str, 0);
-			
 			break;
 			
 		case runroute:
 			if(str == null) return;
 			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
-				Util.log("..must be docked to start new route, but setting active: " + str, this);
-				NavigationUtilities.saveRoute(str);
+				messageplayer("must be docked to start new route, skipped", null, null);
 				return;					
 			}
+
+			String msg = "Route: " + str + " activated by ";
+			if(state.exists(values.driver)) msg += state.get(values.driver);
+			else msg += " automated user";
+			
 			NavigationLog.newItem("Route: " + str + "  Activated by user");
 			Navigation.runRoute(str);
 			break;
 
 		case cancelroute:
-			Util.log("cancel route:: active route: " + NavigationUtilities.getActiveRoute() + " state: " + state.get(values.navigationroute), this);
-			NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: canceled by user");
-			Navigation.cancelAllRoutes();
+			if(state.exists(values.navigationroute)){ 
+				msg = "Route: canceled by ";
+				if(state.exists(values.driver)) msg += state.get(values.driver);
+				else msg += " automated user";
+				NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);
+				Navigation.cancelAllRoutes();
+			}
 			break;
 
 		case startmapping: Navigation.startMapping(); break;
@@ -1733,6 +1737,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 // THIS in developer mode, or just warning? 	
 //			if(settings.getInteger(ManualSettings.restarted) > 10){
 //			Util.log("restart called but reboot neededd, going down..", this);
+			
 		}
 		
 		// write file as restart flag for script

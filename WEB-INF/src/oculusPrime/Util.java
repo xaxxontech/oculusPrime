@@ -729,6 +729,11 @@ public class Util {
 				// truncStaleAudioVideo();		
 				// truncStaleFrames();
 				zipLogFile();
+				
+				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));
+				NavigationLog.newItem("archived list: ......................... "  );
+				Util.log((NavigationLog.navigationlogpath.replace("index.html", new Date().toString() + ".html") + " -------------------------------------"));
+				
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
