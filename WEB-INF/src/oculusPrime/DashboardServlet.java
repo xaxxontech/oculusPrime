@@ -25,7 +25,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	
 	private static final int MAX_STATE_HISTORY = 40;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "6"; 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "7"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -42,6 +42,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;&nbsp;&nbsp;"+ 
 			"<a href=\"dashboard?action=email\">email</a>" ; 
+	
+	Vector<String> waypoints = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
 	
 	static final double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
@@ -280,6 +282,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
 				if(key.equals(values.networksinrange.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
 				str.append("<tr><td><b>" + key + "</b><td>" + props.get(key) + "</a>");
 				
 				if( !i.hasNext()) break;
@@ -291,6 +294,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(key.equals(values.rosmapwaypoints.name())) key = i.next();
 				if(key.equals(values.batteryinfo.name())) key = i.next();
 				if(key.equals(values.networksinrange.name())) key = i.next();
+				if(key.equals(values.rosmapinfo.name())) key = i.next();
 				str.append("<td><b>" + key + "</b><td>" + props.get(key) + "</a>");
 				if( !i.hasNext()) break;
 				
@@ -363,15 +367,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
 	
 		//------------------- now build HTML STRING buffer ------------------------------------------------------------//  
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
-		
-		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
 
-		// version | ssid | ping delay
-		// String[] jetty = Util.getJettyStatus().split(",");
+		// version | ssid | rate
 		str.append("\n<tr><td><b>version</b><td>" + VERSION); 
 		str.append("\n<td><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\">" + state.get(values.ssid)); 
-		str.append("\n<td><b>ping</b><td>" + "none"); 
+		str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=\"5\">5</a> <a href=\"dashboard?delay=10\">10</a>"); 
 
 		// motor | wan | hdd 		
 		str.append("\n<tr>");
@@ -420,13 +421,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) 
 			+ "<td><b>ros</b><td>" + Util.getRosCheck() + "</tr> \n" ); // doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
 		
+		// 
 		str.append(getActiveRoute());
 		str.append("\n\n<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
-		Vector<String> list = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
-		String nlink = "<tr><td><b>points</b><td colspan=\"11\">";
-		for(int i = 0 ; i < list.size() ; i++)
-			nlink += "<a href=\"dashboard?action=gotowp&route="+ list.get(i) +"\">" + list.get(i) + "</a>&nbsp;&nbsp;";
-		str.append( nlink ); 
+		// Vector<String> list = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
+		String nlink = "\n<tr><td><b>points</b><td colspan=\"11\">";
+		for(int i = 0 ; i < waypoints.size() ; i++)
+			nlink += "\n<a href=\"dashboard?action=gotowp&route="+ waypoints.get(i) +"\">" + waypoints.get(i) + "</a>&nbsp;&nbsp;";
+		str.append(nlink); 
+		str.append("&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>");
 		
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
@@ -435,9 +438,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			msg = "<tr><td><b>message</b><td colspan=\"11\">" + msg + "</tr> \n";
 			str.append(msg);
 		}
+	
 		
+		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
+// 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(25) + "\n");
+		str.append(getTail(22) + "\n");
 		return str.toString();
 	}
 	
@@ -450,6 +456,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	}
 	
 	private String getActiveRoute(){  	
+		
 	//	if( ! state.exists(values.navigationroute)) return "";
 		String rname = state.get(values.navigationroute);
 		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) + " ";
@@ -463,19 +470,28 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(next==null) time = "";
 	
-		String link = "\n\n<td><b>next</b><td>" + next; 
+		String link = "";
+		
+		try {
+			
+			link = "\n\n<td><b>next</b><td>" + next; 
 			link += "<td><b>meters</b><td>" 
-				+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + "   (" +  NavigationUtilities.getRouteDistanceEstimate(rname) + ")"
-				+ "<td><b>time</b><td>" + time + "   (" +  NavigationUtilities.getRouteTimeEstimate(rname)+")";
-		
-		link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) + " - " ; 
-		
-		link += " failed (" + Navigation.failed + ") ";//  + "exited (" + Navigation.runrouteexited + ")     ";
-		if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
-		if(state.getBoolean(values.waitingforcpu)) link+= " *cpubusy* "; 	
-				
-	//	link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
-		link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
+					+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + "   (" +  NavigationUtilities.getRouteDistanceEstimate(rname) + ")"
+					+ "<td><b>time</b><td>" + time + "   (" +  NavigationUtilities.getRouteTimeEstimate(rname)+")";
+			
+			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) + " - " + NavigationUtilities.getWaypointsForRoute(rname, NavigationUtilities.routesLoad());
+ ; 
+			
+			link += " failed (" + Navigation.failed + ") ";//  + "exited (" + Navigation.runrouteexited + ")     ";
+			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
+			if(state.getBoolean(values.waitingforcpu)) link+= " *cpubusy* "; 	
+					
+//	link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
+			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
+			
+		} catch (Exception e) {
+			Util.printError(e);
+		}
 		
 		return link; 
 	}

@@ -13,7 +13,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Vector;
 
@@ -37,11 +39,13 @@ public class Util {
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;
 
+	private static final int MIN_LOG_FILES = 6;
+
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
 	
-	static boolean debug = false;
+	static boolean debug = true;
 	
 	public Util(){
 		debug = Settings.getReference().getBoolean(ManualSettings.debugenabled);
@@ -625,47 +629,6 @@ public class Util {
 		} }).start();
 	}
 
-	/*
-	public static void setJettyTelnetPort() {
-		new Thread(new Runnable() { public void run() {
-			Settings settings = Settings.getReference();
-			String url = "http://127.0.0.1/?action=telnet&port=" + settings.readSetting(GUISettings.telnetport);
-			try {
-				URLConnection connection = (URLConnection) new URL(url).openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-				while ((in.read()) != -1); 
-				in.close();	
-			} catch (Exception e) {}
-		} }).start();
-	}
-	
-	public static void updateJetty() {
-		new Thread(new Runnable() { public void run() {
-			try {
-				String url = "http://127.0.0.1/?action=push";
-				URLConnection connection = (URLConnection) new URL(url).openConnection();
-				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-				while ((in.read()) != -1);
-				in.close();
-			} catch (Exception e) {}
-		} }).start();
-	}
-
-	public static String getJettyStatus() {
-		try {
-			String url = "http://127.0.0.1/?action=status";
-			URLConnection connection = (URLConnection) new URL(url).openConnection();
-			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-			int i; String reply = "";
-			while ((i = in.read()) != -1) reply += (char)i;
-			in.close();
-			return reply;
-		} catch (Exception e) {
-			return new Date().toString() + " DISABLED";
-		}
-	}
-	*/
-	
 	public static void deleteLogFiles(){
 	
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -711,6 +674,33 @@ public class Util {
 		} 
 	}
 	
+	public static void truncStaleNavigationFiles(){
+		
+		log("truncStaleNavigationFiles(): " + NavigationLog.navigationlogFOLDER);
+
+		File[] files = null;
+		try {
+			files = new File(NavigationLog.navigationlogFOLDER).listFiles();
+		} catch (Exception e) { printError(e); }	
+		
+		log("truncStaleNavigationFiles: files found = " + files.length);
+		
+		Arrays.sort(files, new Comparator<File>() {
+		    public int compare(File f1, File f2) {
+		        return Long.compare(f2.lastModified(), f1.lastModified());
+		    }
+		});
+		
+		// Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+		
+        for (int i = MIN_LOG_FILES; i < files.length; i++){
+			if(files[i].isFile()){
+				log(i + " " + /*files[i].getName() + */" was deleted " + (System.currentTimeMillis() - files[i].lastModified())/1000/60);
+	//			files[i].delete();
+			}
+		} 
+	}
+	
 	public static boolean linkedFrame(final String fname){ 
 		Process proc = null;
 		try { 
@@ -725,15 +715,21 @@ public class Util {
 	public static void archiveLogs(){
 		new Thread(new Runnable() { public void run() {
 			try {
-				appendUserMessage("log files being archived");
-				// truncStaleAudioVideo();		
-				// truncStaleFrames();
-				zipLogFile();
+				appendUserMessage("log files being archived...");
 				
-				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));
-				NavigationLog.newItem("archived list: ......................... "  );
-				Util.log((NavigationLog.navigationlogpath.replace("index.html", new Date().toString() + ".html") + " -------------------------------------"));
 				
+				//truncStaleAudioVideo();		
+				//truncStaleFrames();
+				zipLogFile();			
+				
+
+				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));	
+				
+				NavigationLog.newItem(NavigationLog.getAchiveLinks());
+
+				truncStaleNavigationFiles();
+								
+
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
@@ -748,8 +744,7 @@ public class Util {
 		       if (files[i].isFile()) names += "./log/"+files[i].getName() + " ";
 		    
 			names = names.trim();
-			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names +
-				" " + "./webapps" + Util.sep + "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html"};
+			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names +" " + NavigationLog.navigationlogFOLDER};
 		
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 

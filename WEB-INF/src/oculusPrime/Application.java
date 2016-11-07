@@ -967,9 +967,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case gotodock:
-	//		Util.log("Route canceled by user (gotodock)", this);
-	//		NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route canceled by user (gotodock)");
-	//		Navigation.cancelAllRoutes();
 			Navigation.dock(); 
 			break;
 			
@@ -1034,8 +1031,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 				if(state.exists(values.driver)) msg += state.get(values.driver);
 				else msg += " automated user";
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);
-				Navigation.cancelAllRoutes();
-			}
+				
+			} else Util.log("playerCallServer(): null route, skipped.. " , this);
+			Navigation.cancelAllRoutes();
 			break;
 
 		case startmapping: Navigation.startMapping(); break;

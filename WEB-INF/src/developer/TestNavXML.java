@@ -22,7 +22,7 @@ import org.xml.sax.SAXException;
 public class TestNavXML {
 	
 	String path = "F:\\robot\\archive\\robot backup\\oculusPrime\\conf\\navigationroutes.xml";
-	
+	/*
 	@Test
 	public void testCompareToSkeletonXML() throws Exception {
 		
@@ -55,6 +55,7 @@ public class TestNavXML {
 	    System.out.println("diff different: " + myDiff);
 	    
 	}
+	*/
 	
 	@Test
 	public void readRouteDetails() throws ParserConfigurationException{
@@ -86,12 +87,12 @@ public class TestNavXML {
 			String g = NavigationUtilities.removeTag(NavigationUtilities.ESTIMATED_TIME_TAG, f);
 			String h = NavigationUtilities.removeTag(NavigationUtilities.ACTIVE, g);
 
-
+/*	
+	
 //			System.out.println("both : " + h);
 			String value = h;
 			String temp = "";
-		/*		*/
-			
+				
 			for(int j = 0 ; ; j++){
 				System.out.println("days " + j + " " + value);
 				temp = NavigationUtilities.removeTag("day", value);
@@ -105,9 +106,9 @@ public class TestNavXML {
 				if(temp == null) break;
 				else value = temp;
 			}
-
+	*/
 			
-/*
+/**/
 			System.out.println("waypoints: " + NavigationUtilities.getWaypointsForRoute(name, xml));
 		
 			System.out.println("count    : " + NavigationUtilities.getRouteCountString(name, xml) + " == " + NavigationUtilities.getRouteCountString(name));
@@ -125,7 +126,7 @@ public class TestNavXML {
 			System.out.println("time     : " + NavigationUtilities.getRouteTimeEstimateString(name, xml) + " == " + NavigationUtilities.getRouteTimeEstimateString(name));
 			assertTrue(NavigationUtilities.getRouteTimeEstimateString(name, xml).equals(NavigationUtilities.getRouteTimeEstimateString(name)));
 			assertTrue(NavigationUtilities.getRouteTimeEstimate(name, xml) == NavigationUtilities.getRouteTimeEstimate(name));
-*/
+
 			
 		}
 	}
@@ -138,7 +139,7 @@ public class TestNavXML {
 		NavigationUtilities.navroutesfile = new File(path); // override path for junit test  
 		Vector<String> routes = NavigationUtilities.getRoutes(); 
 		for(int i = 0 ; i < routes.size() ; i++){
-				/*
+			
 			String name = routes.get(i);
 //			System.out.println("\n---- test write files: " + name + " -----");
 			
@@ -173,7 +174,6 @@ public class TestNavXML {
 			NavigationUtilities.routeFailed(name);
 			System.out.println(".. route failed: " + NavigationUtilities.getRouteFails(name));
 			NavigationUtilities.setRouteFails(name, NavigationUtilities.getRouteFails(name)-1 );
-			*/
 			
 // 			assertEquals(NavigationUtilities.getRouteFails(name), NavigationUtilities.setRouteFails(name, NavigationUtilities.getRouteFails(name)-1 ));
 			

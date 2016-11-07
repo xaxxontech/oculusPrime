@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.InputStreamReader;
 
-import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.State.values;
@@ -22,9 +21,9 @@ import oculusPrime.Util;
  * css: completedroute,
  */
 public class NavigationLog {
-
-    public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
-            "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
+	
+	public static final String navigationlogFOLDER =  Settings.redhome+Util.sep + "webapps" + Util.sep + "oculusPrime"+ Util.sep + "navigationlog";
+    public static final String navigationlogpath =  navigationlogFOLDER + Util.sep + "index.html";
 
     public static final String ALERTSTATUS = "ALERT";
     public static final String ERRORSTATUS = "ERROR";
@@ -163,17 +162,22 @@ public class NavigationLog {
         } catch (Exception e) { Util.printError(e); }
     }
     
-    public static File[] getArchiveLogs() {
-
-		File dir = new File(navigationlogpath.replace("index.html", ""));
+    public static File[] getArchiveLogs(){
+		File dir = new File(navigationlogFOLDER);
 		File[] files = dir.listFiles(new FilenameFilter() {
 			public boolean accept(File dir, String name) {
 				return name.toLowerCase().endsWith(".html");
 			}
 		});
-
 		return files;
 	}
+    
+    public static String getAchiveLinks(){
+    	File[] files = getArchiveLogs();     
+    	String link = "Archives: ";
+    	for(int i = 0 ; i < files.length ; i++) link += "<a href=\"" + files[i].getName() + "\">" + i + "</a> ";
+    	return link;
+    }
 
     private static String createFile(File file) {
         String str = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
@@ -232,7 +236,7 @@ public class NavigationLog {
         str += "</head><body onload=\"loaded();\">\n";
         str += "<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; cursor: pointer;' ";
         str += "onclick=\"window.open(document.URL.replace(/#.*$/, ''), '_self'); \" ";
-        str += ">Oculus Prime Navigation Log "+ getArchiveLogs().length +"</div>\n";
+        str += ">Oculus Prime Navigation Log </div>\n";
         str += FILEEND;
         return str;
     }

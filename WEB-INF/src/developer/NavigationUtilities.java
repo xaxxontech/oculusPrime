@@ -320,15 +320,15 @@ public class NavigationUtilities {
 	}
 	
 
-	/** */
+	/** 
 	public static Vector<String> getWaypointsForRoute(final String routename){
-		return getWaypointsForRoute(routesLoad(), routename);
-	}
+	return getWaypointsForRoute(routesLoad(), routename);
+	}	*/
 	
-	/** */
+	/** 
 	public static Vector<String> getWaypointsForActiveRoute(){
 		return getWaypointsForRoute(routesLoad(), getActiveRoute());
-	}
+	}*/
 	
 	/** */
 	// should take from waypoints text file?
