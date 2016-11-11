@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import oculusPrime.State.values;
-import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 
 public class Settings {
 

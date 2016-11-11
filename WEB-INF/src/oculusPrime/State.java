@@ -163,14 +163,14 @@ public class State {
 			current = get(member); 
 			if(current!=null){
 				if(target.equalsIgnoreCase(current)){
-					Util.debug("block() cleared in:  " + ((System.currentTimeMillis()-start)) + " ms for member: " + member.name(), this);
+//					Util.debug("block() cleared in:  " + ((System.currentTimeMillis()-start)) + " ms for member: " + member.name(), this);
 					return true;
 				}
 			}
 	
 			Util.delay(delay); 
 			if (System.currentTimeMillis()-start > timeout){ 
-				Util.debug("block() timeout: " + member.name(), this);
+//				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}
@@ -189,7 +189,7 @@ public class State {
 			if(current!=null){
 				if(starting != current){	
 					// Util.debug("block() updated: " + member, this);
-					Util.debug("block() changed in: " + ((System.currentTimeMillis()-start))/1000 + " seconds for member: " + member, this);
+					// Util.debug("block() changed in: " + ((System.currentTimeMillis()-start))/1000 + " seconds for member: " + member, this);
 					// Util.debug("block() was: [" + starting + "] now: [" + current + "]", this);
 					return true;
 				}

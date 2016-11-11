@@ -993,7 +993,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			break;
 		
-		case routedata: // TODO: makes this xml !!
+		case routedata: // TODO: makes this xml  
 			String r = "count: " + NavigationUtilities.getRouteCountString(str) 
 			 			+ " fail: " + NavigationUtilities.getRouteFailsString(str)
 			 			+ " meters: " + NavigationUtilities.getRouteDistanceEstimate(str)
@@ -1033,6 +1033,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);
 				
 			} else Util.log("playerCallServer(): null route, skipped.. " , this);
+			
 			Navigation.cancelAllRoutes();
 			break;
 

@@ -4,12 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Vector;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -22,16 +18,11 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.DOMException;
-
-// import org.custommonkey.xmlunit.Diff;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import oculusPrime.Util;
 
@@ -53,7 +44,7 @@ public class NavigationUtilities {
 		final String current = routesLoad();
 		
 		if(str.equalsIgnoreCase(current)){
-			Util.debug("saveRoute(): skipped, same XML string");
+//			Util.debug("saveRoute(): skipped, same XML string");
 			return;
 		}
 		
@@ -220,9 +211,6 @@ public class NavigationUtilities {
 					<wpname>coner</wpname>
 					<duration>10</duration>
 					<action>photo</action></waypoint><waypoint><wpname>sink</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			
-			<route><rname>red route</rname><minbetween>10</minbetween><starthour>00</starthour><startmin>00</startmin><routeduration>24</routeduration><day>Sun</day><day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day><active>false</active><waypoint><wpname>deck</wpname><duration>10</duration><action>photo</action></waypoint><estimateddistance>20</estimateddistance><estimatedtime>425</estimatedtime><waypoint><wpname>hallway</wpname><duration>10</duration><action>photo</action></waypoint><routecount>345</routecount><routefail>76</routefail><waypoint><wpname>front door</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			<route><rname>front door</rname><minbetween>10</minbetween><starthour>00</starthour><startmin>00</startmin><routeduration>24</routeduration><day>Sun</day><day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day><active>false</active><estimateddistance>0</estimateddistance><estimatedtime>206</estimatedtime><routecount>777</routecount><routefail>6</routefail><waypoint><wpname>deck</wpname><duration>10</duration><action>photo</action></waypoint><waypoint><wpname>front door</wpname><duration>10</duration><action>photo</action></waypoint></route>
 			... 
 		</routeslist>
 		
@@ -258,41 +246,6 @@ public class NavigationUtilities {
 	    		}
 			}
 		}
-		
-		<routeslist>
-			<route>
-				<rname>back door</rname>
-				<minbetween>2</minbetween>
-				<starthour>00</starthour>
-				<startmin>00</startmin>
-				<routeduration>24</routeduration>
-				<day>Sun</day>
-				<active>false</active>
-				<waypoint>
-					<wpname>deck</wpname>
-						<duration>10</duration>
-						<action>photo</action>
-				</waypoint>
-				<estimateddistance>5</estimateddistance>
-				<estimatedtime>158</estimatedtime>
-				<day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day>
-				<routecount>151</routecount>
-				<routefail>5</routefail>
-				<waypoint>
-					<wpname>coner</wpname>
-					<duration>10</duration>
-					<action>photo</action></waypoint><waypoint><wpname>sink</wpname><duration>10</duration><action>photo</action></waypoint>
-					
-			</route>
-			
-			<route><rname>red route</rname><minbetween>10</minbetween><starthour>00</starthour><startmin>00</startmin><routeduration>24</routeduration><day>Sun</day><day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day><active>false</active><waypoint><wpname>deck</wpname><duration>10</duration><action>photo</action></waypoint><estimateddistance>20</estimateddistance><estimatedtime>425</estimatedtime><waypoint><wpname>hallway</wpname><duration>10</duration><action>photo</action></waypoint><routecount>345</routecount><routefail>76</routefail><waypoint><wpname>front door</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			<route><rname>front door</rname><minbetween>10</minbetween><starthour>00</starthour><startmin>00</startmin><routeduration>24</routeduration><day>Sun</day><day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day><active>false</active><estimateddistance>0</estimateddistance><estimatedtime>206</estimatedtime><routecount>777</routecount><routefail>6</routefail><waypoint><wpname>deck</wpname><duration>10</duration><action>photo</action></waypoint><waypoint><wpname>front door</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			... 
-		</routeslist>
-		
-		neelcant and case worker donna and raven song  
-
-
 		
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
@@ -657,13 +610,21 @@ public class NavigationUtilities {
 	}
 
 	public static void routeCompleted(String name, int seconds, int meters){
+		
 		setRouteCount(name, getRouteCount(name)+1);
 		
 		int sec = getRouteTimeEstimate(name); 
-		setRouteTimeEstimate(name, (seconds+sec)/2); // average them
-		
-		int distace = getRouteDistanceEstimate(name);
-		setRouteDistanceEstimate(name, (distace+meters)/2); // average them
+		if(sec != seconds) {
+			setRouteTimeEstimate(name, (seconds+sec)/2); // average them	
+			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average seconds  was = " + seconds + " now = "+ sec);
+
+		}
+			
+		int distance = getRouteDistanceEstimate(name);
+		if(distance != meters){
+			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
+			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average distance was = " + meters  + " now = "+ distance);
+		}
 	}
 
 	public static void routeCompleted(String name){

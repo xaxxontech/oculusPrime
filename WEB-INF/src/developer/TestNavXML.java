@@ -1,23 +1,15 @@
 package developer;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Vector;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.custommonkey.xmlunit.Diff;
-import org.custommonkey.xmlunit.DifferenceListener;
-import org.custommonkey.xmlunit.IgnoreTextAndAttributeValuesDifferenceListener;
-import org.custommonkey.xmlunit.XMLUnit;
-import org.junit.Assert;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
 
 public class TestNavXML {
 	

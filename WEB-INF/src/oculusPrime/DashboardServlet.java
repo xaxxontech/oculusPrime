@@ -34,14 +34,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\" title=\"archive all files in log folders\">";	
 
 	static final String viewslinks = 
-			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;&nbsp&nbsp;"+
-			"<a href=\"dashboard?view=drive\">drive</a>&nbsp;&nbsp;&nbsp;&nbsp;"  +
-			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;&nbsp;&nbsp;" +
+			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
+			"<a href=\"dashboard?view=drive\">drive</a>&nbsp;&nbsp;"  +
+			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;" +
+			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;&nbsp;&nbsp;"  +
-			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snap</a>&nbsp;&nbsp;&nbsp;&nbsp;"+ 
-			"<a href=\"dashboard?action=email\">email</a>" ; 
+			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;"  +
+			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snaphot</a>&nbsp;&nbsp;"+ 
+			"<a href=\"dashboard?action=email\">send email</a>" ; 
 	
 	Vector<String> waypoints = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
 	
@@ -52,7 +52,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-	String nextWapoint;
+//	String nextWapoint = null;
+	
+	String refresh = HTTP_REFRESH_DELAY_SECONDS;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -97,6 +99,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
+		else refresh = delay;
 		
 		if(move != null){ 
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){ 
@@ -196,7 +199,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 		if(view != null){
 			if(view.equalsIgnoreCase("drive")){
-				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ refresh + "\"></head><body> \n");
 				out.println("<br/>&nbsp;&nbsp;<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;&nbsp;&nbsp;");
 				out.println("nudge: <a href=\"dashboard?view=drive&move=forward\">forward</a>&nbsp;&nbsp;");
 				out.println("<a href=\"dashboard?view=drive&move=backward\">backward</a>&nbsp;&nbsp;");
@@ -372,7 +375,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// version | ssid | rate
 		str.append("\n<tr><td><b>version</b><td>" + VERSION); 
 		str.append("\n<td><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\">" + state.get(values.ssid)); 
-		str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=\"5\">5</a> <a href=\"dashboard?delay=10\">10</a>"); 
+		str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | <a href=\"dashboard?delay=10\">10</a> | <a href=\"dashboard?delay=20\">20</a>"); 
 
 		// motor | wan | hdd 		
 		str.append("\n<tr>");
@@ -443,7 +446,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
 // 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(22) + "\n");
+		str.append(getTail(18) + "\n");
 		return str.toString();
 	}
 	
@@ -479,15 +482,18 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + "   (" +  NavigationUtilities.getRouteDistanceEstimate(rname) + ")"
 					+ "<td><b>time</b><td>" + time + "   (" +  NavigationUtilities.getRouteTimeEstimate(rname)+")";
 			
-			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) + " - " + NavigationUtilities.getWaypointsForRoute(rname, NavigationUtilities.routesLoad());
- ; 
+			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) 
+				+ " " + NavigationUtilities.getWaypointsForRoute(rname, NavigationUtilities.routesLoad());
+ 
+			; 
 			
-			link += " failed (" + Navigation.failed + ") ";//  + "exited (" + Navigation.runrouteexited + ")     ";
+			if(Navigation.failed) link += " *route failed*";
 			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
 			if(state.getBoolean(values.waitingforcpu)) link+= " *cpubusy* "; 	
 					
 //	link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
-			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
+			
+			link += "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
 			
 		} catch (Exception e) {
 			Util.printError(e);
@@ -540,12 +546,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	@Override
 	public void updated(String key){
 		
+		/*
 		if(key.equals(values.roswaypoint.name())){
 			
 			Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);
 			nextWapoint = state.get(values.roswaypoint);
 			
 		}
+		*/
 		
 		if(state.getBoolean(values.routeoverdue)) 
 			state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 

@@ -84,14 +84,11 @@ public class Navigation implements Observer {
 				return;
 			}
 			
-			Util.log("updated() waypoint = " + state.get(values.roswaypoint) + " " + waypoints, this);
-			
-			if( ! state.exists(values.roswaypoint)){
-				Util.log("updated() waypoint was deleted :" + waypoints, this);
-				return;
-			}
-			
 			if(waypoints == null) return;
+			
+			Util.log("updated() waypoint = " + state.get(values.roswaypoint) + " " + waypoints, this);
+			Util.log("updated() waypoint index = " + waypoints.indexOf(state.get(values.roswaypoint)), this);
+
 			for(int i = 0 ; i < waypoints.size() ; i++){
 				if(waypoints.get(i).equals(values.roswaypoint.name())){
 					
@@ -100,10 +97,6 @@ public class Navigation implements Observer {
 				}
 			}
 		}	
-		
-	//	if(key.equals(values.na.name())){
-	//		Util.log("updated() waypoint = " + state.get(values.waypointbusy), this);
-	//	}	
 		
 		if(key.equals(values.navigationroute.name())){
 			Util.log("updated() navigationroute = " + state.get(values.navigationroute), this);
@@ -118,12 +111,13 @@ public class Navigation implements Observer {
 		if(key.equals(values.dockstatus.name())){
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
 				
-				Util.log("updated() dockstatus, docked resetiing..", this);	
+				Util.log("updated() dockstatus, docked reset...", this);	
 				state.delete(values.routeoverdue);
 				state.delete(values.recoveryrotation);			
 				state.delete(values.waypointbusy);
 				rotations = 0;
 				failed = false;
+			//	waypoints = null;
 			
 			//  never do these here! 
 			//	routemillimeters = 0;  
@@ -701,7 +695,7 @@ public class Navigation implements Observer {
 			if( ! delayToNextRoute(name, navroute)) return;
 		}
 		
-		Util.fine(".............visitWaypoints(" + name + "): exit.......");
+		Util.fine("  ---- visitWaypoints(" + name + "): exiting");
 	}
 	
 	
@@ -711,9 +705,10 @@ public class Navigation implements Observer {
 
 	public static void runRoute(final String name){
 		
-		Util.log("-----------  runRoute(" + name + "): called..");
+		Util.fine("Navigation.runRoute(" + name + "): called");
 
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)){ 
+			Util.log("Can't start route, location unknown, command dropped");
 			app.driverCallServer(PlayerCommands.messageclients, "Can't start route, location unknown, command dropped");
 			return;
 		}
@@ -736,24 +731,16 @@ public class Navigation implements Observer {
 		state.set(values.navigationroute, name);
 				
 		if( ! state.equals(values.navigationroute, NavigationUtilities.getActiveRoute())){
-			Util.log("-----------  runRoute() route not set properly, return");
+			Util.log("runRoute() route not set properly, return");
 			return;
 		}
 		
-	/*	*/	
-		
-		try {
-			Util.log("runRoute(): " + waypoints.size() + " " + waypoints);
-		} catch (Exception e) {
-			Util.printError(e);
-		}
-	
 		new Thread(new Runnable() { public void run() {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + state.get(values.navigationroute));
 	
-			failed = false;   // might need resetting 
-			while( !failed ){ // repeat route schedule forever until cancelled
+			failed = false;            // might need resetting 
+			while( !failed ){          // repeat route schedule forever until cancelled
 				
 				// check if cancelled while waiting
 				if( ! state.exists(State.values.navigationroute)){
@@ -836,7 +823,7 @@ public class Navigation implements Observer {
 				 
 				if(failed){
 					
-					 Util.log("................route failed: " + name  , this);
+					 Util.log("Navigation.runRoute("+ name + "): route failed", this);
 					 NavigationUtilities.routeFailed(name);
 					 NavigationLog.newItem(NavigationLog.ERRORSTATUS, "route failed: called back to the dock ");
 					 dock();
@@ -853,7 +840,7 @@ public class Navigation implements Observer {
 					 // add on distance while docking 
 					 routemillimeters += (settings.getDouble(ManualSettings.undockdistance) * (double)1000);
 					
-					 Util.log("route [" + name + "] completed: " + name + " " + routetime + " seconds " + (int)routemillimeters/1000 + " meters"  , this);
+					 // Util.log("route [" + name + "] completed: " + name + " " + routetime + " seconds " + (int)routemillimeters/1000 + " meters"  , this);
 					 
 					 // update stats 
 					 NavigationUtilities.routeCompleted(name, routetime, (int)routemillimeters/1000);
@@ -1330,17 +1317,8 @@ public class Navigation implements Observer {
 	/*	*/
 	public static synchronized void cancelAllRoutes(){	
 		
-		/*
-		if( ! state.exists(values.navigationroute)){
-			Util.debug("cancelAllRoutes(): cancelAllRoutes(): navigation route is null!");
-			return;
-		}
-		*/
-		
 		goalCancel();
 		NavigationUtilities.deactivateAllRoutes();
-		
-		/*	*/
 		
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)){
 			
