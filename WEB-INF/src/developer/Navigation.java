@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Vector;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
@@ -28,7 +29,7 @@ public class Navigation implements Observer {
 	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;	
 	
-	private static final int LIGHT_LEVEL_TOO_LOW = 25;
+	private static final int LIGHT_LEVEL_TOO_LOW = 45;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 20;  // TODO: set to 15 in production
 	public static final int MIN_BATTERY_LIFE = 40;               // TODO: CALCULATE THIS FROM ROUTE INFO?
 	public static final String DOCK = "dock";                    // waypoint name
@@ -61,10 +62,6 @@ public class Navigation implements Observer {
 	@Override
 	public void updated(String key){
 	
-// watch for overdue 
-//		int seconds = (int) (System.currentTimeMillis() - Navigation.routestarttime)/1000);
-//		if( )
-		
 		if(key.equals(values.distanceangle.name())){
 			try {
 				int mm = Integer.parseInt(state.get(values.distanceangle).split(" ")[0]);
@@ -88,6 +85,11 @@ public class Navigation implements Observer {
 			
 			Util.log("updated() waypoint = " + state.get(values.roswaypoint) + " " + waypoints, this);
 			Util.log("updated() waypoint index = " + waypoints.indexOf(state.get(values.roswaypoint)), this);
+			
+//			if(waypoints.indexOf(state.get(values.roswaypoint)) == -1){
+//				Util.log("updated() waypoint index = " + waypoints.indexOf(state.get(values.roswaypoint)), this);
+//				failed = true;
+//			}
 
 			for(int i = 0 ; i < waypoints.size() ; i++){
 				if(waypoints.get(i).equals(values.roswaypoint.name())){
@@ -117,8 +119,9 @@ public class Navigation implements Observer {
 				state.delete(values.waypointbusy);
 				rotations = 0;
 				failed = false;
+				
+			// never do these here 
 			//	waypoints = null;
-			
 			//  never do these here! 
 			//	routemillimeters = 0;  
 			//	routestarttime = 0;
@@ -127,6 +130,21 @@ public class Navigation implements Observer {
 				
 			}
 		}
+	}
+	
+	/** */
+	public static Vector<String> getAllWaypoints(){
+		String[] points = state.get(values.rosmapwaypoints).split(",");
+		Vector<String> names = new Vector<String>();
+		for( int i = 0 ; i < points.length ; i++ ){
+			try {
+				Double.parseDouble(points[i]);
+			} catch (NumberFormatException e) {
+				names.add(points[i]);
+			}
+		}
+		if(names.size() == 0) names.add("NONE");
+		return names;
 	}
 
 	/** */
@@ -334,7 +352,7 @@ public class Navigation implements Observer {
 						if(state.exists(values.driver)) msg += state.get(values.driver);
 						else msg += " automated user";
 						NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);
-						Navigation.cancelAllRoutes();
+					//	Navigation.cancelAllRoutes();
 						failed = true; 
 						return;
 					}
@@ -574,7 +592,7 @@ public class Navigation implements Observer {
 	}
 	
 	/** go to each waypoint */
-	private synchronized static void visitWaypoints(final String name, final  Element navroute){
+	private /*synchronized*/ static void visitWaypoints(final String name, final  Element navroute){
  
 		if(navroute == null){
 			Util.log("visitWaypoints("+ name + ") xml details not read, return.");
@@ -672,7 +690,12 @@ public class Navigation implements Observer {
 		}
     	
     	// check if cancelled while waiting
-		if( ! state.exists(values.navigationroute)) return;
+		if( ! state.exists(values.navigationroute)) {
+			Util.log("visitWaypoints(" + name + "): canceled..  breaking loop");
+			return;
+		}
+		
+		Util.log("visitWaypoints(" + name + "): start docking...");
 		dock();
 		
 		// wait while autodocking does its thing 
@@ -684,6 +707,7 @@ public class Navigation implements Observer {
 		}
 			
 		if( ! state.get(values.dockstatus).equals(AutoDock.DOCKED)){
+			
 			NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock"); 
 			
 			// try docking one more time, sending alert if fail
@@ -695,7 +719,7 @@ public class Navigation implements Observer {
 			if( ! delayToNextRoute(name, navroute)) return;
 		}
 		
-		Util.fine("  ---- visitWaypoints(" + name + "): exiting");
+		Util.fine("  ---- visitWaypoints(" + name + "): exit function");
 	}
 	
 	
@@ -703,7 +727,7 @@ public class Navigation implements Observer {
 	// TODO: build error checking into this (ignore duplicate waypoints, etc)
 	// assume goto dock at the end, whether or not dock is a waypoint
 
-	public static void runRoute(final String name){
+	public static /*synchronized*/ void runRoute(final String name){
 		
 		Util.fine("Navigation.runRoute(" + name + "): called");
 
@@ -739,6 +763,8 @@ public class Navigation implements Observer {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + state.get(values.navigationroute));
 	
+			if(failed) Util.log("run(): route failed, had to reset it............ ", this);
+
 			failed = false;            // might need resetting 
 			while( !failed ){          // repeat route schedule forever until cancelled
 				
@@ -820,7 +846,8 @@ public class Navigation implements Observer {
 				undockandlocalize();
 				SystemWatchdog.waitForCpu(); 
 				visitWaypoints(name, navroute);	
-				 
+				SystemWatchdog.waitForCpu(); 
+
 				if(failed){
 					
 					 Util.log("Navigation.runRoute("+ name + "): route failed", this);
@@ -1317,21 +1344,24 @@ public class Navigation implements Observer {
 	/*	*/
 	public static synchronized void cancelAllRoutes(){	
 		
-		goalCancel();
-		NavigationUtilities.deactivateAllRoutes();
+		goalCancel(); failed = true;
+		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
+		state.delete(values.navigationroute); // this eventually stops currently running route
+		state.delete(values.nextroutetime);	
 		
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)){
 			
 			Util.debug("cancelAllRoutes(): all routes cancelled, going to the dock");
-			failed = true;
+			
 			dock();
 			return;
 			
 		}
 	
-		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
-		state.delete(values.navigationroute); // this eventually stops currently running route
-		state.delete(values.nextroutetime);
+		
+		
+		NavigationUtilities.deactivateAllRoutes();
+
 	}
 
 	public static void saveMap() {

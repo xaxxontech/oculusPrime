@@ -20,25 +20,19 @@ public class Frame extends JFrame implements Runnable {
 		setDefaultLookAndFeelDecorated(true);
 		setLayout(new BorderLayout());
 
-		JList list;
-		DefaultListModel listModel;
+		DefaultListModel<PlayerCommands> listModel = new DefaultListModel<PlayerCommands>();
 
-		listModel = new DefaultListModel();
-
-		String commands = null;
 		PlayerCommands[] cmds = PlayerCommands.values();
 		for (int i = 0; i < cmds.length; i++) {
-
-			commands += cmds[i] + " \n";
-
 			listModel.addElement(cmds[i]);
-
 		}
 
 		// Create the list and put it in a scroll pane.
-		list = new JList(listModel);
+		JList list = new JList(listModel);
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		list.setSelectedIndex(2);
+//		list.setSelectedIndex(2);
+//		list.getSelectedIndex();
+		
 		// list.addListSelectionListener(this);
 		// list.setVisibleRowCount(5);
 
@@ -61,11 +55,12 @@ public class Frame extends JFrame implements Runnable {
 			@Override
 			public void contentsChanged(ListDataEvent e) {
 
-				in.setText("'''''''''''''satated: " + e.getIndex0());
+				in.setText(".............. " +		list.getSelectedIndex() );
 				System.out.println("contentsChanged: " + e.getIndex1());
 				
 			}
 		});
+		
 		JScrollPane listScrollPane = new JScrollPane(list);
 
 		JScrollPane chatScroller = new JScrollPane(out);

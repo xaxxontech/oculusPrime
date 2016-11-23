@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.Vector;
 
 import developer.NavigationLog;
+import developer.NavigationUtilities;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
 
@@ -714,20 +715,21 @@ public class Util {
 	public static void archiveLogs(){
 		new Thread(new Runnable() { public void run() {
 			try {
-				appendUserMessage("log files being archived...");
 				
+				appendUserMessage("log files being archived");
+			
+				truncStaleAudioVideo();		
+				truncStaleFrames();
+				zipLogFile();	
 				
-				//truncStaleAudioVideo();		
-				//truncStaleFrames();
-				zipLogFile();			
-				
-
 				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));	
 				
 				NavigationLog.newItem(NavigationLog.getAchiveLinks());
 
-				truncStaleNavigationFiles();
-								
+		//		truncStaleNavigationFiles();
+						
+				NavigationUtilities.resetAllRouteStats();
+						
 
 			} catch (Exception e){printError(e);}
 		} }).start();

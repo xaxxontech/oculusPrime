@@ -14,6 +14,8 @@ import org.junit.Test;
 public class TestNavXML {
 	
 	String path = "F:\\robot\\archive\\robot backup\\oculusPrime\\conf\\navigationroutes.xml";
+
+	
 	/*
 	@Test
 	public void testCompareToSkeletonXML() throws Exception {
@@ -49,8 +51,9 @@ public class TestNavXML {
 	}
 	*/
 	
+	/*
 	@Test
-	public void readRouteDetails() throws ParserConfigurationException{
+	public void readRouteDetails() throws ParserConfigurationException {
 
 		NavigationUtilities.navroutesfile = new File(path); // override path for junit test  
 		String xml = NavigationUtilities.routesLoad();//path);
@@ -79,8 +82,7 @@ public class TestNavXML {
 			String g = NavigationUtilities.removeTag(NavigationUtilities.ESTIMATED_TIME_TAG, f);
 			String h = NavigationUtilities.removeTag(NavigationUtilities.ACTIVE, g);
 
-/*	
-	
+
 //			System.out.println("both : " + h);
 			String value = h;
 			String temp = "";
@@ -98,9 +100,8 @@ public class TestNavXML {
 				if(temp == null) break;
 				else value = temp;
 			}
-	*/
-			
-/**/
+	
+		
 			System.out.println("waypoints: " + NavigationUtilities.getWaypointsForRoute(name, xml));
 		
 			System.out.println("count    : " + NavigationUtilities.getRouteCountString(name, xml) + " == " + NavigationUtilities.getRouteCountString(name));
@@ -121,9 +122,9 @@ public class TestNavXML {
 
 			
 		}
-	}
+	}*/
 	
-
+/*
 	
 	@Test
 	public void testFileWrites(){
@@ -171,4 +172,16 @@ public class TestNavXML {
 			
 		}
 	}
+	
+	*/
+
+	@Test
+	public void testResetAll(){
+		
+		NavigationUtilities.navroutesfile = new File(path); // override path for junit test  
+
+		NavigationUtilities.resetAllRouteStats();
+	
+	}
+	
 }

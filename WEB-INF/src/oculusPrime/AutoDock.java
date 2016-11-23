@@ -9,7 +9,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-
+import developer.Navigation;
 import developer.NavigationLog;
 import oculusPrime.State.values;
 import developer.Ros;
@@ -286,7 +286,6 @@ public class AutoDock {
 					comport.stopGoing();
 					
 					state.block(values.wallpower, "true", 400);
-					// new StateObserver().block(values.wallpower, "true", 400);
 					inchforward ++;
 				}
 				
@@ -298,7 +297,7 @@ public class AutoDock {
 					
 					comport.strobeflash("on", 120, 20);
 					// allow time for charger to get up to voltage 
-				     // and wait to see if came-undocked immediately (fairly commmon)
+				    // and wait to see if came-undocked immediately (fairly common)
 					Util.delay(5000);
 				}
 				
@@ -331,10 +330,10 @@ public class AutoDock {
 					Util.log(state.get(State.values.driver) + " docked successfully", this);
 					PowerLogger.append(state.get(State.values.driver) + " docked successfully", this);
 
-					if(settings.getBoolean(ManualSettings.developer.name())){
-						if(!state.exists(values.driver)) NavigationLog.newItem("Docked: docked successfully");
-						else NavigationLog.newItem("Docked: " + state.get(State.values.driver) + " docked successfully");
-					}
+//					if(settings.getBoolean(ManualSettings.developer.name())){
+//						if(!state.exists(values.driver)) NavigationLog.newItem("Docked: docked successfully");
+//						else NavigationLog.newItem("Docked: " + state.get(State.values.driver) + " docked successfully");
+//					}
 				
 				} else { // dock fail
 					
@@ -345,10 +344,10 @@ public class AutoDock {
 						Util.log("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 						PowerLogger.append("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 
-						if(settings.getBoolean(ManualSettings.developer.name())){
-							if(!state.exists(values.driver))NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): docking timed out");
-							else NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): " + state.get(State.values.driver) + " docking timed out");
-						}
+//						if(settings.getBoolean(ManualSettings.developer.name())){
+//							if(!state.exists(values.driver))NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): docking timed out");
+//							else NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): " + state.get(State.values.driver) + " docking timed out");
+//						}
 													
 						// back up and retry
 						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)){
@@ -396,6 +395,9 @@ public class AutoDock {
 							NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): autodock completely failed");
 							app.message("autodock completely failed", null, null);
 							autoDockCancel();
+							// TODO: testing.......................................................
+							Navigation.failed = true;
+							
 						}
 					}
 						

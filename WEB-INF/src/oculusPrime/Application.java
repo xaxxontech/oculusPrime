@@ -401,7 +401,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 				Util.debug(".... booted undocked, trying redock, waiting....", this);		
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
-				if(state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TEN_MINUTES)){
+				if(state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TWO_MINUTES)){
 					if(( /* state.equals(values.wallpower, "true") && */ state.equals(values.dockstatus, AutoDock.DOCKED))){
 								
 						Util.debug(".... booted undocked, trying redock, done waiting....", this);		
@@ -1017,17 +1017,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 				return;					
 			}
 
-			String msg = "Route: " + str + " activated by ";
+			String msg = "Route " + str + " activated by ";
 			if(state.exists(values.driver)) msg += state.get(values.driver);
 			else msg += " automated user";
 			
-			NavigationLog.newItem("Route: " + str + "  Activated by user");
+			NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: " + str + "  Activated by user");
 			Navigation.runRoute(str);
 			break;
 
 		case cancelroute:
 			if(state.exists(values.navigationroute)){ 
-				msg = "Route: canceled by ";
+				
+				msg = "Route canceled by ";
 				if(state.exists(values.driver)) msg += state.get(values.driver);
 				else msg += " automated user";
 				NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);

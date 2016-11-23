@@ -67,14 +67,14 @@ public class Client {
 				} catch (Exception e) {
 					socket.close();
 					title = "dead";
-					System.exit(0);
+//					System.exit(0);
 				}
 			}
 
 		} catch (Exception e) {
-			socket.close();
-			System.out.println(e.getMessage());
-			System.exit(-1);
+//			socket.close();
+//			System.out.println(e.getMessage());
+//			System.exit(-1);
 		}
 	}
 

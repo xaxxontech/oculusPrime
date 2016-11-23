@@ -25,7 +25,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final long serialVersionUID = 1L;	
 	
 	private static final int MAX_STATE_HISTORY = 40;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "7"; 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "10"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
@@ -35,6 +35,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	static final String viewslinks = 
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
+			"<a href=\"dashboard?view=routes\">route stats</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?view=drive\">drive</a>&nbsp;&nbsp;"  +
 			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;" +
 			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
@@ -43,7 +44,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snaphot</a>&nbsp;&nbsp;"+ 
 			"<a href=\"dashboard?action=email\">send email</a>" ; 
 	
-	Vector<String> waypoints = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
+//	Vector<String> waypointsAll = Navigation.getAllWaypoints(); 
 	
 	static final double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
@@ -52,9 +53,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
-//	String nextWapoint = null;
-	
-	String refresh = HTTP_REFRESH_DELAY_SECONDS;
+	String delay = "10"; 
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -85,7 +84,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		
 		String view = null;	
-		String delay = null;	
+//		String delay = null;	
 		String action = null;
 		String route = null;
 		String move = null;
@@ -99,7 +98,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} catch (Exception e) {}
 			
 		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
-		else refresh = delay;
+//		else refresh = delay;
 		
 		if(move != null){ 
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){ 
@@ -191,7 +190,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				return;
 			}
 			
-			response.sendRedirect("/oculusPrime/dashboard"); 
+			response.sendRedirect("/oculusPrime/dashboard?delay=" + delay); 
 		}
 		
 		response.setContentType("text/html");
@@ -199,7 +198,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 		if(view != null){
 			if(view.equalsIgnoreCase("drive")){
-				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ refresh + "\"></head><body> \n");
+				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<br/>&nbsp;&nbsp;<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;&nbsp;&nbsp;");
 				out.println("nudge: <a href=\"dashboard?view=drive&move=forward\">forward</a>&nbsp;&nbsp;");
 				out.println("<a href=\"dashboard?view=drive&move=backward\">backward</a>&nbsp;&nbsp;");
@@ -230,6 +229,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a>");
 				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard?view=history\">history</a><br /><br />\n");
 				out.println(toHTML() + "\n");
+				out.println("\n</body></html> \n");
+				out.close();
+			}
+			
+			if(view.equalsIgnoreCase("routes")){
+				out.println("<html><body> \n");				
+				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">dashboard</a>");
+//				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard?view=history\">history</a><br /><br />\n");
+				out.println("<br>\n");
+				out.println(NavigationUtilities.getRouteStatsHTML() + "\n");
+				out.println("\n");
+
+				
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -303,7 +315,20 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				
 			} catch (Exception e) { break; }
 		}
-
+		
+		/*
+		String[] points = state.get(values.rosmapwaypoints).split(",");
+		String names = "";
+		for( int i = 0 ; i < points.length ; i++ ){
+			try {
+				double value = Double.parseDouble(points[i]);
+			} catch (NumberFormatException e) {
+				names += points[i] + " ";
+			}
+		}
+		*/
+		
+		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>wapoints: </b>" + Navigation.getAllWaypoints());
 		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>null's</b>");
 		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
 		str.append("</table>\n");
@@ -375,7 +400,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// version | ssid | rate
 		str.append("\n<tr><td><b>version</b><td>" + VERSION); 
 		str.append("\n<td><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\">" + state.get(values.ssid)); 
-		str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | <a href=\"dashboard?delay=10\">10</a> | <a href=\"dashboard?delay=20\">20</a>"); 
+		
+		if(delay.equals("5"))  str.append("\n<td><b>rate</b><td>" + "5 | <a href=\"dashboard?delay=10\">10</a> | <a href=\"dashboard?delay=30\">30</a>"); 
+		if(delay.equals("10")) str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | 10 | <a href=\"dashboard?delay=30\">30</a>"); 
+		if(delay.equals("30")) str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | <a href=\"dashboard?delay=10\">10</a> | 30"); 
 
 		// motor | wan | hdd 		
 		str.append("\n<tr>");
@@ -428,9 +456,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append(getActiveRoute());
 		str.append("\n\n<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
 		// Vector<String> list = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
+		Vector<String> waypointsAll = Navigation.getAllWaypoints(); 
 		String nlink = "\n<tr><td><b>points</b><td colspan=\"11\">";
-		for(int i = 0 ; i < waypoints.size() ; i++)
-			nlink += "\n<a href=\"dashboard?action=gotowp&route="+ waypoints.get(i) +"\">" + waypoints.get(i) + "</a>&nbsp;&nbsp;";
+		for(int i = 0 ; i < waypointsAll.size() ; i++)
+			nlink += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i) +"\">" + waypointsAll.get(i) + "</a>&nbsp;&nbsp;";
 		str.append(nlink); 
 		str.append("&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>");
 		

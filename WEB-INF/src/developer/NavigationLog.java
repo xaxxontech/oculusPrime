@@ -175,7 +175,7 @@ public class NavigationLog {
     public static String getAchiveLinks(){
     	File[] files = getArchiveLogs();     
     	String link = "Archives: ";
-    	for(int i = 0 ; i < files.length ; i++) link += "<a href=\"" + files[i].getName() + "\">" + i + "</a> ";
+    	for(int i = 0 ; i < files.length ; i++) link += "<a href=\"" + files[i].getName() + "\">" + (i+1) + "</a> ";
     	return link;
     }
 
