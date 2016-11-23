@@ -689,8 +689,8 @@ public class NavigationUtilities {
 	/* */
 	public static String getRouteStatsHTML(){
 		
-		String info = "<br><table cellspacing=\"15\"><tr><td><b>route name</b><td><b>seconds</b><td><b>meters</b><td><b>count</b><td><b>fails</b></tr>";
-		// <tr colspan=\"5\"><hr></tr>";
+		String info = "<table cellspacing=\"15\"><tr><td><b>route name</b><td><b>seconds</b><td><b>meters</b><td><b>count</b><td><b>fails</b></tr>";
+		
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
@@ -698,7 +698,7 @@ public class NavigationUtilities {
 			Element route = (Element) routes.item(i);	
 			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 			
-			info += "<tr><td>" + rname;
+			info += "<tr><td><a href=\"dashboard?action=resetstats&route=" + rname + "\">" + rname + "</a>" ;
 			
 			try {
 				info += "<td>" + route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent();
@@ -709,7 +709,7 @@ public class NavigationUtilities {
 				
 		}
 		
-		info += "</table><br>";
+		info += "</table>";
 		return info;
 	}
 	

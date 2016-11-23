@@ -123,6 +123,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				app.driverCallServer(PlayerCommands.publish, "stop");
 				app.driverCallServer(PlayerCommands.spotlight, "0");
 			}
+			
+			if(action.equalsIgnoreCase("resetstats")) app.driverCallServer(PlayerCommands.resetroutedata, route);
 
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("gotowp")) app.driverCallServer(PlayerCommands.gotowaypoint, route);

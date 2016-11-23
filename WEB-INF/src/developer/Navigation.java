@@ -36,15 +36,17 @@ public class Navigation implements Observer {
 	
 	private static Settings settings = Settings.getReference();
 	private static State state = State.getReference();
-	public static boolean failed = false; 						// flag set if user takes control, or gets lost 
 	private static Application app = null;	
+	
 	public static boolean navdockactive = false;
 	public static long starteddockingtime = 0;
 	public static long routemillimeters = 0;  
 	public static long routestarttime = 0;
 	public static int consecutiveroute = 1;  
 	public static int lastIndex = 0;
-	
+		
+	public static boolean failed = false; 						// flag set if user takes control, or gets lost 
+
 	// public static int rotations = 0;
 	public static int rotations = 0;
 
@@ -353,7 +355,7 @@ public class Navigation implements Observer {
 						else msg += " automated user";
 						NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);
 					//	Navigation.cancelAllRoutes();
-						failed = true; 
+					//	failed = true; 
 						return;
 					}
 				} catch (Exception e) {Util.printError(e);}
@@ -624,6 +626,8 @@ public class Navigation implements Observer {
 			// TODO: UGLY ----------------------------------------------------------------------------------------------------------------
     		String wpname = ((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
 
+//			Util.log("visitWaypoints(" + name + "): ");
+    		
 			app.comport.checkisConnectedBlocking(); // just in case
     		if(wpname.equals(DOCK)) break;
 
@@ -729,7 +733,7 @@ public class Navigation implements Observer {
 
 	public static /*synchronized*/ void runRoute(final String name){
 		
-		Util.fine("Navigation.runRoute(" + name + "): called");
+		Util.fine("Navigation.runRoute(" + name + "): called..");
 
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)){ 
 			Util.log("Can't start route, location unknown, command dropped");
@@ -763,7 +767,7 @@ public class Navigation implements Observer {
 			
 			app.driverCallServer(PlayerCommands.messageclients, "activating route: " + state.get(values.navigationroute));
 	
-			if(failed) Util.log("run(): route failed, had to reset it............ ", this);
+//			if(failed) Util.log("run(): route failed, had to reset it............ ", this);
 
 			failed = false;            // might need resetting 
 			while( !failed ){          // repeat route schedule forever until cancelled
@@ -781,9 +785,14 @@ public class Navigation implements Observer {
 				
 				// determine next scheduled route time, wait if necessary
 				state.delete(values.nextroutetime);
-				while (state.exists(values.navigationroute)){
+				while(state.exists(values.navigationroute)){
 					Util.delay(1000);
-					if(failed) return;
+					
+					if(failed){
+						Util.fine("..runRoute (failed): " + name);
+						return;
+					}
+					
 					if(updateTimeToNextRoute(navroute)){
 						state.delete(State.values.nextroutetime);
 						break; // delete so not shown in gui 
@@ -840,7 +849,7 @@ public class Navigation implements Observer {
 				state.delete(values.routeoverdue);
 				routemillimeters = 0; // count distance from dock too, do before localize 
 				rotations = 0;
-				failed = false;
+				// failed = false;
 				
 				SystemWatchdog.waitForCpu(); 
 				undockandlocalize();
