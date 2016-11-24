@@ -44,8 +44,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snaphot</a>&nbsp;&nbsp;"+ 
 			"<a href=\"dashboard?action=email\">send email</a>" ; 
 	
-//	Vector<String> waypointsAll = Navigation.getAllWaypoints(); 
-	
 	static final double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
 	static Application app = null;
@@ -318,19 +316,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			} catch (Exception e) { break; }
 		}
 		
-		/*
-		String[] points = state.get(values.rosmapwaypoints).split(",");
-		String names = "";
-		for( int i = 0 ; i < points.length ; i++ ){
-			try {
-				double value = Double.parseDouble(points[i]);
-			} catch (NumberFormatException e) {
-				names += points[i] + " ";
-			}
-		}
-		*/
-		
-		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>wapoints: </b>" + Navigation.getAllWaypoints());
+		Vector<String> points = Navigation.getAllWaypoints();
+		String pnames = "NONE";
+		if(points.size() > 0) pnames = points.toString();
+		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>wapoints: </b>" + pnames);
 		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>null's</b>");
 		for (values key : values.values()) if(! props.containsKey(key.name())) str.append(" " + key.name() + " ");
 		str.append("</table>\n");

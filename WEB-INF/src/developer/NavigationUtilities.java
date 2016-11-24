@@ -611,21 +611,21 @@ public class NavigationUtilities {
 		}
 	}
 
-	public static void routeCompleted(String name, int seconds, int meters){
+	public static void routeCompleted(final String name, final int seconds, final int meters){
 		
 		setRouteCount(name, getRouteCount(name)+1);
 		
-		int sec = getRouteTimeEstimate(name); 
-		if(sec != seconds) {
-			setRouteTimeEstimate(name, (seconds+sec)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average seconds  was = " + seconds + " now = "+ sec);
+		int estsec = getRouteTimeEstimate(name); 
+		if(estsec != seconds) {
+			setRouteTimeEstimate(name, (seconds+estsec)/2); // average them	
+			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
 
 		}
 			
 		int distance = getRouteDistanceEstimate(name);
 		if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average distance was = " + meters  + " now = "+ distance);
+			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average distance = " + meters  + " updated = "+ (distance+meters)/2);
 		}
 	}
 

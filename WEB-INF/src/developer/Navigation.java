@@ -51,6 +51,7 @@ public class Navigation implements Observer {
 	public static int rotations = 0;
 
 	static Vector<String> waypoints = null;
+	private static boolean visting = false;
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -138,15 +139,23 @@ public class Navigation implements Observer {
 	public static Vector<String> getAllWaypoints(){
 		String[] points = state.get(values.rosmapwaypoints).split(",");
 		Vector<String> names = new Vector<String>();
-		for( int i = 0 ; i < points.length ; i++ ){
+		for(int i = 0 ; i < points.length ; i++ ){
 			try {
 				Double.parseDouble(points[i]);
 			} catch (NumberFormatException e) {
 				names.add(points[i]);
 			}
 		}
-		if(names.size() == 0) names.add("NONE");
+//		if(names.size() == 0) names.add("NONE");
 		return names;
+	}
+	
+	/** */
+	public static boolean waypointExists(String name){
+		Vector<String> points = getAllWaypoints();
+		if(points.size() == 0) return false;
+		for(int i = 0 ; i < points.size() ; i++) if(points.get(i).equalsIgnoreCase(name)) return true;
+		return false;
 	}
 
 	/** */
@@ -595,14 +604,25 @@ public class Navigation implements Observer {
 	
 	/** go to each waypoint */
 	private /*synchronized*/ static void visitWaypoints(final String name, final  Element navroute){
+		
+		Util.fine("  ---- visitWaypoints(" + name + "): start function");
+		
+		if(visting){
+			Util.log("visitWaypoints(): allready running..... DANGEROUS..");
+			return;
+		}
+		
+		visting = true;
  
 		if(navroute == null){
 			Util.log("visitWaypoints("+ name + ") xml details not read, return.");
+			visting = false;
 			return;
 		}
 		
 		if(failed){
 			Util.log("visitWaypoints("+ name + ") failed flag set on before startup, return.");
+			visting = false;
 			return;
 		}
 		
@@ -611,23 +631,29 @@ public class Navigation implements Observer {
     	
     	// TODO: CHANGE TO FOR LOOP
     	while(wpnum < waypoints.getLength()){
+    			
+    		// TODO: UGLY ----------------------------------------------------------------------------------------------------------------
+    		String wpname = ((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+
+    		if( ! waypointExists(wpname)) {
+    			Util.log("visitWaypoints(): " + wpname + " doesn't exist, skipping");
+    			wpnum ++;
+				continue;
+    		}
     		
     		if(failed){
 				Util.log("visitWaypoints(" + name + "): failed breaking loop");
+				visting = false;
 				return;
 			}
 			
     		// check if cancelled while waiting
 			if( ! state.exists(values.navigationroute)){
 				Util.log("visitWaypoints(" + name + "): cancelled breaking loop");
+				visting = false;
 				return;
 			}
 			
-			// TODO: UGLY ----------------------------------------------------------------------------------------------------------------
-    		String wpname = ((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
-
-//			Util.log("visitWaypoints(" + name + "): ");
-    		
 			app.comport.checkisConnectedBlocking(); // just in case
     		if(wpname.equals(DOCK)) break;
 
@@ -649,11 +675,13 @@ public class Navigation implements Observer {
 			// check if cancelled while waiting
 			if( ! state.exists(values.navigationroute)){
 				Util.log("visitWaypoints(" + name + "): canceled..  breaking loop");
+				visting = false;
 				return;
 			}
     		
 			if(failed){
 				Util.log("visitWaypoints(" + name + "): failed..  breaking loop");
+				visting = false;
 				return;
 			}
     		
@@ -674,6 +702,7 @@ public class Navigation implements Observer {
 
     		if(failed){
 				Util.log("visitWaypoints(" + name + "): failed breaking loop");
+				visting = false;
 				return;
 			}
     		
@@ -696,6 +725,7 @@ public class Navigation implements Observer {
     	// check if cancelled while waiting
 		if( ! state.exists(values.navigationroute)) {
 			Util.log("visitWaypoints(" + name + "): canceled..  breaking loop");
+			visting = false;
 			return;
 		}
 		
@@ -720,10 +750,14 @@ public class Navigation implements Observer {
 			Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 			app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 	
-			if( ! delayToNextRoute(name, navroute)) return;
+			if( ! delayToNextRoute(name, navroute)) {
+				visting = false;
+				return;
+			}
 		}
 		
 		Util.fine("  ---- visitWaypoints(" + name + "): exit function");
+		visting = false;
 	}
 	
 	
@@ -756,6 +790,7 @@ public class Navigation implements Observer {
 		NavigationUtilities.setActiveRoute(name);	
 		Element navroute = NavigationUtilities.getRouteElement(name);
 		waypoints = NavigationUtilities.getWaypointsForRoute(name, NavigationUtilities.routesLoad());
+		
 		state.set(values.navigationroute, name);
 				
 		if( ! state.equals(values.navigationroute, NavigationUtilities.getActiveRoute())){
