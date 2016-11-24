@@ -994,18 +994,19 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case routedata: // TODO: makes this xml  
-			String r = "count: " + NavigationUtilities.getRouteCountString(str) 
-			 			+ " fail: " + NavigationUtilities.getRouteFailsString(str)
-			 			+ " meters: " + NavigationUtilities.getRouteDistanceEstimate(str)
-			 			+ " seconds: " + NavigationUtilities.getRouteTimeEstimate(str) ;
+			String r = "<routename>" + str + "</routename>" 
+						+ "<count>" + NavigationUtilities.getRouteCountString(str) + "</count>"
+			 			+ "<fail>" + NavigationUtilities.getRouteFailsString(str) + "</fail>"
+			 			+ "<meters> " + NavigationUtilities.getRouteDistanceEstimate(str) + "</meters>"
+			 			+ "<second>" + NavigationUtilities.getRouteTimeEstimate(str) + "</seconds>";
 			
 			Util.log("route: " + str + " " + r, this);
 			commandServer.sendToGroup("route: " + str + " " + r);
 			break;
 			
 		case resetroutedata: 
-			NavigationLog.newItem(NavigationLog.INFOSTATUS, "User reset route info for: "+str);
-			messageplayer("User reset route status for: "+str, null, null);
+			Util.log("playerCallServer(): User reset route status for: "+str, this);
+			// messageplayer("User reset route status for: "+str, null, null);
 			NavigationUtilities.setRouteFails(str, 0);
 			NavigationUtilities.setRouteCount(str, 0);
 			break;
@@ -1013,6 +1014,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if(str == null) return;
 			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+				Util.log("playerCallServer(): must be docked to start new route, skipped", this);
 				messageplayer("must be docked to start new route, skipped", null, null);
 				return;					
 			}
@@ -1021,7 +1023,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if(state.exists(values.driver)) msg += state.get(values.driver);
 			else msg += " automated user";
 			
-			NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route: " + str + "  Activated by user");
+			NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route " + str + "  Activated by user");
 			Navigation.runRoute(str);
 			break;
 

@@ -454,16 +454,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) 
 			+ "<td><b>ros</b><td>" + Util.getRosCheck() + "</tr> \n" ); // doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
 		
-		// 
 		str.append(getActiveRoute());
 		str.append("\n\n<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
 		// Vector<String> list = NavigationUtilities.getWaypointsAll(NavigationUtilities.routesLoad());
 		Vector<String> waypointsAll = Navigation.getAllWaypoints(); 
 		String nlink = "\n<tr><td><b>points</b><td colspan=\"11\">";
 		for(int i = 0 ; i < waypointsAll.size() ; i++)
-			nlink += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i) +"\">" + waypointsAll.get(i) + "</a>&nbsp;&nbsp;";
+			nlink += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i) +"\">" + waypointsAll.get(i) + "</a> ";
 		str.append(nlink); 
-		str.append("&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>");
+	// 	str.append("&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>");
 		
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
@@ -472,7 +471,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			msg = "<tr><td><b>message</b><td colspan=\"11\">" + msg + "</tr> \n";
 			str.append(msg);
 		}
-	
 		
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
 // 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
@@ -516,15 +514,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) 
 				+ " " + NavigationUtilities.getWaypointsForRoute(rname, NavigationUtilities.routesLoad());
  
-			; 
-			
 			if(Navigation.failed) link += " *route failed*";
 			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
 			if(state.getBoolean(values.waitingforcpu)) link+= " *cpubusy* "; 	
 					
-//	link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
-			
-			link += "&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
+			link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
+			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
 			
 		} catch (Exception e) {
 			Util.printError(e);
