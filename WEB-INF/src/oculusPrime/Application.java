@@ -408,13 +408,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 						Util.delay(15000); // system settle 	
 						
-						Util.debug(".... redockWaitRunRoute(): run active route: " + NavigationUtilities.getActiveRoute() + " " + state.get(values.navigationroute));
+						Util.debug(".... redockWaitRunRoute(): run active route: " + NavigationUtilities.getActiveRoute());
 						Navigation.runActiveRoute();	
 						
 					}				
 				} else {
+					
+					// this is bad 
 					NavigationLog.newItem(NavigationLog.ALERTSTATUS, "redockWaitRunRoute(): failed to dock");
 					new SendMail("oculus can't dock", "redockWaitRunRoute() failed: " + state.toString().replaceAll("<br>", "\n"));
+					
 				}
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
@@ -978,18 +981,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 				// reset if existed
 				// TODO: TESTING... 
-				/*
-				String r = "count: " + Navigation.getRouteCountString(str) 
-	 			+ " fail: " + Navigation.getRouteFailsString(str)
-	 			+ " meters: " + Navigation.getRouteDistanceEstimate(str)
-	 			+ " seconds: " + Navigation.getRouteTimeEstimate(str);
-
-	 			commandServer.sendToGroup("route: " + str + " " + r);
-			*/
-			//	NavigationLog.newItem("User reset route info for: "+str.substring(str.indexOf("<rname>"), str.indexOf("</rname>")) + "\n<br>" + r);
-			//	Navigation.updateRouteEstimatess(str, 0, 0);
-			//	Navigation.updateRouteStats(str, 0, 0);
-				
 			
 			break;
 		
@@ -997,16 +988,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 			String r = "<routename>" + str + "</routename>" 
 						+ "<count>" + NavigationUtilities.getRouteCountString(str) + "</count>"
 			 			+ "<fail>" + NavigationUtilities.getRouteFailsString(str) + "</fail>"
-			 			+ "<meters> " + NavigationUtilities.getRouteDistanceEstimate(str) + "</meters>"
+			 			+ "<meters>" + NavigationUtilities.getRouteDistanceEstimate(str) + "</meters>"
 			 			+ "<second>" + NavigationUtilities.getRouteTimeEstimate(str) + "</seconds>";
 			
-			Util.log("route: " + str + " " + r, this);
+			// Util.log("route: " + str + " " + r, this);
 			commandServer.sendToGroup("route: " + str + " " + r);
 			break;
 			
 		case resetroutedata: 
 			Util.log("playerCallServer(): User reset route status for: "+str, this);
 			// messageplayer("User reset route status for: "+str, null, null);
+			// RESET ROUTE SEC ANDE DEISTANCE TOO ?
 			NavigationUtilities.setRouteFails(str, 0);
 			NavigationUtilities.setRouteCount(str, 0);
 			break;
@@ -1018,26 +1010,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("must be docked to start new route, skipped", null, null);
 				return;					
 			}
-
-			String msg = "Route " + str + " activated by ";
-			if(state.exists(values.driver)) msg += state.get(values.driver);
-			else msg += " automated user";
 			
-			NavigationLog.newItem(NavigationLog.INFOSTATUS, "Route " + str + "  Activated by user");
 			Navigation.runRoute(str);
 			break;
 
+			// MOVE THESE3 DETAILS TO NAV 
 		case cancelroute:
-			if(state.exists(values.navigationroute)){ 
-				
-				msg = "Route canceled by ";
-				if(state.exists(values.driver)) msg += state.get(values.driver);
-				else msg += " automated user";
-				NavigationLog.newItem(NavigationLog.INFOSTATUS, msg);
-				
-			} else Util.log("playerCallServer(): null route, skipped.. " , this);
-			
-			Navigation.cancelAllRoutes();
+			Navigation.cancelAllRoutes(); // state changes 
+			NavigationUtilities.deactivateAllRoutes(); // edit file 
 			break;
 
 		case startmapping: Navigation.startMapping(); break;
@@ -1089,7 +1069,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.deleteLogFiles();
 			break;
 		
-	/*		*/
+	
+		/** testing 		*/
 		case wait: //---------------------------------------------------------------------------------
 		
 			Util.log("wait on: " + str, this);

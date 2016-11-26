@@ -723,10 +723,8 @@ public class Util {
 				zipLogFile();	
 				
 				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));	
-				
 				NavigationLog.newItem(NavigationLog.getAchiveLinks());
-
-		//		truncStaleNavigationFiles();
+				truncStaleNavigationFiles();
 						
 				NavigationUtilities.resetAllRouteStats();
 						
@@ -745,7 +743,8 @@ public class Util {
 		       if (files[i].isFile()) names += "./log/"+files[i].getName() + " ";
 		    
 			names = names.trim();
-			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names +" " + NavigationLog.navigationlogFOLDER};
+			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names 
+					+" " + NavigationLog.navigationlogFOLDER + " " + RssFeed.RSSFILE};
 		
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 

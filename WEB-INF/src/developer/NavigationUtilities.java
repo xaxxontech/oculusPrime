@@ -44,7 +44,7 @@ public class NavigationUtilities {
 		final String current = routesLoad();
 		
 		if(str.equalsIgnoreCase(current)){
-			Util.debug("saveRoute(): skipped, same XML string");
+// 			Util.debug("saveRoute(): skipped, same XML string");
 			return;
 		}
 		
@@ -134,55 +134,6 @@ public class NavigationUtilities {
 	}
 
 	/** */
-	public static String removeTag(final String tag, final String xml) throws ParserConfigurationException{
-		if(tag == null || xml == null) return null;
-		
-		/*
-		
-		<routeslist>
-			<route>
-				<rname>back door</rname>
-				<minbetween>2</minbetween>
-				<starthour>00</starthour>
-				<startmin>00</startmin>
-				<routeduration>24</routeduration>
-				<day>Sun</day>
-				<active>false</active>
-				<waypoint>
-					<wpname>deck</wpname>
-						<duration>10</duration>
-						<action>photo</action>
-				</waypoint>
-				<estimateddistance>5</estimateddistance>
-				<estimatedtime>158</estimatedtime>
-				<day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day>
-				<routecount>151</routecount>
-				<routefail>5</routefail>
-				<waypoint>
-					<wpname>coner</wpname>
-					<duration>10</duration>
-					<action>photo</action></waypoint><waypoint><wpname>sink</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			
-			<route><rname>red route</rname><minbetween>10</minbetween><starthour>00</starthour><startmin>00</startmin><routeduration>24</routeduration><day>Sun</day><day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day><active>false</active><waypoint><wpname>deck</wpname><duration>10</duration><action>photo</action></waypoint><estimateddistance>20</estimateddistance><estimatedtime>425</estimatedtime><waypoint><wpname>hallway</wpname><duration>10</duration><action>photo</action></waypoint><routecount>345</routecount><routefail>76</routefail><waypoint><wpname>front door</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			<route><rname>front door</rname><minbetween>10</minbetween><starthour>00</starthour><startmin>00</startmin><routeduration>24</routeduration><day>Sun</day><day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day><active>false</active><estimateddistance>0</estimateddistance><estimatedtime>206</estimatedtime><routecount>777</routecount><routefail>6</routefail><waypoint><wpname>deck</wpname><duration>10</duration><action>photo</action></waypoint><waypoint><wpname>front door</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			... 
-		</routeslist>
-		
-		neelcant and case worker donna and raven song  
-
-		
-		*/ 
-
-		String start = "<" + tag + ">";
-		String end = "</" + tag + ">";
-		
-		if(xml.indexOf(start) == -1 || xml.indexOf(end) == -1) return null;
-		
-		String sub = xml.substring(0, xml.indexOf(start)) + xml.substring(xml.indexOf(end) + end.length(), xml.length());
-		return sub;
-	}	
-
-	/** */
 	public static String getTag(final String tag, final String xml) throws ParserConfigurationException{
 		if(tag == null || xml == null) return null;
 		
@@ -225,80 +176,6 @@ public class NavigationUtilities {
 		String sub = xml.substring( xml.indexOf(start) + start.length(), xml.indexOf(end));
 		return sub;
 	}
-	
-	
-	/**
-	 * @throws ParserConfigurationException  */
-	public static String getRouteXML(final String routename, String xml) throws ParserConfigurationException{
-		if(routename == null) return null;
-	//	xml = getTag("routeslist", xml);
-		
-		/*
-		Document document = loadXMLFromString(xml);
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		Vector<String> ans = new Vector<String>();
-		for(int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
-			if(routename.equals(rname)){
-	    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName(WAYPOINT_NAME);
-	    		for(int j = 0 ; j < wp.getLength() ; j++){
-	        		ans.add(wp.item(j).getTextContent());
-	    		}
-			}
-		}
-		
-		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        dbf.setNamespaceAware(true);
-        dbf.setCoalescing(true);
-        dbf.setIgnoringElementContentWhitespace(true);
-        dbf.setIgnoringComments(true);
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        
-
-        Document doc1 = null;Document doc2 = null;
-		try {
-			doc1 = db.parse(navroutesfile);doc2 = db.parse(navroutesfile);
-		} catch (SAXException | IOException e) {
-			e.printStackTrace();
-		}
-        
-        doc1.normalizeDocument();
-        doc2.normalizeDocument();
-		
-		*/ 
-		
-		String start = "<route><rname>" + routename + "</rname>";
-		String sub = xml.substring( xml.indexOf(start) + start.length());// , xml.indexOf("</route>"));
-		return sub;
-	}
-	
-
-	/** 
-	public static Vector<String> getWaypointsForRoute(final String routename){
-	return getWaypointsForRoute(routesLoad(), routename);
-	}	*/
-	
-	/** 
-	public static Vector<String> getWaypointsForActiveRoute(){
-		return getWaypointsForRoute(routesLoad(), getActiveRoute());
-	}*/
-	
-	/**
-	// should take from waypoints text file?
-	public static Vector<String> getWaypointsAll(final String xml){
-		Document document = loadXMLFromString(xml);
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		Vector<String> ans = new Vector<String>();
-		for (int i = 0; i < routes.getLength(); i++){
-    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName(WAYPOINT_NAME);
-    		for(int j = 0 ; j < wp.getLength() ; j++){
-        		if(!ans.contains(wp.item(j).getTextContent())) ans.add(wp.item(j).getTextContent());
-    		}
-		}		
-		return ans;
-	}
-	*/
-	
 	
 	//---------------- route fails
 	
@@ -350,51 +227,7 @@ public class NavigationUtilities {
 			}
 		}
 	}
-	
-	/*
-	public static String updateRouteFails(final String xml, final String name, final int routefails){
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		Element route = null;
-		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
-			if (rname.equals(name)){
-				route = (Element) routes.item(i);				
-				try {
-					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
-				} catch (Exception e) { // create if not there 
-					Node fail = document.createElement(ROUTE_FAIL_TAG);
-					fail.setTextContent(Integer.toString(routefails));
-					route.appendChild(fail);
-				}
-				break;
-			}
-		}
-		
-		return document;
-	}
-	
-	public static Document updateRouteFails(Document document, final String name, final int routefails){
-		NodeList routes = document.getDocumentElement().getChildNodes();
-		Element route = null;
-		for (int i = 0; i < routes.getLength(); i++){
-			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
-			if (rname.equals(name)){
-				route = (Element) routes.item(i);				
-				try {
-					route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).setTextContent(Integer.toString(routefails));
-				} catch (Exception e) { // create if not there 
-					Node fail = document.createElement(ROUTE_FAIL_TAG);
-					fail.setTextContent(Integer.toString(routefails));
-					route.appendChild(fail);
-				}
-				break;
-			}
-		}
-		
-		return document;
-	}
-	*/
-	
+
 	//--------------- route count
 	
 	public static void setRouteCount(final String name, final int routecount){
@@ -615,15 +448,18 @@ public class NavigationUtilities {
 		
 		setRouteCount(name, getRouteCount(name)+1);
 		
+		if(seconds <= 0  || meters <= 0) return; // sanity test 
+		
 		int estsec = getRouteTimeEstimate(name); 
-		if(estsec != seconds) {
+		if(estsec == 0) setRouteTimeEstimate(name, seconds); 
+		else if(estsec != seconds) {
 			setRouteTimeEstimate(name, (seconds+estsec)/2); // average them	
 			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
-
 		}
 			
 		int distance = getRouteDistanceEstimate(name);
-		if(distance != meters){
+		if(distance == 0) setRouteDistanceEstimate(name, meters);
+		else if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
 			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average distance = " + meters  + " updated = "+ (distance+meters)/2);
 		}
@@ -679,7 +515,7 @@ public class NavigationUtilities {
 			
 		}
 	
-	//  screws up junit 
+	//  screws up junit tests
 	//	NavigationLog.newItem(NavigationLog.ALERTSTATUS, "Utilities.resetAllRouteStats");
 		Util.log("NavigationUtilies.developer.NavigationUtilities.resetAllRouteStats(): " + XMLtoString(document));
 
@@ -694,19 +530,18 @@ public class NavigationUtilities {
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
-			
-			Element route = (Element) routes.item(i);	
-			String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
-			
-			info += "<tr><td><a href=\"dashboard?action=resetstats&route=" + rname + "\">" + rname + "</a>" ;
-			
 			try {
+				
+				Element route = (Element) routes.item(i);	
+				String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+				
+				info += "<tr><td><a href=\"dashboard?action=resetstats&route=" + rname + "\">" + rname + "</a>" ;
 				info += "<td>" + route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent();
 				info += "<td>" + route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent();
 				info += "<td>" + route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent();
 				info += "<td>" + route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent();
-			} catch (Exception e) {}
 				
+			} catch (Exception e) {}
 		}
 		
 		info += "</table>";

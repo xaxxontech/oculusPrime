@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 
 public class RssFeed {
 	
-	private final String RSSFILE = Settings.redhome+ Util.sep+"webapps"+Util.sep+"oculusPrime"+Util.sep+"rss.xml";
+	final static String RSSFILE = Settings.redhome+ Util.sep+"webapps"+Util.sep+"oculusPrime"+Util.sep+"rss.xml";
 	private static State state = State.getReference();
 	private static Settings settings = Settings.getReference();
 	private final static int LIMIT = 20; 
