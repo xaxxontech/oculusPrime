@@ -654,9 +654,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		case move: {
 
-			if (settings.getBoolean(GUISettings.navigation)) Navigation.navdockactive = false;
+			if(settings.getBoolean(GUISettings.navigation)) Navigation.navdockactive = false;
 
-			if (state.exists(State.values.navigationroute) && !passengerOverride && 
+			if(state.exists(State.values.navigationroute) && !passengerOverride && 
 					str.equals(ArduinoPrime.direction.stop.toString())){
 				
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
@@ -668,7 +668,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("navigation goal cancelled by stop", null, null);
 			} 
 
-			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
+			if( ! passengerOverride && watchdog.redocking) watchdog.redocking = false;
 			move(str); 
 			break;
 		}
@@ -703,17 +703,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		
 		case record: record(str); break;  // record [true | false]
-		
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
-
 		case restart: restart(); break;
 		case powershutdown: powerport.shutdown(); break;
 		case reboot: reboot(); break;
 		case systemshutdown: powerdown(); break;
-
 		case softwareupdate: softwareUpdate(str); break;
 //		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
 		case quitserver: shutdownApplication(); break;
@@ -735,8 +731,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.lowres = true; // ?
 			break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
-		case nudge: nudge(str); break;
-		
 		case state: 
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
@@ -777,6 +771,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
 
+		case nudge: nudge(str); break;
+		
 		case left:
 		case right:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
@@ -975,16 +971,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case saveroute: 
 			NavigationUtilities.saveRoute(str);
-			messageplayer("route saved", null, null);
-				
-			Util.log("save route: " + str, this);
-
-				// reset if existed
-				// TODO: TESTING... 
-			
+			messageplayer("route saved", null, null);			
 			break;
 		
-		case routedata: // TODO: makes this xml  
+		case routedata:
 			String r = "<routename>" + str + "</routename>" 
 						+ "<count>" + NavigationUtilities.getRouteCountString(str) + "</count>"
 			 			+ "<fail>" + NavigationUtilities.getRouteFailsString(str) + "</fail>"
@@ -996,7 +986,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case resetroutedata: 
-			Util.log("playerCallServer(): User reset route status for: "+str, this);
+			Util.log("User reset route stats for: "+str, this);
 			// messageplayer("User reset route status for: "+str, null, null);
 			// RESET ROUTE SEC ANDE DEISTANCE TOO ?
 			NavigationUtilities.setRouteFails(str, 0);
@@ -1014,7 +1004,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Navigation.runRoute(str);
 			break;
 
-			// MOVE THESE3 DETAILS TO NAV 
 		case cancelroute:
 			Navigation.cancelAllRoutes(); // state changes 
 			NavigationUtilities.deactivateAllRoutes(); // edit file 
@@ -1522,14 +1511,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void saySpeech(String str) {
-
-		Util.debug("SPEECH sayspeech: " + str, this);
-		
 		try {
 			String strarr[] = {"espeak",str};
 			Runtime.getRuntime().exec(strarr);
-		} catch (IOException e) { Util.printError(e); }
-	
+		} catch (IOException e) { Util.printError(e); }	
 	}
 
 	private void getEmailSettings() {
@@ -1845,6 +1830,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	
 		messageplayer("command received: " + str, "motion", "MOVING");
+
+		Util.log("..... move(): user taking over, cancel route........................ ");
+		Navigation.cancelAllRoutes(); 
 	}
 
 	public void nudge(String str) {
@@ -1863,6 +1851,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		comport.nudge(ArduinoPrime.direction.valueOf(str));
 		messageplayer("command received: nudge " + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
+		
+		Util.log("..... nudge(): user taking over, cancel route........................ ");
+		Navigation.cancelAllRoutes(); 
 	}
 
 	private void motionEnableToggle() {

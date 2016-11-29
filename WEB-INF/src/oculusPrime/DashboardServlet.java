@@ -479,7 +479,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getActiveRoute(){  	
 		
-		if( ! state.exists(values.navigationroute)) return "NONE";
+//		if( ! state.exists(values.navigationroute)) return "<tr><td>NONE";
 		String rname = state.get(values.navigationroute);
 		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) + " ";
 		String next = state.get(values.roswaypoint);
@@ -507,7 +507,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(Navigation.failed) link += " *route failed*";
 			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
 			if(state.getBoolean(values.rosgoalcancel)) link+= " *ros goal cancel* "; 		
-			if(Navigation.visting) link+= " *visting* "; 		
+//			if(Navigation.routevisiting) link+= " *visting* "; 		
 
 			link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
 			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";

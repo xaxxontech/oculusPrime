@@ -696,7 +696,7 @@ public class Util {
         for (int i = MIN_LOG_FILES; i < files.length; i++){
 			if(files[i].isFile()){
 				log(i + " " + /*files[i].getName() + */" was deleted " + (System.currentTimeMillis() - files[i].lastModified())/1000/60);
-	//			files[i].delete();
+				files[i].delete();
 			}
 		} 
 	}
@@ -718,8 +718,8 @@ public class Util {
 				
 				appendUserMessage("log files being archived");
 			
-				truncStaleAudioVideo();		
-				truncStaleFrames();
+		//		truncStaleAudioVideo();		
+		//		truncStaleFrames();
 				zipLogFile();	
 				
 				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));	
@@ -728,6 +728,7 @@ public class Util {
 						
 				NavigationUtilities.resetAllRouteStats();
 						
+		//		appendUserMessage("archive complete");
 
 			} catch (Exception e){printError(e);}
 		} }).start();

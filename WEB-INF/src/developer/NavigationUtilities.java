@@ -454,14 +454,14 @@ public class NavigationUtilities {
 		if(estsec == 0) setRouteTimeEstimate(name, seconds); 
 		else if(estsec != seconds) {
 			setRouteTimeEstimate(name, (seconds+estsec)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
+			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
 		}
-			
+
 		int distance = getRouteDistanceEstimate(name);
 		if(distance == 0) setRouteDistanceEstimate(name, meters);
 		else if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+"): compute average distance = " + meters  + " updated = "+ (distance+meters)/2);
+			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average meters = " + seconds + " updated = "+ (seconds+estsec)/2);
 		}
 	}
 
@@ -511,8 +511,7 @@ public class NavigationUtilities {
 				Node fail = document.createElement(ROUTE_FAIL_TAG);
 				fail.setTextContent("0");
 				route.appendChild(fail);
-			}
-			
+			}	
 		}
 	
 	//  screws up junit tests
