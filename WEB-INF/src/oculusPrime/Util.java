@@ -212,7 +212,7 @@ public class Util {
 
 		} catch (Exception e) {
 //			printError(e);
-			Util.log("Util.readUrlToString() parse error", null);
+//			Util.log("Util.readUrlToString() parse error", null);
 			return null;
 		}
 

@@ -132,6 +132,11 @@ public class NavigationUtilities {
 		}
 		return ans;
 	}
+	
+	/** */
+	public static Vector<String> getWaypointsForRoute(String rname) {
+		return getWaypointsForRoute(rname, routesLoad());
+	}
 
 	/** */
 	public static String getTag(final String tag, final String xml) throws ParserConfigurationException{
@@ -310,7 +315,7 @@ public class NavigationUtilities {
 			if (rname.equals(name)){
 				try {
 					return ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent(); 
-				} catch (Exception e){break;}
+				} catch (Exception e){return "0";}
 			}
 		}
 		return "0";
@@ -325,7 +330,7 @@ public class NavigationUtilities {
 	}
 	
 	public static int getRouteDistanceEstimate(final String name){
-		return Integer.parseInt(getRouteDistanceEstimateString(name));
+		return (int) Double.parseDouble(getRouteDistanceEstimateString(name));
 	}
 	
 	//-------------------- time  -- units seconds --------------------//
@@ -360,7 +365,7 @@ public class NavigationUtilities {
 			if (rname.equals(name)){
 				try {
 					return ((Element) routes.item(i)).getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent(); 
-				} catch (Exception e){break;}
+				} catch (Exception e){return "0";}
 			}
 		}
 		return "0";
@@ -371,7 +376,7 @@ public class NavigationUtilities {
 	}
 		
 	public static int getRouteTimeEstimate(final String name, final String xml){
-		return Integer.parseInt(getRouteTimeEstimateString(name, xml));
+		return (int) Double.parseDouble(getRouteTimeEstimateString(name, xml));
 	}
 	
 	public static int getRouteTimeEstimate(final String name){
@@ -461,7 +466,7 @@ public class NavigationUtilities {
 		if(distance == 0) setRouteDistanceEstimate(name, meters);
 		else if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average meters = " + seconds + " updated = "+ (seconds+estsec)/2);
+			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average meters = " + meters + " updated = "+ (distance+meters)/2);
 		}
 	}
 
@@ -516,14 +521,15 @@ public class NavigationUtilities {
 	
 	//  screws up junit tests
 	//	NavigationLog.newItem(NavigationLog.ALERTSTATUS, "Utilities.resetAllRouteStats");
-		Util.log("NavigationUtilies.developer.NavigationUtilities.resetAllRouteStats(): " + XMLtoString(document));
+	//	Util.log("NavigationUtilies.developer.NavigationUtilities.resetAllRouteStats(): " + XMLtoString(document));
 
 		saveRoute(XMLtoString(document));
 	}
 	
-	/* */
+	/** do in single method, don't call helper methods in loop, too many file operations */
 	public static String getRouteStatsHTML(){
 		
+		// add some css 
 		String info = "<table cellspacing=\"15\"><tr><td><b>route name</b><td><b>seconds</b><td><b>meters</b><td><b>count</b><td><b>fails</b></tr>";
 		
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());

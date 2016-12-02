@@ -51,6 +51,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static String httpport = null;
 	static BanList ban = null;
 	static State state = null;
+	String pointslist;
 	String delay = "10"; 
 	
 	public void init(ServletConfig config) throws ServletException {
@@ -60,9 +61,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		httpport = state.get(State.values.httpport);
 		settings = Settings.getReference();
 		ban = BanList.getRefrence();		
-
 		state.addObserver(this);
-
 	}
 
 	public static void setApp(Application a){app = a;}
@@ -479,8 +478,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getActiveRoute(){  	
 		
-//		if( ! state.exists(values.navigationroute)) return "<tr><td>NONE";
 		String rname = state.get(values.navigationroute);
+		if(rname == null) rname = " inactive but xml: " + NavigationUtilities.getActiveRoute();
 		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) + " ";
 		String next = state.get(values.roswaypoint);
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
@@ -491,20 +490,20 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} 
 		
 		if(next==null) time = "";
-	
 		String link = "";
 		
 		try {
 			
 			link = "\n\n<td><b>next</b><td>" + next; 
 			link += "<td><b>meters</b><td>" 
-					+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + "   (" +  NavigationUtilities.getRouteDistanceEstimate(rname) + ")"
-					+ "<td><b>time</b><td>" + time + "   (" +  NavigationUtilities.getRouteTimeEstimate(rname)+")";
+					+ Util.formatFloat(Navigation.routemillimeters / (double)1000, 0) + " of " +  NavigationUtilities.getRouteDistanceEstimateString(rname) 
+					+ "<td><b>time</b><td>" + time + " of " +  NavigationUtilities.getRouteTimeEstimateString(rname);
 			
-			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) 
-				+ " " + NavigationUtilities.getWaypointsForRoute(rname, NavigationUtilities.routesLoad());
- 
+			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " 
+					+ rname +  " " + NavigationUtilities.getWaypointsForRoute(rname);
+			
 			if(Navigation.failed) link += " *route failed*";
+			if(state.getBoolean(values.routeoverdue)) link+= " *overdue* "; 		
 			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
 			if(state.getBoolean(values.rosgoalcancel)) link+= " *ros goal cancel* "; 		
 //			if(Navigation.routevisiting) link+= " *visting* "; 		
@@ -572,8 +571,23 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		*/
 		
-		if(state.getBoolean(values.routeoverdue)) 
-			state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
+//		if(state.exists(key)) Util.log("updated: " + state.get(key), this);
+		
+		if(key.equals(values.navigationroute)){
+			if(state.exists(values.navigationroute)){
+				
+				Util.log("updated: " + state.get(values.navigationroute), this);
+
+				pointslist = NavigationUtilities.getWaypointsForRoute(state.get(values.navigationroute), NavigationUtilities.routesLoad()).toString();
+				Util.log("pointslist: " + pointslist + " " + state.get(values.navigationroute), this);
+			}
+			
+				//		else 
+	//			pointslist = "none";
+		}
+		
+	//	if(state.getBoolean(values.routeoverdue)) 
+	//		state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
 
 		if(key.equals(values.networksinrange.name())) return;
 		if(key.equals(values.batteryinfo.name())) return;

@@ -60,6 +60,7 @@ public class Navigation implements Observer {
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		state.addObserver(this);
 		
+	// WORKING ON 	
 	//	new NavWatchdog();
 	}
 	  
@@ -213,10 +214,9 @@ public class Navigation implements Observer {
 			return;
 		}
 			
-		Util.log("gotoWaypoint(): user taking over, cancel route?? ");
 
-		if(state.getBoolean(values.navigationroute)){
-			Util.log("..... gotoWaypoint(): user taking over, cancel route........................ ");
+		if(state.getBoolean(values.navigationroute)){	
+			Util.log("gotoWaypoint(): user taking over, cancel route?? ");
 			// cancelAllRoutes();  
 			failed = true;
 			// dock? 
@@ -231,29 +231,24 @@ public class Navigation implements Observer {
 	
 	/** blocking */
 	private static boolean waitForNavSystem(){ 
-
 		if (state.equals(values.navsystemstatus, Ros.navsystemstate.mapping.name()) ||
 				state.equals(values.navsystemstatus, Ros.navsystemstate.stopping.name())) {
 			app.driverCallServer(PlayerCommands.messageclients, "Navigation.waitForNavSystem(): can't start navigation");
 			return false;
 		}
-
 		startNavigation();
 		state.block(values.navsystemstatus, Ros.navsystemstate.running.name(), (int)NAVSTARTTIMEOUT*3, 300);
-	
-		if (!state.equals(values.navsystemstatus, Ros.navsystemstate.running.name())){
+		if( ! state.equals(values.navsystemstatus, Ros.navsystemstate.running.name())){
 			app.driverCallServer(PlayerCommands.messageclients, "Navigation.waitForNavSystem(): navigation start failure");
 			failed = true;
 			return false;
 		}
-
 		return true;
 	}
 
 	/** */
 	public static void startMapping(){
-		
-		if (!state.equals(values.navsystemstatus, Ros.navsystemstate.stopped.name())) {
+		if( ! state.equals(values.navsystemstatus, Ros.navsystemstate.stopped.name())) {
 			app.driverCallServer(PlayerCommands.messageclients, "Navigation.startMapping(): unable to start mapping, system already running");
 			return;
 		}
@@ -400,7 +395,6 @@ public class Navigation implements Observer {
 			// 5000 too low, massive cpu sometimes here
 			SystemWatchdog.waitForCpu();
 			SystemWatchdog.waitForCpu();
-			SystemWatchdog.waitForCpu();
 
 			if (! navdockactive) return;
 
@@ -426,7 +420,7 @@ public class Navigation implements Observer {
 
 			if (!navdockactive) return;
 
-			// TODO: debugging potential intermittent camera problem .. conincides with flash error 1009? checked, no 1009
+// TODO: debugging potential intermittent camera problem .. conincides with flash error 1009? checked, no 1009
 //			state.delete(State.values.lightlevel);
 //			app.driverCallServer(PlayerCommands.getlightlevel, null);
 //			long timeout = System.currentTimeMillis() + 5000;
@@ -467,8 +461,8 @@ public class Navigation implements Observer {
 				Util.delay(2000);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.name());
 			} else {
-				failed = true;
 				Util.log("Navigation.dock() - unable to dock", this);
+				failed = true;
 			}
 		}}).start();
 
@@ -666,25 +660,6 @@ public class Navigation implements Observer {
 			long start = System.currentTimeMillis();
 			while(! failed && state.exists(values.roscurrentgoal) && System.currentTimeMillis() - start < WAYPOINTTIMEOUT) Util.delay(500);
 			
-			if(System.currentTimeMillis() - start > WAYPOINTTIMEOUT){
-				Util.log(".... WARNING ....  visitWaypoints(): " + name + " : " + wpname + " timed out .....");
-			}
-			
-			// check if cancelled while waiting
-			/*
-			if( ! state.exists(values.navigationroute)){
-				Util.log("visitWaypoints(" + name + "): canceled..  breaking loop");
-				visting = false;
-				return;
-			}
-    		
-			if(failed){
-				Util.log("visitWaypoints(" + name + "): failed..  breaking loop");
-				visting = false;
-				return;
-			}
-    		*/
-			
 			// this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 			if( ! state.exists(values.rosgoalstatus)){ 
 				Util.log("error, state rosgoalstatus null");
@@ -700,20 +675,11 @@ public class Navigation implements Observer {
 				continue; 
 			}
 
-			// nuke ?
-    		if(failed){
-				Util.log("visitWaypoints(" + name + "): failed breaking loop");
-				routevisiting = false;
-				return;
-			}
-    		
+			// send actions and duration delay to processRouteActions()		
 			Util.fine("visitWaypoints(" + name + "): start process waypoint: " + wpname);
-			
-			// send actions and duration delay to processRouteActions()
 			NodeList actions = ((Element) waypoints.item(wpnum)).getElementsByTagName("action");
 			long duration = Long.parseLong(((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
 			if (duration > 0) processWayPointActions(actions, duration * 1000, wpname, name);
-			
 			Util.fine("visitWaypoints(" + name + "): done process waypoint: " + wpname);
 			
 			SystemWatchdog.waitForCpu(); // help ros localize before moving on 
@@ -723,14 +689,6 @@ public class Navigation implements Observer {
 			wpnum ++;
 		}
     	
-    	// check if cancelled while waiting
-    	/*
-		if( ! state.exists(values.navigationroute)) {
-			Util.log("visitWaypoints(" + name + "): canceled..  breaking loop");
-			routevisiting = false;
-			return;
-		}*/
-		
 //		Util.log("visitWaypoints(" + name + "): start going to the dock...");
 		dock();
 		
@@ -743,7 +701,6 @@ public class Navigation implements Observer {
 		}
 			
 		if( ! state.get(values.dockstatus).equals(AutoDock.DOCKED)){
-			
 			NavigationLog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock"); 
 			failed = true;
 			
@@ -760,16 +717,16 @@ public class Navigation implements Observer {
 	}
 	
 	
-	/** ------------------------------------------------------------------------------ working --------------------------------------------- */
+	/** */
 	// TODO: build error checking into this (ignore duplicate waypoints, etc)
 	// assume goto dock at the end, whether or not dock is a waypoint
 
-	public static /*synchronized*/ void runRoute(final String name){
+	public static void runRoute(final String name){
 		
 		Util.fine("Navigation.runRoute(" + name + "): called..");
 		
 		if(routevisiting){
-			Util.log("runRoute(): visitWaypoints(): allready running....................... DANGEROUS...........................");
+			Util.log("runRoute(): visitWaypoints(): allready running ... DANGEROUS.");
 			return;
 		}
 
@@ -792,30 +749,31 @@ public class Navigation implements Observer {
 		
 		// be sure other thread exits first 
 		if(state.exists(values.navigationroute)){
-			Util.debug(" === runRoute(): route = " + state.get(values.navigationroute) + " .. needs to terminate, waiting.. ");
+			Util.debug("Navigation.runRoute(): route = " + state.get(values.navigationroute) + " .. needs to terminate, waiting ");
 			cancelAllRoutes();
 			Util.delay(NEXT_ROUTE_DELAY*3); // wait for inner thread to die first! 
-			Util.debug(" === did this exit? runRoute(): route = " + state.get(values.navigationroute) + " starting = " + name);
 		}
 		
-		// check its terminated first  
+		// check its terminated first, route must be null  
 		if(state.exists(values.navigationroute)){
-			Util.log("runRoute("+name+"): still active and can't cancel, failed to start: " + name);
+			Util.log("runRoute("+name+"): .. FATAL .. still active and can't cancel, failed to start: " + name);
+			cancelAllRoutes();
+			dock();
 			return;
 		}
 		
 		// now set active 
 		state.set(values.navigationroute, name);
+//		if(NavigationUtilities.getActiveRoute().equals(state.get(values.navigationroute))) 
 		NavigationUtilities.setActiveRoute(name);	
 		Element navroute = NavigationUtilities.getRouteElement(name);
 		
-//		waypoints = NavigationUtilities.getWaypointsForRoute(name, NavigationUtilities.routesLoad());
-	
-		// be sure ... NUKE 
-		// if( ! state.equals(values.navigationroute, NavigationUtilities.getActiveRoute())){ // || waypoints == null){
-		//	Util.log("...........................runRoute() route not set properly, return");
-		//	return;
-		//}
+//		waypoints = NavigationUtilities.getWaypointsForRoute(name, NavigationUtilities.routesLoad())
+
+		if( ! state.equals(values.navigationroute, NavigationUtilities.getActiveRoute())){ // || waypoints == null){
+			Util.log(".. FATAL FIX IF SEEN.. runRoute() route not set properly, return");
+			return;
+		}
 					
 		String msg = "Route " + name + " activated by ";
 		if(state.exists(values.driver)) msg += state.get(values.driver);
@@ -825,11 +783,8 @@ public class Navigation implements Observer {
 
 		new Thread(new Runnable() { public void run() {
 				
-			// be sure ... NUKE 
-			if(failed) Util.log(".... WARNING ..... runRoute("+name+"): failed flag needed to be reset.........");
-
 			failed = false; 
-			while( !failed && state.exists(values.navigationroute)){   
+			while( ! failed && state.exists(values.navigationroute)){   
 				
 				// determine next scheduled route time, wait if necessary
 				state.delete(values.nextroutetime);
@@ -914,8 +869,7 @@ public class Navigation implements Observer {
 					 }
 				 }					
 	
-				Util.debug(" == runRoute (bottom of loop): " + name + " #" + consecutiveroute, this);
-				
+				Util.debug("Navigation.runRoute ("+ state.exists(values.navigationroute) +"): " + name + " #" + consecutiveroute, this);	
 			}
 		}}).start();
 	}
@@ -925,20 +879,11 @@ public class Navigation implements Observer {
 	public static void goalCancel(){
 		app.driverCallServer(PlayerCommands.messageclients, "goal cancelled");
 		state.set(values.rosgoalcancel, true); // pass info to ros node
-//		state.delete(values.navigationroute);  // this eventually stops currently running route
 		state.delete(values.roswaypoint);
-//		failed = true;
 	}
 	
 	/**	*/
 	public static synchronized void cancelAllRoutes(){	
-		
-		// NUKE? 
-		if(state.getBoolean(values.autodocking)){
-			Util.log("cancelAllRoutes(): Autodocking, command dropped");
-			app.driverCallServer(PlayerCommands.messageclients, "Autodocking, command dropped");
-			return;
-		}
 		
 		if(state.exists(values.navigationroute)){ 
 			String msg = "Route canceled by ";
@@ -946,7 +891,7 @@ public class Navigation implements Observer {
 			else msg += " automated user";
 			NavigationLog.newItem(/*NavigationLog.INFOSTATUS, */ msg);  // can't use the name, deleted from state 
 			app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
-		} else Util.log("cancelAllRoutes(): Autodocking, command dropped");
+		} else Util.debug("cancelAllRoutes(): NO ACTIVE ROUTE, command dropped");
 
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)){
 			Util.debug("cancelAllRoutes(): all routes cancelled, going to the dock");
@@ -957,7 +902,7 @@ public class Navigation implements Observer {
 		state.delete(values.navigationroute); // this eventually stops currently running route
 		state.delete(values.nextroutetime);	
 
-		// be sure? NUKE 
+		// be sure? 
 		if(NavigationUtilities.getActiveRoute() != null) NavigationUtilities.deactivateAllRoutes();
 	}
 	
@@ -994,23 +939,23 @@ public class Navigation implements Observer {
 		state.set(values.nextroutetime, System.currentTimeMillis()+timebetween);
 		app.driverCallServer(PlayerCommands.messageclients, min +  msg);
 		long start = System.currentTimeMillis();
-		while (System.currentTimeMillis() - start < timebetween) {
+		while(System.currentTimeMillis() - start < timebetween) {
 		
 			if( ! state.exists(values.navigationroute)){
-				Util.debug("........... delayToNextRoute(): canceled, return..");
+				Util.debug("delayToNextRoute(): canceled, return..");
 				state.delete(values.nextroutetime);
 				return false;
 			}
 
 			if( failed ){
-				Util.debug("........... delayToNextRoute(): failed, return..");
+				Util.debug("delayToNextRoute(): failed, return..");
 				return false;
 			}
 			
 			Util.delay(NEXT_ROUTE_DELAY);
 		}
 
-		if ((consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) && (state.getUpTime() > Util.TEN_MINUTES)){ 
+		if((consecutiveroute > RESTARTAFTERCONSECUTIVEROUTES) && (state.getUpTime() > Util.TEN_MINUTES)){ 
 			Util.log("rebooting, max consecutive routes reached"); // prevent runaway reboots
 			app.driverCallServer(PlayerCommands.reboot, null);
 			return false;
@@ -1019,9 +964,7 @@ public class Navigation implements Observer {
 		return true;
 	}
 
-	/**
-	 * process actions for single waypoint 
-	 */
+	/** process actions for single waypoint */
 	private static void processWayPointActions(NodeList actions, long duration, String wpname, String name) {
 		
 		// TODO: actions here
@@ -1109,14 +1052,10 @@ public class Navigation implements Observer {
 			if (photo) app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*2));
 			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*5));
 
-			if (human)
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.name());
-			else if (motion)
-    			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.name());
-			else if (photo)
-				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
-			else // record
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.name());
+			if (human) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.name());
+			else if (motion) app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.name());
+			else if (photo) app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+			else app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.name()); // record
 
 			if (photo)app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
 			else app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
@@ -1162,8 +1101,7 @@ public class Navigation implements Observer {
 			// enable sound detection
 			if (sound) {
 				if (!settings.getBoolean(ManualSettings.useflash))   app.video.sounddetect(Settings.TRUE);
-				else app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
-						"0 " + settings.readSetting(ManualSettings.soundthreshold));
+				else app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 " + settings.readSetting(ManualSettings.soundthreshold));
 			}
 
 			// lights on if needed

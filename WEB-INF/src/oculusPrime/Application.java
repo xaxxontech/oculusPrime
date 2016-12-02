@@ -1000,7 +1000,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("must be docked to start new route, skipped", null, null);
 				return;					
 			}
-			
+			// TODO ?? 
+			NavigationUtilities.setActiveRoute(str);	
 			Navigation.runRoute(str);
 			break;
 
@@ -1831,8 +1832,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 		messageplayer("command received: " + str, "motion", "MOVING");
 
-		Util.log("..... move(): user taking over, cancel route........................ ");
-		Navigation.cancelAllRoutes(); 
+// doesn't work
+//		Util.log("..... move(): user taking over, cancel route........................ ");
+//		Navigation.cancelAllRoutes(); 
 	}
 
 	public void nudge(String str) {
@@ -1852,8 +1854,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer("command received: nudge " + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
 		
-		Util.log("..... nudge(): user taking over, cancel route........................ ");
-		Navigation.cancelAllRoutes(); 
+// doesn't work
+//		Util.log("..... nudge(): user taking over, cancel route........................ ");
+//		Navigation.cancelAllRoutes(); 
 	}
 
 	private void motionEnableToggle() {
