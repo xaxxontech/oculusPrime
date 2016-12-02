@@ -14,7 +14,7 @@ import oculusPrime.State.values;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.954; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.955; // trailing zeros ignored!
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;

@@ -31,34 +31,37 @@ public class State {
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
-		writingframegrabs, record, // undocumented
+		record, sounddetect,
+		// not typically used by scripts, undocumented:
+		writingframegrabs,
 
 		// power
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,
 		powererror, forceundock,
+		// not typically used by scripts, undocumented:
 		redockifweakconnection, // undocumented
 
-		javastartup, linuxboot, httpport, lastusercommand, cpu, // system
-		localaddress, externaladdress, ssid, guinotify,
-		osarch,
+		// system
+		javastartup, linuxboot, httpport, lastusercommand, cpu, guinotify, waitingforcpu, osarch,
 
-		relayserver, relayclient, // to be documented
 
 		// network
-		networksinrange, networksknown, gatewayaddress, // to be documented
+		localaddress, externaladdress, ssid,
+		networksinrange, networksknown, gatewayaddress, relayserver, relayclient,
 
 		// odometry
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast,
 		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
+		// not typically used by scripts, undocumented:
 		calibratingrotation,
 
 		// navigation
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		roswaypoint, nextroutetime, //navigationrouteid
-		
-		rosarcmove, routeoverdue, recoveryrotation, waitingforcpu, sounddetect, waypointbusy, // to be documented
+		navigationrouteid, nextroutetime, roswaypoint, rosarcmove,
+		// to be documented:
+		recoveryrotation, routeoverdue, waypointbusy,
 
 	}
 

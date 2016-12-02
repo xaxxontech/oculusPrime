@@ -766,7 +766,7 @@ public class Navigation implements Observer {
 		state.set(values.navigationroute, name);
 //		if(NavigationUtilities.getActiveRoute().equals(state.get(values.navigationroute))) 
 		NavigationUtilities.setActiveRoute(name);	
-		Element navroute = NavigationUtilities.getRouteElement(name);
+		final Element navroute = NavigationUtilities.getRouteElement(name);
 		
 //		waypoints = NavigationUtilities.getWaypointsForRoute(name, NavigationUtilities.routesLoad())
 
