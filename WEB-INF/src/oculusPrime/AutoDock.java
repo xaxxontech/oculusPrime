@@ -259,7 +259,12 @@ public class AutoDock {
 		app.message("docking initiated", "multiple", "speed slow motion moving dock docking");
 		state.set(State.values.docking, true);
 		state.set(State.values.dockstatus, DOCKING);
-		comport.speedset(ArduinoPrime.speeds.slow.toString());
+
+//		comport.speedset(ArduinoPrime.speeds.slow.toString());
+		int s = comport.speedslow;
+		if (s>comport.MAXDOCKEDPWM) s=comport.MAXDOCKEDPWM;
+
+		state.set(State.values.motorspeed, Integer.toString(s));
 		state.set(State.values.movingforward, false);
 		Util.log("docking initiated", this);
 		PowerLogger.append("docking initiated", this);
@@ -338,13 +343,15 @@ public class AutoDock {
 							dockattempts ++;
 
 							// backup a bit
-							comport.speedset(ArduinoPrime.speeds.fast.toString());
+//							comport.speedset(ArduinoPrime.speeds.med.toString());
+							state.set(State.values.motorspeed, Integer.toString(comport.MAXDOCKEDPWM));
 							comport.goBackward();
-							comport.delayWithVoltsComp(250);
+							comport.delayWithVoltsComp(400);
 							comport.stopGoing();
 							Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
 
 							// turn slightly! // TODO: direction should be determined by last slope
+							comport.speedset(ArduinoPrime.speeds.fast.toString());
 							comport.clickNudge((imgwidth / 4) * rescomp, true); // true=firmware timed
 							comport.delayWithVoltsComp(allowforClickSteer);
 
@@ -773,7 +780,10 @@ public class AutoDock {
 		String res=HIGHRES;
 		if (lowres) res=LOWRES;
 
-		if (!app.frameGrab(res)) return; // performs stream availability check
+		if (!app.frameGrab(res)) {
+			state.set(oculusPrime.State.values.dockgrabbusy, false);
+			return; // performs stream availability check
+		}
 
 //		if (app.grabber instanceof IServiceCapableConnection) {
 //			state.set(State.values.framegrabbusy.name(), true);

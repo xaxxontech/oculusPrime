@@ -114,7 +114,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static final int speedfast = 255;
 	public static final Double METERSPERSEC = 0.33;
 	public static final Double DEGPERMS = 0.0857;
-//		degperms = 0.0857 # turnspeed
+	public static final int MAXDOCKEDPWM = 120;
 
 	private volatile List<Byte> commandList = new ArrayList<>();
 	private volatile boolean commandlock = false;
@@ -704,15 +704,18 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}
 		
 		// no full speed when on dock voltage
-		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed2==speedfast) {
-			speed2 = speedmed;
-		}
+//		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && speed2==speedfast) {
+//			speed2 = speedmed;
+//		}
 
 		if (delay != 0) timeddelay = delay + FIRMWARE_TIMED_OFFSET;
 
 		// if already moving forward, go full speed and exit
 		if (state.get(State.values.direction).equals(direction.forward.toString()) ) {
-			int[] comp = applyComp(speed2); 
+			int s = speed2;
+			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
+				s = MAXDOCKEDPWM;
+			int[] comp = applyComp(s);
 			int L, R;
 			L = comp[0];
 			R = comp[1];
@@ -728,15 +731,19 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}
 
 		// always start slow, un-comped
-		if (delay == 0)
-			sendCommand(new byte[] { FORWARD, (byte) speed1, (byte) speed1});
+		int s = speed1;
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
+			s = MAXDOCKEDPWM;
+		if (delay == 0) {
+			sendCommand(new byte[]{FORWARD, (byte) s, (byte) s});
+		}
 		else {
 			int d = timeddelay;
 			if (d > ACCEL_DELAY) d = ACCEL_DELAY;
 
 			byte d1 = (byte) ((d >> 8) & 0xff);
 			byte d2 = (byte) (d & 0xff);
-			sendCommand(new byte[]{ FORWARDTIMED, (byte) speed1, (byte) speed1, d1, d2});
+			sendCommand(new byte[]{ FORWARDTIMED, (byte) s, (byte) s, d1, d2});
 			if (timeddelay <= ACCEL_DELAY) return;
 		}
 
@@ -748,12 +755,16 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				public void run() {
 					
 					Util.delay(ACCEL_DELAY);
-					
+
+					int s = spd;
+					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
+						s = MAXDOCKEDPWM;
+
 					if (currentMoveID != moveID)  return;
 
 					// actual speed, un-comped
 					if (delay==0)
-						sendCommand(new byte[] { FORWARD, (byte) spd, (byte) spd});
+						sendCommand(new byte[] { FORWARD, (byte) s, (byte) s});
 					else {
 						int d = timeddelay;
 
@@ -761,7 +772,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 						byte d1 = (byte) ((d >> 8) & 0xff);
 						byte d2 = (byte) (d & 0xff);
-						sendCommand(new byte[]{ FORWARDTIMED, (byte) spd, (byte) spd, d1, d2});
+						sendCommand(new byte[]{ FORWARDTIMED, (byte) s, (byte) s, d1, d2});
 						timeddelay -= COMP_DELAY;
 					}
 
@@ -777,7 +788,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				public void run() {
 					Util.delay(COMP_DELAY);
 
-					int[] comp = applyComp(spd); // actual speed, comped
+					int s = spd;
+					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
+						s = MAXDOCKEDPWM;
+
+					int[] comp = applyComp(s); // actual speed, comped
 					int L,R;
 					L = comp[0];
 					R = comp[1];
@@ -788,7 +803,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						int d = timeddelay-ACCEL_DELAY;
 						byte d1 = (byte) ((d >> 8) & 0xff);
 						byte d2 = (byte) (d & 0xff);
-						sendCommand(new byte[]{ FORWARDTIMED, (byte) spd, (byte) spd, d1, d2});
+						sendCommand(new byte[]{ FORWARDTIMED, (byte) s, (byte) s, d1, d2});
 					}
 					
 				} 
@@ -815,7 +830,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	public void goBackward() {
-	
+
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) return;
+
 		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
@@ -917,6 +934,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 	
 	public void turnRight(int delay) {
+
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) return;
+
 		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
@@ -973,6 +993,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * @param delay milliseconds, then stop (timed directly by firmware). If 0, continuous movement
 	 */
 	public void turnLeft(int delay) {
+
+		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) return;
+
 		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 		
