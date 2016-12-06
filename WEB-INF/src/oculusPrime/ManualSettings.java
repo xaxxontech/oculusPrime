@@ -11,7 +11,7 @@ public enum ManualSettings {
 	// undocumented
 	redockifweakconnection,restarted, 
 	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, undockdistance,
-
+	relayserver, relayserverauth,
 	;
 	
 	/** get basic settings, set defaults for all */
@@ -30,13 +30,28 @@ public enum ManualSettings {
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "150");
 		config.setProperty(redockifweakconnection.name(), Settings.TRUE);
+		config.setProperty(redockifweakconnection.name(), Settings.TRUE);   
 		config.setProperty(useflash.name(), Settings.TRUE);
 		config.setProperty(arcmovecomp.name(), "0.8");
 		config.setProperty(usearcmoves.name(), Settings.TRUE);
 		config.setProperty(arcpwmthreshold.name(), "150");
 		config.setProperty(soundthresholdalt.name(), "-8");
 		config.setProperty(undockdistance.name(), "0.75");
-
+		config.setProperty(redockifweakconnection.name(), Settings.TRUE);
+		config.setProperty(useflash.name(), Settings.TRUE);
+		config.setProperty(arcmovecomp.name(), "0.8");
+		config.setProperty(usearcmoves.name(), Settings.TRUE);
+		config.setProperty(restarted.name(), "0"); // TODO: undocumented
+		config.setProperty(arcpwmthreshold.name(), "150");
+		config.setProperty(redockifweakconnection.name(), Settings.TRUE);   // TODO: undocumented
+		config.setProperty(useflash.name(), Settings.TRUE); // TODO: undocumented
+		config.setProperty(arcmovecomp.name(), "0.8"); // TODO: undocumented
+		config.setProperty(usearcmoves.name(), Settings.TRUE); // TODO: undocumented
+		config.setProperty(arcpwmthreshold.name(), "150");   // TODO: undocumented
+		config.setProperty(soundthresholdalt.name(), "-8");  // TODO: undocumented
+		config.setProperty(undockdistance.name(), "0.75");  // TODO: undocumented
+		config.setProperty(relayserver.name(), Settings.DISABLED);  // TODO: undocumented
+		config.setProperty(relayserverauth.name(), Settings.DISABLED);  // TODO: undocumented
 		return config;
 	}
 	

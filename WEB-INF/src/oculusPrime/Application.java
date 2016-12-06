@@ -348,15 +348,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
-		if (state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if (!settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
 		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
 		// use relay server if set
-
-		if (!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
-
-
+		if( !settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
 			red5client = new Red5Client(this); // connects to remote server
 			red5client.connectToRelay();
 		}
@@ -393,7 +390,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// start active route 
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
 		Util.log("java application initialized", this);		
-		
 	}
 	
 	private void redockWaitRunRoute(){

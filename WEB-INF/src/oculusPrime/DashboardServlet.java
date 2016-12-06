@@ -570,13 +570,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		if(key.equals(values.navigationroute.name())){
 			if(state.exists(values.navigationroute)){
-				
-//				Util.log("................updated: " + state.get(values.navigationroute), this);
-
 				estimatedmeters = NavigationUtilities.getRouteDistanceEstimateString(state.get(values.navigationroute));
 				estimatedseconds = NavigationUtilities.getRouteTimeEstimateString(state.get(values.navigationroute));
 				pointslist = NavigationUtilities.getWaypointsForRoute(state.get(values.navigationroute)).toString();
-			
 			} else {
 				pointslist = "none";	
 				estimatedmeters = "0";
@@ -584,17 +580,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			}
 		}
 		
-		/*
-		if(key.equals(values.roswaypoint.name())){
-			
-			Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);
-			nextWapoint = state.get(values.roswaypoint);
-			
-		}
-		*/
-		//	if(state.getBoolean(values.routeoverdue)) 
-		//		state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
-
+//		if(key.equals(values.roswaypoint.name())){
+//				Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);
+//  			nextWapoint = state.get(values.roswaypoint);
+						
+//	if(state.getBoolean(values.routeoverdue)) 
+//		state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
 //		if(key.equals(values.framegrabbusy.name())) return;
 //		if(key.equals(values.rosglobalpath.name())) return;
 //		if(key.equals(values.rosscan.name())) return;
