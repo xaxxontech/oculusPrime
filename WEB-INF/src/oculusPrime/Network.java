@@ -1,11 +1,12 @@
 package oculusPrime;
 
 
-import oculusPrime.commport.ArduinoPrime;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import developer.NavigationUtilities;
+import oculusPrime.State.values;
 
 public class Network {
 
@@ -38,8 +39,7 @@ public class Network {
                             if (networkInfoToState()) {
                                 wait = 0;
                                 networkInfoToStateFailCount = 0;
-                            }
-                            else {
+                            } else {
                                 wait = System.currentTimeMillis() + Util.ONE_MINUTE;
                                 networkInfoToStateFailCount ++;
                             }
@@ -65,7 +65,7 @@ public class Network {
             return false;
         }
 
-        Document document = Util.loadXMLFromString(data);
+        Document document = NavigationUtilities.loadXMLFromString(data);
         if (document == null) {
             nukeStateValues();
             return false;
@@ -82,10 +82,10 @@ public class Network {
             }
         }
         else {
-            if (state.exists(State.values.ssid)) { // changed
-                state.delete(State.values.externaladdress);
-                state.delete(State.values.localaddress);
-                state.delete(State.values.ssid);
+            if (state.exists(values.ssid)) { // changed
+                state.delete(values.externaladdress);
+                state.delete(values.localaddress);
+                state.delete(values.ssid);
             }
         }
 

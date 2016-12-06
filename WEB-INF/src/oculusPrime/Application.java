@@ -17,7 +17,12 @@ import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
+import org.red5.server.stream.ClientBroadcastStream;
 
+import developer.Navigation;
+import developer.NavigationLog;
+import developer.NavigationUtilities;
+import developer.Ros;
 import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
@@ -64,12 +69,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	public static developer.depth.OpenNIRead openNIRead = null;
 	public static developer.depth.ScanUtils scanUtils = null;
-	private developer.Navigation navigation = null;
-
+	
 	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
 	public static BufferedImage videoOverlayImage = null;
 
+	// for fine debugging 
+	private static final boolean DEBUG_PLAYER = false;
+	
 	private Red5Client red5client = null;
 	public IConnection relayclient = null;
 	public Network network = null;
@@ -83,9 +90,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = new LoginRecords(this);
-		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
-		initialize();
+		initialize();		
+		
+		// do last always 
+		if(settings.getBoolean(ManualSettings.developer.name())) DashboardServlet.setApp(this);
 	}
 
 	@Override
@@ -336,43 +345,81 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		if (settings.getBoolean(GUISettings.navigation)) {
-			navigation = new developer.Navigation(this);
-			navigation.runAnyActiveRoute();
-		}
-
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
-		// use relay server if set
-		if (!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
+		// use relay server if set
+		if( !settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
 			red5client = new Red5Client(this); // connects to remote server
 			red5client.connectToRelay();
 		}
 
-		if (state.get(values.osarch).equals(ARM))
-			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if (!settings.getBoolean(ManualSettings.useflash))
-			state.set(values.driverstream, driverstreamstate.disabled.toString());
-		else
-			state.set(State.values.driverstream, driverstreamstate.stop.toString());
-
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		
+		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
-
-		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
-//		Util.updateExternalIPAddress();
-//		Util.updateLocalIPAddress();
 		network = new Network(this);
-
-		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
-		
 		watchdog = new SystemWatchdog(this);
-
-		Util.debug("application initialize done", this);
+		if(settings.getBoolean(GUISettings.navigation)) new developer.Navigation(this);
 		
+		if(settings.getBoolean(ManualSettings.developer.name())){
+			
+			// extra logging info 
+			Util.log(/*"prime folder: " + Util.countMbytes(".") + " mybtes, " + */ Util.diskFullPercent() + "% used", this);
+			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
+			Util.logLinuxRelease(); 
+			
+			// developer debugging info, warning to reboot after many restarts
+			// if(settings.getInteger(ManualSettings.restarted) > 5)
+				
+			NavigationLog.newItem("WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			
+			// try re-docking, then start routes again 
+			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
+		}
+		
+		// start active route 
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
+		Util.log("java application initialized", this);		
+	}
+	
+	private void redockWaitRunRoute(){
+		new Thread(new Runnable() { public void run() {
+			try {
+				
+				Util.delay(5000); // system settle 	
+				
+				Util.debug(".... booted undocked, trying redock, waiting....", this);		
+				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
+				if(state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TWO_MINUTES)){
+					if(( /* state.equals(values.wallpower, "true") && */ state.equals(values.dockstatus, AutoDock.DOCKED))){
+								
+						Util.debug(".... booted undocked, trying redock, done waiting....", this);		
+	
+						Util.delay(15000); // system settle 	
+						
+						Util.debug(".... redockWaitRunRoute(): run active route: " + NavigationUtilities.getActiveRoute());
+						Navigation.runActiveRoute();	
+						
+					}				
+				} else {
+					
+					// this is bad 
+					NavigationLog.newItem(NavigationLog.ALERTSTATUS, "redockWaitRunRoute(): failed to dock");
+					new SendMail("oculus can't dock", "redockWaitRunRoute() failed: " + state.toString().replaceAll("<br>", "\n"));
+					
+				}
+			} catch (Exception e){Util.printError(e);}
+		} }).start();
 	}
 
 	// called by remote relay client
@@ -549,13 +596,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 		try {
 			cmd = PlayerCommands.valueOf(fn);
 		} catch (Exception e) {
-			Util.debug("playerCallServer() command not found:" + fn, this);
+			Util.log("playerCallServer() command not found:" + fn, this);
 			messageplayer("error: unknown command, "+fn,null,null);
 			return;
 		}
 		if (cmd != null) playerCallServer(cmd, str, false);	
 	}
 	
+	public void playerCallServer(PlayerCommands fn, String str) {
+		playerCallServer(fn, str, false);
+	}
+
 	@SuppressWarnings("incomplete-switch")
 	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 
@@ -592,27 +643,31 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 		
+		/*
+		if( ! fn.name().equals(PlayerCommands.statuscheck ) &&
+				 ! fn.name().equals(PlayerCommands.arcmove )	) 
+			Util.log("---playerCallServer: " + fn.name() + " argument: " + str, this);
+		*/
+		
 		switch (fn) {
 	
 		case move: {
 
-			if (settings.getBoolean(GUISettings.navigation)) navigation.navdockactive = false;
+			if(settings.getBoolean(GUISettings.navigation)) Navigation.navdockactive = false;
 
-			if (state.exists(State.values.navigationroute) && !passengerOverride && 
-					str.equals(ArduinoPrime.direction.stop.toString())) {
+			if(state.exists(State.values.navigationroute) && !passengerOverride && 
+					str.equals(ArduinoPrime.direction.stop.toString())){
+				
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
-						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0);
-				navigation.cancelAllRoutes();
-			}
-			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
+				NavigationLog.newItem("Route cancelled by user");
+				Navigation.cancelAllRoutes();
+			
+			}  else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
-			}
+			} 
 
-			if (!passengerOverride && watchdog.redocking) watchdog.redocking = false;
-				
+			if( ! passengerOverride && watchdog.redocking) watchdog.redocking = false;
 			move(str); 
 			break;
 		}
@@ -647,15 +702,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: video.record(str); break; // record [true | false]
+		case record: record(str); break;  // record [true | false]
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
-
 		case restart: restart(); break;
 		case powershutdown: powerport.shutdown(); break;
 		case reboot: reboot(); break;
 		case systemshutdown: powerdown(); break;
-
 		case softwareupdate: softwareUpdate(str); break;
 //		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
 		case quitserver: shutdownApplication(); break;
@@ -677,8 +730,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.lowres = true; // ?
 			break;
 		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
-		case nudge: nudge(str); break;
-		
 		case state: 
 			String s[] = str.split(" ");
 			if (s.length == 2) { // two args
@@ -719,6 +770,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("speed set: " + str, "speed", str.toUpperCase());
 			break;
 
+		case nudge: nudge(str); break;
+		
 		case left:
 		case right:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
@@ -871,8 +924,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case erroracknowledged:
 			if (str.equals("true")) {
 				Util.log("power error acknowledged",this);
-				Util.log("power error acknowledged","Application_power");
-				
 				if (watchdog.powererrorwarningonly) { 
 					powerport.clearWarningErrors(); 
 					watchdog.lastpowererrornotify = null; 
@@ -892,10 +943,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case roslaunch:
-			if (Ros.launch(str))
-				messageplayer("roslaunch "+str+".launch", null, null);
-			else
-				messageplayer("roslaunch already running", null, null);
+			if (Ros.launch(str)) messageplayer("roslaunch "+str+".launch", null, null);
+			else messageplayer("roslaunch already running", null, null);
 			break;
 		
 		case savewaypoints:
@@ -904,54 +953,65 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case gotowaypoint:
-			if (navigation != null) navigation.gotoWaypoint(str);
+			Navigation.gotoWaypoint(str);
 			break;
 		
 		case startnav:
-			if (navigation != null) navigation.startNavigation(); 
+			Navigation.startNavigation(); 
 			break;
 		
 		case stopnav:
-			if (navigation != null) navigation.stopNavigation();
+			Navigation.stopNavigation();
 			break;
 		
 		case gotodock:
-			if (navigation != null) navigation.dock(); 
+			Navigation.dock(); 
 			break;
 			
 		case saveroute: 
-			if (navigation != null) navigation.saveRoute(str);
-			messageplayer("route saved", null, null);
+			NavigationUtilities.saveRoute(str);
+			messageplayer("route saved", null, null);			
+			break;
+		
+		case routedata:
+			String r = "<routename>" + str + "</routename>" 
+						+ "<count>" + NavigationUtilities.getRouteCountString(str) + "</count>"
+			 			+ "<fail>" + NavigationUtilities.getRouteFailsString(str) + "</fail>"
+			 			+ "<meters>" + NavigationUtilities.getRouteDistanceEstimate(str) + "</meters>"
+			 			+ "<second>" + NavigationUtilities.getRouteTimeEstimate(str) + "</seconds>";
+			
+			// Util.log("route: " + str + " " + r, this);
+			commandServer.sendToGroup("route: " + str + " " + r);
+			break;
+			
+		case resetroutedata: 
+			Util.log("User reset route stats for: "+str, this);
+			// messageplayer("User reset route status for: "+str, null, null);
+			// RESET ROUTE SEC ANDE DEISTANCE TOO ?
+			NavigationUtilities.setRouteFails(str, 0);
+			NavigationUtilities.setRouteCount(str, 0);
 			break;
 			
 		case runroute:
-			if (navigation != null) {
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
-				navigation.runRoute(str);
+			if(str == null) return;
+			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
+				Util.log("playerCallServer(): must be docked to start new route, skipped", this);
+				messageplayer("must be docked to start new route, skipped", null, null);
+				return;					
 			}
+			// TODO ?? 
+			NavigationUtilities.setActiveRoute(str);	
+			Navigation.runRoute(str);
 			break;
 
 		case cancelroute:
-			if (navigation != null && state.exists(values.navigationroute)) {
-				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
-						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0);
-				navigation.cancelAllRoutes();
-			}
+			Navigation.cancelAllRoutes(); // state changes 
+			NavigationUtilities.deactivateAllRoutes(); // edit file 
 			break;
 
-		case startmapping:
-			if (navigation != null) navigation.startMapping();
-			break;
-
-		case savemap:
-			if (navigation != null) navigation.saveMap();
-			break;
-
-		case clearmap: Mapper.clearMap();
-			break;
-
+		case startmapping: Navigation.startMapping(); break;
+		case savemap: Navigation.saveMap(); break;
+		case clearmap: Mapper.clearMap(); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
 		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
@@ -967,7 +1027,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case cpu: 
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
+			commandServer.sendToGroup("cpu = " + cpu);
 			break;
+		
 		case waitforcpu: watchdog.waitForCpuThread();  break;
 
 		// dev tool only
@@ -987,7 +1049,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			new OpenCVUtils(this).jpgStream(str);
 //			opencvutils.jpgStream(str);
 			break;
-			
+		
 		case deletelogs:
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
@@ -995,6 +1057,25 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			Util.deleteLogFiles();
 			break;
+		
+	
+		/** testing 		*/
+		case wait: //---------------------------------------------------------------------------------
+		
+			Util.log("wait on: " + str, this);
+
+			final String input[] = str.split(" ");
+			new Thread(new Runnable() { public void run(){
+				
+				if(state.block(input[0], (int) Util.TEN_MINUTES)){ 
+					commandServer.sendToGroup("... wait: " + input[0] + " == " + input[1]);
+				} else { 
+					commandServer.sendToGroup("... wait: time out: " + input[0]);
+				}
+
+			}}).start();
+			break;
+	
 			
 		case archivelogs: 
 //			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
@@ -1246,6 +1327,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	}
 
+
 //	private void muteROVMicOnMoveToggle() {
 //		if (settings.getBoolean(GUISettings.muteonrovmove)) {
 ////			state.set(State.values.muteOnROVmove, false);
@@ -1412,7 +1494,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		if(str!=null){
 			if(! str.equals("status check received")) // basic ping from client, ignore
-				Util.debug("messageplayer: "+str+", "+status+", "+value, this);
+				if(DEBUG_PLAYER) Util.debug("messageplayer: "+str+", "+status+", "+value);
 		}
 
 	}
@@ -1429,14 +1511,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void saySpeech(String str) {
-
-		Util.debug("SPEECH sayspeech: " + str, this);
-		
 		try {
 			String strarr[] = {"espeak",str};
 			Runtime.getRuntime().exec(strarr);
-		} catch (IOException e) { Util.printError(e); }
-	
+		} catch (IOException e) { Util.printError(e); }	
 	}
 
 	private void getEmailSettings() {
@@ -1618,7 +1696,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void restart() {
-		messageplayer("restarting server application", null, null);	
+		messageplayer("restarting server application", null, null);
+		
+		if(settings.getBoolean(ManualSettings.developer.name())){
+			int b = settings.getInteger(ManualSettings.restarted);
+			settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+			
+// THIS in developer mode, or just warning? 	
+//			if(settings.getInteger(ManualSettings.restarted) > 10){
+//			Util.log("restart called but reboot neededd, going down..", this);
+			
+		}
 		
 		// write file as restart flag for script
 		File f = new File(Settings.redhome + Util.sep + "restart");
@@ -1633,28 +1721,30 @@ public class Application extends MultiThreadedApplicationAdapter {
 		shutdownApplication();
 	}
 	
-	public  void reboot() {
+	public void reboot(){
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
+		settings.writeSettings(ManualSettings.restarted, "0");
 
-		if (navigation != null) { // TODO: << condition required?
-			if (state.exists(values.odomlinearpwm)) {
-				settings.writeSettings(ManualSettings.odomlinearpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
-			}
-			if (state.exists(values.odomturnpwm)) {
-				settings.writeSettings(ManualSettings.odomturnpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
-			}
+		if(state.exists(values.odomlinearpwm)){
+			settings.writeSettings(ManualSettings.odomlinearpwm,
+				String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+		}
+		
+		if(state.exists(values.odomturnpwm)) {
+			settings.writeSettings(ManualSettings.odomturnpwm,
+				String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
 		}
 
 		Util.delay(1000);
+
 //		if (!state.get(values.osarch).equals(ARM)) {
 //			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 //		}
 //		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+		
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 
 	}
@@ -1665,6 +1755,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
+
 //		if (!state.get(values.osarch).equals(ARM)) {
 //			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
 //		}
@@ -1686,21 +1777,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if (powerport.isConnected()) powerport.writeStatusToEeprom();
 		PowerLogger.close();
 		
-		if (navigation != null) {
-			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-				navigation.stopNavigation();
+		if( ! state.equals(values.navsystemstatus, Ros.navsystemstate.stopped.toString())) Navigation.stopNavigation();
 
-			if (state.exists(values.odomlinearpwm)) {
-				settings.writeSettings(ManualSettings.odomlinearpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
-			}
-			if (state.exists(values.odomturnpwm)) {
-				settings.writeSettings(ManualSettings.odomturnpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
-			}
-		}
-
-		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
+		if(state.exists(values.odomlinearpwm)) settings.writeSettings(ManualSettings.odomlinearpwm,
+			String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+			
+		if (state.exists(values.odomturnpwm)) settings.writeSettings(ManualSettings.odomturnpwm,
+			String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+			
+		/*if( ! settings.getBoolean(ManualSettings.debugenabled))*/ killGrabber();
 
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}
@@ -1745,6 +1830,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	
 		messageplayer("command received: " + str, "motion", "MOVING");
+
+// doesn't work
+//		Util.log("..... move(): user taking over, cancel route........................ ");
+//		Navigation.cancelAllRoutes(); 
 	}
 
 	public void nudge(String str) {
@@ -1763,6 +1852,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		comport.nudge(ArduinoPrime.direction.valueOf(str));
 		messageplayer("command received: nudge " + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
+		
+// doesn't work
+//		Util.log("..... nudge(): user taking over, cancel route........................ ");
+//		Navigation.cancelAllRoutes(); 
 	}
 
 	private void motionEnableToggle() {
@@ -2351,8 +2444,112 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
+	// record to flv in webapps/oculusPrime/streams/
+	@SuppressWarnings("incomplete-switch")
+	public String record(String mode) {
+		IConnection conn = grabber;
 
+		if (state.get(State.values.stream) == null) return null;
+
+		if (state.get(State.values.record) == null)
+			state.set(State.values.record, Application.streamstate.stop.toString());
+
+		if (conn == null) return null;
+
+		if (mode.toLowerCase().equals(Settings.TRUE)) {  // TRUE, start recording
+
+			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
+				driverCallServer(PlayerCommands.messageclients, "no stream running, unable to record");
+				return null;
+			}
+
+			if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
+				driverCallServer(PlayerCommands.messageclients, "already recording, command dropped");
+				return null;
+			}
+
+			// Get a reference to the current broadcast stream.
+			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
+
+
+			// Save the stream to disk.
+			try {
+				String streamName = Util.getDateStamp();
+				final String urlString = "http://"+state.get(State.values.externaladdress)+":"+
+						state.get(State.values.httpport) + "/oculusPrime/streams/";
+
+				state.set(State.values.record, state.get(State.values.stream));
+
+				switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
+					case mic:
+						messageplayer("recording to: " + urlString+streamName + "_audio.flv",
+								values.record.toString(), state.get(values.record));
+						stream.saveAs(streamName + "_audio", false);
+						break;
+
+					case camandmic:
+						if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
+							ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
+							messageplayer("recording to: " + urlString+streamName + "_audio.flv",
+									values.record.toString(), state.get(values.record));
+							audiostream.saveAs(streamName+"_audio", false);
+						}
+						// BREAK OMITTED ON PURPOSE
+
+					case camera:
+						messageplayer("recording to: " + urlString+streamName + "_video.flv",
+								values.record.toString(), state.get(values.record));
+						stream.saveAs(streamName + "_video", false);
+						break;
+				}
+
+				Util.log("recording: streamName",this);
+				return urlString + streamName;
+
+			} catch (Exception e) {
+				Util.printError(e);
+			}
+		}
+
+
+		else { // FALSE, stop recording
+
+			if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
+				driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
+				return null;
+			}
+
+			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
+			if (stream == null) return null; // if page reload
+
+			state.set(State.values.record, Application.streamstate.stop.toString());
+
+			switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
+
+				case camandmic:
+					if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
+						ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
+						driverCallServer(PlayerCommands.messageclients, "2nd audio recording stopped");
+						audiostream.stopRecording();
+					}
+					// BREAK OMITTED ON PURPOSE
+
+				case mic:
+					// BREAK OMITTED ON PURPOSE
+
+				case camera:
+					stream.stopRecording();
+					Util.log("recording stopped", this);
+					messageplayer("recording stopped", values.record.toString(), state.get(values.record));
+					break;
+			}
+
+
+		}
+		return null;
+	}
 
 }
+
 
 

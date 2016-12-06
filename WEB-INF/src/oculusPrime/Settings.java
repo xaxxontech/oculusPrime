@@ -5,19 +5,18 @@ import java.util.HashMap;
 import java.util.UUID;
 
 import oculusPrime.State.values;
-import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 
 public class Settings {
 
 	public final static String redhome = System.getenv("RED5_HOME");
-	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
+	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";	
 	public final static String appsubdir = "webapps/oculusPrime";
 	public final static String streamfolder = redhome + Util.sep+"webapps/oculusPrime/streams/";
 	public final static String framefolder = redhome+Util.sep+appsubdir+"/framegrabs";
 	public final static String streamsfolder = redhome+Util.sep+appsubdir+"/streams";
 	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
-	public final static String archivefolder = redhome+Util.sep+"archive";
 	public final static String logfolder = redhome+Util.sep+"log";
+	// public final static String archivefolder = logfolder+"/archive";
 	public final static String roslogfolder = "~/.ros/";
 	
 	public final static String DISABLED= "disabled";

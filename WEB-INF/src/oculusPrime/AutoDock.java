@@ -9,6 +9,9 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import developer.Navigation;
+import developer.NavigationLog;
+import oculusPrime.State.values;
 import developer.Ros;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -45,6 +48,7 @@ public class AutoDock {
 	public static final int FLLOW = 7;
 	private final int FLCALIBRATE = 2;
 	private volatile boolean autodocknavrunning = false;
+	private int busyflags; // TODO: TESTING RESET FLAG COUNTER 
 	
 	public AutoDock(Application theapp, ArduinoPrime com, ArduinoPower powercom) {
 		this.app = theapp;
@@ -285,8 +289,8 @@ public class AutoDock {
 					comport.goForward();
 					Util.delay((long) comport.voltsComp(200)); // was 150
 					comport.stopGoing();
-
-					state.block(oculusPrime.State.values.wallpower, "true", 400);
+					
+					state.block(values.wallpower, "true", 400);
 					inchforward ++;
 				}
 				
@@ -298,15 +302,17 @@ public class AutoDock {
 					
 					comport.strobeflash("on", 120, 20);
 					// allow time for charger to get up to voltage 
-				     // and wait to see if came-undocked immediately (fairly commmon)
+				    // and wait to see if came-undocked immediately (fairly common)
 					Util.delay(5000);
 				}
 				
-				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful
-					
+				if(state.get(State.values.dockstatus).equals(DOCKED)){ // dock successful
+
+					//TODO: testing.. 
+					busyflags = 0;
+
 					state.set(State.values.docking, false);
 					comport.speedset(ArduinoPrime.speeds.fast.toString());
-
 					String str = "";
 					
 					if (state.getBoolean(State.values.autodocking)) {
@@ -329,6 +335,11 @@ public class AutoDock {
 					Util.log(state.get(State.values.driver) + " docked successfully", this);
 					PowerLogger.append(state.get(State.values.driver) + " docked successfully", this);
 
+//					if(settings.getBoolean(ManualSettings.developer.name())){
+//						if(!state.exists(values.driver)) NavigationLog.newItem("Docked: docked successfully");
+//						else NavigationLog.newItem("Docked: " + state.get(State.values.driver) + " docked successfully");
+//					}
+				
 				} else { // dock fail
 					
 					if (state.getBoolean(State.values.docking)) {
@@ -338,8 +349,13 @@ public class AutoDock {
 						Util.log("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 						PowerLogger.append("dock(): " + state.get(State.values.driver) + " docking timed out", this);
 
+//						if(settings.getBoolean(ManualSettings.developer.name())){
+//							if(!state.exists(values.driver))NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): docking timed out");
+//							else NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): " + state.get(State.values.driver) + " docking timed out");
+//						}
+													
 						// back up and retry
-						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)) {
+						if (dockattempts < maxdockattempts && state.getBoolean(State.values.autodocking)){
 							dockattempts ++;
 
 							// backup a bit
@@ -383,8 +399,12 @@ public class AutoDock {
 //
 //							String str = "motion disabled dock "+UNDOCKED+" battery draining cameratilt "
 //									+state.get(State.values.cameratilt)+" autodockcancelled blank";
+							NavigationLog.newItem(NavigationLog.ALERTSTATUS, "dock(): autodock completely failed");
 							app.message("autodock completely failed", null, null);
 							autoDockCancel();
+							// TODO: testing.......................................................
+							Navigation.failed = true;
+							
 						}
 					}
 						
@@ -742,7 +762,7 @@ public class AutoDock {
 					}
 					avg = avg / n;
 					app.message("getlightlevel: " + Integer.toString(avg), null, null);
-					state.set(State.values.lightlevel, avg);
+					state.set(values.lightlevel, avg);
 					
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -753,13 +773,21 @@ public class AutoDock {
 
 	public void dockGrab(final dockgrabmodes mode, final int x, final int y) {
 
-		if (state.getBoolean(State.values.dockgrabbusy)) {
-			Util.log("dockGrab() error, dockgrabbusy", this);
+		if (state.getBoolean(values.dockgrabbusy)){
+			busyflags++;
+			Util.log("dockGrab() error, dockgrabbusy flags: " + busyflags, this);
+			if(busyflags >= 3){
+				
+				Util.log("dockGrab(): reset busy flags", this);
+				state.delete(values.dockgrabbusy);
+				busyflags = 0;
+				
+			}
 			return;
 		}
 
-		state.delete(oculusPrime.State.values.dockfound);
-		state.delete(oculusPrime.State.values.dockmetrics);
+		state.delete(values.dockfound);
+		state.delete(values.dockmetrics);
 
 //		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
 //				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
@@ -768,16 +796,18 @@ public class AutoDock {
 //			return;
 //		}
 
-		if (state.getBoolean(State.values.framegrabbusy)) {
-			app.message("framegrab busy", null, null);
-			Util.log("error, framegrab busy", this);
-			state.delete(State.values.framegrabbusy); // TODO: testing
+		if (state.getBoolean(values.framegrabbusy)) {
+			busyflags++;
+			app.message("framegrab busy: " + busyflags, null, null);
+			Util.log("dockGrab(): error, framegrab busy.. reset state", this);
+			state.delete(values.framegrabbusy);
+			// TODO: testing.......................................................
 			return;
 		}
 
-		state.set(oculusPrime.State.values.dockgrabbusy, true);
+		state.set(values.dockgrabbusy, true);
 
-		String res=HIGHRES;
+		String res = HIGHRES;
 		if (lowres) res=LOWRES;
 
 		if (!app.frameGrab(res)) {

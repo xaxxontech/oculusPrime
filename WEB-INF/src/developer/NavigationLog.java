@@ -4,9 +4,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.InputStreamReader;
 
 import oculusPrime.Settings;
+import oculusPrime.State;
+import oculusPrime.State.values;
 import oculusPrime.Util;
 
 /**
@@ -18,12 +21,9 @@ import oculusPrime.Util;
  * css: completedroute,
  */
 public class NavigationLog {
-
-    public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
-            "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
-
-    // testing:
-//    public static final String navigationlogpath = System.getenv("HOME")+Util.sep+"temp"+Util.sep+"navroutelog/index.html";
+	
+	public static final String navigationlogFOLDER =  Settings.redhome+Util.sep + "webapps" + Util.sep + "oculusPrime"+ Util.sep + "navigationlog";
+    public static final String navigationlogpath =  navigationlogFOLDER + Util.sep + "index.html";
 
     public static final String ALERTSTATUS = "ALERT";
     public static final String ERRORSTATUS = "ERROR";
@@ -31,23 +31,24 @@ public class NavigationLog {
     public static final String INFOSTATUS = "Info";
     public static final String PHOTOSTATUS = "Photo";
     public static final String VIDEOSTATUS = "Video";
-//    private static final String PIPE = " <span style='color: #999999'>|</span> ";
+    
     private static final String PIPE = " &nbsp; ";
     private static final String ITEM = "<!--item-->";
     private static final String FILEEND = "</body></html>";
-    private static final int maxitems = 300;
-    private volatile boolean newItemBusy = false;
-
-    // completed route
-    public void newItem(final String status, final String msg, final long starttime, final String waypoint,
-                        final String routename, final int consecutiveroute, final double routedistance) {
-
+    private static final int maxitems = 500; // Development
+    private static volatile boolean newItemBusy = false;
+    
+    // use if only needing to write a simple message 
+    public static void newItem(final String status, final String msg){
+    	newItem(status, msg, State.getReference().get(values.roswaypoint), State.getReference().get(values.navigationroute));
+    }
+    
+    public static synchronized void newItem(final String status, final String msg, final String waypoint, final String routename){ 
         new Thread(new Runnable() { public void run() {
-
             long timeout = System.currentTimeMillis() + 5000;
             while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
             if (newItemBusy) {
-                Util.log("error, newitembusy timed out", this);
+                Util.log("error, newitembusy timed out: "+msg, this);
                 return;
             }
 
@@ -57,17 +58,14 @@ public class NavigationLog {
             String str="<div id='"+id+"' ";
 
             if (status.equals(VIDEOSTATUS)) str += "class='"+PHOTOSTATUS.toLowerCase()+"' ";
-            else
-                str += "class='"+status.toLowerCase()+"' ";
+            else str += "class='"+status.toLowerCase()+"' ";
 
             str += "onclick=\"clicked(this.id);\" ";
             str += ">"+Util.getTime() + PIPE;
             String rname = routename;
             if (rname == null) rname = "undefined";
             str += "Route: "+rname;
-            if (status != null) {
-                str += PIPE+status;
-            }
+            if (status != null) str += PIPE+status;
             str += "</div>\n";
 
             // expand
@@ -80,26 +78,61 @@ public class NavigationLog {
             }
             if (msg != null) str += msg+"<br>\n";
             if (waypoint != null) str += "Waypoint: "+waypoint+"<br>\n";
-            str += "Consecutive Route: "+consecutiveroute+"<br>\n";
-            if( !status.equals(NavigationLog.INFOSTATUS.toString()) && !status.equals(NavigationLog.ERRORSTATUS.toString())){
-            	long st = starttime;
-            	if (st==0) st = System.currentTimeMillis();
-            	str += "Elapsed time: "+(int) ((System.currentTimeMillis()-st)/1000/60)+" minutes <br>\n";
+            str += "Consecutive Route: "+Navigation.consecutiveroute+"<br>\n";
+            
+            if(status.equals(COMPLETEDSTATUS.toString()) && routename != null){ 
+            	str += "Route Count: " + NavigationUtilities.getRouteCount(routename) + " <br>\n";
+            	int fails = NavigationUtilities.getRouteFails(routename);
+            	if(fails > 0) str += "Route Failures: " + fails + "<br>\n"; 	
             }
-            if(routedistance > 0) str += "Route distance: " + Util.formatFloat(routedistance/(double)1000, 2) + " meters <br>\n";
+            
+            if( !status.equals(INFOSTATUS.toString()) && !status.equals(ERRORSTATUS.toString())
+            		&& !status.equals(NavigationLog.PHOTOSTATUS.toString())){
+            	long st = Navigation.routestarttime;
+            	if(st==0) st = System.currentTimeMillis();
+            	str += "Elapsed time: "
+            			+ Util.formatFloat((System.currentTimeMillis()-(double)st)/(double)1000/(double)60, 1)
+            			+" minutes <br>\n";
+            }
+            
+            if(Navigation.routemillimeters > 0 && !status.equals(INFOSTATUS.toString())) 
+            	str += "Route distance: " + Util.formatFloat(Navigation.routemillimeters/(double)1000, 2) + " meters <br>\n";
+            
+//            if(Navigation.rotations > 0 && !status.equals(INFOSTATUS.toString())) 
+//            	str += "Recovery Rotations: " + Navigation.rotations; 
+            
             str += "</div>\n";
-
             writeFile(str);
-
             newItemBusy = false;
-
         } }).start();
     }
 
-    private void writeFile(String newitem) {
+    /*   */
+    
+    public static synchronized void newItem(final String msg){ 
+        new Thread(new Runnable() { public void run() {
+            long timeout = System.currentTimeMillis() + 5000;
+            while (newItemBusy && System.currentTimeMillis() < timeout) Util.delay(1);  // wait
+            if (newItemBusy) {
+                Util.log("error, newitembusy timed out: "+msg, this);
+                return;
+            }
+            newItemBusy = true;;
+            String str = "<div class=\"message\">" +Util.getTime() + PIPE + msg + "</div>\n";
+            writeFile(str);
+            newItemBusy = false;
+        } }).start();
+    }
+ 
+    private static void writeFile(String newitem){
+  
+// in development mode... backup by renaming index.html to xxx.html 
+//		if(settings.getBoolean(ManualSettings.developer.name())){
+//		if(maxitems 
+//		}
+		
         File file = new File(navigationlogpath);
         new File(file.getParentFile().getAbsolutePath()).mkdirs(); // make sure folder exists, returns if exists
-
         String entirefile = "";
         if (!file.exists()) entirefile = createFile(file);
         else {
@@ -108,26 +141,19 @@ public class NavigationLog {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
                 String line;
                 int items = 0;
-                while ((line = reader.readLine()) != null) {
-                    if (line.contains(ITEM))
-                        items ++;
-
-                    if (items < maxitems || line.contains(FILEEND))
-                        entirefile += line + "\n";
+                while((line = reader.readLine()) != null){
+                    if(line.contains(ITEM)) items ++;
+                    if(items < maxitems || line.contains(FILEEND)) entirefile += line + "\n";
                 }
-                
                 reader.close();
-
-            } catch (Exception e) { Util.printError(e); }
+            } catch (Exception e){ Util.printError(e); }
         }
 
         // read file, splice newitem into file, after 1st div
         String old = entirefile.substring(0, entirefile.indexOf("</div>")+7);
         String end = entirefile.substring(entirefile.indexOf("</div>")+7);
         entirefile = old + ITEM + "\n" + newitem + end;
-
-
-
+        
         // write file
         try {
             FileWriter fw = new FileWriter(file);
@@ -135,8 +161,25 @@ public class NavigationLog {
             fw.close();
         } catch (Exception e) { Util.printError(e); }
     }
+    
+    public static File[] getArchiveLogs(){
+		File dir = new File(navigationlogFOLDER);
+		File[] files = dir.listFiles(new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				return name.toLowerCase().endsWith(".html");
+			}
+		});
+		return files;
+	}
+    
+    public static String getAchiveLinks(){
+    	File[] files = getArchiveLogs();     
+    	String link = "Archives: ";
+    	for(int i = 0 ; i < files.length ; i++) link += "<a href=\"" + files[i].getName() + "\">" + (i+1) + "</a> ";
+    	return link;
+    }
 
-    private String createFile(File file) {
+    private static String createFile(File file) {
         String str = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
         str += "<!-- DO NOT MODIFY THIS FILE, THINGS WILL BREAK -->\n";
         str += "<html><head>\n";
@@ -168,6 +211,7 @@ public class NavigationLog {
                 "padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; " +
                 "border-top: 1px solid #ffffff; }\n";
         str += "."+PHOTOSTATUS.toLowerCase()+"expand {background-color: #d3a6e0; padding-bottom: 3px}\n";
+        str += ".message {background-color: #e1e1ea; padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; border-top: 1px solid #ffffff; }";
 
         str += "</style>\n";
         str += "<script type=\"text/javascript\">\n";
@@ -192,10 +236,8 @@ public class NavigationLog {
         str += "</head><body onload=\"loaded();\">\n";
         str += "<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; cursor: pointer;' ";
         str += "onclick=\"window.open(document.URL.replace(/#.*$/, ''), '_self'); \" ";
-        str += ">Oculus Prime Navigation Log</div>\n";
+        str += ">Oculus Prime Navigation Log </div>\n";
         str += FILEEND;
-
         return str;
     }
-
 }

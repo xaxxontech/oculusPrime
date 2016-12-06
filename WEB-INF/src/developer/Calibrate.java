@@ -1,9 +1,17 @@
 package developer;
 
 import developer.depth.Stereo;
-import oculusPrime.*;
+import oculusPrime.Application;
+import oculusPrime.AutoDock;
+import oculusPrime.ManualSettings;
+import oculusPrime.Observer;
+import oculusPrime.PlayerCommands;
+import oculusPrime.Settings;
+import oculusPrime.State;
 import oculusPrime.State.values;
-import oculusPrime.commport.ArduinoPower;
+import oculusPrime.SystemWatchdog;
+import oculusPrime.Util;
+import oculusPrime.Video;
 import oculusPrime.commport.ArduinoPrime;
 
 /**

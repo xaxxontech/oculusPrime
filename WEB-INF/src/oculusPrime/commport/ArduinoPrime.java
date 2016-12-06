@@ -3,6 +3,7 @@ package oculusPrime.commport;
 import java.util.ArrayList;
 import java.util.List;
 
+import developer.NavigationLog;
 import developer.Ros;
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
@@ -382,14 +383,15 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			// end of testing only ----------------
 
 		}
+		
 		else if (s[0].equals("stop") && state.getBoolean(State.values.stopbetweenmoves)) 
 			state.set(State.values.direction, direction.stop.toString());
-		else if (s[0].equals("stopdetectfail")) {
-//			if (settings.getBoolean(ManualSettings.debugenabled))
-//				application.message("FIRMWARE STOP DETECT FAIL", null, null);
-				Util.debug("FIRMWARE STOP DETECT FAIL", this);
-			if (state.getBoolean(State.values.stopbetweenmoves)) 
-				state.set(State.values.direction, direction.stop.toString());
+		
+		else if (s[0].equals("stopdetectfail")){
+			// if (state.getBoolean(State.values.stopbetweenmoves)) state.set(State.values.direction, direction.stop.toString());
+			Util.log("**FIRMWARE STOP DETECT FAIL", this);
+			if (settings.getBoolean(ManualSettings.developer.name())) 
+				NavigationLog.newItem(NavigationLog.ALERTSTATUS, "FIRMWARE STOP DETECT FAIL");
 		}
 	}
 
@@ -398,15 +400,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 */
 	private void connect() {
 		isconnected = false;
-		
 		try {
 
 	    	String[] portNames = SerialPortList.getPortNames();
 	        if (portNames.length == 0) return;
 	        
 	        String otherdevice = "";
-	        if (state.exists(State.values.powerport)) 
-	        	otherdevice = state.get(State.values.powerport);
+	        if (state.exists(State.values.powerport)) otherdevice = state.get(State.values.powerport);
 	        
 	        for (int i=0; i<portNames.length; i++) {
 				if (portNames[i].matches("/dev/ttyUSB.+") && !portNames[i].equals(otherdevice)) {
@@ -1508,6 +1508,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
 	public void movedistance(final direction dir, final double meters) {
 		new Thread(new Runnable() {
+			@SuppressWarnings("incomplete-switch")
 			public void run() {
 				
 				final int tempspeed = state.getInteger(State.values.motorspeed);
@@ -1519,10 +1520,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 				short[] depthFrameAfter = null;
 				
 				// stereo
-				short[][] cellsBefore = null;
-				short[][] cellsAfter = null;
-
-				String currentdirection = state.get(State.values.direction);
+	//			short[][] cellsBefore = null;
+	//			short[][] cellsAfter = null;
+	//			String currentdirection = state.get(State.values.direction);
 				
 				switch (dir) {
 					case forward:

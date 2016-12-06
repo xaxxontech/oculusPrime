@@ -10,9 +10,9 @@ public enum PlayerCommands {
 
 	// operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu, waitforcpu,
-	networkconnect,
-	// not typically used by scripts, undocumented:
-	networksettings,
+
+    // not typically used by scripts, undocumented:
+	networksettings, networkconnect,
 
 	//user, accounts
     who, chat, disconnectotherconnections, driverexit, loginrecords, messageclients,  
@@ -42,9 +42,10 @@ public enum PlayerCommands {
     // wheels
     clicksteer, motionenabletoggle, speed, move, nudge, forward, backward, left, right, 
     odometrystart, odometryreport, odometrystop, lefttimed, righttimed, forwardtimed,
-	arcmove, calibraterotation,
+	arcmove, // calibraterotation,
     // lights and camera tilt
     strobeflash, spotlight, floodlight, cameracommand, camtilt,
+    
 	// undocumented (unused):
     fwdflood,
 
@@ -55,26 +56,25 @@ public enum PlayerCommands {
 	// sensing
 	getlightlevel, setstreamactivitythreshold,
 	objectdetect, objectdetectcancel,
-	motiondetect, motiondetectcancel, sounddetect,
-	// not typically used by scripts, undocumented:
-	objectdetectstream, motiondetectstream,
+	motiondetect, motiondetectcancel,
+	
+	// undocumented:
+	objectdetectstream, motiondetectstream, sounddetect,
 
 	// un-categorized
 	speech, serverbrowser, email, state, rssadd,
-
+    
     // experimental (undocumented)
-    opennisensor, clearmap, test,
-
-    // deprecated (kept for mobile client compatibility, undocumented)
-    spotlightsetbrightness,
+    opennisensor, clearmap, error, resetroutedata, wait, test, routedata, 
     
     // undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
 	deletelogs, truncimages, truncros, truncarchive, archive,
-	archiveros, archiveimages, archivelogs,
-
-    ;
+	archiveros, archiveimages, archivelogs, calibraterotation,
 	
+	// deprecated (kept for mobile client compatibility, undocumented)
+    spotlightsetbrightness;
+
 	// sub-set that are restricted to "user0"
 	private enum AdminCommands {
 		docklineposupdate, autodockcalibrate, getemailsettings, emailsettingsupdate,

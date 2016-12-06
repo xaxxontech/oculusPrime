@@ -65,7 +65,7 @@ public class TelnetServer implements Observer {
 			sendToSocket("Welcome to Oculus Prime v" + new Updater().getCurrentVersion(), out); 
 			String ip_address = clientSocket.getInetAddress().toString().substring(1);
 			sendToSocket(ip_address + " connected via socket", out);
-			Util.log(ip_address+" connected via socket", this);
+			Util.debug(ip_address+" connected via socket", this);
 			this.start();
 		}
 		
@@ -78,18 +78,18 @@ public class TelnetServer implements Observer {
 			state.set(oculusPrime.State.values.telnetusers, printers.size());
 			
 			String str = null;
-			while (true) {
+			while (true){
 				
 				try {
 					str = in.readLine();
 				} catch (Exception e) {
-					Util.debug("readLine(): " + e.getMessage(), this);
+					// Util.debug("readLine(): " + e.getMessage(), this);
 					break;
 				}
 
 				// client is terminating?
-				if (str == null) {
-					Util.debug("read thread, closing.", this);
+				if(str == null) {
+					Util.debug("read thread, closing", this);
 					break;
 				}
 					
@@ -100,13 +100,14 @@ public class TelnetServer implements Observer {
 					if(str.length()>=1){
 						
 						if( ! manageCommand(str, out, in, clientSocket)) {
-							Util.debug("doPlayer(" + str + ")", this);	
+							// Util.fine("Telnet calling doPlayer(" + str + ")");	
 							doPlayer(str, out);
 						}
 					}	
 							
 				} catch (Exception e) {
 					Util.log("parse error: " + e.getLocalizedMessage(), this);
+					Util.printError(e);
 				}
 			}
 	
@@ -120,7 +121,7 @@ public class TelnetServer implements Observer {
 
 		// log to console, and notify other users of leaving
 		sendToSocket("shutting down, "+reason, out);
-		Util.debug("closing socket [" + clientSocket + "] " + reason, this);
+//		Util.debug("closing socket [" + clientSocket + "] " + reason, this);
 		
 		try {
 
@@ -191,6 +192,7 @@ public class TelnetServer implements Observer {
 
 			case state:
 				if (cmd.length == 3) { // two args
+					// if (cmd[1].equals("increment")) state.increment(cmd[2]);
 					if (cmd[1].equals("delete")) state.delete(cmd[2]);
 					else state.set(cmd[1], cmd[2]);
 				}

@@ -1,10 +1,10 @@
 package oculusPrime;
 
+import javax.imageio.ImageIO;
 
 import org.red5.server.api.IConnection;
 import org.red5.server.stream.ClientBroadcastStream;
 
-import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -21,8 +21,11 @@ public class Video {
     private static final int defaultquality = 5;
     private static final int quality720p = 7;
     private static final int defaultwidth=640;
+//  private static final int defaultheight=480;
+//  private static final int lowreswidth=320;
     private static final int defaultheight=480;
     public static final int lowreswidth=320;
+
     private static final int lowresheight=240;
     private static final String PATH="/dev/shm/avconvframes/";
     private static final String EXT=".bmp";
@@ -37,7 +40,7 @@ public class Video {
     static final String FFMPEG = "ffmpeg";
     static final String AVCONV = "avconv";
     private String avprog = AVCONV;
-    private static long STREAM_CONNECT_DELAY = Application.STREAM_CONNECT_DELAY;
+    private static long STREAM_CONNECT_DELAY = 5000; // Application.STREAM_CONNECT_DELAY;
     private static int dumpfps = 15;
     private static final String STREAMSPATH="/oculusPrime/streams/";
     public static final String FMTEXT = ".flv";
@@ -68,7 +71,6 @@ public class Video {
             String cmd[] = new String[]{"arecord", "--list-devices"};
             Process proc = Runtime.getRuntime().exec(cmd);
             proc.waitFor();
-//            proc.waitFor();
 
             String line = null;
             BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -212,7 +214,7 @@ public class Video {
             }
 
             // determine latest image file
-            File dir=new File(PATH);
+            File dir = new File(PATH);
             File imgfile = null;
             long start = System.currentTimeMillis();
             while (imgfile == null && System.currentTimeMillis()-start < 10000) {
@@ -229,7 +231,7 @@ public class Video {
             if (imgfile == null) { Util.log(avprog+" frame unavailable", this); }
             else {
                 try {
-                    app.processedImage = ImageIO.read(imgfile);
+                    Application.processedImage = ImageIO.read(imgfile);
                 } catch (IOException e) {
                     Util.printError(e);
                 }
@@ -291,17 +293,16 @@ public class Video {
             for(File file: dir.listFiles()) file.delete(); // clean up (gets most files)
 
         } }).start();
-
     }
 
-    public String record(String mode) {
+    public String record(String mode){
         return record(mode, null);
     }
 
     // record to flv in webapps/oculusPrime/streams/
     private String record(String mode, String optionalfilename) {
         IConnection conn = app.grabber;
-
+       
         if (state.get(State.values.stream) == null) return null;
 
         if (state.get(State.values.record) == null)

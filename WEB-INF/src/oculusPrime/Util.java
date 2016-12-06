@@ -8,32 +8,21 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Vector;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
-
 import developer.NavigationLog;
+import developer.NavigationUtilities;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
-import org.xml.sax.SAXParseException;
 
 public class Util {
 	
@@ -45,14 +34,22 @@ public class Util {
 	public static final long FIVE_MINUTES = 300000;
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
-
-	public static final int MIN_FILE_COUNT = 10;  
-	public static final int MAX_HISTORY = 40;
-	public static final int PRECISION = 1;	
 	
+	private static final boolean DEBUG_FINE = true;	
+	public static final int MAX_HISTORY = 45;
+	public static final int PRECISION = 1;
+
+	private static final int MIN_LOG_FILES = 6;
+
 	static Vector<String> history = new Vector<String>(MAX_HISTORY);
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
+	
+	static boolean debug = true;
+	
+	public Util(){
+		debug = Settings.getReference().getBoolean(ManualSettings.debugenabled);
+	}
 	
 	public static void delay(long delay) {
 		try { Thread.sleep(delay); } 
@@ -148,41 +145,18 @@ public class Util {
 		}
 	}
 
-	/**
-	 * Run the given text string as a command on the host computer. 
-	 * 
-	 * @param args is the command to run, like: "restart
-	 * 
-	 */
+	/** Run the given text string as a command on the host computer. */
 	public static void systemCallBlocking(final String args) {
 		try {	
-
 			Process proc = Runtime.getRuntime().exec(args);
-
-//			long start = System.currentTimeMillis();
-//			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-//			String line = null;
-//			System.out.println(proc.hashCode() + "OCULUS: exec():  " + args);
-//			while ((line = procReader.readLine()) != null)
-//				System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
-			
 			proc.waitFor(); // required for linux else throws process hasn't terminated error
-
-//			System.out.println("OCULUS: process exit value = " + proc.exitValue());
-//			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		} catch (Exception e){ printError(e); }
 	}	
 
-	/**
-	 * Run the given text string as a command on the windows host computer. 
-	 * 
-	 * @param str is the command to run, like: "restart"
-	 */
+	/** Run the given text string as a command on the windows host computer. */
 	public static void systemCall(final String str){
-		try { Runtime.getRuntime().exec(str); 
+		try {
+			Runtime.getRuntime().exec(str); 
 		} catch (Exception e) { printError(e); }
 	}
 
@@ -203,6 +177,22 @@ public class Util {
 		Settings.getReference().writeSettings(GUISettings.volume.name(), percent);
 	}
 
+	public static void saveUrl(String filename, String urlString) throws MalformedURLException, IOException {
+        BufferedInputStream in = null;
+        FileOutputStream fout = null;
+        try{
+        	in = new BufferedInputStream(new URL(urlString).openStream());
+            fout = new FileOutputStream(filename);
+            byte data[] = new byte[1024];
+            int count;
+            while ((count = in.read(data, 0, 1024)) != -1)
+            	fout.write(data, 0, count);	
+        } finally {    
+        	if (in != null) in.close();
+            if (fout != null) fout.close();
+        }
+    }
+
 	public static String readUrlToString(String urlString) {
 
 		try {
@@ -222,7 +212,7 @@ public class Util {
 
 		} catch (Exception e) {
 //			printError(e);
-			Util.log("Util.readUrlToString() parse error", null);
+//			Util.log("Util.readUrlToString() parse error", null);
 			return null;
 		}
 
@@ -241,7 +231,7 @@ public class Util {
 		final long now = System.currentTimeMillis();
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) {
+		for(; i < history.size() ; i++){
 			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim();
 			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
 			line = line.replaceFirst("\\$[0-9]", "");
@@ -262,6 +252,10 @@ public class Util {
 		log(method + ": " + e.getLocalizedMessage(), c);
 	}
 	
+	public static void log(String str){
+		log(str, null);
+	}
+	
 	public static void log(String str, Object c) {
     	if(str == null) return;
 		String filter = "static";
@@ -277,14 +271,22 @@ public class Util {
     	if(c!=null) filter = c.getClass().getName();
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
-			history.add(System.currentTimeMillis() + ", " +str);
+    		history.add(System.currentTimeMillis() + ", " +str);
 		}
 	}
     
     public static void debug(String str) {
     	if(str == null) return;
-    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
+    	if(debug){
     		System.out.println("DEBUG: " + getTime() + ", " +str);
+    		history.add(System.currentTimeMillis() + ", " +str);
+    	}
+    }    
+
+    public static void fine(String str) {
+    	if(str == null) return;
+    	if(DEBUG_FINE){
+    		System.out.println("DEBUG FINE: " + getTime() + ", " +str);
     		history.add(System.currentTimeMillis() + ", " +str);
     	}
     }
@@ -298,44 +300,8 @@ public class Util {
 	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
-	
-	public static Document loadXMLFromString(String xml) {
-		try {
-
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder builder;
-
-			builder = factory.newDocumentBuilder();
-			InputSource is = new InputSource(new StringReader(xml));
-			return builder.parse(is);
-
-		}
-		catch (SAXParseException pe) {
-			Util.log("Util.loadXMLFromString() parse error:\n"+xml, null);
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
 
 	// replaces standard e.printStackTrace();
-	public static String XMLtoString(Document doc) {
-		String output = null;
-		try {
-			TransformerFactory tf = TransformerFactory.newInstance();
-			Transformer transformer = tf.newTransformer();
-			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-			StringWriter writer = new StringWriter();
-			transformer.transform(new DOMSource(doc), new StreamResult(writer));
-			output = writer.getBuffer().toString().replaceAll("\n|\r", "");
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		return output;
-	}
-
 	public static void printError(Exception e) {
 		System.err.println("error "+getTime()+ ":");
 		e.printStackTrace();
@@ -343,7 +309,6 @@ public class Util {
 	
 	public static boolean validIP (String ip) {
 	    try {
-	    	
 	        if (ip == null || ip.isEmpty()) return false;
 	        String[] parts = ip.split( "\\." );
 	        if ( parts.length != 4 ) return false;
@@ -352,29 +317,21 @@ public class Util {
 	            if ( (i < 0) || (i > 255) )
 	            	return false;
 	        }
-	        
 	        if(ip.endsWith(".")) return false;
-	        
 	        return true;
-	    } catch (NumberFormatException nfe) {
-	        return false;
-	    }
+	    } catch (Exception e) { return false; }
 	}
 
 	public static long[] readProcStat() {
 		try {
-
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/stat")));
 			String line = reader.readLine();
 			reader.close();
 			String[] values = line.split("\\s+");
 			long total = Long.valueOf(values[1])+Long.valueOf(values[2])+Long.valueOf(values[3])+Long.valueOf(values[4]);
 			long idle = Long.valueOf(values[4]);
-			return new long[] { total, idle};
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			return new long[] { total, idle };
+		} catch (Exception e) { e.printStackTrace(); }
 		return null;
 	}
 
@@ -654,56 +611,22 @@ public class Util {
 		return wdev;
 	}
 
-
-	public static void updateExternalIPAddress(){
-//		new Thread(new Runnable() { public void run() {
-
-			State state = State.getReference();
-
-//  --- changed: updated only called on ssid change from non null
-//			if(state.exists(values.externaladdress)) {
-//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
-//					return;
-//				}
-//			}
-
-//			try {
-//
-//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-//
-//				int i;
-//				String address = "";
-//				while ((i = in.read()) != -1) address += (char)i;
-//				in.close();
-//
-				String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
-
-
-				if(validIP(address)) state.set(values.externaladdress, address);
-				else state.delete(values.externaladdress);
-
-//			} catch (Exception e) {
-//				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
-//				state.delete(values.externaladdress);
-//			}
-//		} }).start();
-	}
-
-	public static String getJettyStatus() {
+	public static void logLinuxRelease(){
 		try {
-			String url = "http://127.0.0.1/?action=status";
-			URLConnection connection = (URLConnection) new URL(url).openConnection();
-			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-			int i; String reply = "";
-			while ((i = in.read()) != -1) reply += (char)i;
-			in.close();
-			return reply;
-		} catch (Exception e) {
-			return new Date().toString() + " DISABLED";
-		}
+			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "lsb_release -a"});
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) log("lookupRelease(): " + line, null);
+		} catch (Exception e){printError(e);}
+	}
+	
+	public static void updateExternalIPAddress(){
+		new Thread(new Runnable() { public void run() {
+			State state = State.getReference();
+			String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
+			if(validIP(address)) state.set(values.externaladdress, address);
+			else state.delete(values.externaladdress);
+		} }).start();
 	}
 
 	public static void deleteLogFiles(){
@@ -719,8 +642,10 @@ public class Util {
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) files[i].delete();
 	    }
-
-	   deleteROS();
+	    
+	    truncStaleAudioVideo();		
+		truncStaleFrames();
+		deleteROS();
 	}
 	
 	public static void truncStaleAudioVideo(){
@@ -738,6 +663,7 @@ public class Util {
 	
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
+		debug("truncStaleFrames: files found = " + files.length);
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
@@ -745,6 +671,33 @@ public class Util {
 					files[i].delete();
 				}
 	        }
+		} 
+	}
+	
+	public static void truncStaleNavigationFiles(){
+		
+		log("truncStaleNavigationFiles(): " + NavigationLog.navigationlogFOLDER);
+
+		File[] files = null;
+		try {
+			files = new File(NavigationLog.navigationlogFOLDER).listFiles();
+		} catch (Exception e) { printError(e); }	
+		
+		log("truncStaleNavigationFiles: files found = " + files.length);
+		
+		Arrays.sort(files, new Comparator<File>() {
+		    public int compare(File f1, File f2) {
+		        return Long.compare(f2.lastModified(), f1.lastModified());
+		    }
+		});
+		
+		// Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+		
+        for (int i = MIN_LOG_FILES; i < files.length; i++){
+			if(files[i].isFile()){
+				log(i + " " + /*files[i].getName() + */" was deleted " + (System.currentTimeMillis() - files[i].lastModified())/1000/60);
+				files[i].delete();
+			}
 		} 
 	}
 	
@@ -758,175 +711,46 @@ public class Util {
 		} catch (Exception e){return false;};
 		return false;
 	}
-	
-	/*
-	public static void truncStaleArchive(){
-		File[] files  = new File(Settings.archivefolder).listFiles();
-		debug("truncStaleArchive(): " + files.length + " files in folder");
-		sortFiles(files);
-        for (int i = 4; i < files.length; i++){
-			if (files[i].isFile()){
-				debug("truncStaleArchive(): " + files[i].getName() + "  was deleted");
-				files[i].delete();
-	        }
-		} 
-	}
-	
-	public static void truncState(){
-		File[] files  = new File(Settings.logfolder).listFiles(new stateFilter());	
-		debug("truncState(): " + files.length + " files in folder");
-		if(files.length < MIN_FILE_COUNT) return;
-		sortFiles(files); 
-        for (int i = 0; i < files.length; i++){
-			if (files[i].isFile()){
-				debug("truncState(): " + files[i].getName() + " was deleted");
-				files[i].delete();
-	        }
-		} 
-	}
 
-	public static class stateFilter implements FilenameFilter{
-        @Override
-        public boolean accept(File dir, String name) {
-            return name.contains("state");
-        }
-	}
-	
-	private static void sortFiles(File[] files) {
-		Arrays.sort(files, new Comparator<File>(){
-			public int compare( File f1, File f2){
-                long result = f2.lastModified() - f1.lastModified();
-                if( result > 0 ){ return 1;
-                } else if( result < 0 ){ return -1;
-                } else return 0;
-            }
-        });	
-	}
-	*/
-	
 	public static void archiveLogs(){
 		new Thread(new Runnable() { public void run() {
 			try {
+				
 				appendUserMessage("log files being archived");
-				zipLogFile();
-				truncStaleAudioVideo();		
-				truncStaleFrames();
+			
+		//		truncStaleAudioVideo();		
+		//		truncStaleFrames();
+				zipLogFile();	
+				
+				new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));	
+				NavigationLog.newItem(NavigationLog.getAchiveLinks());
+				truncStaleNavigationFiles();
+						
+				NavigationUtilities.resetAllRouteStats();
+						
+		//		appendUserMessage("archive complete");
+
 			} catch (Exception e){printError(e);}
 		} }).start();
 	}
 
 	private static void zipLogFile(){	
-		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " log "
-				+ NavigationLog.navigationlogpath + " " + Settings.settingsfile};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-	}
-	
-	/* not needed?
-	public static String archiveImages(){
-		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.framefolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static String archiveStreams(){
-		final String path = "./archive" + sep + "vid_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.streamfolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static String archiveROS(){
-		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static String archiveAll(String[] files){
-		final String path = "./archive" + sep + "all_"+System.currentTimeMillis() + ".tar";
-		String args = "  " + NavigationLog.navigationlogpath + " ";
-		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + args};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
-		}}).start();
-		return path;
-	}
-	
-	public static void archiveFiles(final String fname, final String[] files){
-		String args = "";
-		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
-		log("file created: " + fname, null);
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
-		}}).start();
-	}
-	
-	public static void compressFiles(final String fname, final String[] files){
-		String args = "";
-		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + fname + " " + args};
-		log("file created: " + fname, null);
-		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
-		}}).start();
-	}*/
-
-	/*
-	public static boolean archivePID(){ 
-		Process proc = null;
-		String line = null;
-		try { 
-			proc = Runtime.getRuntime().exec( new String[]{ "/bin/sh", "-c", "ps -a" });
-			proc.waitFor();
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));	
-			while ((line = procReader.readLine()) != null){
-				if(line.contains("tar") || line.contains("zip")){
-					Util.debug("archivePID(): found: " + line);
-					return true;
-				}
-			}
-		} catch (Exception e){return false;};
+			new File("./log/archive").mkdir();
+			final String path = "./log/archive/log_" + System.currentTimeMillis() + ".tar";
+			String names = "";
+			File[] files = new File(Settings.logfolder).listFiles();
+		    for (int i = 0; i < files.length; i++)
+		       if (files[i].isFile()) names += "./log/"+files[i].getName() + " ";
+		    
+			names = names.trim();
+			final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " ./conf/ " + names 
+					+" " + NavigationLog.navigationlogFOLDER + " " + RssFeed.RSSFILE};
 		
-		return false;
-	}
+			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 
-	
-	public static boolean waitForArchive(){
-		if(archivePID()){ 
-			long start = System.currentTimeMillis();
-			for(;;){
-				if(archivePID()){
-					delay(5000);
-					debug("waitForArchive(): seconds: " + (System.currentTimeMillis() - start)/1000);
-					if((System.currentTimeMillis() - start) > TEN_MINUTES){
-						log("waitForArchive(): timout: " + (System.currentTimeMillis() - start)/1000, null);
-						break;
-					}
-				} else break;
-			}
-			debug("waitForArchive(): exit: " + (System.currentTimeMillis() - start)/1000 + " seconds");
-		}
-		
-		return archivePID();
+		}}).start();
 	}
-	*/
 	
 	public static Vector<File> walk(String path, Vector<File> allfiles){
         File root = new File( path );
@@ -963,6 +787,20 @@ public class Util {
 	}
 
 	public static long countMbytes(final String path){ 
+		if( ! new File(path).exists()) return 0;
+		File root = new File( path );
+	    File[] list = root.listFiles();
+		long total = 0;
+		for(int i = 0 ; i < list.length-1 ; i++) {
+			total += list[i].length();
+			// Util.log("total = " + total + " " + list[i].getPath(), null);;
+		}
+		
+		return total / (1000*1000);
+	 }
+	
+	public static long countAllMbytes(final String path){ 
+		if( ! new File(path).exists()) return 0;
 		Vector<File> f = new Vector<>();
 		f = walk(path, f);
 		long total = 0;
@@ -1001,18 +839,18 @@ public class Util {
 		}
 		
 		appendUserMessage("ros purge, reboot required");
-		
+		Settings.getReference().writeSettings(ManualSettings.restarted, "0");
+
 		new Thread(new Runnable() { public void run() {
 			try {
-				String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder};
-				Runtime.getRuntime().exec(cmd);
+				Runtime.getRuntime().exec(new String[]{"bash", "-ic", "rm -rf " + Settings.roslogfolder});
 				new File("rlog.txt").delete();
 			} catch (Exception e){printError(e);}
 		} }).start();
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				PowerLogger.append("shutting down application", this);
+				PowerLogger.append("deleteROS(): shutting down application", this);
 				PowerLogger.close();
 				delay(10000);					
 				systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
@@ -1021,6 +859,7 @@ public class Util {
 		
 	}
 	
+	// TODO: THIS IS STUPID 
 	public static String getRosCheck(){	
 		
 		if(rosinfor!=null) return rosinfor;
@@ -1053,10 +892,26 @@ public class Util {
 			if(rosinfor.contains("K ROS node logs")) rosinfor = "1";
 			if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
-		} catch (Exception e){ rosinfor = "0.00"; }
+			
+			if(rosinfor.contains("G ROS node logs")) 
+				rosinfor = rosinfor.substring(0, rosinfor.indexOf("G")).trim() + " gb";
+				
+		} catch (Exception e){ rosinfor = "-0.00"; }
+		
+//	        .........ros dir = /home/brad/catkin_ws/src/oculusprime_ros
+//  		Util.log(".........ros dir = " + Ros.getRosPackageDir(), null);
+		
+		try {
+			new Thread(new Runnable() { public void run() {
+				try {
+					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt"};
+					Runtime.getRuntime().exec(cmd);		
+				} catch (Exception e){printError(e);}
+			}}).start();
+		} catch (Exception e){printError(e);}
+
 		
 		return rosinfor;
 	}	
 }
-
 

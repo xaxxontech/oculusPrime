@@ -114,7 +114,9 @@ public class SendMail {
 	}
 
 	/** */
-	public static void sendEmailWithAttachments(String subject, String message, String[] attachFiles) {
+	public static void sendEmailWithAttachments(
+			//String host, //String port, //final String userName, final String password, String toAddress, 
+			String subject, String message, String[] attachFiles) {
 		
 		Properties props = new Properties();
 		props.put("mail.smtp.host", host);
