@@ -298,7 +298,7 @@ public class NavigationUtilities {
 					route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).setTextContent(Util.formatFloat(meters, 0));
 				} catch (Exception e) { // create if not there 
 					Node dist = document.createElement(ESTIMATED_DISTANCE_TAG);
-					dist.setTextContent(Util.formatFloat(meters, 1));
+					dist.setTextContent(Util.formatFloat(meters, 0));
 					route.appendChild(dist);
 				}
 				saveRoute(XMLtoString(document));

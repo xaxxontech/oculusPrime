@@ -40,10 +40,11 @@ public class Navigation implements Observer {
 	
 	public static boolean navdockactive = false;
 	public static long starteddockingtime = 0;
-	public static long routemillimeters = 0;  
+	static long routemillimeters = 0;  
 	public static long routestarttime = 0;
 	public static int consecutiveroute = 1;  
-	public static int lastIndex = 0;
+	
+	// public static int lastIndex = 0;
 		
 	public static boolean failed = false; 						// flag set if user takes control, or gets lost 
 
@@ -253,7 +254,7 @@ public class Navigation implements Observer {
 			return;
 		}
 
-		if (!Ros.launch(Ros.MAKE_MAP)) {
+		if( ! Ros.launch(Ros.MAKE_MAP)) {
 			app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, aborting mapping start");
 			return;
 		}
@@ -373,15 +374,16 @@ public class Navigation implements Observer {
 				Util.delay(100);
 			}
 
-			if ( ! state.exists(values.rosgoalstatus)) { 
+			if( ! state.exists(values.rosgoalstatus)) { 
 				//this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 				Util.log("error, rosgoalstatus null, setting to empty string", this); 
 				state.set(values.rosgoalstatus, "");
 			}
 
-			if (!state.equals(values.rosgoalstatus, Ros.ROSGOALSTATUS_SUCCEEDED)) {
+			if( ! state.equals(values.rosgoalstatus, Ros.ROSGOALSTATUS_SUCCEEDED)) {
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.dock() failed to reach dock");
 				failed = true;
+				Navigation.cancelAllRoutes(); //-------------------------------------------------------------------------
 				return;
 			}
 
@@ -463,6 +465,8 @@ public class Navigation implements Observer {
 			} else {
 				Util.log("Navigation.dock() - unable to dock", this);
 				failed = true;
+				goalCancel();
+				cancelAllRoutes();//-------------------------------------- acorn off -------------------------
 			}
 		}}).start();
 
@@ -1123,13 +1127,13 @@ public class Navigation implements Observer {
 			// ALL SENSES ENABLED, NOW WAIT
 			long start = System.currentTimeMillis();
 			while (!state.exists(values.streamactivity) && System.currentTimeMillis() - start < delay
-					&& !failed /*&& state.get(values.navigationrouteid).equals(id) */ ) Util.delay(10); 
+					&& !failed && state.exists(values.navigationroute)) Util.delay(10); 
 
 			// PHOTO
 			if (photo) {
 				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
 
-				final String link = FrameGrabHTTP.saveToFile("");
+				final String link = FrameGrabHTTP.saveToFileWaypoint("", "");
 
 				Util.delay(2000); // allow time for framgrabusy flag to be set true
 				long timeout = System.currentTimeMillis() + 10000;
@@ -1342,5 +1346,9 @@ public class Navigation implements Observer {
 		new Thread(new Runnable() { public void run() {
 			if (Ros.saveMap()) app.message("map saved to "+Ros.getMapFilePath(), null, null);
 		}  }).start();
+	}
+
+	public static String getRouteMeters() {
+		return Util.formatFloat(routemillimeters / 1000, 0);
 	}
 }

@@ -1,25 +1,29 @@
 package oculusPrime;
 
-import developer.Navigation;
-import developer.NavigationUtilities;
-import developer.Ros;
-import developer.depth.Mapper;
-import developer.depth.ScanUtils;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
-import java.awt.*;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.*;
-import javax.servlet.annotation.MultipartConfig;
+import developer.NavigationUtilities;
+import developer.Ros;
+import developer.depth.Mapper;
+import developer.depth.ScanUtils;
 
 @SuppressWarnings("serial")
 @MultipartConfig(fileSizeThreshold=1024*1024*2, // 2MB
@@ -334,4 +338,34 @@ public class FrameGrabHTTP extends HttpServlet {
 		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
 				"/oculusPrime/framegrabs/"+datetime+".jpg";
 	}
+	
+	public static String saveToFileWaypoint(final String waypoint, final String args) {
+		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;		
+		final String datetime = Util.getDateStamp();
+		final String path =  "webapps"+Util.sep+"oculusPrime"+Util.sep+"framegrabs";
+		final Downloader dl = new Downloader();
+		
+//		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
+//		Calendar cal = Calendar.getInstance();
+//		final String datetime = dateFormat.format(cal.getTime());
+		
+		new Thread(new Runnable(){
+			public void run(){
+				if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
+					Util.log("failure to download... 1", this);
+					Util.delay(500);
+					if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
+						Util.log("failure to download... 2", this);
+						Util.delay(900);
+						if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
+							Util.log("failure to download... 3, give up..", this);
+						}
+					}
+				}
+			}
+		}).start();
+		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
+				"/oculusPrime/framegrabs/"+datetime+"_" + waypoint + ".jpg";
+	}
+	
 }

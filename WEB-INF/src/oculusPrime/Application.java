@@ -374,7 +374,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
 			// extra logging info 
-			Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
+			Util.log(/*"prime folder: " + Util.countMbytes(".") + " mybtes, " + */ Util.diskFullPercent() + "% used", this);
 			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
 			Util.logLinuxRelease(); 
 			
