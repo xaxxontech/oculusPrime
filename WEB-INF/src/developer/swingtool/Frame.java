@@ -28,7 +28,7 @@ public class Frame extends JFrame implements Runnable {
 		}
 
 		// Create the list and put it in a scroll pane.
-		JList list = new JList(listModel);
+		final JList list = new JList(listModel);
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 //		list.setSelectedIndex(2);
 //		list.getSelectedIndex();
