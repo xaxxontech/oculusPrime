@@ -1133,7 +1133,7 @@ public class Navigation implements Observer {
 			if (photo) {
 				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
 
-				final String link = FrameGrabHTTP.saveToFileWaypoint("", "");
+				final String link = FrameGrabHTTP.saveToFileWaypoint((state.get(values.roswaypoint)), "");
 
 				Util.delay(2000); // allow time for framgrabusy flag to be set true
 				long timeout = System.currentTimeMillis() + 10000;

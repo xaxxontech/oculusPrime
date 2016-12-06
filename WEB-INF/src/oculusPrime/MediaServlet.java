@@ -56,22 +56,37 @@ public class MediaServlet extends HttpServlet {
 
 		response.setContentType("html");
 		PrintWriter out = response.getWriter();
-
-		File[] streams = new File(Settings.streamfolder).listFiles();	
-		File[] frames = new File(Settings.framefolder).listFiles();	
-		File[] files = new File[frames.length + streams.length];
+	
+		String filterstr = null;
+		try { filterstr = req.getParameter("filter"); } catch (Exception e) {}
+		File[] files = null;
+					
+		final String f = filterstr;
+		File[] streams = null;
+		File[] frames = null; 	
+		
+		if(f == null){
+			streams = new File(Settings.streamfolder).listFiles();	
+			frames = new File(Settings.framefolder).listFiles();		
+		} else {
+			streams = new File(Settings.streamfolder).listFiles((File pathname) -> pathname.getName().contains(f));	
+			frames = new File(Settings.framefolder).listFiles((File pathname) -> pathname.getName().contains(f));	
+		}
+		
+		// merge lists and sort by date 
+		files = new File[frames.length + streams.length];
 
 		int total = 0;
 		for(int i = 0; i < streams.length; i++) files[total++] = streams[i];  
 		for(int j = 0; j < frames.length;  j++) files[total++] = frames[j];
-
+		
 		Arrays.sort(files, new Comparator<File>() {
 		    public int compare(File f1, File f2) {
 		        return Long.compare(f2.lastModified(), f1.lastModified());
 		    }
 		});
 
-		for(int c = 0 ; c < total ; c++){
+		for(int c = 0 ; c < files.length ; c++){
 			
 			if(files[c].getName().toLowerCase().endsWith(".jpg"))
 				str.append( "<div class=\'"+IMAGE+"\'><a href=\"http://" + state.get(values.externaladdress) + ":" + state.get(values.httpport) 
@@ -85,28 +100,9 @@ public class MediaServlet extends HttpServlet {
 			
 			
 		}
-		
-		/*
-		 	for(int i = 0; i < files.length; i++){
-			if(files[i].isFile()){
-				str.append( "<div class=\'"+VIDEO+"\'><a href=\"http://" + state.get(values.externaladdress) + ":" + state.get(values.httpport) 
-					+ "/oculusPrime/streams/"+ files[i].getName() + "\">"
-					+ files[i].getName() + "</a>      " + files[i].length() + " bytes" + "</div>\n");
-	        }
-		} 
-
-		// File[] 
-		files  = new File(Settings.framefolder).listFiles();	
-		for(int i = 0; i < files.length; i++){
-			if(files[i].isFile()){
-				str.append( "<div class=\'"+IMAGE+"\'><a href=\"http://" + state.get(values.externaladdress) + ":" + state.get(values.httpport) 
-					+ "/oculusPrime/framegrabs/"+ files[i].getName() + "\">"  
-					+ files[i].getName() + "</a>      " + files[i].length() + " bytes" + "</div>\n");
-	        }
-		} 
-		 */
 	
         out.println(str+ FILEEND);
         out.close();	
 	}
+	
 }

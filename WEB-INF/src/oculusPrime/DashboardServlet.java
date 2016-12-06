@@ -54,16 +54,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 	String pointslist;
 	String delay = "10";
-
-	private int time;
-
 	private String estimatedmeters;
-
 	private String estimatedseconds; 
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
-		
 		state = State.getReference();
 		httpport = state.get(State.values.httpport);
 		settings = Settings.getReference();

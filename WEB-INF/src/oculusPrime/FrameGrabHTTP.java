@@ -339,6 +339,8 @@ public class FrameGrabHTTP extends HttpServlet {
 				"/oculusPrime/framegrabs/"+datetime+".jpg";
 	}
 	
+	
+	//// TODO: CALLING FUNCTION SHOULD BE THREADED, THIS SHOULD BLOCK, FAIL, RETURN NULL; 
 	public static String saveToFileWaypoint(final String waypoint, final String args) {
 		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;		
 		final String datetime = Util.getDateStamp();
@@ -349,23 +351,27 @@ public class FrameGrabHTTP extends HttpServlet {
 //		Calendar cal = Calendar.getInstance();
 //		final String datetime = dateFormat.format(cal.getTime());
 		
-		new Thread(new Runnable(){
-			public void run(){
-				if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
-					Util.log("failure to download... 1", this);
+		new Thread(new Runnable(){	
+			public void run(){	
+				String filename = "";
+				if(waypoint != null) filename = datetime+"_" + waypoint + ".jpg";
+				else filename = datetime + ".jpg";
+				if( ! dl.FileDownload(urlString, filename, path)){
+					Util.log("saveToFileWaypoint(): failure to download...", this);
 					Util.delay(500);
-					if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
-						Util.log("failure to download... 2", this);
-						Util.delay(900);
-						if( ! dl.FileDownload(urlString, datetime + ".jpg", path)){
-							Util.log("failure to download... 3, give up..", this);
-						}
+					if( ! dl.FileDownload(urlString, datetime+"_" + waypoint + ".jpg", path)){
+						Util.log("saveToFileWaypoint(): failure to download... 2", this);
+			//			Util.delay(900);
+			//			if( ! dl.FileDownload(urlString, datetime+"_" + waypoint + ".jpg", path)){
+			//				Util.log("failure to download... 3, give up..", this);
 					}
 				}
 			}
 		}).start();
+		
 		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
 				"/oculusPrime/framegrabs/"+datetime+"_" + waypoint + ".jpg";
+		
 	}
 	
 }
