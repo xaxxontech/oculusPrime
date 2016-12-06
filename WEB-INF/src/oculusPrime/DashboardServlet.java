@@ -571,7 +571,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(key.equals(values.navigationroute.name())){
 			if(state.exists(values.navigationroute)){
 				
-				Util.log("................updated: " + state.get(values.navigationroute), this);
+//				Util.log("................updated: " + state.get(values.navigationroute), this);
 
 				estimatedmeters = NavigationUtilities.getRouteDistanceEstimateString(state.get(values.navigationroute));
 				estimatedseconds = NavigationUtilities.getRouteTimeEstimateString(state.get(values.navigationroute));
@@ -595,16 +595,16 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		//	if(state.getBoolean(values.routeoverdue)) 
 		//		state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
 
+//		if(key.equals(values.framegrabbusy.name())) return;
+//		if(key.equals(values.rosglobalpath.name())) return;
+//		if(key.equals(values.rosscan.name())) return;
+		
 		if(key.equals(values.networksinrange.name())) return;
 		if(key.equals(values.batteryinfo.name())) return;
 		if(key.equals(values.batterylife.name())) return;		
  		if(key.equals(values.batteryvolts.name())) return; 		
  		if(key.equals(values.cpu.name())) return; 
-
-//		if(key.equals(values.framegrabbusy.name())) return;
-//		if(key.equals(values.rosglobalpath.name())) return;
-//		if(key.equals(values.rosscan.name())) return;
-		
+ 		
 		// trim size
 		if(history.size() > MAX_STATE_HISTORY) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
