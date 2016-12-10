@@ -453,8 +453,9 @@ public class NavigationUtilities {
 		
 		setRouteCount(name, getRouteCount(name)+1);
 		
-		if(seconds <= 0  || meters <= 0) return; // sanity test 
-		
+	//	if(seconds <= 0  || meters <= 0) return; // sanity test 
+		Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): called.. ");
+
 		int estsec = getRouteTimeEstimate(name); 
 		if(estsec == 0) setRouteTimeEstimate(name, seconds); 
 		else if(estsec != seconds) {

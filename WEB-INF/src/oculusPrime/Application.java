@@ -979,17 +979,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 			 			+ "<fail>" + NavigationUtilities.getRouteFailsString(str) + "</fail>"
 			 			+ "<meters>" + NavigationUtilities.getRouteDistanceEstimate(str) + "</meters>"
 			 			+ "<second>" + NavigationUtilities.getRouteTimeEstimate(str) + "</seconds>";
-			
-			// Util.log("route: " + str + " " + r, this);
 			commandServer.sendToGroup("route: " + str + " " + r);
 			break;
 			
 		case resetroutedata: 
 			Util.log("User reset route stats for: "+str, this);
-			// messageplayer("User reset route status for: "+str, null, null);
-			// RESET ROUTE SEC ANDE DEISTANCE TOO ?
+			messageplayer("User reset route status for: "+str, null, null);
 			NavigationUtilities.setRouteFails(str, 0);
 			NavigationUtilities.setRouteCount(str, 0);
+			NavigationUtilities.setRouteDistanceEstimate(str, 0);
+			NavigationUtilities.setRouteTimeEstimate(str, 0);
 			break;
 			
 		case runroute:

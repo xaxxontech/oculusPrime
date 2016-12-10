@@ -70,9 +70,10 @@ public enum PlayerCommands {
     
     // undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
-	deletelogs, truncimages, truncros, truncarchive, archive,
-	archiveros, archiveimages, archivelogs, routedata, resetroutedata, wait,
+	deletelogs, truncimages, truncarchive, archive,
+	archivelogs, routedata, resetroutedata, wait,
 
+	// truncrosarchiveros, archiveimages,
     ;
 	
 	// sub-set that are restricted to "user0"

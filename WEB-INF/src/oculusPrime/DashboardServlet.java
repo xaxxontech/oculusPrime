@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import developer.Navigation;
+import developer.NavigationLog;
 import developer.NavigationUtilities;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
@@ -56,6 +57,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	String delay = "10";
 	private String estimatedmeters;
 	private String estimatedseconds; 
+	long time;
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -79,6 +81,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
+		
 		if( ! ban.knownAddress(request.getRemoteAddr())){
 			Util.log("unknown address: sending to login: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");   
@@ -481,39 +484,43 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	private String getActiveRoute(){  	
 		
 		String rname = state.get(values.navigationroute);
-		if(rname == null) rname = " inactive but xml: " + NavigationUtilities.getActiveRoute();
-		String time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000) + " ";
+		if(rname == null) rname = "xml: " + NavigationUtilities.getActiveRoute();
+		time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000);
 		String next = state.get(values.roswaypoint);
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)){
 				next = ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000)+ " sec";
-				time = "0";
+				time = 0;
 			}
 		} 
 		
-		if(next==null) time = "";
-		String link = "";
+		if(next==null) time = 0;
+		String link = "\n\n<td><b>next</b><td>" + next ;
 		
 		try {
-				
-			link = "\n\n<td><b>next</b><td>" + next + "<td><b>meters</b><td>" + Navigation.getRouteMeters() + " | " +  estimatedmeters
-					+ "<td><b>time</b><td>" + time + " | " +  estimatedseconds;
+		
+			link += "<td><b>meters</b><td>" + Navigation.getRouteMeters() + " | " + estimatedmeters + "<td><b>time</b><td>" + time + " | " +  estimatedseconds;
 			
+		} catch (Exception e) {return link;}
+		
+		try {
+			
+			// dumbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+			if(time > (Long.parseLong(estimatedseconds.trim()+10000))){
+		//		NavigationLog.newItem("Route: " + state.exists(values.navigationroute) + " over due");
+				state.set(values.routeoverdue, "true");
+			}
+
 			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + rname +  " " + pointslist; 
 			
-			if(Navigation.failed) link += " *route failed*";
+//			if(Navigation.failed) link += " *route failed*";
 			if(state.getBoolean(values.routeoverdue)) link+= " *overdue* "; 		
 			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
 			if(state.getBoolean(values.rosgoalcancel)) link+= " *ros goal cancel* "; 		
-//			if(Navigation.routevisiting) link+= " *visting* "; 		
-
 			link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
 			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
 			
-		} catch (Exception e) {
-			Util.log("getActiveRoute(): " + e, this);
-		}
-		
+		} catch (Exception e) {}
 		return link; 
 	}
 	
@@ -563,6 +570,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 //		if(state.exists(key)) Util.log("updated: " + key + " " + state.get(key), this);
 		
+		// only read from file on change 
 		if(key.equals(values.navigationroute.name())){
 			if(state.exists(values.navigationroute)){
 				estimatedmeters = NavigationUtilities.getRouteDistanceEstimateString(state.get(values.navigationroute));
@@ -570,10 +578,22 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				pointslist = NavigationUtilities.getWaypointsForRoute(state.get(values.navigationroute)).toString();
 			} else {
 				pointslist = "none";	
-				estimatedmeters = "0";
-				estimatedseconds = "0";
+//				estimatedmeters = "0";
+//				estimatedseconds = "0";
 			}
 		}
+		
+		
+		if(key.equals(values.dockstatus.name())){
+			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
+		
+//				estimatedmeters = "0";
+//				estimatedseconds = "0";
+				time = 0;
+				
+			}
+		}
+		
 		
 //		if(key.equals(values.roswaypoint.name())){
 //				Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);

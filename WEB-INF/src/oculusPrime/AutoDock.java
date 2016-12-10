@@ -403,7 +403,7 @@ public class AutoDock {
 							app.message("autodock completely failed", null, null);
 							autoDockCancel();
 							// TODO: testing.......................................................
-							Navigation.failed = true;
+							// Navigation.failed = true;
 							
 						}
 					}
@@ -655,7 +655,7 @@ public class AutoDock {
 					if (Math.abs(slopedeg - dockslopedeg) > s2slopetolerance
 							|| autodockctrattempts > 10) { // rotate a bit, then backup and try again
 
-						Util.log("autodock backup", this);
+//////.						Util.debug("autodock backup", this);
 						PowerLogger.append("autodock backup", this);
 						autodockctrattempts = 0;
 						int comp = imgwidth/4;

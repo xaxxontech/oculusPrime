@@ -29,29 +29,33 @@ public class Navigation implements Observer {
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;	
 	public static final long NEXT_ROUTE_DELAY = 1000;	
 
-	private static final int LIGHT_LEVEL_TOO_LOW = 45;
+	public static final int LIGHT_LEVEL_TOO_LOW = 45;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 20;  // TODO: set to 15 in production
-	public static final int MIN_BATTERY_LIFE = 25;               // TODO: CALCULATE THIS FROM ROUTE INFO?
+	public static final int MIN_BATTERY_LIFE = 30;               // TODO: CALCULATE THIS FROM ROUTE INFO?
 	public static final String DOCK = "dock";                    // waypoint name
 	
-	private static Settings settings = Settings.getReference();
-	private static State state = State.getReference();
-	private static Application app = null;	
+	static Settings settings = Settings.getReference();
+	static State state = State.getReference();
+	static Application app = null;	
 	
 	public static boolean navdockactive = false;
-	public static long starteddockingtime = 0;
-	static long routemillimeters = 0;  
 	public static long routestarttime = 0;
 	public static int consecutiveroute = 1;  
 	
+	// testing -------------------------------
+	
 	// public static int lastIndex = 0;
 		
-	public static boolean failed = false; 						// flag set if user takes control, or gets lost 
+	
+	static long starteddockingtime = 0;
+	static long routemillimeters = 0;  
+	static boolean failed = false; 						// flag set if user takes control, or gets lost 
 
 	public static int rotations = 0;
 
 //	static Vector<String> waypoints = null;
 	static boolean routevisiting = false;
+	
 	
 	/** Constructor */
 	public Navigation(Application a){
@@ -61,8 +65,8 @@ public class Navigation implements Observer {
 		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
 		state.addObserver(this);
 		
-	// WORKING ON 	
-	//	new NavWatchdog();
+		// WORKING ON 	
+		// new NavWatchdog();
 	}
 	  
 	@Override
@@ -83,7 +87,7 @@ public class Navigation implements Observer {
 		if(key.equals(values.roswaypoint.name())){
 			
 			if( ! state.exists(values.roswaypoint)){
-				Util.log("updated() waypoint deleted ", this);
+				Util.log("updated() waypoint deleted..", this);
 				return;
 			}
 	
@@ -127,18 +131,31 @@ public class Navigation implements Observer {
 				state.delete(values.recoveryrotation);			
 				state.delete(values.waypointbusy);
 				state.delete(values.rosgoalcancel);
-				rotations = 0;
+			
+				routevisiting = false;	
 				failed = false;
-				routevisiting = false;
-				
-			// never do these here 
+				rotations = 0;
+
+			//  never do these here 
 			//	waypoints = null;
 			//  never do these here! 
 			//	routemillimeters = 0;  
 			//	routestarttime = 0;
-			//	estimatedmeters = 0;	      
-			//	estimatedtime = 0;	
 				
+			}
+		}
+		
+		
+		if(key.equals(values.wallpower.name())){
+			if(state.exists(values.wallpower)){
+				if(state.equals(values.wallpower, "true")){
+
+					Util.log("updated() dockstatus, wallpower reset...", this);	
+
+				//	routemillimeters = 0;  
+				//	routestarttime = 0;
+				
+				}
 			}
 		}
 	}
@@ -878,6 +895,10 @@ public class Navigation implements Observer {
 		}}).start();
 	}
 
+	/** */ 
+	public static String getRouteMeters() {
+		return Util.formatFloat(routemillimeters / 1000, 0);
+	}
 
 	/**	*/
 	public static void goalCancel(){
@@ -893,7 +914,7 @@ public class Navigation implements Observer {
 			String msg = "Route canceled by ";
 			if(state.exists(values.driver)) msg += state.get(values.driver);
 			else msg += " automated user";
-			NavigationLog.newItem(/*NavigationLog.INFOSTATUS, */ msg);  // can't use the name, deleted from state 
+			NavigationLog.newItem(/*NavigationLog.INFOSTATUS, */ msg);  // TODO: can't use the name, deleted from state 
 			app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 		} else Util.debug("cancelAllRoutes(): NO ACTIVE ROUTE, command dropped");
 
@@ -905,6 +926,8 @@ public class Navigation implements Observer {
 
 		state.delete(values.navigationroute); // this eventually stops currently running route
 		state.delete(values.nextroutetime);	
+		state.delete(values.routeoverdue);
+		// state.delete(values.waypointbusy);
 
 		// be sure? 
 		if(NavigationUtilities.getActiveRoute() != null) NavigationUtilities.deactivateAllRoutes();
@@ -1346,9 +1369,5 @@ public class Navigation implements Observer {
 		new Thread(new Runnable() { public void run() {
 			if (Ros.saveMap()) app.message("map saved to "+Ros.getMapFilePath(), null, null);
 		}  }).start();
-	}
-
-	public static String getRouteMeters() {
-		return Util.formatFloat(routemillimeters / 1000, 0);
 	}
 }

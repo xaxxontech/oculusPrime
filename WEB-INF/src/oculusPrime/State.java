@@ -32,18 +32,19 @@ public class State {
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 		record, sounddetect,
+		
 		// not typically used by scripts, undocumented:
 		writingframegrabs,
 
 		// power
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,
 		powererror, forceundock,
+		
 		// not typically used by scripts, undocumented:
 		redockifweakconnection, // undocumented
 
 		// system
 		javastartup, linuxboot, httpport, lastusercommand, cpu, guinotify, waitingforcpu, osarch,
-
 
 		// network
 		localaddress, externaladdress, ssid,
@@ -60,7 +61,9 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		rosarcmove, waypointbusy, routeoverdue, recoveryrotation, // to be documented
+		
+		 // to be documented
+		rosarcmove, waypointbusy, routeoverdue, recoveryrotation,
 
 	}
 
