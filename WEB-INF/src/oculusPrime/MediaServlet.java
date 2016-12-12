@@ -49,10 +49,8 @@ public class MediaServlet extends HttpServlet {
 		str.append("."+VIDEO+" {background-color: #C2EBFF; padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; border-top: 1px solid #ffffff; }\n");
 		str.append("</style>\n");
 	        
-     	str.append("</head><body onload=\"loaded();\">\n");
-        str.append("<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; cursor: pointer;'");
-        str.append("onclick=\"window.open(document.URL.replace(/#.*$/, ''), '_self'); \" ");
-        str.append("<div>Oculus Prime Media Files </div>\n");
+     	str.append("</head><body>\n");
+        str.append("<div style='padding-left: 15px'>Oculus Prime Media Files </div>\n");
 
 		response.setContentType("html");
 		PrintWriter out = response.getWriter();
@@ -89,13 +87,13 @@ public class MediaServlet extends HttpServlet {
 		for(int c = 0 ; c < files.length ; c++){
 			
 			if(files[c].getName().toLowerCase().endsWith(".jpg"))
-				str.append( "<div class=\'"+IMAGE+"\'><a href=\"http://" + state.get(values.externaladdress) + ":" + state.get(values.httpport) 
-					+ "/oculusPrime/framegrabs/"+ files[c].getName() + "\">"
+				str.append( "<div class=\'"+IMAGE+"\'><a href=\"/oculusPrime/framegrabs/"+ files[c].getName()
+					+ "\" target='_blank'>"
 					+ files[c].getName() + "</a>      " + files[c].length() + " bytes" + "</div>\n");
 			
 			else // if(files[c].getName().toLowerCase().endsWith(".flv"))
-				str.append( "<div class=\'"+VIDEO+"\'><a href=\"http://" + state.get(values.externaladdress) + ":" + state.get(values.httpport) 
-					+ "/oculusPrime/streams/"+ files[c].getName() + "\">"
+				str.append( "<div class=\'"+VIDEO+"\'><a href=\"/oculusPrime/streams/"+ files[c].getName()
+					+ "\" target='_blank'>"
 					+ files[c].getName() + "</a>      " + files[c].length() + " bytes" + "</div>\n");
 			
 			
