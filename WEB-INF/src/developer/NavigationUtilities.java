@@ -127,6 +127,10 @@ public class NavigationUtilities {
 	    		NodeList wp = ((Element) routes.item(i)).getElementsByTagName(WAYPOINT_NAME);
 	    		for(int j = 0 ; j < wp.getLength() ; j++){
 	        		ans.add(wp.item(j).getTextContent());
+	        		
+	        		// TODO: 
+	        		if( wp.item(j).getTextContent().contains("&nbsp;")) Util.log("getWaypointsForRoute(): ... WARNING .... HTML CHARATERS IN  NAV XML ...");
+
 	    		}
 			}
 		}
@@ -453,17 +457,21 @@ public class NavigationUtilities {
 		
 		setRouteCount(name, getRouteCount(name)+1);
 		
-	//	if(seconds <= 0  || meters <= 0) return; // sanity test 
-		Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): called.. ");
+	//	Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): called.. ");
 
-		int estsec = getRouteTimeEstimate(name); 
+		if(seconds <= 0  || meters <= 0) {
+	//		Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): faillllll.. ");
+			return; // sanity test 
+		}
+
+		final int estsec = getRouteTimeEstimate(name); 
 		if(estsec == 0) setRouteTimeEstimate(name, seconds); 
 		else if(estsec != seconds) {
 			setRouteTimeEstimate(name, (seconds+estsec)/2); // average them	
 			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
 		}
 
-		int distance = getRouteDistanceEstimate(name);
+		final int distance = getRouteDistanceEstimate(name);
 		if(distance == 0) setRouteDistanceEstimate(name, meters);
 		else if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	

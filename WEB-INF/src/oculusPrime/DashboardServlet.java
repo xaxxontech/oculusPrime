@@ -16,7 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import developer.Navigation;
-import developer.NavigationLog;
 import developer.NavigationUtilities;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
@@ -24,7 +23,6 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-	
 	private static final int MAX_STATE_HISTORY = 40;
 	private static final String HTTP_REFRESH_DELAY_SECONDS = "10"; 
 	
@@ -317,7 +315,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			} catch (Exception e) { break; }
 		}
 		
-		Vector<String> points = Navigation.getAllWaypoints();
+		Vector<String> points = getAllWaypoints();
 		String pnames = "NONE";
 		if(points.size() > 0) pnames = points.toString();
 		str.append("<tr><td colspan=\"9\"><hr><tr><td colspan=\"9\"><b>wapoints: </b>" + pnames);
@@ -338,6 +336,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println(state.toString().replaceAll("<br>", ""));	
 		out.println("\n\r -- settings --\n\r");
 		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
+		out.println("\n\r -- route stats -- \n\r");
+		out.println(NavigationUtilities.getRouteStatsHTML() + "\n");
 		out.close();	
 	}
 	
@@ -450,7 +450,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		str.append(getActiveRoute());
 		str.append("\n\n<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
-		Vector<String> waypointsAll = Navigation.getAllWaypoints(); 
+		Vector<String> waypointsAll = getAllWaypoints(); 
 		if(waypointsAll != null){
 		String nlink = "\n<tr><td><b>points</b><td colspan=\"11\">";
 			for(int i = 0 ; i < waypointsAll.size() ; i++)
@@ -483,33 +483,25 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	private String getActiveRoute(){  	
 		
+		String link = "\n\n<td><b>next</b><td>";
 		String rname = state.get(values.navigationroute);
+		String next = "err";
+		rname = state.get(values.navigationroute);
 		if(rname == null) rname = "xml: " + NavigationUtilities.getActiveRoute();
 		time = ((System.currentTimeMillis() - Navigation.routestarttime)/1000);
-		String next = state.get(values.roswaypoint);
+		next = state.get(values.roswaypoint);
 		if(state.equals(values.dockstatus, AutoDock.DOCKED) && !state.getBoolean(values.odometry)){
 			if(state.exists(values.nextroutetime)){
 				next = ((state.getLong(values.nextroutetime) - System.currentTimeMillis())/1000)+ " sec";
 				time = 0;
 			}
-		} 
-		
+		}
+	
 		if(next==null) time = 0;
-		String link = "\n\n<td><b>next</b><td>" + next ;
-		
-		try {
-		
-			link += "<td><b>meters</b><td>" + Navigation.getRouteMeters() + " | " + estimatedmeters + "<td><b>time</b><td>" + time + " | " +  estimatedseconds;
+		link += next += "<td><b>meters</b><td>" + Navigation.getRouteMeters() + " | " + estimatedmeters + "<td><b>time</b><td>" + time + " | " +  estimatedseconds;
 			
-		} catch (Exception e) {return link;}
-		
 		try {
 			
-			// dumbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-			if(time > (Long.parseLong(estimatedseconds.trim()+10000))){
-		//		NavigationLog.newItem("Route: " + state.exists(values.navigationroute) + " over due");
-				state.set(values.routeoverdue, "true");
-			}
 
 			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + rname +  " " + pointslist; 
 			
@@ -520,7 +512,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
 			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
 			
-		} catch (Exception e) {}
+		} catch (Exception e) {	Util.printError(e); return link;}
+		
 		return link; 
 	}
 	
@@ -578,27 +571,20 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				pointslist = NavigationUtilities.getWaypointsForRoute(state.get(values.navigationroute)).toString();
 			} else {
 				pointslist = "none";	
-//				estimatedmeters = "0";
-//				estimatedseconds = "0";
+				estimatedmeters = "0";
+				estimatedseconds = "0";
+				time = 0;
 			}
 		}
-		
 		
 		if(key.equals(values.dockstatus.name())){
 			if(state.equals(values.dockstatus, AutoDock.DOCKED)){
-		
-//				estimatedmeters = "0";
-//				estimatedseconds = "0";
+				// estimatedmeters = "0";
+				// estimatedseconds = "0";
 				time = 0;
-				
 			}
 		}
-		
-		
-//		if(key.equals(values.roswaypoint.name())){
-//				Util.log("next: " + nextWapoint + " point: " + state.get(values.roswaypoint), this);
-//  			nextWapoint = state.get(values.roswaypoint);
-						
+			
 //	if(state.getBoolean(values.routeoverdue)) 
 //		state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
 //		if(key.equals(values.framegrabbusy.name())) return;
@@ -614,6 +600,24 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// trim size
 		if(history.size() > MAX_STATE_HISTORY) history.remove(0);
 		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
+	}
+	
+	public static Vector<String> getAllWaypoints(){
+		Vector<String> names = new Vector<String>();
+		if( ! state.exists(values.rosmapwaypoints)) return names;	
+		String[] points = state.get(values.rosmapwaypoints).split(",");
+		for(int i = 0 ; i < points.length ; i++ ){
+			try { Double.parseDouble(points[i]); } catch (NumberFormatException e){
+				
+				String value = points[i].trim(); // .replaceAll("&nbsp;", " ");			
+				
+//				if(value.contains("&nbsp;")) Util.log("getAllWaypoints(): ..WARNING.. html chars point: " + value);
+//				if(names.contains(value)) Util.log("getAllWaypoints(): ..WARNING.. duplicate point: " + value);
+				
+				if( ! names.contains(value)) names.add(points[i]);
+			}
+		}
+		return names;
 	}
 }
 

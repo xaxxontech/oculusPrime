@@ -303,6 +303,7 @@ public class Util {
 
 	// replaces standard e.printStackTrace();
 	public static void printError(Exception e) {
+		history.add(System.currentTimeMillis() + ", " + e.getMessage());
 		System.err.println("error "+getTime()+ ":");
 		e.printStackTrace();
 	}
