@@ -398,16 +398,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 				
 				Util.delay(5000); // system settle 	
 				
-				Util.debug(".... booted undocked, trying redock, waiting....", this);		
+				// Util.debug(".... booted undocked, trying redock, waiting....", this);		
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				if(state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TWO_MINUTES)){
 					if(( /* state.equals(values.wallpower, "true") && */ state.equals(values.dockstatus, AutoDock.DOCKED))){
 								
-						Util.debug(".... booted undocked, trying redock, done waiting....", this);		
+						// Util.debug(".... booted undocked, trying redock, done waiting....", this);		
 	
 						Util.delay(15000); // system settle 	
 						
-						Util.debug(".... redockWaitRunRoute(): run active route: " + NavigationUtilities.getActiveRoute());
+						// Util.debug(".... redockWaitRunRoute(): run active route: " + NavigationUtilities.getActiveRoute());
 						Navigation.runActiveRoute();	
 						
 					}				
@@ -415,7 +415,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 					
 					// this is bad 
 					NavigationLog.newItem(NavigationLog.ALERTSTATUS, "redockWaitRunRoute(): failed to dock");
-					new SendMail("oculus can't dock", "redockWaitRunRoute() failed: " + state.toString().replaceAll("<br>", "\n"));
+					new SendMail("Oculus failed to dock", "redockWaitRunRoute(): called but failed. booted un-docked andd ccan't find dock by spining");
+					//state.toString().replaceAll("<br>", "\n"));
 					
 				}
 			} catch (Exception e){Util.printError(e);}
@@ -584,9 +585,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		playerCallServer(fn, str, true);
 	}
 
-	/**
-	 * called by remote flash
-	 * */
+	/** called by remote flash */
 	public void playerCallServer(String fn, String str) {
 		
 		if (fn == null) return;
@@ -993,6 +992,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case runroute:
 			if(str == null) return;
+			if(str.equals("")) return;
+			if( ! NavigationUtilities.routeExists(str)){
+				Util.log("runroute(): route does not exist: " + str);
+				return;
+			}
 			if( ! state.equals(values.dockstatus, AutoDock.DOCKED)){
 				Util.log("playerCallServer(): must be docked to start new route, skipped", this);
 				messageplayer("must be docked to start new route, skipped", null, null);
@@ -1058,7 +1062,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 	
-		/** testing 		*/
+		/** testing block on state change */
 		case wait: //---------------------------------------------------------------------------------
 		
 			Util.log("wait on: " + str, this);

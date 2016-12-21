@@ -71,7 +71,13 @@ public class Util {
 		Calendar cal = Calendar.getInstance();
 		return dateFormat.format(cal.getTime());
 	}
-
+	
+	public static String getDateStampShort() {
+		DateFormat dateFormat = new SimpleDateFormat("mm-ss");
+		Calendar cal = Calendar.getInstance();
+		return dateFormat.format(cal.getTime());
+	}
+	
 	/**
 	 * Returns the specified double, formatted as a string, to n decimal places,
 	 * as specified by precision.

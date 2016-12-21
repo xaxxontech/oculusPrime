@@ -337,7 +337,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.println("\n\r -- settings --\n\r");
 		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
 		out.println("\n\r -- route stats -- \n\r");
-		out.println(NavigationUtilities.getRouteStatsHTML() + "\n");
+		out.println(NavigationUtilities.getRouteStats() + "\n");
 		out.close();	
 	}
 	

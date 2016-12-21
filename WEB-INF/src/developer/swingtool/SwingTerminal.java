@@ -5,10 +5,13 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import oculusPrime.PlayerCommands;
+import oculusPrime.Util;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -21,24 +24,30 @@ public class SwingTerminal extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	DefaultListModel<PlayerCommands> listModel = new DefaultListModel<PlayerCommands>();
-	JList<PlayerCommands>  list = new JList<PlayerCommands>(listModel) ;
+	JList<PlayerCommands> list = new JList<PlayerCommands>(listModel) ;
+	JTextArea messages = new JTextArea();	
 	JTextField in = new JTextField();
-	JTextArea messages = new JTextArea();
 	BufferedReader reader = null;
 	PrintWriter printer = null;
 	Socket socket = null;
+	int rx, tx = 0;
 	String ip;
 	int port;
-	int rx, tx = 0;
 	
 	public SwingTerminal(String ip, int port){ 
 		this.ip = ip;
 		this.port = port;
 		setDefaultLookAndFeelDecorated(true);
+		
+//		messages.setFont(new Font("serif", Font.PLAIN, 25));
+//		list.setFont(new Font("serif", Font.PLAIN, 25));
+//		in.setFont(new Font("serif", Font.PLAIN, 25));
+//		setFont(new Font("serif", Font.PLAIN, 25));
+		
 		setLayout(new BorderLayout());
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.addListSelectionListener(new ListSelectionListener() {	
-			@Override
+			@Override // update text in input window 
 			public void valueChanged(ListSelectionEvent e) {
 				if(e.getValueIsAdjusting() == false) {
 					if(list.getSelectedIndex() != -1){
@@ -49,6 +58,34 @@ public class SwingTerminal extends JFrame {
 			}
 		});
 		
+		list.addKeyListener(new KeyListener() {
+			@Override public void keyTyped(KeyEvent arg) {}
+			@Override public void keyReleased(KeyEvent arg) {}
+			@Override // enter key 
+			public void keyPressed(KeyEvent arg) {
+				if(arg.getKeyCode() == 10){				
+					if(list.getSelectedIndex() != -1){
+						sendCommand(in.getText().trim());
+					}
+				}
+			}
+		});
+		
+		list.addMouseListener( new MouseListener() {
+			@Override public void mouseReleased(MouseEvent arg) {}
+			@Override public void mousePressed(MouseEvent arg) {}
+			@Override public void mouseExited(MouseEvent arg) {}
+			@Override public void mouseEntered(MouseEvent arg) {}
+			@Override // double clicked 
+			public void mouseClicked(MouseEvent arg) {
+				if(arg.getClickCount() == 2){			
+					if(list.getSelectedIndex() != -1){
+						sendCommand(in.getText().trim());
+					}
+				}
+			}
+		});
+		
 		final PlayerCommands[] cmds = PlayerCommands.values();
 		for(int i = 0; i < cmds.length; i++) listModel.addElement(cmds[i]);
 		
@@ -56,15 +93,25 @@ public class SwingTerminal extends JFrame {
 		JScrollPane chatScroller = new JScrollPane(messages);
 		JScrollPane cmdsScroller = new JScrollPane(listScrollPane);
 
-		chatScroller.setPreferredSize(new Dimension(600, 600));
-		cmdsScroller.setPreferredSize(new Dimension(200, 400));
+		chatScroller.setPreferredSize(new Dimension(500, 700));
+		cmdsScroller.setPreferredSize(new Dimension(200, 700));
 		getContentPane().add(chatScroller, BorderLayout.LINE_END);
 		getContentPane().add(cmdsScroller, BorderLayout.LINE_START);
 		getContentPane().add(in, BorderLayout.PAGE_END);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		chatScroller.setFocusable(false);
 		
-		in.addKeyListener(new keyListener());
+		in.addKeyListener(new KeyListener() {
+			@Override public void keyPressed(KeyEvent arg) {}
+			@Override public void keyReleased(KeyEvent arg) {}
+			@Override // input with parameter 
+			public void keyTyped(KeyEvent e) {
+				final char c = e.getKeyChar();
+				if(c == '\n' || c == '\r') 
+					sendCommand(in.getText().trim());
+			}
+		});
+		
 		in.setFocusable(true);	
 		in.requestFocus();
 
@@ -104,7 +151,7 @@ public class SwingTerminal extends JFrame {
 					if(input.length() > 0) {
 						rx++;
 						setTitle(socket.getInetAddress().toString() + " rx: " + rx + " tx: " + tx);
-						messages.append(input + "\n");
+						messages.append(Util.getDateStampShort() + " " + input + "\n");
 						messages.setCaretPosition(messages.getDocument().getLength());
 					}
 				} catch (Exception e) {
@@ -118,24 +165,15 @@ public class SwingTerminal extends JFrame {
 		}}).start();
 	}
 	
-	public class keyListener implements KeyListener {
-		@Override public void keyPressed(KeyEvent arg0) {}
-		@Override public void keyReleased(KeyEvent arg0) {}
-		@Override
-		public void keyTyped(KeyEvent e) {
-			final char c = e.getKeyChar();
-			if (c == '\n' || c == '\r') {
-				final String input = in.getText().trim();
-				tx++;
-				try {
-					printer.println(input);
-				} catch (Exception e1) {
-					try {
-						socket.close();
-					} catch (IOException e2) {
-						messages.append(e1.getMessage());
-					}
-				}
+	void sendCommand(final String input){
+		tx++;
+		try {
+			printer.println(input);
+		} catch (Exception e1) {
+			try {
+				socket.close();
+			} catch (IOException e2) {
+				messages.append(e1.getMessage());
 			}
 		}
 	}

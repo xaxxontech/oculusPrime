@@ -414,9 +414,16 @@ public class NavigationUtilities {
 		String xmlString = XMLtoString(document);
 		saveRoute(xmlString);
 	}
+	
+	public static boolean routeExists(final String name){
+		Vector<String> routes = getRoutes();
+		if(routes.contains(name)) return true;
+		return false;
+	}
 
-	public static void setActiveRoute(String name){
-		if(name == null) return;;
+	public static void setActiveRoute(final String name){
+		if(name == null) return;
+		if(name.equals("")) return;
 		try {
 			Document document = loadXMLFromString(routesLoad());
 			NodeList routes = document.getDocumentElement().getChildNodes();
@@ -554,6 +561,27 @@ public class NavigationUtilities {
 				info += "<td>" + route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent();
 				info += "<td>" + route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent();
 				info += "<td>" + route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent();
+				
+			} catch (Exception e) {}
+		}
+		
+		info += "</table>";
+		return info;
+	}
+	
+	public static String getRouteStats(){
+		String info = "";	
+		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
+		NodeList routes = document.getDocumentElement().getChildNodes();
+		for (int i = 0; i < routes.getLength(); i++){
+			try {
+				
+				Element route = (Element) routes.item(i);	
+				String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
+				info += "route: " + rname + " time: " + route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent()
+				              + " distance: " + route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent()
+			                  + " count: " + route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent()
+				              + " fail: " + route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent() + "\n";
 				
 			} catch (Exception e) {}
 		}
