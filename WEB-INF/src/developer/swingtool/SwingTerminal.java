@@ -19,10 +19,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class SwingTerminal extends JFrame {
 
 	private static final long serialVersionUID = 1L;
+	final long DELAY = 5000; 
+
 	DefaultListModel<PlayerCommands> listModel = new DefaultListModel<PlayerCommands>();
 	JList<PlayerCommands> list = new JList<PlayerCommands>(listModel) ;
 	JTextArea messages = new JTextArea();	
@@ -106,78 +110,124 @@ public class SwingTerminal extends JFrame {
 			@Override public void keyReleased(KeyEvent arg) {}
 			@Override // input with parameter 
 			public void keyTyped(KeyEvent e) {
-				final char c = e.getKeyChar();
-				if(c == '\n' || c == '\r') 
+				if(e.getKeyChar() == '\n' || e.getKeyChar() == '\r') 
 					sendCommand(in.getText().trim());
 			}
 		});
 		
-		in.setFocusable(true);	
-		in.requestFocus();
-
+		// show the Swing gui 
 		pack();
 		setVisible(true);
-		openSocket();
+		setResizable(false);
+		
+		// start timer watch dog 
+		new Timer().scheduleAtFixedRate(new Task(), 0, DELAY);
 	}
 	
-	void openSocket(){
-		try {
-			socket = new Socket(ip, port);
-			printer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
-			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			messages.append("connected to: " + socket.getInetAddress().toString());
-			setTitle(socket.getInetAddress().toString());
-			readSocket();
-		}catch (Exception e) {
-			messages.append(e.getMessage());
-			try {
-				socket.close();
-				setTitle("dead");
-			} catch (IOException e1) {
-				messages.append(e.getMessage());
+	private class Task extends TimerTask {
+		public void run(){
+			if(printer == null || socket.isClosed()){
+				
+				openSocket();
+				try { Thread.sleep(5000); } catch (InterruptedException e) {}
+				if(socket != null) if(socket.isConnected()) readSocket();
+					
+			} else {
+				try {
+					printer.checkError();
+					printer.flush();
+					printer.println("\n\n\n"); // send dummy message to test the connection
+				} catch (Exception e) {
+					appendMessages("TimerTask(): "+e.getMessage());
+					closeSocket();
+				}
 			}
 		}
 	}
 	
-	/** block on input and then update text area */
+	void openSocket(){	
+		try {	
+			setTitle("trying to connect");
+			socket = new Socket(ip, port);
+			printer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			appendMessages("openSocket(): connected to: " + socket.getInetAddress().toString());
+			setTitle(socket.getInetAddress().toString());
+		} catch (Exception e) {
+			setTitle("disconnected");
+			appendMessages("openSocket(): " + e.getMessage());
+			closeSocket();
+		}
+	}
+	
+	void closeSocket(){
+		if(printer != null){
+			printer.close();
+			printer = null;
+		}
+		if(reader != null){
+			try {
+				reader.close();
+				reader = null;
+			} catch (IOException e) {
+				appendMessages("closeSocket(): " + e.getLocalizedMessage());
+			}
+		}
+		try { 
+			if(socket != null) socket.close(); 
+		} catch (IOException ex) {
+			appendMessages("closeSocket(): " + ex.getLocalizedMessage());
+		}
+	}
+
 	void readSocket(){	
 		new Thread(new Runnable() { public void run() {
 			String input = null;
-			while (true) {
+			while(printer != null) {
 				try {
 					input = reader.readLine();
-					if(input == null) break;
+					if(input == null) {
+						appendMessages("readSocket(): null message, closing..");
+						try { Thread.sleep(5000); } catch (InterruptedException e) {}
+						closeSocket();
+						break;
+					}
 					input = input.trim();
 					if(input.length() > 0) {
-						rx++;
-						setTitle(socket.getInetAddress().toString() + " rx: " + rx + " tx: " + tx);
-						messages.append(Util.getDateStampShort() + " " + input + "\n");
-						messages.setCaretPosition(messages.getDocument().getLength());
+						setTitle(socket.getInetAddress().toString() + " rx: " + rx++ + " tx: " + tx);
+						appendMessages( input );
 					}
 				} catch (Exception e) {
-					try {
-						socket.close();
-					} catch (IOException e1) {
-						messages.append(e.getMessage());
-					}
+					appendMessages("readSocket(): "+e.getMessage());
+					closeSocket();
 				}
 			}
 		}}).start();
 	}
 	
-	void sendCommand(final String input){
+	void sendCommand(final String input){		
+		if(printer == null){
+			appendMessages("sendCommand(): not connected");
+			return;
+		}
+	
 		tx++;
 		try {
+			printer.checkError();
 			printer.println(input);
-		} catch (Exception e1) {
-			try {
-				socket.close();
-			} catch (IOException e2) {
-				messages.append(e1.getMessage());
-			}
+		} catch (Exception e) {
+			appendMessages("sendCommand(): "+e.getMessage());
+			closeSocket();
 		}
+		
+		in.setText(""); // reset text input field 
 	}
-
+	
+	void appendMessages(final String input){
+		messages.append(Util.getDateStampShort() + " " + input + "\n");
+		messages.setCaretPosition(messages.getDocument().getLength());
+	}
+	
 	public static void main(String[] args) {
 		String ip = args[0];
 		int port = Integer.parseInt(args[1]);

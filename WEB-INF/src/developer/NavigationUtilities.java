@@ -574,8 +574,7 @@ public class NavigationUtilities {
 		Document document = NavigationUtilities.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0; i < routes.getLength(); i++){
-			try {
-				
+			try {		
 				Element route = (Element) routes.item(i);	
 				String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
 				info += "route: " + rname + " time: " + route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent()
@@ -585,8 +584,6 @@ public class NavigationUtilities {
 				
 			} catch (Exception e) {}
 		}
-		
-		info += "</table>";
 		return info;
 	}
 	

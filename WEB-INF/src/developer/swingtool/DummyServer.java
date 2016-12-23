@@ -3,13 +3,15 @@ package developer.swingtool;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Vector;
 
 public class DummyServer {
 	
-	private static final int PORT = 4444;
-	private static ServerSocket serverSocket = null;  	
+	static final int PORT = 4444;
+	static ServerSocket serverSocket = null;  	
+	private Vector<PrintWriter> printers = new Vector<PrintWriter>();
 
-	/** Threaded client handler */
+	/** threaded client handler */
 	class ConnectionHandler extends Thread {
 	
 		private Socket clientSocket = null;
@@ -29,37 +31,46 @@ public class DummyServer {
 				System.out.println("ConnectionHandler(): " + e.getMessage());
 				return;
 			}
-		
-			out.println("welcome");
 			
+			System.out.println("ConnectionHandler(): " + socket.toString() + " connected");
+			out.println("\n..welcome.. active connections: " + printers.size());		
+			printers.add(out);
 			this.start();
 		}
 		
 		@Override
 		public void run() {
 			String str = null;
-			while (true) {
-				
+			while (true) {		
 				try {
 					str = in.readLine();
 				} catch (Exception e) {
 					System.out.println("readLine(): " + clientSocket.toString() + " " + e.getMessage());
+					sendGroup(clientSocket.toString() + " exited");	
 					break;
 				}
 
-				// client is terminating?
-				// if(str == null) {
-				//	System.out.println("read thread, closing");
-				//	break;
-				//}
-		
-				System.out.println("IMPUT: " + clientSocket.toString() + " " + str);
-						
+				if(str.trim().length() > 1){
+					System.out.println("INPUT: " + clientSocket.toString() + " " + str);
+					sendGroup(clientSocket.toString() + " " + str);	
+				}
 			}
 		}	
 	} 
 
-	/** register for updates, share state with all threads  */
+	void sendGroup(String str){
+		PrintWriter pw = null;
+		for (int c = 0; c < printers.size(); c++) {
+			pw = printers.get(c);
+			if(pw.checkError()) {	
+				printers.remove(pw);
+				pw.close();
+			} else {
+				pw.println(str);
+			}
+		}			
+	}
+	
 	public DummyServer() {
 		new Thread(new Runnable() {
 			@Override
@@ -69,9 +80,7 @@ public class DummyServer {
 		}).start();
 	}
 	
-	/** do forever */ 
 	private void startCommandListener(){
-		
 		try {
 			serverSocket = new ServerSocket(PORT);
 		} catch (Exception e) {
@@ -81,13 +90,9 @@ public class DummyServer {
 		
 		System.out.println("listening with socket: " + serverSocket.toString());
 		
-		// serve new connections until killed
-		while (true) {
+		while(true) {
 			try {
-
-				// new user has connected
 				new ConnectionHandler(serverSocket.accept());
-
 			} catch (Exception e) {
 				try {				
 					if(serverSocket.isBound()) serverSocket.close();
@@ -95,7 +100,6 @@ public class DummyServer {
 					System.out.println("socket error: " + ee.getMessage());
 					return;					
 				}	
-				
 				return;
 			}
 		}
