@@ -235,7 +235,7 @@ public class TelnetServer implements Observer {
 	/** send to socket on state change */ 
 	public void updated(String key) {
 		String value = state.get(key); // State.values.valueOf(key));
-		if(value==null)	sendToGroup(STATETAG + " deleted: " + key); 
+		if(value==null)	sendToGroup(STATETAG + " deleted " + key); 
 		else {
 			
 			if (State.isNonTelnetBroadCast(key)) return; 

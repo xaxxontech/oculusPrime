@@ -41,14 +41,17 @@ public class SwingTerminal extends JFrame {
 	public SwingTerminal(String ip, int port){ 
 		this.ip = ip;
 		this.port = port;
-		setDefaultLookAndFeelDecorated(true);
 		
+		setDefaultLookAndFeelDecorated(true);
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		setLayout(new BorderLayout());
+
 //		messages.setFont(new Font("serif", Font.PLAIN, 25));
 //		list.setFont(new Font("serif", Font.PLAIN, 25));
 //		in.setFont(new Font("serif", Font.PLAIN, 25));
 //		setFont(new Font("serif", Font.PLAIN, 25));
 		
-		setLayout(new BorderLayout());
+		
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.addListSelectionListener(new ListSelectionListener() {	
 			@Override // update text in input window 
@@ -97,13 +100,12 @@ public class SwingTerminal extends JFrame {
 		JScrollPane chatScroller = new JScrollPane(messages);
 		JScrollPane cmdsScroller = new JScrollPane(listScrollPane);
 
-		chatScroller.setPreferredSize(new Dimension(500, 700));
-		cmdsScroller.setPreferredSize(new Dimension(200, 700));
+		chatScroller.setPreferredSize(new Dimension(500, 800));
+		cmdsScroller.setPreferredSize(new Dimension(250, 800));
 		getContentPane().add(chatScroller, BorderLayout.LINE_END);
 		getContentPane().add(cmdsScroller, BorderLayout.LINE_START);
 		getContentPane().add(in, BorderLayout.PAGE_END);
-		setDefaultCloseOperation(EXIT_ON_CLOSE);
-		chatScroller.setFocusable(false);
+		// chatScroller.setFocusable(false);
 		
 		in.addKeyListener(new KeyListener() {
 			@Override public void keyPressed(KeyEvent arg) {}
@@ -118,7 +120,7 @@ public class SwingTerminal extends JFrame {
 		// show the Swing gui 
 		pack();
 		setVisible(true);
-		setResizable(false);
+	//	setResizable(false);
 		
 		// start timer watch dog 
 		new Timer().scheduleAtFixedRate(new Task(), 0, DELAY);
@@ -136,7 +138,8 @@ public class SwingTerminal extends JFrame {
 				try {
 					printer.checkError();
 					printer.flush();
-					printer.println("\n\n\n"); // send dummy message to test the connection
+					// printer.println("\n\n\n"); 
+					// send dummy message to test the connection
 				} catch (Exception e) {
 					appendMessages("TimerTask(): "+e.getMessage());
 					closeSocket();
@@ -187,11 +190,13 @@ public class SwingTerminal extends JFrame {
 				try {
 					input = reader.readLine();
 					if(input == null) {
-						appendMessages("readSocket(): null message, closing..");
+						appendMessages("readSocket(): closing..");
 						try { Thread.sleep(5000); } catch (InterruptedException e) {}
 						closeSocket();
 						break;
 					}
+					
+					// ignore dummy messages 
 					input = input.trim();
 					if(input.length() > 0) {
 						setTitle(socket.getInetAddress().toString() + " rx: " + rx++ + " tx: " + tx);
@@ -220,7 +225,7 @@ public class SwingTerminal extends JFrame {
 			closeSocket();
 		}
 		
-		in.setText(""); // reset text input field 
+		// in.setText(""); // reset text input field 
 	}
 	
 	void appendMessages(final String input){

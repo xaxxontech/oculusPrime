@@ -1030,7 +1030,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case cpu: 
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
-			commandServer.sendToGroup("cpu = " + cpu);
+			commandServer.sendToGroup("cpu " + cpu);
 			break;
 		
 		case waitforcpu: watchdog.waitForCpuThread();  break;

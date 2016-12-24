@@ -299,11 +299,10 @@ public class Util {
     
 	public static String memory() {
     	String str = "";
-		str += "memory : " + ((double)Runtime.getRuntime().freeMemory()
+		str += "memory " + ((double)Runtime.getRuntime().freeMemory()
 			/ (double)Runtime.getRuntime().totalMemory())*100 + "% free<br>";
-		
-		str += "memory total : "+Runtime.getRuntime().totalMemory()+"<br>";    
-	    str += "memory free : "+Runtime.getRuntime().freeMemory()+"<br>";
+		str += "memory total "+Runtime.getRuntime().totalMemory()+"<br>";    
+	    str += "memory free "+Runtime.getRuntime().freeMemory()+"<br>";
 		return str;
     }
 
