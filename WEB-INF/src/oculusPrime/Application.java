@@ -384,14 +384,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 			NavigationLog.newItem("WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// try re-docking, then start routes again 
-			if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
+			// if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 		}
 		
 		// start active route 
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
+		else watchdog.redock(SystemWatchdog.NOFORWARD);
 		Util.log("java application initialized", this);		
 	}
 	
+	/* useful ??
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run() {
 			try {
@@ -401,7 +403,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				// Util.debug(".... booted undocked, trying redock, waiting....", this);		
 				watchdog.redock(SystemWatchdog.NOFORWARD); // re-dock and block 
 				if(state.block(values.dockstatus, AutoDock.DOCKED,(int)Util.TWO_MINUTES)){
-					if(( /* state.equals(values.wallpower, "true") && */ state.equals(values.dockstatus, AutoDock.DOCKED))){
+					if(( state.equals(values.dockstatus, AutoDock.DOCKED))){
 								
 						// Util.debug(".... booted undocked, trying redock, done waiting....", this);		
 	
@@ -422,6 +424,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
+*/
 
 	// called by remote relay client
 	public void setRelayClient() {
@@ -701,7 +704,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: record(str); break;  // record [true | false]
+		case record: // record [true | false] optionalfilename
+			if(str == null) break;
+			if(str.startsWith("true ")) video.record("true", str.substring(4).trim().replace(" ", "_")); 
+			if(str.equals("true") || str.equals("false")) video.record(str); 
+			break;  
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 		case restart: restart(); break;
@@ -1060,11 +1067,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			Util.deleteLogFiles();
 			break;
-		
 	
 		/** testing block on state change */
-		case wait: //---------------------------------------------------------------------------------
-		
+		case wait:
 			Util.log("wait on: " + str, this);
 
 			final String input[] = str.split(" ");
@@ -2446,113 +2451,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			state.set(State.values.streamactivity, str); // needs to be after disable, method deletes state val
 		}
 	}
-
-	// record to flv in webapps/oculusPrime/streams/
-	@SuppressWarnings("incomplete-switch")
-	public String record(String mode) {
-		IConnection conn = grabber;
-
-		if (state.get(State.values.stream) == null) return null;
-
-		if (state.get(State.values.record) == null)
-			state.set(State.values.record, Application.streamstate.stop.toString());
-
-		if (conn == null) return null;
-
-		if (mode.toLowerCase().equals(Settings.TRUE)) {  // TRUE, start recording
-
-			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
-				driverCallServer(PlayerCommands.messageclients, "no stream running, unable to record");
-				return null;
-			}
-
-			if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
-				driverCallServer(PlayerCommands.messageclients, "already recording, command dropped");
-				return null;
-			}
-
-			// Get a reference to the current broadcast stream.
-			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
-
-
-			// Save the stream to disk.
-			try {
-				String streamName = Util.getDateStamp();
-				final String urlString = "http://"+state.get(State.values.externaladdress)+":"+
-						state.get(State.values.httpport) + "/oculusPrime/streams/";
-
-				state.set(State.values.record, state.get(State.values.stream));
-
-				switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
-					case mic:
-						messageplayer("recording to: " + urlString+streamName + "_audio.flv",
-								values.record.toString(), state.get(values.record));
-						stream.saveAs(streamName + "_audio", false);
-						break;
-
-					case camandmic:
-						if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
-							ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
-							messageplayer("recording to: " + urlString+streamName + "_audio.flv",
-									values.record.toString(), state.get(values.record));
-							audiostream.saveAs(streamName+"_audio", false);
-						}
-						// BREAK OMITTED ON PURPOSE
-
-					case camera:
-						messageplayer("recording to: " + urlString+streamName + "_video.flv",
-								values.record.toString(), state.get(values.record));
-						stream.saveAs(streamName + "_video", false);
-						break;
-				}
-
-				Util.log("recording: streamName",this);
-				return urlString + streamName;
-
-			} catch (Exception e) {
-				Util.printError(e);
-			}
-		}
-
-
-		else { // FALSE, stop recording
-
-			if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
-				driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
-				return null;
-			}
-
-			ClientBroadcastStream stream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream1");
-			if (stream == null) return null; // if page reload
-
-			state.set(State.values.record, Application.streamstate.stop.toString());
-
-			switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
-
-				case camandmic:
-					if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
-						ClientBroadcastStream audiostream = (ClientBroadcastStream) getBroadcastStream(conn.getScope(), "stream2");
-						driverCallServer(PlayerCommands.messageclients, "2nd audio recording stopped");
-						audiostream.stopRecording();
-					}
-					// BREAK OMITTED ON PURPOSE
-
-				case mic:
-					// BREAK OMITTED ON PURPOSE
-
-				case camera:
-					stream.stopRecording();
-					Util.log("recording stopped", this);
-					messageplayer("recording stopped", values.record.toString(), state.get(values.record));
-					break;
-			}
-
-
-		}
-		return null;
-	}
-
 }
-
 
 

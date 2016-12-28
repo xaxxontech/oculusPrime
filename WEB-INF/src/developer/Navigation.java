@@ -61,7 +61,7 @@ public class Navigation implements Observer {
 		state.addObserver(this);
 		
 		// WORKING ON 	
-		new NavWatchdog();
+		// new NavWatchdog();
 	}
 	  
 	@Override
@@ -165,35 +165,6 @@ public class Navigation implements Observer {
 		}
 	}
 	
-	/** taken from state but stored in waypoints.txt 
-	public static Vector<String> getAllWaypoints(){
-		Vector<String> names = new Vector<String>();
-		if( ! state.exists(values.rosmapwaypoints)) return names;
-		
-		String[] points = state.get(values.rosmapwaypoints).split(",");
-		for(int i = 0 ; i < points.length ; i++ ){
-			try { Double.parseDouble(points[i]); } catch (NumberFormatException e){
-				
-				String value = points[i].trim(); // .replaceAll("&nbsp;", " ");			
-				
-//				if(value.contains("&nbsp;")) Util.log("getAllWaypoints(): ..WARNING.. html chars point: " + value);
-
-				if(names.contains(value)) Util.log("getAllWaypoints(): ..WARNING.. duplicate point: " + value);
-				
-				if( ! names.contains(value)) names.add(points[i]);
-			}
-		}
-		return names;
-	}*/
-	
-	/*
-	public static boolean waypointExists(String name){
-		Vector<String> points = getAllWaypoints();
-		if(points.size() == 0) return false;
-		for(int i = 0 ; i < points.size() ; i++) if(points.get(i).equalsIgnoreCase(name)) return true;
-		return false;
-	}*/
-
 	/** only used before starting a route, ignored if undocked */
 	public static boolean batteryTooLow(){
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) return false;
@@ -818,7 +789,7 @@ public class Navigation implements Observer {
 				// determine next scheduled route time, wait if necessary
 				state.delete(values.nextroutetime);
 				while(state.exists(values.navigationroute)){
-						if(updateTimeToNextRoute(navroute)){
+					if(updateTimeToNextRoute(navroute)){
 						Util.log("runRoute("+name+"): determine next scheduled route time, wait if necessary, done waiting.");
 						state.delete(State.values.nextroutetime); // delete so not shown in gui 
 						break; 
@@ -874,7 +845,7 @@ public class Navigation implements Observer {
 					 NavigationLog.newItem(/* NavigationLog.ERRORSTATUS, */ "route failed, return to the dock"); // route name deleted from state by now 
 					 dock();
 					 
-					 Util.log(" == runRoute(): exit thread, route failed, logged to nav and xml", this);
+					 Util.log("runRoute(): exit thread, route failed, logged to nav and xml", this);
 					 return;
 				
 				 } else {
@@ -895,7 +866,7 @@ public class Navigation implements Observer {
 
 					 // wait for next route to start 
 					 if( ! delayToNextRoute(name, navroute)){
-						 Util.debug(" == runRoute(): exit thread, delayToNextRoute EXITED", this);
+						 Util.debug("runRoute(): exit thread, delayToNextRoute EXITED", this);
 						 return;
 					 }
 				 }					
@@ -1323,7 +1294,7 @@ public class Navigation implements Observer {
 				navlogmsg += "<br> new RSS item ";
 			}
 			NavigationLog.newItem(NavigationLog.VIDEOSTATUS, navlogmsg);
-			app.record(Settings.FALSE); // stop recording
+			app.video.record(Settings.FALSE); // stop recording
 		}
 
 		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.name());

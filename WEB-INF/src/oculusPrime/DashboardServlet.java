@@ -469,7 +469,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
 // 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(15) + "\n"); // ------------------------- SETTING FOR VIEW SIZE ? 
+		str.append(getTail(12) + "\n"); // ------------------------- SETTING FOR VIEW SIZE ? 
 		return str.toString();
 	}
 	

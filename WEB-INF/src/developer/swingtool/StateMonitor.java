@@ -2,6 +2,10 @@ package developer.swingtool;
 
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -15,6 +19,8 @@ import java.util.TimerTask;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableModel;
 
 import oculusPrime.State;
 import oculusPrime.State.values;
@@ -22,36 +28,62 @@ import oculusPrime.State.values;
 public class StateMonitor extends JFrame {
 	
 	private static final long serialVersionUID = 1L;
+	
+	final values[] stateValues = State.values.values();
+	
+	TableModel model = new StateTableModel();
 	BufferedReader reader = null;
 	PrintWriter printer = null;
 	Socket socket = null;
 	int rx = 0;
 	String ip;
 	int port;
-    JTable table;
- 
+    
     public StateMonitor(String ip, int port) {
 
 		this.ip = ip;
 		this.port = port;
-		
-        String[] columnNames = {"state", "value", "count"};
-        Object[][] data = new Object[State.values.values().length][3];
-
-		values[] cmds = State.values.values();
-		for(int i = 0; i < cmds.length; i++){
-			data[i][0] = cmds[i].name();
-			data[i][2] = 0;
-		}
-		
-        table = new JTable(data, columnNames);
+	
+		JTable table = new JTable(model);
         table.setPreferredScrollableViewportSize(new Dimension(500, 800));
         table.getColumnModel().getColumn(0).setPreferredWidth(150); 
         table.getColumnModel().getColumn(0).setMinWidth(100); 
         table.getColumnModel().getColumn(0).setMaxWidth(250); 
         table.getColumnModel().getColumn(2).setMaxWidth(60); 
+        // table.repaint();
         // table.setEnabled(false);
+        
+        table.addMouseListener(new MouseListener() {
+        	@Override public void mouseReleased(MouseEvent arg) {}
+			@Override public void mousePressed(MouseEvent arg) {}
+			@Override public void mouseExited(MouseEvent arg) {}
+			@Override public void mouseEntered(MouseEvent arg) {}
+			@Override // double clicked, force update 
+			public void mouseClicked(MouseEvent arg) {
+				if(arg.getClickCount() == 2){			
+					 int row = table.rowAtPoint(arg.getPoint());
+				     // int col = table.columnAtPoint(arg.getPoint());
+				     // System.out.println("["+row+", "+col+"] "+ table.getValueAt(row, 0));
+				     printer.println("state "+ table.getValueAt(row, 0));
+				}
+			}
+		});
 
+        table.addKeyListener(new KeyListener() {
+			@Override public void keyTyped(KeyEvent e) {}
+			@Override public void keyPressed(KeyEvent e) {}
+			@Override
+			public void keyReleased(KeyEvent e) {
+				if(e.getKeyCode() == 10){
+					String update = "";
+					if(table.getValueAt(table.getSelectedRow(), 1) != null) update = (String) table.getValueAt(table.getSelectedRow(), 1);
+					// System.out.println(" ... typed: " + table.getValueAt(table.getSelectedRow(), 0) + " [" + update + "]");
+					if(update.length() == 0) printer.println("state delete " + table.getValueAt(table.getSelectedRow(), 0));
+					else printer.println("state " + table.getValueAt(table.getSelectedRow(), 0) + " " + update);
+				}	
+			}
+		});
+  
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setDefaultLookAndFeelDecorated(true);
 		setLayout(new GridLayout(1,0));
@@ -59,9 +91,48 @@ public class StateMonitor extends JFrame {
         getContentPane().add(scrollPane);
         pack();
         setVisible(true);
-		new Timer().scheduleAtFixedRate(new Task(), 0, 10000);
+		new Timer().scheduleAtFixedRate(new Task(), 2000, 10000);
+		new Timer().scheduleAtFixedRate(new nullTask(), 2000, 20000);
+
     }
  
+    class StateTableModel extends AbstractTableModel {
+    	
+		private static final long serialVersionUID = 1L;
+		String[] columnNames = {"state", "value", "count"};
+        Object[][] data = new Object[State.values.values().length][3];
+		
+		StateTableModel(){
+			for(int i = 0; i < stateValues.length; i++){
+				data[i][0] = stateValues[i].name();
+			//	data[i][1] = "null";
+				data[i][2] = 0;
+			}	
+		}
+		
+        public int getColumnCount() { return columnNames.length; }
+        public int getRowCount() { return data.length; }
+        public String getColumnName(int col) { return columnNames[col]; }
+        public Object getValueAt(int row, int col) { return data[row][col]; }
+
+		@SuppressWarnings("unchecked")
+		public Class getColumnClass(int c) {
+            if(c == 0 || c == 1) return String.class;
+			return Integer.class;
+        }
+		
+        public boolean isCellEditable(int row, int col) {
+            if(col == 0 || col == 2) return false;
+            return true;
+        }
+    
+        public void setValueAt(Object value, int row, int col) {
+ //           System.out.println("[" + row + "," + col + "] value = " + value + " " + data[row][0]);    	
+              data[row][col] = value;
+              fireTableCellUpdated(row, col);
+        }       
+    }
+    
 	private class Task extends TimerTask {
 		public void run(){
 			if(printer == null || socket.isClosed()){		
@@ -81,6 +152,44 @@ public class StateMonitor extends JFrame {
 		}
 	}
 	
+	private class nullTask extends TimerTask {
+		public void run(){
+			if(printer == null || socket.isClosed()){		
+				openSocket();
+				try { Thread.sleep(5000); } catch (InterruptedException e) {}
+				if(socket != null) if(socket.isConnected()) readSocket();					
+			} else {
+				try {
+					printer.checkError();
+					printer.flush();
+				
+					for(int i = 0; i < stateValues.length; i++){
+				
+						if(model.getValueAt(i, 1) == null){
+							
+							printer.println("state " + stateValues[i].name()); 
+							try { Thread.sleep(100); } catch (InterruptedException e) {}
+				
+						} else {
+								if(model.getValueAt(i, 1).equals("null")){
+									
+									printer.println("state " + stateValues[i].name()); 
+									try { Thread.sleep(100); } catch (InterruptedException e) {}
+								
+								
+								} 
+						}
+					
+					}	
+					
+				} catch (Exception e) {
+					System.out.println("TimerTask(): "+e.getMessage());
+					closeSocket();
+				}
+			}
+		}
+	}
+	
 	void openSocket(){	
 		try {	
 			setTitle("trying to connect");
@@ -89,6 +198,7 @@ public class StateMonitor extends JFrame {
 			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			System.out.println("openSocket(): connected to: " + socket.getInetAddress().toString());
 			setTitle(socket.getInetAddress().toString());
+			printer.println("state"); 
 		} catch (Exception e) {
 			setTitle("disconnected");
 			System.out.println("openSocket(): " + e.getMessage());
@@ -141,29 +251,31 @@ public class StateMonitor extends JFrame {
 						input = input.trim();
 						
 						String[] tokens = input.split(" ");	
-						// System.out.println("[" + input + "] tokens:" + tokens.length);
+						System.out.println("[" + input + "] tokens:" + tokens.length);
 						
 						if(input.contains("deleted")){
-							for( int i = 0 ; i < table.getRowCount() ; i++ )
-								if(table.getValueAt(i, 0).equals(tokens[tokens.length-1]))
-									table.setValueAt(table.getValueAt(i, 1) + " (deleted)", i, 1);		
+							for( int i = 0 ; i < model.getRowCount() ; i++ )
+								if(model.getValueAt(i, 0).equals(tokens[tokens.length-1]))
+									model.setValueAt(/*table.getValueAt(i, 1) + " (deleted)"*/ null, i, 1);		
 						}
 					
 						if(input.contains("<state>")){
-							for( int i = 0 ; i < table.getRowCount() ; i++ ){
-								if(table.getValueAt(i, 0).equals(tokens[1])){
+							for( int i = 0 ; i < model.getRowCount() ; i++ ){
+								if(model.getValueAt(i, 0).equals(tokens[1])){
 									String value = input.substring(input.indexOf(tokens[2]), input.length());
-									table.setValueAt(value, i, 1);
-									table.setValueAt((int)table.getValueAt(i, 2)+1, i, 2);
+									if( ! value.equals("null")){
+										model.setValueAt(value, i, 1);
+										model.setValueAt((int)model.getValueAt(i, 2)+1, i, 2);
+									}
 								}
 							}
 						}
 						
 						if(tokens.length == 2){
-							for( int i = 0 ; i < table.getRowCount() ; i++ ){
-								if(table.getValueAt(i, 0).equals(tokens[0])){
-									table.setValueAt(tokens[1], i, 1);
-									table.setValueAt((int)table.getValueAt(i, 2)+1, i, 2);
+							for( int i = 0 ; i < model.getRowCount() ; i++ ){
+								if(model.getValueAt(i, 0).equals(tokens[0])){
+									model.setValueAt(tokens[1], i, 1);
+									model.setValueAt((int)model.getValueAt(i, 2)+1, i, 2);
 								}
 							}
 						}

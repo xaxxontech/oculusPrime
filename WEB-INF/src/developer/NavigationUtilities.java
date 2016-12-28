@@ -577,7 +577,7 @@ public class NavigationUtilities {
 			try {		
 				Element route = (Element) routes.item(i);	
 				String rname = ((Element) routes.item(i)).getElementsByTagName(ROUTE_NAME).item(0).getTextContent();
-				info += "route: " + rname + " time: " + route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent()
+				info += "route name: " + rname + " time: " + route.getElementsByTagName(ESTIMATED_TIME_TAG).item(0).getTextContent()
 				              + " distance: " + route.getElementsByTagName(ESTIMATED_DISTANCE_TAG).item(0).getTextContent()
 			                  + " count: " + route.getElementsByTagName(ROUTE_COUNT_TAG).item(0).getTextContent()
 				              + " fail: " + route.getElementsByTagName(ROUTE_FAIL_TAG).item(0).getTextContent() + "\n";

@@ -5,6 +5,8 @@ import javax.imageio.ImageIO;
 import org.red5.server.api.IConnection;
 import org.red5.server.stream.ClientBroadcastStream;
 
+import oculusPrime.State.values;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -296,11 +298,14 @@ public class Video {
     }
 
     public String record(String mode){
-        return record(mode, null);
-    }
+    	return record(mode, null);
+   	}
 
     // record to flv in webapps/oculusPrime/streams/
-    private String record(String mode, String optionalfilename) {
+	public String record(String mode, String optionalfilename) {
+			
+		Util.debug("record("+mode+", " + optionalfilename +"): called.. ", this);
+
         IConnection conn = app.grabber;
        
         if (state.get(State.values.stream) == null) return null;
@@ -332,6 +337,8 @@ public class Video {
                 String streamName = optionalfilename;
                 if (streamName == null) streamName = Util.getDateStamp();
 
+                if(state.exists(values.roswaypoint)) streamName += "_" + state.get(values.roswaypoint);
+           
                 final String urlString = "http://"+state.get(State.values.externaladdress)+":"+
                         state.get(State.values.httpport) + STREAMSPATH;
 
@@ -360,7 +367,7 @@ public class Video {
                         break;
                 }
 
-                Util.log("recording: streamName",this);
+                Util.log("recording: " + urlString + streamName, this);
                 return urlString + streamName;
 
             } catch (Exception e) {
@@ -370,15 +377,19 @@ public class Video {
 
         else { // FALSE, stop recording
 
-            if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
-                app.driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
-                return null;
-            }
-
+// safer to call it any way 
+//            if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
+//                app.driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
+//                return null;
+//            }
+        	
+        	state.set(State.values.record, Application.streamstate.stop.name());
+        	
             ClientBroadcastStream stream = (ClientBroadcastStream) app.getBroadcastStream(conn.getScope(), STREAM1);
             if (stream == null) return null; // if page reload
 
-            state.set(State.values.record, Application.streamstate.stop.toString());
+            // moved above 
+            // state.set(State.values.record, Application.streamstate.stop.name());
 
             switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
 
@@ -517,8 +528,5 @@ public class Video {
             }
 
         } }).start();
-
-
     }
-
 }
