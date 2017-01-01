@@ -7,7 +7,7 @@ public class Downloader {
 	
 	/**
 	 * 
-	 * Down load a given URL to the local disk. Will delete existing file first, and create directory if required. 
+	 * Download a given URL to the local disk. Will delete existing file first, and create directory if required. 
 	 *
 	 * @param fileAddress is the full http://url of the remote file
 	 * @param localFileName the file name to use on the host
@@ -29,7 +29,7 @@ public class Downloader {
 		new File(path).delete();
 
 		// test is really gone
-		if (new File(path).exists()) {
+		if(new File(path).exists()) {
 			Util.log("can't delete existing file: " + path, this);
 			return false;
 		}
@@ -68,6 +68,8 @@ public class Downloader {
 
 		if(written == 0){ // || (ByteWritten != ByteRead)){
 			Util.log("file downloading error: " + path, this);
+			// if(new File(path).length() == 0)
+			new File(path).delete();
 			return false; 
 		}
 		
