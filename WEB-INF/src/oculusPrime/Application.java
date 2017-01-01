@@ -374,20 +374,18 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if(settings.getBoolean(ManualSettings.developer.name())){
 			
 			// extra logging info 
-			Util.log(/*"prime folder: " + Util.countMbytes(".") + " mybtes, " + */ Util.diskFullPercent() + "% used", this);
 			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
 			Util.logLinuxRelease(); 
 			
 			// developer debugging info, warning to reboot after many restarts
-			// if(settings.getInteger(ManualSettings.restarted) > 5)
-				
-			NavigationLog.newItem("WARNING: restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			if(settings.getInteger(ManualSettings.restarted) > 5)
+				NavigationLog.warning("restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// try re-docking, then start routes again 
 			// if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
 		}
 		
-		// start active route 
+		// start active route or try to dock
 		if(state.equals(values.dockstatus, AutoDock.DOCKED)) Navigation.runActiveRoute();
 		else watchdog.redock(SystemWatchdog.NOFORWARD);
 		Util.log("java application initialized", this);		
@@ -1030,7 +1028,30 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case objectdetectcancel: state.delete(values.objectdetect); break;
 		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
 
-		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		// case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		case framegrabtofile: // allow extra name to be added 
+			final String c = str.trim(); // split(" ");
+			new Thread(new Runnable(){	
+				public void run(){	
+					
+					String url = null; 
+					if(c.length() > 1) { 
+						url = FrameGrabHTTP.saveToFile(c); // ?mode=processedImgJPG 
+						Util.log("framegrabtofile(mode): "+c, this);
+					}
+					if(c.length() == 0){
+						FrameGrabHTTP.saveToFile(null); // default filename
+						Util.log("framegrabtofile(default): ", this);
+					}
+					
+					// try again? FrameGrabHTTP.saveToFile(null);
+					if(url == null) Util.log("framegrabtofile(): ERROR downloading", this);
+					else messageplayer("framegrab "+url, null, null); 
+				}
+			}).start();
+			break;
+			
+			
 		case log: Util.log("log: "+str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
 		

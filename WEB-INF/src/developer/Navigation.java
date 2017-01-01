@@ -493,15 +493,17 @@ public class Navigation implements Observer {
 			}
 			rot ++;
 
-			if (rot == 1) Util.log("Navigation.finddock(): error, rotation required");
+			if (rot == 1) {
+				Util.log("Navigation.finddock(): error, rotation required");
+				NavigationLog.warning("Navigation.finddock(): error, rotation required");
+			}
 
 			if (rot == 21) { // failure give up
 //					callForHelp(subject, body);
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.name());
 				app.driverCallServer(PlayerCommands.floodlight, "0");
 				app.driverCallServer(PlayerCommands.messageclients, "Navigation.finddock() failed to find dock");
-				failed = true;
-				return false;
+				cancelAllRoutes(); failed = true;
 			}
 		}
 		if (!navdockactive) return false;
@@ -1137,12 +1139,13 @@ public class Navigation implements Observer {
 			if (photo) {
 				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
 
-				final String link = FrameGrabHTTP.saveToFileWaypoint((state.get(values.roswaypoint)), "");
-
-				Util.delay(2000); // allow time for framgrabusy flag to be set true
-				long timeout = System.currentTimeMillis() + 10000;
-				while (state.getBoolean(values.framegrabbusy) && System.currentTimeMillis() < timeout) Util.delay(10);
-				Util.delay(3000); // allow time to download
+				final String link = FrameGrabHTTP.saveToFile(null); 
+// TODO: BRAD 
+// block instead 
+//				Util.delay(2000); // allow time for framgrabusy flag to be set true
+//				long timeout = System.currentTimeMillis() + 10000;
+//				while (state.getBoolean(values.framegrabbusy) && System.currentTimeMillis() < timeout) Util.delay(10);
+//				Util.delay(3000); // allow time to download
 
 				String navlogmsg = "<a href='" + link + "' target='_blank'>Photo</a>";
 				String msg = "[Oculus Prime Photo] ";
