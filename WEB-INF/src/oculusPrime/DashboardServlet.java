@@ -30,7 +30,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
 	static final String deletelogs = "<a href=\"dashboard?action=deletelogs\" title=\"delete all log files, causes reboot.\">";
-	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\" title=\"archive all files in log folders\">";	
+//	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\" title=\"archive all files in log folders\">";	
 
 	static final String viewslinks = 
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
@@ -417,14 +417,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n<tr>");
 		str.append("<td><b>dock</b><td>" + dock);	
 		str.append("<td><b>battery</b><td><a href=\"dashboard?view=power\">" + state.get(values.batterylife) + "</a>"); 
-		str.append("<td><b>streams</b><td><a href=\"http://"+ ext + ":" + httpport 
-				+ "/oculusPrime/streams/"  +"\">" + Util.countAllMbytes(Settings.streamfolder) + "</a> mb</tr> \n" );
+		str.append("<td><b>streams</b><td><a href=\"/oculusPrime/media"  +"\">" + Util.countAllMbytes(Settings.streamfolder) + "</a> mb</tr> \n" );
 	
 		// record | booted | archive 
 		str.append("\n<tr>");	
 		str.append("<td><b>record</b><td>" + rec);
 		str.append("<td><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins");
-		str.append("<td><b>archive</b><td>"+ archivelogs + Util.countMbytes("./log/archive") + "</a> mb</tr> \n" );
+		str.append("<td><b>archive</b><td>"+ Util.countMbytes("./log/archive") + " mb</tr> \n" );
 
 		// camera | uptime | frames 
 		str.append("\n<tr>");
