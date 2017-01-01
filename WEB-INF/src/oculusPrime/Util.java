@@ -644,13 +644,26 @@ public class Util {
 			}
 		}
 
+		// delete all 
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) files[i].delete();
 	    }
+	    files = new File(Settings.streamfolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	       if (files[i].isFile()) files[i].delete();
+	    }
+	    files = new File(Settings.framefolder).listFiles();
+	    for (int i = 0; i < files.length; i++){
+	       if (files[i].isFile()) files[i].delete();
+	    }
 	    
-	    truncStaleAudioVideo();		
-		truncStaleFrames();
+	    // rename ans create new index.hml file in navigation 
+		new File(NavigationLog.navigationlogpath).renameTo(new File(NavigationLog.navigationlogpath.replace("index.html", System.currentTimeMillis() + ".html")));	
+		NavigationLog.newItem(NavigationLog.getAchiveLinks());
+		
+//	    truncStaleAudioVideo();		
+//		truncStaleFrames();
 		deleteROS();
 	}
 	
@@ -845,8 +858,6 @@ public class Util {
 		}
 		
 		appendUserMessage("ros purge, reboot required");
-		Settings.getReference().writeSettings(ManualSettings.restarted, "0");
-
 		new Thread(new Runnable() { public void run() {
 			try {
 				Runtime.getRuntime().exec(new String[]{"bash", "-ic", "rm -rf " + Settings.roslogfolder});
@@ -854,6 +865,9 @@ public class Util {
 			} catch (Exception e){printError(e);}
 		} }).start();
 		
+		// Settings.getReference().writeSettings(ManualSettings.restarted, "0");
+
+		/*
 		new Thread(new Runnable() { public void run() {
 			try {
 				PowerLogger.append("deleteROS(): shutting down application", this);
@@ -862,7 +876,7 @@ public class Util {
 				systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 			} catch (Exception e){printError(e);}
 		} }).start();
-		
+		*/ 
 	}
 	
 	// TODO: THIS IS STUPID 
