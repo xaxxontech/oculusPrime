@@ -156,7 +156,7 @@ public class State {
 	 * @param target block until timeout or until member == target
 	 * @param timeout is the ms to wait before giving up 
 	 * @return true if the member was set to the target in less than the given timeout 
-	 */
+ */
 	public boolean block(final values member, final String target, int timeout){
 		return block(member, target, timeout, 1); 
 	} 
@@ -181,7 +181,7 @@ public class State {
 		}
 	} 
 	
-	/**	block, wait for a change in given member */
+// block, wait for a change in given member 
 	public boolean block(final values member, int timeout){
 		return block(member.name(), timeout);
 	} 
@@ -207,7 +207,7 @@ public class State {
 			}
 		}
 	} 
-	
+		
 	/** test for string equality. any nulls will return false */ 
 	public boolean equals(State.values value, String b){ return equals(value.name(), b); }
 	public boolean equals(values a, navsystemstate b){ return equals(a.name(), b.name()); }
