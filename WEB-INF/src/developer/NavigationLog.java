@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.InputStreamReader;
 
+import oculusPrime.ManualSettings;
 import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.State.values;
@@ -38,7 +39,14 @@ public class NavigationLog {
     private static final int maxitems = 500; // Development
     private static volatile boolean newItemBusy = false;
     
-    // use if only needing to write a simple message 
+    /** turn on or off with developer setting */
+	public static void warning(String string) {
+		if(Settings.getReference().getBoolean(ManualSettings.developer.name())){
+			newItem("WARN: " + string);
+		}
+	}
+    
+    /** use if only needing to write a simple message */
     public static void newItem(final String status, final String msg){
     	newItem(status, msg, State.getReference().get(values.roswaypoint), State.getReference().get(values.navigationroute));
     }
@@ -107,8 +115,7 @@ public class NavigationLog {
         } }).start();
     }
 
-    /*   */
-    
+    /**  */
     public static synchronized void newItem(final String msg){ 
         new Thread(new Runnable() { public void run() {
             long timeout = System.currentTimeMillis() + 5000;
