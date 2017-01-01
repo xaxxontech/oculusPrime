@@ -50,7 +50,7 @@ public class MediaServlet extends HttpServlet {
 		str.append("</style>\n");
 	        
      	str.append("</head><body>\n");
-        str.append("<div style='padding-left: 15px'>Oculus Prime Media Files </div>\n");
+        str.append("<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px;'>Oculus Prime Media Files </div>\n");
 
 		response.setContentType("html");
 		PrintWriter out = response.getWriter();
@@ -62,6 +62,10 @@ public class MediaServlet extends HttpServlet {
 		final String f = filterstr;
 		File[] streams = null;
 		File[] frames = null; 	
+		
+		// avoid null pointers 
+		new File(Settings.streamfolder).createNewFile();
+		new File(Settings.framefolder).createNewFile();
 		
 		if(f == null){
 			streams = new File(Settings.streamfolder).listFiles();	
