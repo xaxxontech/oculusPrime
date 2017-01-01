@@ -24,6 +24,7 @@ import javax.swing.table.TableModel;
 
 import oculusPrime.State;
 import oculusPrime.State.values;
+import oculusPrime.Util;
  
 public class StateMonitor extends JFrame {
 	
@@ -35,7 +36,7 @@ public class StateMonitor extends JFrame {
 	BufferedReader reader = null;
 	PrintWriter printer = null;
 	Socket socket = null;
-	int rx = 0;
+	long rx = 0;
 	String ip;
 	int port;
     
@@ -92,7 +93,8 @@ public class StateMonitor extends JFrame {
         pack();
         setVisible(true);
 		new Timer().scheduleAtFixedRate(new Task(), 2000, 10000);
-		new Timer().scheduleAtFixedRate(new nullTask(), 2000, 20000);
+	
+	//	new Timer().scheduleAtFixedRate(new nullTask(), Util.TWO_MINUTES, Util.TWO_MINUTES);
 
     }
  
@@ -198,6 +200,7 @@ public class StateMonitor extends JFrame {
 			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			System.out.println("openSocket(): connected to: " + socket.getInetAddress().toString());
 			setTitle(socket.getInetAddress().toString());
+			rx = 0;
 			printer.println("state"); 
 		} catch (Exception e) {
 			setTitle("disconnected");
@@ -251,7 +254,7 @@ public class StateMonitor extends JFrame {
 						input = input.trim();
 						
 						String[] tokens = input.split(" ");	
-						System.out.println("[" + input + "] tokens:" + tokens.length);
+						//, System.out.println("[" + input + "] tokens:" + tokens.length);
 						
 						if(input.contains("deleted")){
 							for( int i = 0 ; i < model.getRowCount() ; i++ )
@@ -260,6 +263,7 @@ public class StateMonitor extends JFrame {
 						}
 					
 						if(input.contains("<state>")){
+							System.out.println(input);
 							for( int i = 0 ; i < model.getRowCount() ; i++ ){
 								if(model.getValueAt(i, 0).equals(tokens[1])){
 									String value = input.substring(input.indexOf(tokens[2]), input.length());
@@ -272,6 +276,7 @@ public class StateMonitor extends JFrame {
 						}
 						
 						if(tokens.length == 2){
+							System.out.println("[" + input + "] tokens:" + tokens.length);
 							for( int i = 0 ; i < model.getRowCount() ; i++ ){
 								if(model.getValueAt(i, 0).equals(tokens[0])){
 									model.setValueAt(tokens[1], i, 1);
