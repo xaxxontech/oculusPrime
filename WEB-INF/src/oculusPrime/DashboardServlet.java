@@ -1,7 +1,10 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.HashMap;
@@ -24,24 +27,29 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
 	private static final int MAX_STATE_HISTORY = 40;
-	private static final String HTTP_REFRESH_DELAY_SECONDS = "10"; 
+	private static final String HTTP_REFRESH_DELAY_SECONDS = "30"; 
 	
 	static final String restart = "<a href=\"dashboard?action=restart\" title=\"restart application\">";
 	static final String reboot = "<a href=\"dashboard?action=reboot\" title=\"reboot linux os\">";
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
-	static final String deletelogs = "<a href=\"dashboard?action=deletelogs\" title=\"delete all log files, causes reboot.\">";
-//	static final String archivelogs = "<a href=\"dashboard?action=archivelogs\" title=\"archive all files in log folders\">";	
-
+	
 	static final String viewslinks = 
-			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation</a>&nbsp&nbsp;"+
-			"<a href=\"dashboard?view=routes\">route stats</a>&nbsp;&nbsp;"  +
-			"<a href=\"dashboard?view=drive\">drive</a>&nbsp;&nbsp;"  +
-			"<a href=\"dashboard?view=users\">users</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=stdout\">stdout</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=history\">history</a>&nbsp;&nbsp;" +
-			"<a href=\"dashboard?view=state\">state</a>&nbsp;&nbsp;"  +
-			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snaphot</a>&nbsp;&nbsp;"+ 
-			"<a href=\"dashboard?action=email\">send email</a>" ; 
+			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation log</a>\n"+
+			"<a href=\"/oculusPrime/media\" target=\"_blank\">media files</a>" + 
+			"<a href=\"dashboard?view=routes\">route stats</a>\n"  +
+			"<a href=\"dashboard?view=drive\">drive</a>\n"  +
+			"<a href=\"dashboard?view=users\">users</a>\n" +
+			"<a href=\"dashboard?view=stdout\">stdout</a>\n" +
+			"<a href=\"dashboard?view=history\">history</a>\n" +
+			"<a href=\"dashboard?view=state\">state</a>\n"; 
+	
+	static final String commandlinks = 
+			"<a href=\"dashboard?view=gotodock\">return dock</a>\n"  +
+			"<a href=\"dashboard?view=cancel\">cancel route</a>\n" +
+			"<a href=\"dashboard?action=archivelogs\"> archive log folder</a>" +
+			"<a href=\"dashboard?view=deletelogs\">delete log files</a>\n"  +
+			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snaphot</a>\n"+ 
+			"<a href=\"dashboard?action=email\">send email</a>\n";
 	
 	static final double VERSION = new Updater().getCurrentVersion();
 	static Vector<String> history = new Vector<String>();
@@ -52,10 +60,27 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static State state = null;
 
 	String pointslist;
-	String delay = "10";
-	private String estimatedmeters;
-	private String estimatedseconds; 
+	String delay = "30";
+	String estimatedmeters;
+	String estimatedseconds; 
 	long time;
+	
+	final String css = getCSS();
+	
+	public String getCSS(){
+		StringBuffer buffer = new StringBuffer();
+		try {	
+			String line = null;
+			FileInputStream filein = new FileInputStream(System.getenv("RED5_HOME") + "/webapps/oculusPrime/dashboard.css");
+			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
+			while ((line = reader.readLine()) != null) buffer.append(line + "\n");
+			reader.close();
+			filein.close();
+		} catch (Exception e) {
+			Util.log("getCSS(): " + e.getMessage(), this);
+		}
+		return buffer.toString();
+	}
 	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -129,7 +154,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 			if(action.equalsIgnoreCase("gui")) state.delete(values.guinotify);
 			if(action.equalsIgnoreCase("gotowp")) app.driverCallServer(PlayerCommands.gotowaypoint, route);
-			if(action.equalsIgnoreCase("startrec")) app.driverCallServer(PlayerCommands.record, "true");
+			if(action.equalsIgnoreCase("startrec")) app.driverCallServer(PlayerCommands.record, "true dashboard");
 			if(action.equalsIgnoreCase("stoprec"))  app.driverCallServer(PlayerCommands.record, "false");
 			if(action.equalsIgnoreCase("motor")) app.driverCallServer(PlayerCommands.motorsreset, null);
 			if(action.equalsIgnoreCase("power")) app.driverCallServer(PlayerCommands.powerreset, null);			
@@ -274,9 +299,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		
 		// default view 
-		out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
+		out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+		out.println("<html>\n<head><meta http-equiv=\"refresh\" content=\""+ delay + "\">\n<title>Oculus Prime</title>\n<style type=\"text/css\">"+ css +"</style></head>\n<body> \n");
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
-		out.println("\n</body></html> \n");
+		out.println("\n</body></html>\n");
 		out.close();	
 	}
 	
@@ -387,102 +413,118 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.getBoolean(values.autodocking)) dock = "<font color=\"blue\">auto-docking</font>";
 	
 		//------------------- now build HTML buffer ------------------------------------------------------------//  
-		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"0\" style=\"min-width: 700px; max-width: 700px;\">\n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"7\" border=\"1\" style=\"min-width: 700px; max-width: 700px;\">\n");
 
-		// version | ssid | rate
-		str.append("\n<tr><td><b>version</b><td>" + VERSION); 
-		str.append("\n<td><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\">" + state.get(values.ssid)); 
+		// version | views | ssid | rate
+		str.append("\n<tr><td bgcolor=\"#c2d6d6\"><b>version <td></b>" + VERSION);
+	//	str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">views</button><div class=\"dropdown-content\">\n" + viewslinks + "\n</div></div>");
+		str.append("\n<td bgcolor=\"#c2d6d6\"><b>ssid</b><td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\">" + state.get(values.ssid)); 
 		
-		if(delay.equals("5"))  str.append("\n<td><b>rate</b><td>" + "5 | <a href=\"dashboard?delay=10\">10</a> | <a href=\"dashboard?delay=30\">30</a>"); 
-		if(delay.equals("10")) str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | 10 | <a href=\"dashboard?delay=30\">30</a>"); 
-		if(delay.equals("30")) str.append("\n<td><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | <a href=\"dashboard?delay=10\">10</a> | 30"); 
+		if(delay.equals("5"))  str.append("\n<td bgcolor=\"#c2d6d6\"><b>rate</b><td>" + "5 | <a href=\"dashboard?delay=10\">10</a> | <a href=\"dashboard?delay=30\">30</a>"); 
+		if(delay.equals("10")) str.append("\n<td bgcolor=\"#c2d6d6\"><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | 10 | <a href=\"dashboard?delay=30\">30</a>"); 
+		if(delay.equals("30")) str.append("\n<td bgcolor=\"#c2d6d6\"><b>rate</b><td>" + "<a href=\"dashboard?delay=5\">5</a> | <a href=\"dashboard?delay=10\">10</a> | 30"); 
 
 		// motor | wan | hdd 		
 		str.append("\n<tr>");
-		str.append("<td><b>motor</b><td>" + motor );
+		str.append("<td bgcolor=\"#c2d6d6\"><b>motor</b><td>" + motor );
 		String ext = state.get(values.externaladdress);
-		if( ext == null ) str.append("<td><b>wan</b><td>disconnected");
-		else str.append("<td><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
+		if( ext == null ) str.append("<td bgcolor=\"#c2d6d6\"><b>wan</b><td>disconnected");
+		else str.append("<td bgcolor=\"#c2d6d6\"><b>wan</b><td><a href=\"http://"+ ext + ":" + httpport 
 				+ "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>"); // target=\"_blank\" title=\"go to user interface on external address\"
-		str.append( "<td><b>hdd</b><td>" + Util.diskFullPercent() + "% used</a></tr> \n"); 
+		str.append( "<td bgcolor=\"#c2d6d6\"><b>hdd</b><td>" + Util.diskFullPercent() + "% used</a></tr> \n"); 
 	
 		// power | lan | prime 
 		str.append("\n<tr>");
-		str.append("<td><b>power</b><td>" + power );
-		str.append("<td><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
+		str.append("<td bgcolor=\"#c2d6d6\"><b>power</b><td>" + power );
+		str.append("<td bgcolor=\"#c2d6d6\"><b>lan</b><td><a href=\"http://"+state.get(values.localaddress) 
 			+"\" target=\"_blank\">" + state.get(values.localaddress) + "</a>"); // title=\"go to network control panel\"
-		str.append("<td><b>prime</b><td>" + deletelogs + Util.countAllMbytes(".") + "</a> mb</tr> \n");
+		str.append("<td bgcolor=\"#c2d6d6\"><b>prime</b><td>" + Util.countAllMbytes(".") + " mb</tr> \n");
 		
 		// dock | battery | streams
 		str.append("\n<tr>");
-		str.append("<td><b>dock</b><td>" + dock);	
-		str.append("<td><b>battery</b><td><a href=\"dashboard?view=power\">" + state.get(values.batterylife) + "</a>"); 
-		str.append("<td><b>streams</b><td><a href=\"/oculusPrime/media"  +"\">" + Util.countAllMbytes(Settings.streamfolder) + "</a> mb</tr> \n" );
+		str.append("<td bgcolor=\"#c2d6d6\"><b>dock</b><td>" + dock);	
+		str.append("<td bgcolor=\"#c2d6d6\"><b>battery</b><td><a href=\"dashboard?view=power\">" + state.get(values.batterylife) + "</a>"); 
+		str.append("<td bgcolor=\"#c2d6d6\"><b>streams</b><td>" + Util.countAllMbytes(Settings.streamfolder) + "</a> mb</tr> \n" );
 	
 		// record | booted | archive 
 		str.append("\n<tr>");	
-		str.append("<td><b>record</b><td>" + rec);
-		str.append("<td><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins");
-		str.append("<td><b>archive</b><td>"+ Util.countMbytes("./log/archive") + " mb</tr> \n" );
+		str.append("<td bgcolor=\"#c2d6d6\"><b>record</b><td>" + rec);
+		str.append("<td bgcolor=\"#c2d6d6\"><b>booted</b><td>" + reboot + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins");
+		str.append("<td bgcolor=\"#c2d6d6\"><b>archive</b><td>"+ Util.countMbytes("./log/archive") + " mb</tr> \n" );
 
 		// camera | uptime | frames 
 		str.append("\n<tr>");
-		str.append("<td><b>camera</b><td>" + cam); 
-		str.append("<td><b>up time</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins ");
-		str.append("<td><b>frames</b><td>" + Util.countAllMbytes(Settings.framefolder) + " mb</tr> \n" );
+		str.append("<td bgcolor=\"#c2d6d6\"><b>camera</b><td>" + cam); 
+		str.append("<td bgcolor=\"#c2d6d6\"><b>up time</b><td>" + restart +(state.getUpTime()/1000)/60 + "</a> mins ");
+		str.append("<td bgcolor=\"#c2d6d6\"><b>frames</b><td>" + Util.countAllMbytes(Settings.framefolder) + " mb</tr> \n" );
 
 		// navigation | cpu | logs
 		str.append("\n<tr>");
-		str.append("<td><b>nav</b><td>" + od);
+		str.append("<td bgcolor=\"#c2d6d6\"><b>nav</b><td>" + od);
 			
 		String cpuvalue; 
 		if(state.getBoolean(values.waitingforcpu)) cpuvalue = "<font color=\"blue\"><b>" + state.get(values.cpu) + "%</b>"; 
 		else cpuvalue = state.get(values.cpu) + "%"; 
-		str.append("<td><b>cpu</b><td>" + cpuvalue);
-		str.append("<td><b>logs</b><td>" + Util.countMbytes(Settings.logfolder) + " mb</tr> \n" );
+		str.append("<td bgcolor=\"#c2d6d6\"><b>cpu</b><td>" + cpuvalue);
+		str.append("<td bgcolor=\"#c2d6d6\"><b>logs</b><td>" + Util.countMbytes(Settings.logfolder) + " mb</tr> \n" );
 		
 		// debug | telnet | ros
 		str.append("\n<tr>");
-		str.append("<td><b>debug</b><td>" + debug  
-			+ "<td><b>telnet</b><td>" + state.get(values.telnetusers) 
-			+ "<td><b>ros</b><td>" + Util.getRosCheck() + "</tr> \n" ); // doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
+		str.append("<td bgcolor=\"#c2d6d6\"><b>debug</b><td>" + debug  
+			+ "<td bgcolor=\"#c2d6d6\"><b>telnet</b><td>" + state.get(values.telnetusers) 
+			+ "<td bgcolor=\"#c2d6d6\"><b>ros</b><td>" + Util.getRosCheck() + "</tr> \n" ); // doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
 		
 		str.append(getActiveRoute());
-		str.append("\n\n<tr><td><b>routes</b>"+ getRouteLinks() +"</tr> \n");
+		
+		str.append("\n\n<tr><td bgcolor=\"#c2d6d6\"><b>routes</b><td>"+ getRouteLinks() +" \n");
+		String waypoint = state.get(values.roswaypoint);
+		if(waypoint == null) waypoint = "not active";
+		String drop = "\n<td bgcolor=\"#c2d6d6\"><b>points</b><td><div class=\"dropdown\"><button class=\"dropbtn\">"+waypoint+"</button><div class=\"dropdown-content\">";
 		Vector<String> waypointsAll = getAllWaypoints(); 
 		if(waypointsAll != null){
-		String nlink = "\n<tr><td><b>points</b><td colspan=\"11\">";
 			for(int i = 0 ; i < waypointsAll.size() ; i++)
-				nlink += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i) +"\">" + waypointsAll.get(i) + "</a> ";
-			str.append(nlink); 
+				drop += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i) +"\">" + waypointsAll.get(i) + "</a> ";
 		}
+		drop += "</div></div>";
+		str.append(drop);
+		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">views</button><div class=\"dropdown-content\">\n" + viewslinks + "\n</div></div>");
+		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">commands</button><div class=\"dropdown-content\">\n" + commandlinks + "\n</div></div>");
 		
+		String m = pointslist;
+		if(state.getBoolean(values.routeoverdue)) m += " *overdue* "; 		
+		if(state.getBoolean(values.waypointbusy)) m += " *waypointbusy* "; 		
+		if(state.getBoolean(values.rosgoalcancel)) m += " *ros goal cancel* "; 
+		if(m == null) m = "";
+		if(m.length() > 0)
+			str.append("\n<tr><td bgcolor=\"#c2d6d6\"><b>points</b><td colspan=\"11\">"+ m + "</tr> \n");	
+
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
 		else msg += "&nbsp;&nbsp;(<a href=\"dashboard?action=gui\">ignore</a>)";
 		if(msg.length() > 1) {
-			msg = "<tr><td><b>message</b><td colspan=\"11\">" + msg + "</tr> \n";
+			msg = "<tr><td bgcolor=\"#c2d6d6\"><b>message</b><td colspan=\"11\">" + msg + "</tr> \n";
 			str.append(msg);
 		}
 		
-		str.append("\n<tr><td><b>views</b><td colspan=\"11\">"+ viewslinks + "</tr> \n");	
-// 		str.append("\n<tr><td colspan=\"11\"><hr></tr> \n");	
 		str.append("\n</table>\n");
-		str.append(getTail(12) + "\n"); // ------------------------- SETTING FOR VIEW SIZE ? 
+		str.append(getTail(12) + "\n"); 
 		return str.toString();
 	}
 	
 	private String getRouteLinks(){   
 		Vector<String> list = NavigationUtilities.getRoutes();
-		if(list == null ) return "";
-		String link = "<td colspan=\"11\">";
-		for(int i = 0; i < list.size(); i++) link += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>&nbsp;&nbsp;";
-		return link;
+	//	if(list == null ) return "";
+		String rname = state.get(values.navigationroute);
+		if(rname == null) rname = "not active";
+		String drop = "\n<div class=\"dropdown\"><button class=\"dropbtn\">"+rname+"</button><div class=\"dropdown-content\">";
+	//	drop += "<a href=\"dashboard?action=cancel\">cancel</a>";
+		for(int i = 0; i < list.size(); i++) drop += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>";
+		return drop += "</div></div>";
 	}
 	
 	private String getActiveRoute(){  	
 		
-		String link = "\n\n<td><b>next</b><td>";
+		String link = "<tr><td bgcolor=\"#c2d6d6\"><b>next</b><td>";
 		String rname = state.get(values.navigationroute);
 		String next = "err";
 		rname = state.get(values.navigationroute);
@@ -497,22 +539,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 	
 		if(next==null) time = 0;
-		link += next += "<td><b>meters</b><td>" + Navigation.getRouteMeters() + " | " + estimatedmeters + "<td><b>time</b><td>" + time + " | " +  estimatedseconds;
-			
-		try {
-			
-
-			link +=  "\n\n<tr><td><b>active</b><td colspan=\"11\">#" + Navigation.consecutiveroute + " " + rname +  " " + pointslist; 
-			
-//			if(Navigation.failed) link += " *route failed*";
-			if(state.getBoolean(values.routeoverdue)) link+= " *overdue* "; 		
-			if(state.getBoolean(values.waypointbusy)) link+= " *waypointbusy* "; 		
-			if(state.getBoolean(values.rosgoalcancel)) link+= " *ros goal cancel* "; 		
-			link += "&nbsp;&nbsp;<a href=\"dashboard?action=gotodock\">dock</a>";
-			link += "&nbsp;&nbsp;<a href=\"dashboard?action=cancel\">cancel</a>";
-			
-		} catch (Exception e) {	Util.printError(e); return link;}
-		
+		link += next += "<td bgcolor=\"#c2d6d6\"><b>meters</b><td>" + Navigation.getRouteMeters() + " | " + estimatedmeters + "<td bgcolor=\"#c2d6d6\"><b>time</b><td>" + time + " | " +  estimatedseconds;
 		return link; 
 	}
 	

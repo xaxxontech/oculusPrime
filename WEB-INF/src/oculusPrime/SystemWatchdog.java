@@ -50,7 +50,7 @@ public class SystemWatchdog implements Observer {
 		
 		if(key.equals(values.cpu.name())){
 			int cpu = state.getInteger(values.cpu);
-			if(cpu > 60) Util.fine("warning cpu: " + cpu + "%");
+			if(cpu > 60) Util.debug("warning cpu: " + cpu + "%");
 		}
 	}
 
@@ -396,6 +396,6 @@ public class SystemWatchdog implements Observer {
 			Util.delay(1000);
 		}
 		state.set(values.waitingforcpu, false);
-		Util.fine("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + " ms");
+		Util.log("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + " ms");
 	}
 }

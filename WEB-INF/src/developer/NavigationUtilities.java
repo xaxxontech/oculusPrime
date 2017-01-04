@@ -475,14 +475,14 @@ public class NavigationUtilities {
 		if(estsec == 0) setRouteTimeEstimate(name, seconds); 
 		else if(estsec != seconds) {
 			setRouteTimeEstimate(name, (seconds+estsec)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
+			Util.log("routeCompleted("+name+", " + seconds + ", " + meters + "): average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
 		}
 
 		final int distance = getRouteDistanceEstimate(name);
 		if(distance == 0) setRouteDistanceEstimate(name, meters);
 		else if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
-			Util.log("NavigationUtilies.routeCompleted("+name+", " + seconds + ", " + meters + "): compute average meters = " + meters + " updated = "+ (distance+meters)/2);
+			Util.log("routeCompleted("+name+", " + seconds + ", " + meters + "): average meters = " + meters + " updated = "+ (distance+meters)/2);
 		}
 	}
 

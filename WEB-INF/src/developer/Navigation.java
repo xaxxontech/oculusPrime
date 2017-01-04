@@ -227,18 +227,24 @@ public class Navigation implements Observer {
 	
 	/** blocking */
 	private static boolean waitForNavSystem(){ 
-		if (state.equals(values.navsystemstatus, Ros.navsystemstate.mapping.name()) ||
-				state.equals(values.navsystemstatus, Ros.navsystemstate.stopping.name())) {
+
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.mapping.toString()) ||
+				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString())) {
 			app.driverCallServer(PlayerCommands.messageclients, "Navigation.waitForNavSystem(): can't start navigation");
 			return false;
 		}
+
 		startNavigation();
-		state.block(values.navsystemstatus, Ros.navsystemstate.running.name(), (int)NAVSTARTTIMEOUT*3, 300);
-		if( ! state.equals(values.navsystemstatus, Ros.navsystemstate.running.name())){
+
+		long start = System.currentTimeMillis();
+		while (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
+				&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT*3) { Util.delay(50);  } // wait
+
+		if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
 			app.driverCallServer(PlayerCommands.messageclients, "Navigation.waitForNavSystem(): navigation start failure");
-			failed = true;
 			return false;
 		}
+
 		return true;
 	}
 
@@ -678,11 +684,11 @@ public class Navigation implements Observer {
 			}
 
 			// send actions and duration delay to processRouteActions()		
-			Util.fine("visitWaypoints(" + name + "): start process waypoint: " + wpname);
+			// Util.fine("visitWaypoints(" + name + "): start process waypoint: " + wpname);
 			NodeList actions = ((Element) waypoints.item(wpnum)).getElementsByTagName("action");
 			long duration = Long.parseLong(((Element) waypoints.item(wpnum)).getElementsByTagName("duration").item(0).getTextContent());
 			if (duration > 0) processWayPointActions(actions, duration * 1000, wpname, name);
-			Util.fine("visitWaypoints(" + name + "): done process waypoint: " + wpname);
+			// Util.fine("visitWaypoints(" + name + "): done process waypoint: " + wpname);
 			
 			SystemWatchdog.waitForCpu(); // help ros localize before moving on 
 			app.driverCallServer(PlayerCommands.left, "360");
@@ -725,10 +731,10 @@ public class Navigation implements Observer {
 
 	public static void runRoute(final String name){
 		
-		Util.fine("Navigation.runRoute(" + name + "): called..");
+		// Util.fine("Navigation.runRoute(" + name + "): called..");
 		
-		if(routevisiting){
-			Util.log("runRoute(): visitWaypoints(): allready running ... DANGEROUS.");
+		if(routevisiting){ // needless test? nuke soon ? 
+			Util.log("runRoute(): visitWaypoints(): allready running ... DANGEROUS ....");
 			return;
 		}
 
@@ -818,6 +824,12 @@ public class Navigation implements Observer {
 						app.driverCallServer(PlayerCommands.reboot, null);
 						return;
 					}
+				}
+				
+				if( ! state.exists(values.navigationroute)) {
+					Util.log("runRoute(): canceled.. ", this);
+					cancelAllRoutes();
+					return;
 				}
 				
 				// start, clear counters and flags 
@@ -1136,10 +1148,12 @@ public class Navigation implements Observer {
 					&& !failed && state.exists(values.navigationroute)) Util.delay(10); 
 
 			// PHOTO
+			/*
 			if (photo) {
 				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
 
 				final String link = FrameGrabHTTP.saveToFile(null); 
+// 
 // TODO: BRAD 
 // block instead 
 //				Util.delay(2000); // allow time for framgrabusy flag to be set true
@@ -1147,18 +1161,55 @@ public class Navigation implements Observer {
 //				while (state.getBoolean(values.framegrabbusy) && System.currentTimeMillis() < timeout) Util.delay(10);
 //				Util.delay(3000); // allow time to download
 
+				if(link == null) {
+					
+					NavigationLog.newItem(NavigationLog.ERRORSTATUS, "FrameGrabHTTP.saveToFile() FAILED", wpname, state.get(values.navigationroute));
+					
+				} else {
+					
+					String navlogmsg = "<a href='" + link + "' target='_blank'>Photo</a>";
+					String msg = "[Oculus Prime Photo] ";
+					msg += navlogmsg+", time: "+ Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
+	
+					if (email) {
+						String emailto = settings.readSetting(GUISettings.email_to_address);
+						if (!emailto.equals(Settings.DISABLED)){
+							app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
+							navlogmsg += "<br> email sent ";
+							
+							// TODO: TESTING.. adjust path send as an attachment
+							// new SendMail("Oculus Prime Photo", msg, new String[]{ link });
+						}
+					}
+					if (rss) {
+						app.driverCallServer(PlayerCommands.rssadd, msg);
+						navlogmsg += "<br> new RSS item ";
+					}
+	
+					NavigationLog.newItem(NavigationLog.PHOTOSTATUS, navlogmsg, wpname, state.get(values.navigationroute));
+				}
+			}
+*/
+			if (photo) {
+				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
+
+				String link = FrameGrabHTTP.saveToFile("");
+
+				Util.delay(2000); // allow time for framgrabusy flag to be set true
+				long timeout = System.currentTimeMillis() + 10000;
+				while (state.getBoolean(values.framegrabbusy) && System.currentTimeMillis() < timeout) Util.delay(10);
+				Util.delay(3000); // allow time to download
+
 				String navlogmsg = "<a href='" + link + "' target='_blank'>Photo</a>";
 				String msg = "[Oculus Prime Photo] ";
-				msg += navlogmsg+", time: "+ Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
+				msg += navlogmsg+", time: "+
+						Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
 
 				if (email) {
 					String emailto = settings.readSetting(GUISettings.email_to_address);
-					if (!emailto.equals(Settings.DISABLED)){
+					if (!emailto.equals(Settings.DISABLED)) {
 						app.driverCallServer(PlayerCommands.email, emailto + " " + msg);
 						navlogmsg += "<br> email sent ";
-						
-						// TODO: TESTING.. adjust path send as an attachment
-						// new SendMail("Oculus Prime Photo", msg, new String[]{ link });
 					}
 				}
 				if (rss) {
@@ -1168,7 +1219,7 @@ public class Navigation implements Observer {
 
 				NavigationLog.newItem(NavigationLog.PHOTOSTATUS, navlogmsg, wpname, state.get(values.navigationroute));
 			}
-
+			
 			// ALERT
 			if (state.exists(values.streamactivity) && ! notdetect) {
 
@@ -1177,7 +1228,7 @@ public class Navigation implements Observer {
 				Util.log(msg + " " + streamactivity);
 				String navlogmsg = "Detected: "+streamactivity;
 
-				String link = "";
+				String link = ""; // todo: check for null 
 				if (streamactivity.contains("video") || streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
 					link = FrameGrabHTTP.saveToFile("?mode=processedImgJPG");
 					navlogmsg += "<br><a href='" + link + "' target='_blank'>image link</a>";
@@ -1352,6 +1403,6 @@ public class Navigation implements Observer {
 		}
 		new Thread(new Runnable() { public void run() {
 			if (Ros.saveMap()) app.message("map saved to "+Ros.getMapFilePath(), null, null);
-		}  }).start();
+		}}).start();
 	}
 }

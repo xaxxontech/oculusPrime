@@ -55,6 +55,8 @@ public class Downloader {
 			Util.debug("download took: "+ (System.currentTimeMillis()-start) + " ms " + written + " bytes", this);
 		} catch (Exception e) {
 			Util.log(e.getMessage(), this);
+			Util.log("file downloading error: " + path, this);
+			if(new File(path).length() == 0) new File(path).delete();
 			return false;
 		} finally {
 			try {

@@ -375,11 +375,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			// extra logging info 
 			Util.log("java restarts since last boot: " + settings.getInteger(ManualSettings.restarted), this);
-			Util.logLinuxRelease(); 
+			// Util.logLinuxRelease(); 
 			
 			// developer debugging info, warning to reboot after many restarts
-			if(settings.getInteger(ManualSettings.restarted) > 5)
-				NavigationLog.warning("restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
+			// if(settings.getInteger(ManualSettings.restarted) > 5)
+			//	NavigationLog.warning("restarts since last boot: " + settings.getInteger(ManualSettings.restarted));
 			
 			// try re-docking, then start routes again 
 			// if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) redockWaitRunRoute();
@@ -391,7 +391,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.log("java application initialized", this);		
 	}
 	
-	/* useful ??
+	/*
 	private void redockWaitRunRoute(){
 		new Thread(new Runnable() { public void run() {
 			try {
@@ -422,7 +422,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			} catch (Exception e){Util.printError(e);}
 		} }).start();
 	}
-*/
+	*/
 
 	// called by remote relay client
 	public void setRelayClient() {
@@ -1037,11 +1037,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 					String url = null; 
 					if(c.length() > 1) { 
 						url = FrameGrabHTTP.saveToFile(c); // ?mode=processedImgJPG 
-						Util.log("framegrabtofile(mode): "+c, this);
+						Util.debug("framegrabtofile(mode): "+c, this);
 					}
 					if(c.length() == 0){
-						FrameGrabHTTP.saveToFile(null); // default filename
-						Util.log("framegrabtofile(default): ", this);
+						url = FrameGrabHTTP.saveToFile(null); // default filename
+						Util.debug("framegrabtofile(default): ", this);
 					}
 					
 					// try again? FrameGrabHTTP.saveToFile(null);

@@ -22,7 +22,6 @@ import java.util.Vector;
 import developer.NavigationLog;
 import developer.NavigationUtilities;
 import oculusPrime.State.values;
-import oculusPrime.commport.PowerLogger;
 
 public class Util {
 	
@@ -35,7 +34,7 @@ public class Util {
 	public static final long TEN_MINUTES = 600000;
 	public static final long ONE_HOUR = 3600000; 
 	
-	private static final boolean DEBUG_FINE = true;	
+	// private static final boolean DEBUG_FINE = true;	
 	public static final int MAX_HISTORY = 45;
 	public static final int PRECISION = 1;
 
@@ -45,11 +44,11 @@ public class Util {
 	static private String rosinfor = null;
 	static private int rosattempts = 0;
 	
-	static boolean debug = true;
+	//static boolean debug = true;
 	
-	public Util(){
-		debug = Settings.getReference().getBoolean(ManualSettings.debugenabled);
-	}
+	//public Util(){
+	//	debug = Settings.getReference().getBoolean(ManualSettings.debugenabled);
+	//}
 	
 	public static void delay(long delay) {
 		try { Thread.sleep(delay); } 
@@ -273,9 +272,9 @@ public class Util {
 	
     public static void debug(String str, Object c) {
     	if(str == null) return;
-    	String filter = "static";
-    	if(c!=null) filter = c.getClass().getName();
-		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
+    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
+    		String filter = "static";
+    		if(c!=null) filter = c.getClass().getName();
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
     		history.add(System.currentTimeMillis() + ", " +str);
 		}
@@ -283,12 +282,14 @@ public class Util {
     
     public static void debug(String str) {
     	if(str == null) return;
-    	if(debug){
+    	if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
+    	// if(debug){
     		System.out.println("DEBUG: " + getTime() + ", " +str);
     		history.add(System.currentTimeMillis() + ", " +str);
     	}
     }    
 
+    /*
     public static void fine(String str) {
     	if(str == null) return;
     	if(DEBUG_FINE){
@@ -296,6 +297,7 @@ public class Util {
     		history.add(System.currentTimeMillis() + ", " +str);
     	}
     }
+    */
     
 	public static String memory() {
     	String str = "";
@@ -354,158 +356,6 @@ public class Util {
 		return percent;
 	}
 
-	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
-	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
-	/*
-	public static String getCPUTop(){
-		try {
-
-			String[] cmd = { "/bin/sh", "-c", "top -bn 2 -d 5 | grep '^%Cpu' | tail -n 1 | awk \'{print $2+$4+$6}\'" };
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			return procReader.readLine();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return null;
-	}
-
-	public static boolean testHTTP(){
-
-		final String ext = State.getReference().get(values.externaladdress);
-		final String http = State.getReference().get(State.values.httpport);
-		final String url = "http://"+ext+":"+ http +"/oculusPrime";
-
-		if(ext == null || http == null) return false;
-
-		try {
-
-			log("testPortForwarding(): "+url, "testHTTP()");
-			URLConnection connection = (URLConnection) new URL(url).openConnection();
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-			log("testPortForwarding(): "+procReader.readLine(), "testHTTP()");
-
-		} catch (Exception e) {
-			 log("testPortForwarding(): failed: " + url, "testHTTP()");
-			return false;
-		}
-
-		return true;
-	}
-
-	public static boolean testTelnetRouter(){
-		try {
-
-			// "127.0.0.1"; //
-			final String port = Settings.getReference().readSetting(GUISettings.telnetport);
-			final String ext =State.getReference().get(values.externaladdress);
-			log("...telnet test: " +ext +" "+ port, null);
-			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + port);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-			String line = procReader.readLine();
-			if(line.toLowerCase().contains("trying")){
-				line = procReader.readLine();
-				if(line.toLowerCase().contains("connected")){
-					log("telnet test pass...", null);
-					return true;
-				}
-			}
-		} catch (Exception e) {
-			log("telnet test fail..."+e.getLocalizedMessage(), null);
-			return false;
-		}
-		log("telnet test fail...", null);
-		return false;
-	}
-
-
-	public static boolean testRTMP(){
-		try {
-
-			final String ext = "127.0.0.1"; //State.getReference().get(values.externaladdress); //
-			final String rtmp = Settings.getReference().readRed5Setting("rtmp.port");
-
-			log("testRTMP(): http = " +ext, null);
-
-			Process proc = Runtime.getRuntime().exec("telnet " + ext + " " + rtmp);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-
-			String line = procReader.readLine();
-			log("testRTMP(): " + line, null);
-			line = procReader.readLine();
-			log("testRTMP():" + line, null);
-			log("testRTMP(): process exit value = " + proc.exitValue(), null);
-
-			if(line == null) return false;
-			else if(line.contains("Connected")) return true;
-
-		} catch (Exception e) {
-			return false;
-		}
-
-		return true;
-	}
-
-	public static String getJavaStatus(){
-
-		if(redPID==null) return "jetty not running";
-
-		String line = null;
-		try {
-
-			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/proc/"+ redPID +"/stat")));
-			line = reader.readLine();
-			reader.close();
-			log("getJavaStatus:" + line, null);
-
-		} catch (Exception e) {
-			printError(e);
-		}
-
-		return line;
-	}
-
-	public static String getRed5PID(){	
-		
-		if(redPID!=null) return redPID;
-		
-		String[] cmd = { "/bin/sh", "-c", "ps -fC java" };
-		
-		Process proc = null;
-		try { 
-			proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-		} catch (Exception e) {
-			Util.log("getRed5PID(): "+ e.getMessage(), null);
-			return null;
-		}  
-		
-		String line = null;
-		String[] tokens = null;
-		BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-		
-		try {
-			while ((line = procReader.readLine()) != null){
-				if(line.contains("red5")) {
-					tokens = line.split(" ");
-					for(int i = 1 ; i < tokens.length ; i++) {
-						if(tokens[i].trim().length() > 0) {
-							if(redPID==null) redPID = tokens[i].trim();							
-						}
-					}
-				}	
-			}
-		} catch (IOException e) {
-			Util.log("getRed5PID(): ", e.getMessage());
-		}
-
-		return redPID;
-	}	
-	*/
-	
 	public static String pingWIFI(final String addr){
 		if(addr==null) return null;	
 		String[] cmd = new String[]{"ping", "-c1", "-W1", addr};

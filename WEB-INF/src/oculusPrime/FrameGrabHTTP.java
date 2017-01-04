@@ -55,14 +55,7 @@ public class FrameGrabHTTP extends HttpServlet {
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
 		if( ! ban.knownAddress(req.getRemoteAddr())){
-			
 			Util.log("unknown address: danger: "+req.getRemoteAddr(), this);
-			
-			// response.setContentType("text/html");
-			// PrintWriter out = response.getWriter();
-			//out.println("unknown address: danger: "+req.getServerName() + " \n " + ban.toString());
-			//out.close();
-			
 			return;
 		}
 
@@ -322,7 +315,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		if(RICH_FILENAMES) { // build up file name options 
 			if(state.exists(values.navigationroute)) filename += "_route-" + state.get(values.navigationroute);
 			if(state.exists(values.roswaypoint)) filename += "_wp-" + state.get(values.roswaypoint);
-			filename += "_cam" + state.get(values.cameratilt);
+			// filename += "_cam" + state.get(values.cameratilt);
 		}
 		
 		// no spaces, might be in the waypoint name 

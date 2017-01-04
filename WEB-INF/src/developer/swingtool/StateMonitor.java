@@ -24,7 +24,6 @@ import javax.swing.table.TableModel;
 
 import oculusPrime.State;
 import oculusPrime.State.values;
-import oculusPrime.Util;
  
 public class StateMonitor extends JFrame {
 	
