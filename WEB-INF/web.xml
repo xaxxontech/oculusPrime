@@ -80,14 +80,6 @@
 		<servlet-name>NetworkServlet</servlet-name>
 		<url-pattern>/network</url-pattern>
 	</servlet-mapping>
-	<servlet>
-		<servlet-name>MediaServlet</servlet-name>
-		<servlet-class>oculusPrime.MediaServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>MediaServlet</servlet-name>
-		<url-pattern>/media</url-pattern>
-	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>MediaServlet</servlet-name>
