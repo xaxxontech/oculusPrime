@@ -42,19 +42,17 @@ public class MediaServlet extends HttpServlet {
 	                "<meta http-equiv=\"Cache-Control\" Content=\"no-cache\">\n" +
 	                "<meta http-equiv=\"Expires\" content=\"-1\">\n" +
 					"<style type=\"text/css\">\n" +
+	                "a { text-decoration: none; } \n" +
 	                "body { padding-bottom: 10px; margin: 0px; padding: 0px} \n" +
-	                "body, p, ol, ul, td, tr {\n" +
-	                "font-family: verdana, arial, helvetica, sans-serif;}\n");
+	                "body, p, ol, ul, td, tr, td { font-family: verdana, arial, helvetica, sans-serif;}\n");
 		str.append("."+IMAGE+" {background-color: #FF8533; padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; border-top: 1px solid #ffffff; }\n");
 		str.append("."+VIDEO+" {background-color: #C2EBFF; padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; border-top: 1px solid #ffffff; }\n");
-		str.append("</style>\n");
-	        
+		str.append("</style>\n");   
      	str.append("</head><body>\n");
-        str.append("<div style='padding-left: 15px'>Oculus Prime Media Files </div>\n");
-
+        str.append("<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; text'><a href=\"/oculusPrime/media\">Oculus Prime Media Files </a></div>\n");
 		response.setContentType("html");
 		PrintWriter out = response.getWriter();
-	
+		
 		String filterstr = null;
 		try { filterstr = req.getParameter("filter"); } catch (Exception e) {}
 		File[] files = null;
@@ -67,9 +65,18 @@ public class MediaServlet extends HttpServlet {
 			streams = new File(Settings.streamfolder).listFiles();	
 			frames = new File(Settings.framefolder).listFiles();		
 		} else {
-			// not jdk7 compatible! fix?
+
+// not jdk7 compatible! fix?
 //			streams = new File(Settings.streamfolder).listFiles((File pathname) -> pathname.getName().contains(f));
 //			frames = new File(Settings.framefolder).listFiles((File pathname) -> pathname.getName().contains(f));
+
+			streams = new File(Settings.streamfolder).listFiles(new FileFilter() {
+				@Override public boolean accept(File file) { return file.getName().contains(f); }
+			});
+			
+			frames = new File(Settings.framefolder).listFiles(new FileFilter() {
+				@Override public boolean accept(File file) { return file.getName().contains(f); }
+			});	
 		}
 		
 		// merge lists and sort by date 
@@ -85,23 +92,23 @@ public class MediaServlet extends HttpServlet {
 		    }
 		});
 
+		str.append("\n <table> ");
 		for(int c = 0 ; c < files.length ; c++){
 			
 			if(files[c].getName().toLowerCase().endsWith(".jpg"))
-				str.append( "<div class=\'"+IMAGE+"\'><a href=\"/oculusPrime/framegrabs/"+ files[c].getName()
+				str.append( "<tr><td><div class=\'"+IMAGE+"\'><a href=\"/oculusPrime/framegrabs/"+ files[c].getName()
 					+ "\" target='_blank'>"
-					+ files[c].getName() + "</a>      " + files[c].length() + " bytes" + "</div>\n");
+					+ files[c].getName() +"</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
 			
 			else // if(files[c].getName().toLowerCase().endsWith(".flv"))
-				str.append( "<div class=\'"+VIDEO+"\'><a href=\"/oculusPrime/streams/"+ files[c].getName()
+				str.append( "<tr><td><div class=\'"+VIDEO+"\'><a href=\"/oculusPrime/streams/"+ files[c].getName()
 					+ "\" target='_blank'>"
-					+ files[c].getName() + "</a>      " + files[c].length() + " bytes" + "</div>\n");
-			
-			
+					+ files[c].getName() + "</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
 		}
-	
+		
+		str.append("\n </table> ");
         out.println(str+ FILEEND);
         out.close();	
 	}
-	
 }
+	

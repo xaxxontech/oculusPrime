@@ -257,6 +257,10 @@ public class Util {
 		}
 		return str.toString();
 	}
+
+	public static void log(String str){
+		log(str, null);
+	}
 	
 	public static void log(String method, Exception e, Object c) {
 		log(method + ": " + e.getLocalizedMessage(), c);
@@ -341,7 +345,7 @@ public class Util {
 		e.printStackTrace();
 	}
 	
-	public static boolean validIP (String ip) {
+	public static boolean validIP(String ip) {
 	    try {
 	    	
 	        if (ip == null || ip.isEmpty()) return false;
@@ -541,7 +545,7 @@ public class Util {
 
 		return redPID;
 	}	
-	*/
+	
 	
 	public static String pingWIFI(final String addr){
 		if(addr==null) return null;	
@@ -578,7 +582,7 @@ public class Util {
 		
 		return time;	
 	}
-
+*/
 	public static void updateLocalIPAddress(){	
 		State state = State.getReference();
 		String wdev = lookupWIFIDevice();
@@ -634,7 +638,7 @@ public class Util {
 		
 		if(!state.exists(values.localaddress)) state.set(values.localaddress, "127.0.0.1");
 	}
-	
+
 	private static String lookupWIFIDevice(){
 		String wdev = null;
 		try { // this fails if no wifi is enabled 
@@ -653,7 +657,6 @@ public class Util {
 		
 		return wdev;
 	}
-
 
 	public static void updateExternalIPAddress(){
 //		new Thread(new Runnable() { public void run() {
@@ -691,7 +694,7 @@ public class Util {
 //			}
 //		} }).start();
 	}
-
+/*
 	public static String getJettyStatus() {
 		try {
 			String url = "http://127.0.0.1/?action=status";
@@ -705,7 +708,7 @@ public class Util {
 			return new Date().toString() + " DISABLED";
 		}
 	}
-
+*/
 	public static void deleteLogFiles(){
 	
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -961,7 +964,16 @@ public class Util {
 		} catch (Exception e){}
 		return Settings.ERROR;
 	}
-
+	
+	public static long countAllMbytes(final String path){ 
+		if( ! new File(path).exists()) return 0;
+		Vector<File> f = new Vector<>();
+		f = walk(path, f);
+		long total = 0;
+		for(int i = 0 ; i < f.size() ; i++) total += f.get(i).length();
+		return total / (1000*1000);
+	}
+	
 	public static long countMbytes(final String path){ 
 		Vector<File> f = new Vector<>();
 		f = walk(path, f);

@@ -31,7 +31,7 @@ import oculusPrime.commport.ArduinoPrime;
 
 public class Navigation implements Observer {
 	
-	protected Application app = null;
+	protected static Application app = null;
 	private static State state = State.getReference();
 	private static final String DOCK = "dock"; // waypoint name
 	private static final String redhome = System.getenv("RED5_HOME");
@@ -41,9 +41,9 @@ public class Navigation implements Observer {
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
 	private final Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
-	public int consecutiveroute = 1;
-	private double routedistance = 0;
-	public long routestarttime;
+	public static int consecutiveroute = 1;
+	public static long routemillimeters = 0;
+	public static long routestarttime;
 	public NavigationLog navlog;
 	
 	/** Constructor */
@@ -60,15 +60,16 @@ public class Navigation implements Observer {
 	public void updated(String key) {
 		if(key.equals(values.distanceangle.name())){
 			try {
-				double val = Double.parseDouble(state.get(values.distanceangle).split(" ")[0]);
-				if(val > 0){
-					routedistance += val;
-					Util.debug("route distance (mm): " + routedistance, this);
-				}
-			} catch (Exception e) {/*Util.printError(e);*/}
+				int mm = Integer.parseInt(state.get(values.distanceangle).split(" ")[0]);
+				if(mm > 0) routemillimeters += mm;
+			} catch (Exception e){}
 		}
 	}
 
+	public static String getRouteMeters() {
+		return Util.formatFloat(routemillimeters / 1000, 0);
+	}
+	
 	public void gotoWaypoint(final String str) {
 		if (state.getBoolean(State.values.autodocking)) {
 			app.driverCallServer(PlayerCommands.messageclients, "command dropped, autodocking");
@@ -624,7 +625,7 @@ public class Navigation implements Observer {
 
 				// start!
 				routestarttime = System.currentTimeMillis();
-				routedistance = 0l;
+				routemillimeters = 0l;
 				
 				// undock if necessary
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED)) {
@@ -707,7 +708,7 @@ public class Navigation implements Observer {
 				dock();
 				
 				// wait while autodocking does its thing 
-				long start = System.currentTimeMillis();
+				final long start = System.currentTimeMillis();
 				while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
@@ -717,8 +718,6 @@ public class Navigation implements Observer {
 					
 				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 					
-					// TODO: send alert?
-//					state.dumpFile("Unable to dock: "+ routestarttime);
 					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
 
 					// cancelRoute(id);
@@ -728,23 +727,20 @@ public class Navigation implements Observer {
 					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
 					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
 			
-					// create snapshot 
-//					Util.archiveFiles("./archive" + Util.sep + "redock_"+state.get(State.values.navigationroute)
-//						+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath, Settings.logfolder});
-				
-//					return;
 					if (!delayToNextRoute(navroute, name, id)) return;
 					continue;
 				}
 				
-//				state.dumpFile("completed route: " + state.get(State.values.navigationroute) + " total distance: " + routedistance);
-				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routedistance);
-				consecutiveroute ++;
-				routedistance = 0;
-			
-//				Util.archiveFiles("./archive" + Util.sep + state.get(State.values.navigationroute)
-//					+"_"+System.currentTimeMillis() + ".tar.bz2", new String[]{NavigationLog.navigationlogpath,
-//						Settings.logfolder, Settings.settingsfile});
+				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routemillimeters);
+				
+				// how long did docking take 
+				int timetodock = (int) ((System.currentTimeMillis() - start)/ 1000);
+				// subtract from routes time
+				int routetime = (int)(System.currentTimeMillis() - routestarttime)/1000 - timetodock;
+				NavigationUtilities.routeCompleted(name, routetime, (int)routemillimeters/1000);
+				
+				consecutiveroute++;
+				routemillimeters = 0;
 				
 				if (!delayToNextRoute(navroute, name, id)) return;
 			}
@@ -1156,7 +1152,7 @@ public class Navigation implements Observer {
 
 	}
 
-	private boolean turnLightOnIfDark() {
+	public static boolean turnLightOnIfDark() {
 
 		if (state.getInteger(values.spotlightbrightness) == 100) return false; // already on
 

@@ -56,7 +56,7 @@ public class PowerLogger {
 		int i = 0;
 		StringBuffer str = new StringBuffer();
 	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
+		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br>"); 
 		return str.toString();
 	}
 

@@ -1620,15 +1620,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public void restart() {
 		messageplayer("restarting server application", null, null);	
 		
+		int b = settings.getInteger(ManualSettings.restarted); // count java restarts vs booting 
+		settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+
+// THIS in developer mode, or just warning? 	
+//					if(settings.getInteger(ManualSettings.restarted) > 10){
+//					Util.log("restart called but reboot needed, going down..", this);
+					
 		// write file as restart flag for script
 		File f = new File(Settings.redhome + Util.sep + "restart");
-		if (!f.exists()){
-			try {
-				f.createNewFile();
-			} catch (IOException e) {
-				Util.printError(e);
-			}
-		}
+		if (!f.exists()) try { f.createNewFile(); } catch (Exception e) {}
 		
 		shutdownApplication();
 	}
@@ -1638,6 +1639,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
+		settings.writeSettings(ManualSettings.restarted, "0");
 
 		if (navigation != null) { // TODO: << condition required?
 			if (state.exists(values.odomlinearpwm)) {

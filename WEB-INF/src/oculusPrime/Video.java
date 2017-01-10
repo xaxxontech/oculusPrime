@@ -359,7 +359,7 @@ public class Video {
                         break;
                 }
 
-                Util.log("recording: streamName",this);
+                Util.log("recording: "+streamName,this);
                 return urlString + streamName;
 
             } catch (Exception e) {
