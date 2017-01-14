@@ -602,8 +602,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 					str.equals(ArduinoPrime.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
-						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0);
+						Navigation.routestarttime, null, state.get(values.navigationroute),
+						Navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
@@ -647,7 +647,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
-		case record: video.record(str); break; // record [true | false]
+		case record: // record [true | false] optionalfilename
+			if(str == null) break;
+			if(str.startsWith("true ")) video.record("true", str.substring(4).trim().replace(" ", "_")); 
+			if(str.equals("true") || str.equals("false")) video.record(str); 
+			break;  
 		case autodockcalibrate: docker.autoDock("calibrate " + str); break;
 		case redock: watchdog.redock(str); break;
 
@@ -927,7 +931,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case runroute:
 			if (navigation != null) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route activated by user",
-						System.currentTimeMillis(), null, str, navigation.consecutiveroute, 0);
+						System.currentTimeMillis(), null, str, Navigation.consecutiveroute, 0);
 				navigation.runRoute(str);
 			}
 			break;
@@ -935,8 +939,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case cancelroute:
 			if (navigation != null && state.exists(values.navigationroute)) {
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled",
-						navigation.routestarttime, null, state.get(values.navigationroute),
-						navigation.consecutiveroute, 0);
+						Navigation.routestarttime, null, state.get(values.navigationroute),
+						Navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
 			break;
@@ -960,7 +964,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case objectdetectcancel: state.delete(values.objectdetect); break;
 		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
 
-		case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		// case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		case framegrabtofile: // allow extra name to be added 
+		//	final String c = str.trim(); 
+			
+			Util.debug("framegrabtofile(): length = " + cmd.length, this);
+			
+			
+			if(cmd.length == 2) { 
+				FrameGrabHTTP.saveToFile(cmd[0], cmd[1]); // ?mode=processedImgJPG 
+				Util.debug("framegrabtofile(mode, fname): " + cmd[0] + " " + cmd[1], this);
+			}
+			if(cmd.length == 1) { 
+				FrameGrabHTTP.saveToFile(cmd[0]); // ?mode=processedImgJPG 
+				Util.debug("framegrabtofile(mode): "+cmd[0], this);
+			}
+			if(cmd.length == 0){
+				FrameGrabHTTP.saveToFile(null); // default filename
+				Util.debug("framegrabtofile(default):", this);
+			}
+					
+			break;
+			
 		case log: Util.log("log: "+str, this); break;
 		case settings: messageplayer(settings.toString(), null, null); break;
 		

@@ -24,6 +24,7 @@ import developer.Navigation;
 import developer.Ros;
 import developer.depth.Mapper;
 import developer.depth.ScanUtils;
+import oculusPrime.State.values;
 
 @SuppressWarnings("serial")
 @MultipartConfig(fileSizeThreshold=1024*1024*2, // 2MB
@@ -291,7 +292,6 @@ public class FrameGrabHTTP extends HttpServlet {
 					g2d.drawLine(0, y, (w/2)-x, y);  
 					g2d.drawLine(w-1, y, (w/2)+x,y);
 				}
-	  
 			}
 			
 			// cone perim lines
@@ -304,31 +304,47 @@ public class FrameGrabHTTP extends HttpServlet {
 			radarImage = image;
 //			radarImageGenerating = false;
 //		} }).start();
-
 	}
 
 	/**
-	 *
 	 * @param args download url params, can be null
-	 * @return   returns download url of saved image
+	 * @return returns download url of saved image
 	 */
-	public static String saveToFile(String args) {
-		final String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP"+args;
-
-		final Downloader dl = new Downloader();
-//		DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss");
-//		Calendar cal = Calendar.getInstance();
-//		final String datetime = dateFormat.format(cal.getTime());
-		final String datetime = Util.getDateStamp();
+	public static String saveToFile(String args) {	
+		String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP";
+		if(args != null) if(args.startsWith("?")) urlString += args; 
+		final String url = urlString;
+		
+		String datetime = Util.getDateStamp();  // no spaces in filenames       
+		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
+        final String name = datetime + ".jpg";
+		
 		new Thread(new Runnable() {
 			public void run() {
-				String sep = Util.sep;
-				dl.FileDownload(urlString, datetime + ".jpg", "webapps"+sep+"oculusPrime"+sep+"framegrabs");
+				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
 			}
 		}).start();
-		return "http://"+state.get(State.values.externaladdress)+":"+state.get(State.values.httpport)+
-				"/oculusPrime/framegrabs/"+datetime+".jpg";
+		return "/oculusPrime/framegrabs/"+name;
 	}
 	
-
+	/** add extra text into file name after timestamp */
+	public static String saveToFile(final String args, final String optionalname) {
+		String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP";
+		if(args != null) if(args.startsWith("?")) urlString += args; 
+		final String url = urlString;
+		
+		String datetime = Util.getDateStamp();  // no spaces in filenames       
+		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint);
+        final String name = (datetime + optionalname + ".jpg").replaceAll(" ", "_");
+		
+		new Thread(new Runnable() {
+			public void run() {
+				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
+			}
+		}).start();
+		return "/oculusPrime/framegrabs/"+name;
+	}
+	
 }
+
+

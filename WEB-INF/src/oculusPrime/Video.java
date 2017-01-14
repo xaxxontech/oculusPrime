@@ -4,6 +4,8 @@ package oculusPrime;
 import org.red5.server.api.IConnection;
 import org.red5.server.stream.ClientBroadcastStream;
 
+import oculusPrime.State.values;
+
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
@@ -294,21 +296,19 @@ public class Video {
 
     }
 
-    public String record(String mode) {
-        return record(mode, null);
-    }
+    public String record(String mode) { return record(mode, null); }
 
     // record to flv in webapps/oculusPrime/streams/
-    private String record(String mode, String optionalfilename) {
-        IConnection conn = app.grabber;
+    @SuppressWarnings("incomplete-switch")
+	public String record(String mode, String optionalfilename) {
+       
+		Util.debug("record("+mode+", " + optionalfilename +"): called.. ", this);
 
-        if (state.get(State.values.stream) == null) return null;
-
-        if (state.get(State.values.record) == null)
-            state.set(State.values.record, Application.streamstate.stop.toString());
-
-        if (conn == null) return null;
-
+    	IConnection conn = app.grabber;
+    	if (conn == null) return null;
+        
+    	if (state.get(State.values.stream) == null) return null;
+        if (state.get(State.values.record) == null) state.set(State.values.record, Application.streamstate.stop.toString());
         if (state.exists(State.values.sounddetect)) if (state.getBoolean(State.values.sounddetect)) return null;
 
         if (mode.toLowerCase().equals(Settings.TRUE)) {  // TRUE, start recording
@@ -328,11 +328,13 @@ public class Video {
 
             // Save the stream to disk.
             try {
-                String streamName = optionalfilename;
-                if (streamName == null) streamName = Util.getDateStamp();
 
-                final String urlString = "http://"+state.get(State.values.externaladdress)+":"+
-                        state.get(State.values.httpport) + STREAMSPATH;
+                String streamName = Util.getDateStamp(); 
+                if(optionalfilename != null) streamName += "_" + optionalfilename; 	
+                if(state.exists(values.roswaypoint)) streamName += "_" + state.get(values.roswaypoint);
+                streamName = streamName.replaceAll(" ", "_"); // no spaces in filenames 
+                
+                final String urlString = STREAMSPATH;
 
                 state.set(State.values.record, state.get(State.values.stream));
 

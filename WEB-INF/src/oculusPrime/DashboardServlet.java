@@ -153,8 +153,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			if( route != null ){
 				
-				Util.debug("......doGet(): route: " + route, this);
-
+//				Util.debug("......doGet(): route: " + route, this);
 //				if(action.equalsIgnoreCase("resetstats")) app.driverCallServer(PlayerCommands.resetroutedata, route);
 				if(action.equalsIgnoreCase("gotowp")) app.driverCallServer(PlayerCommands.gotowaypoint, route);
 				if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);		
@@ -162,7 +161,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 			if(action.equalsIgnoreCase("cancel")) {
 				
-				Util.debug("......doGet(): cancel route: " + state.get(values.navigationroute), this);
+//				Util.debug("......doGet(): cancel route: " + state.get(values.navigationroute), this);
 				
 				app.driverCallServer(PlayerCommands.move, "stop");
 				app.driverCallServer(PlayerCommands.cancelroute, null);
@@ -203,7 +202,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 			if(action.equalsIgnoreCase("restart")){
 				new Thread(new Runnable(){ public void run(){
-					app.driverCallServer(PlayerCommands.move, "stop");
+			//		app.driverCallServer(PlayerCommands.move, "stop");
 					Util.log("restart called, going down..", this);
 					Util.delay(2000); // redirect before calling.. 
 					app.driverCallServer(PlayerCommands.restart, null);
