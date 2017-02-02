@@ -49,7 +49,7 @@ public class MediaServlet extends HttpServlet {
 		str.append("."+VIDEO+" {background-color: #C2EBFF; padding-top: 3px; padding-bottom: 3px; padding-left: 15px; padding-right: 10px; border-top: 1px solid #ffffff; }\n");
 		str.append("</style>\n");   
      	str.append("</head><body>\n");
-        str.append("<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; text'><a href=\"/oculusPrime/media\">Oculus Prime Media Files </a></div>\n");
+        str.append("<div style='padding-top: 5px; padding-bottom: 5px; padding-left: 15px; '><b>Oculus Prime Media Files </b></div>\n");
 		response.setContentType("html");
 		PrintWriter out = response.getWriter();
 		
@@ -58,8 +58,8 @@ public class MediaServlet extends HttpServlet {
 		File[] files = null;
 					
 		final String f = filterstr;
-		File[] streams = null;
-		File[] frames = null; 	
+		File[] streams;
+		File[] frames;
 		
 		if(f == null){
 			streams = new File(Settings.streamfolder).listFiles();	
@@ -78,35 +78,43 @@ public class MediaServlet extends HttpServlet {
 				@Override public boolean accept(File file) { return file.getName().contains(f); }
 			});	
 		}
-		
-		// merge lists and sort by date 
-		files = new File[frames.length + streams.length];
 
-		int total = 0;
-		for(int i = 0; i < streams.length; i++) files[total++] = streams[i];  
-		for(int j = 0; j < frames.length;  j++) files[total++] = frames[j];
-		
-		Arrays.sort(files, new Comparator<File>() {
-		    public int compare(File f1, File f2) {
-		        return Long.compare(f2.lastModified(), f1.lastModified());
-		    }
-		});
+		int frameslength = 0;
+		if (frames != null) frameslength = frames.length;
+		int streamslength = 0;
+		if (streams != null) streamslength = streams.length;
+		// merge lists and sort by date
 
-		str.append("\n <table> ");
-		for(int c = 0 ; c < files.length ; c++){
-			
-			if(files[c].getName().toLowerCase().endsWith(".jpg"))
-				str.append( "<tr><td><div class=\'"+IMAGE+"\'><a href=\"/oculusPrime/framegrabs/"+ files[c].getName()
-					+ "\" target='_blank'>"
-					+ files[c].getName() +"</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
-			
-			else // if(files[c].getName().toLowerCase().endsWith(".flv"))
-				str.append( "<tr><td><div class=\'"+VIDEO+"\'><a href=\"/oculusPrime/streams/"+ files[c].getName()
-					+ "\" target='_blank'>"
-					+ files[c].getName() + "</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
+		if (streamslength > 0 || frameslength > 0) {
+			files = new File[frameslength + streamslength];
+
+			int total = 0;
+			for (int i = 0; i < streamslength; i++) files[total++] = streams[i];
+			for (int j = 0; j < frameslength; j++) files[total++] = frames[j];
+
+			Arrays.sort(files, new Comparator<File>() {
+				public int compare(File f1, File f2) {
+					return Long.compare(f2.lastModified(), f1.lastModified());
+				}
+			});
+
+			str.append("\n <table> ");
+			for (int c = 0; c < files.length; c++) {
+
+				if (files[c].getName().toLowerCase().endsWith(".jpg"))
+					str.append("<tr><td><div class=\'" + IMAGE + "\'><a href=\"/oculusPrime/framegrabs/" + files[c].getName()
+							+ "\" target='_blank'>"
+							+ files[c].getName() + "</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
+
+				else // if(files[c].getName().toLowerCase().endsWith(".flv"))
+					str.append("<tr><td><div class=\'" + VIDEO + "\'><a href=\"/oculusPrime/streams/" + files[c].getName()
+							+ "\" target='_blank'>"
+							+ files[c].getName() + "</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
+			}
+
+			str.append("\n </table> ");
 		}
-		
-		str.append("\n </table> ");
+		else { str.append ("<div style='padding-left: 15px'>No media yet</div>" ); }
         out.println(str+ FILEEND);
         out.close();	
 	}
