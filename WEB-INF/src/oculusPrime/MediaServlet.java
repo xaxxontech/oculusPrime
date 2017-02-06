@@ -1,14 +1,16 @@
 package oculusPrime;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
-
-import oculusPrime.State.values;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * list the files in framegrabs and streams folders 
@@ -23,9 +25,13 @@ public class MediaServlet extends HttpServlet {
     public static final String VIDEO = "VIDEO";
     public static final String AUDIO = "AUDIO";
     
-    // private static final String ITEM = "<!--item-->";
-    private static final String FILEEND = "</body></html>";
-
+    /*
+    MediaServlet(){
+    	Util.log("--------------------------------------------------");
+    	TODO: read in a css file?
+    }
+    */
+    
 	public void doGet(final HttpServletRequest req, HttpServletResponse response) throws ServletException, IOException {
 
 		if (!ban.knownAddress(req.getRemoteAddr())) {
@@ -33,7 +39,7 @@ public class MediaServlet extends HttpServlet {
 			response.sendRedirect("/oculusPrime");   
 			return;
 		}
-		
+	
 		StringBuffer str = new StringBuffer();
 		str.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
 		str.append("<!-- DO NOT MODIFY THIS FILE, THINGS WILL BREAK -->\n");
@@ -55,18 +61,22 @@ public class MediaServlet extends HttpServlet {
 		
 		String filterstr = null;
 		try { filterstr = req.getParameter("filter"); } catch (Exception e) {}
-		File[] files = null;
-					
+		
+		File[] files = null;	
 		final String f = filterstr;
 		File[] streams = null;
 		File[] frames = null; 	
+		
+		// be sure folders exist OR THROWS NULLS BELOW 
+		new File(Settings.streamfolder).mkdir();
+		new File(Settings.framefolder).mkdir();
 		
 		if(f == null){
 			streams = new File(Settings.streamfolder).listFiles();	
 			frames = new File(Settings.framefolder).listFiles();		
 		} else {
 
-// not jdk7 compatible! fix?
+// not jdk7 compatible! fixed below 
 //			streams = new File(Settings.streamfolder).listFiles((File pathname) -> pathname.getName().contains(f));
 //			frames = new File(Settings.framefolder).listFiles((File pathname) -> pathname.getName().contains(f));
 
@@ -106,8 +116,8 @@ public class MediaServlet extends HttpServlet {
 					+ files[c].getName() + "</a></div><td style=\"text-align: right;\">" + files[c].length() + " bytes" + "</tr>\n");
 		}
 		
-		str.append("\n </table> ");
-        out.println(str+ FILEEND);
+		str.append("\n </table> \n");
+        out.println(str+ "\n</body></html>\n");
         out.close();	
 	}
 }

@@ -335,7 +335,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		
 		String datetime = Util.getDateStamp();  // no spaces in filenames       
 		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint);
-        final String name = (datetime + optionalname + ".jpg").replaceAll(" ", "_");
+        final String name = (datetime + "_" + optionalname + ".jpg").replaceAll(" ", "_");
 		
 		new Thread(new Runnable() {
 			public void run() {

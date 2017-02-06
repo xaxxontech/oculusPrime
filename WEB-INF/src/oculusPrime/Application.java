@@ -77,7 +77,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		state.set(values.osarch, System.getProperty("os.arch"));
-		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+"===============", this);
+		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+ " " +System.getProperty("sun.arch.data.model")+"===============", this);
 		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
@@ -336,43 +336,33 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		if (settings.getBoolean(GUISettings.navigation)) {
-			navigation = new developer.Navigation(this);
-			navigation.runAnyActiveRoute();
-		}
+		
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
 		// use relay server if set
 		if (!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
-
 			red5client = new Red5Client(this); // connects to remote server
 			red5client.connectToRelay();
 		}
 
-		if (state.get(values.osarch).equals(ARM))
-			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if (!settings.getBoolean(ManualSettings.useflash))
-			state.set(values.driverstream, driverstreamstate.disabled.toString());
-		else
-			state.set(State.values.driverstream, driverstreamstate.stop.toString());
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
-
-		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
-//		Util.updateExternalIPAddress();
-//		Util.updateLocalIPAddress();
-		network = new Network(this);
-
-		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
-		
+		network = new Network(this);	
 		watchdog = new SystemWatchdog(this);
-
-		Util.debug("application initialize done", this);
 		
+		if(settings.getBoolean(GUISettings.navigation)) {
+			navigation = new developer.Navigation(this);
+			navigation.runAnyActiveRoute();
+		}
+		
+		Util.debug("application initialize done", this);
 	}
 
 	// called by remote relay client
@@ -395,7 +385,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 				loginRecords.signoutDriver();
 				driverCallServer(PlayerCommands.publish, streamstate.stop.toString());
 			}
-
 		}
 	}
 

@@ -81,7 +81,7 @@ public class BanList {
 		return str.toString();
 	}
 	
-	private void appendLog(final String str){
+	public void appendLog(final String str){
 		if(history.size() > MAX_HISTORY) history.remove(0);
 		history.add(Util.getTime() + ", " + str);
 		
@@ -157,38 +157,35 @@ public class BanList {
 	
 	public synchronized boolean knownAddress(final String address) {
 
-		if(!Settings.getReference().getBoolean(ManualSettings.checkaddresses)) return true;
+		if( ! Settings.getReference().getBoolean(ManualSettings.checkaddresses)) {
+			if( ! known.contains(address)) known.add(address); // put in list even if disabled 
+			return true;
+		}
 				
-		if( ! Util.validIP(address)) return false;
+		if( ! Util.validIP(address)) return false; // basic sanity 
+		if(address.equals("0.0.0.0") || address.equals("127.0.0.1") || address.startsWith("10.42")) return true;
 		
-		if(address.equals("0.0.0.0")) return true;
-		
-		if(address.equals("127.0.0.1")) return true;
-		
-		if(address.startsWith("10.42")) return true;
-
-		if (known.contains(address)) return true;
-
-		if (state.exists(values.localaddress)) {
+		if(state.exists(values.localaddress)) {
 			String firsttwonums = state.get(values.localaddress).replaceFirst("\\.\\d+\\.\\d+$", "");
-			if (address.replaceFirst("\\.\\d+\\.\\d+$", "").equals(firsttwonums)) {
-				if (!known.contains(address)) {
-					appendLog("added lan ip: " + address);
+			if(address.replaceFirst("\\.\\d+\\.\\d+$", "").equals(firsttwonums)) {
+				if( ! known.contains(address) && ! isBanned(address)) {
+					appendLog("added LAN IP: " + address);
 					known.add(address);
 				}
 				return true;
 			}
+		} else appendLog("robot's LAN address unknown yet, system might be booting.. ");
+		
+		if(known.contains(address)) return true;
+		else {
+			appendLog("WARN: unknown address rejected: " + address);
+			return false;
 		}
-		
-		if(isBanned(address)) return false;
-		
-		return known.contains(address);
 	}
 	
 	public synchronized void clearAddress(String address) {
 		
 		if(address == null) return;
-		
 		if(address.equals("null")) return;
 		
 		if( ! Util.validIP(address)){
@@ -205,7 +202,7 @@ public class BanList {
 		
 		if(remoteAddress.equals("127.0.0.1")) return;
 	
-		if(banned.contains(remoteAddress)) Util.log("DANGEROUS..failed sanity check: " + user, this);
+		if(banned.contains(remoteAddress)) Util.log("DANGEROUS: failed sanity check: " + user, this);
 		
 		if(attempts.containsKey(remoteAddress)) attempts.put(remoteAddress, attempts.get(remoteAddress)+1);
 		else attempts.put(remoteAddress, 1);  

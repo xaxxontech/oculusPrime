@@ -1,16 +1,12 @@
 package oculusPrime;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
@@ -29,11 +25,11 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXParseException;
 
 import developer.NavigationLog;
 import oculusPrime.State.values;
 import oculusPrime.commport.PowerLogger;
-import org.xml.sax.SAXParseException;
 
 public class Util {
 	
@@ -178,10 +174,116 @@ public class Util {
 //			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			printError(e);
 		}
 	}	
+	
+	
+	public static String[] getPythonPIDS() {
+		String str = "";
+		try {	
+//			String[] cmd = new String[]{"/bin/sh", "-c", "ps -a | grep python"};		
+			String[] cmd = new String[]{"/bin/sh", "-c", "ps -fC python"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if(line.trim().length() > 0) {
+					line = line.trim();
+					if( ! line.startsWith("UID")){
+	/*				
+	 * 
+UID        PID  PPID  C STIME TTY          TIME CMD
+brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_routes.py
+	
+						log("getPython: "+line + " tokens: " + line.trim().split(" ").length);
+						log("getPython: -0: " + line.trim().split(" ")[0]);
+						log("getPython: -1: " + line.trim().split(" ")[1]);
+						log("getPython: -2: " + line.trim().split(" ")[2]);
+						log("getPython: -5: " + line.trim().split(" ")[5]);
+						log("getPython: "+line + " -end: " + line.trim().split(" ")[line.trim().split(" ").length-1]);
+	 */
+						String tokens[] = line.split(" ");
+						str += tokens[5] + " ";
+					}
+				}
+			}
+		} catch (Exception e) { printError(e); }
+		str = str.trim();
+		if(str.length() == 0) return null;
+		else return str.split(" ");
+	}	
+				
+//UID        PID  PPID  C STIME TTY          TIME CMD
+//brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_routes.py
 
+// brad     14639 14607  7 13:43 ?        00:00:11 python /home/brad/catkin_ws/src/oculusprime_ros/src/odom_tf.py __name:=odom_tf __log:=/home/brad/.ros/log/b5594efa-ea52-11e6-8836-b803054ce181/odom_tf-1.log 23
+// OCULUS: Fri Feb 03 13:45:35 PST 2017, static, String index out of range: -64
+
+/*
+1486178918816, static, log end: home-brad-.ros-log-2275e302-ea87-11e6-8055-b803054ce181-odom_tf-1.log 
+1486178918816, static, log 0_brad 
+1486178918817, static, log 6_6717 
+1486178918817, static, log 8_6684 
+1486178918817, static, log 10_4 
+1486178918817, static, log 11_19:19 
+1486178918818, static, log 12_? 
+1486178918818, static, log 20_00:00:25 
+1486178918818, static, log 21_python 
+1486178918818, static, log 22__home_brad_catkin_ws_src_oculusprime_ros_src_arcmove_globalpath_follower.py 
+1486178918819, static, log 23___name:=arcmove_globalpath_follower 
+1486178918819, static, log 24___log:=_home_brad_.ros_log_2275e302-ea87-11e6-8055-b803054ce181_arcmove_globalpath_follower-2.log 		
+*/
+	
+	public static Vector<PyScripts> getRunningPythonScripts() {
+		
+		Vector<PyScripts> scripts = new Vector<PyScripts>();
+		String log =""; String name = "";
+		
+		try {	
+			String[] cmd = new String[]{"/bin/sh", "-c", "ps -fC python"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if(line.trim().length() > 0) {
+					if( ! line.startsWith("UID")) {
+						
+						String tokens[] = line.trim().split(" ");
+//	                    log(scripts.size() + " -slize- " + line);
+						
+						String pid =  tokens[6];
+						if(pid.length() == 0) pid = tokens[5];
+						String py = tokens[tokens.length-1].trim();
+					
+						if(py.contains("telnet_scripts")){
+							if(py.lastIndexOf(".py") > 0) name = py.substring(0, py.indexOf(".py"));
+							if(py.indexOf("/") > 0) name = name.substring(py.lastIndexOf("/")+1, name.length());
+						
+//							log(scripts.size() + " py: " + py);
+							scripts.add( new PyScripts(pid, name, "none"));
+							
+						} else if(py.contains(".log")){				
+							for(int i = 0 ; i < tokens.length ; i++){
+								if(tokens[i].length() > 0){
+									if(tokens[i].startsWith("__log")) log = tokens[i].replaceAll("/", "_");//.replaceAll("__name:=", "");
+									if(tokens[i].startsWith("__name")) name = tokens[i].replaceAll("/", "_").replaceAll("__name:=", "");
+//									log("log: " + log);
+								}
+							}
+						} else Util.log("pid type? " + line); // shouldn't be others! 
+							
+						if(pid != null) scripts.add( new PyScripts(pid, name, log));
+					}
+				}
+			}
+//			debug("log python pids found = " + scripts.size());
+		} catch (Exception e) { log(e.getMessage()); printError(e); }
+		return scripts;
+	}	
+	
 	/**
 	 * Run the given text string as a command on the windows host computer. 
 	 * 
@@ -324,7 +426,7 @@ public class Util {
 			Util.log("Util.loadXMLFromString() parse error:\n"+xml, null);
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			printError(e);
 		}
 		return null;
 	}
@@ -341,7 +443,7 @@ public class Util {
 			output = writer.getBuffer().toString().replaceAll("\n|\r", "");
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			printError(e);
 		}
 		return output;
 	}
@@ -605,18 +707,16 @@ public class Util {
 					line = procReader.readLine();
 					String addr = line.substring(line.indexOf(":")+1); 
 					addr = addr.substring(0, addr.indexOf(" ")).trim();
-									
 					if(validIP(addr)) {
 						if (!addr.equals(state.get(values.localaddress)))
 							state.set(values.localaddress, addr);
-					}
-					else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
+					} else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
 				}
 			}
 		} catch (Exception e) {
-			Util.debug("updateLocalIPAddress(): failed to lookup wifi device", null);
+			Util.debug("updateLocalIPAddress(): failed to lookup wifi device: " + wdev, null);
 			state.delete(values.localaddress);
-			updateEthernetAddress();
+//			updateEthernetAddress();
 		}
 	}
 	
@@ -645,14 +745,14 @@ public class Util {
 		if(!state.exists(values.localaddress)) state.set(values.localaddress, "127.0.0.1");
 	}
 
-	private static String lookupWIFIDevice(){
+	public static String lookupWIFIDevice(){
 		String wdev = null;
 		try { // this fails if no wifi is enabled 
 			Process proc = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "nmcli dev"});
 			String line = null;
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {
-				if( ! line.startsWith("DEVICE") && line.contains("wireless")){
+				if( ! line.startsWith("DEVICE") && (line.toLowerCase().contains("wireless") || line.toLowerCase().contains("wifi"))){
 					String[] list = line.split(" ");
 					wdev = list[0];
 				}
