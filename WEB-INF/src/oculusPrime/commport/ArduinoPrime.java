@@ -21,7 +21,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum speeds { slow, med, fast };  
 	public enum mode { on, off };
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.128; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.129; // trailing zeros ignored!
 	public static final long DEAD_TIME_OUT = 20000;
 	public static final int WATCHDOG_DELAY = 8000;
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
@@ -423,7 +423,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
         			Thread.sleep(100); // some delay is required
 					byte[] buffer = serialPort.readBytes();
         			
-        			if (buffer == null) break;
+        			if (buffer == null) { // no response, move on to next port
+						serialPort.closePort();
+						continue;
+					}
         			
         			String device = new String();
         			for (int n=0; n<buffer.length; n++) {

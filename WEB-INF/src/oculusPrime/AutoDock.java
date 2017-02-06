@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import developer.Navigation;
 import developer.Ros;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
@@ -72,14 +73,6 @@ public class AutoDock {
 				app.message("auto-dock in progress", null, null);
 				return;
 			}
-			if (state.getBoolean(State.values.odometry)) {
-				app.message("odometry running, disabling", null, null);
-				app.driverCallServer(PlayerCommands.odometrystop, null);
-			}
-			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
-				app.message("navigation running, disabling", null, null);
-				app.driverCallServer(PlayerCommands.stopnav, null);
-			}
 
 			lowres=true;
 
@@ -126,13 +119,28 @@ public class AutoDock {
 							return;
 						}
 						// autodock fail
-						app.message("auto-dock target not found, try again", null, null);
-						Util.log("autoDock():  target lost", this);
-						PowerLogger.append("autoDock():  target lost", this);
 						autoDockCancel();
+
+						if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)) {
+							app.message("auto-dock target not found, navigating to dock", null, null);
+							app.driverCallServer(PlayerCommands.gotodock, null);
+						} else {
+							app.message("auto-dock target not found, try again", null, null);
+							Util.log("autoDock():  target lost", this);
+							PowerLogger.append("autoDock():  target lost", this);
+						}
 					}
 				}
 				else { // found target!
+					if (state.getBoolean(State.values.odometry)) {
+						app.message("odometry running, disabling", null, null);
+						app.driverCallServer(PlayerCommands.odometrystop, null);
+					}
+					if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString())) {
+						app.message("navigation running, disabling", null, null);
+						app.driverCallServer(PlayerCommands.stopnav, null);
+					}
+
 					state.set(State.values.dockfound, true);
 
 					final int x = Integer.parseInt(cmd[2]);

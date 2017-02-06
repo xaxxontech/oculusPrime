@@ -1,6 +1,7 @@
 package oculusPrime;
 
 
+import developer.Ros;
 import org.red5.server.api.IConnection;
 import org.red5.server.stream.ClientBroadcastStream;
 
@@ -331,7 +332,9 @@ public class Video {
 
                 String streamName = Util.getDateStamp(); 
                 if(optionalfilename != null) streamName += "_" + optionalfilename; 	
-                if(state.exists(values.roswaypoint)) streamName += "_" + state.get(values.roswaypoint);
+                if(state.exists(values.roswaypoint) &&
+                        state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
+                            ) streamName += "_" + state.get(values.roswaypoint);
                 streamName = streamName.replaceAll(" ", "_"); // no spaces in filenames 
                 
                 final String urlString = STREAMSPATH;

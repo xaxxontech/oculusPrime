@@ -159,14 +159,16 @@ public class ArduinoPower implements SerialPortEventListener  {
         			serialPort.openPort();
         			serialPort.setParams(BAUD, 8, 1, 0);
         			Thread.sleep(DEVICEHANDSHAKEDELAY);
-        			byte[] buffer = new byte[99];
-        			buffer = serialPort.readBytes(); // clear serial buffer
-        			
-        			serialPort.writeBytes(new byte[] { GET_PRODUCT, 13 }); // query device
-        			Thread.sleep(100); // some delay is required
-        			buffer = serialPort.readBytes();
-        			
-        			if (buffer == null) break;
+					serialPort.readBytes(); // clear serial buffer
+
+					serialPort.writeBytes(new byte[]{GET_PRODUCT, 13}); // query device
+					Thread.sleep(100); // some delay is required
+					byte[] buffer = serialPort.readBytes();
+
+					if (buffer == null) { // no response, move on to next port
+						serialPort.closePort();
+						continue;
+					}
         			
         			String device = new String();
         			for (int n=0; n<buffer.length; n++) {

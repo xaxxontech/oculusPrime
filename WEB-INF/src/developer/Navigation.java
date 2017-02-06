@@ -224,7 +224,7 @@ public class Navigation implements Observer {
 			return;
 		}
 		else if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
-			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
+//			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
 

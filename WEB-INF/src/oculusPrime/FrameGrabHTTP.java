@@ -316,7 +316,9 @@ public class FrameGrabHTTP extends HttpServlet {
 		final String url = urlString;
 		
 		String datetime = Util.getDateStamp();  // no spaces in filenames       
-		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
+		if(state.exists(values.roswaypoint) &&
+				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
+					) datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
         final String name = datetime + ".jpg";
 		
 		new Thread(new Runnable() {
@@ -334,7 +336,9 @@ public class FrameGrabHTTP extends HttpServlet {
 		final String url = urlString;
 		
 		String datetime = Util.getDateStamp();  // no spaces in filenames       
-		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint);
+		if(state.exists(values.roswaypoint) &&
+				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
+					) datetime += "_" + state.get(values.roswaypoint);
         final String name = (datetime + optionalname + ".jpg").replaceAll(" ", "_");
 		
 		new Thread(new Runnable() {

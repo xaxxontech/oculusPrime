@@ -454,6 +454,7 @@ function setstatus(status, value) {
 	}
 	else if (status == "navigation"  && relay != true) {
 		document.getElementById("navigationmenu").style.display = "";
+		navsystemstatustext = str;
 	}
 	else if (status == "debug") { debug(value); }
 	else if (status=="loadpage") {
@@ -716,14 +717,14 @@ function docklineposition(n) {
 	d.style.height = "120px";
 }
 
-function speech() {
-	var a = document.getElementById('speechbox');
-	var str = a.value;
-	a.value = "";
-	callServer("speech", str);
-	message("sending command: say '" + str + "'", sentcmdcolor, 0);
-	lagtimer = new Date().getTime();
-}
+// function speech() {
+	// var a = document.getElementById('speechbox');
+	// var str = a.value;
+	// a.value = "";
+	// callServer("speech", str);
+	// message("sending command: say '" + str + "'", sentcmdcolor, 0);
+	// lagtimer = new Date().getTime();
+// }
 
 function mainmenu(id) {
 	streamdetailspopulate();
@@ -2292,10 +2293,10 @@ function openbox(str) {
 	popupmenu("menu","resize");
 }
 
-function closebox(str) {
-	document.getElementById(str).style.display = "none";
-	popupmenu("menu","resize");
-}
+// function closebox(str) {
+	// document.getElementById(str).style.display = "none";
+	// popupmenu("menu","resize");
+// }
 
 function disconnectOtherConnections() {
 	message("request eliminate passengers: "+str, sentcmdcolor);

@@ -1588,7 +1588,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
-			if (settings.getBoolean(GUISettings.navigation)) str += " navigation true";
+			if (settings.getBoolean(GUISettings.navigation)) str += " navigation "+state.get(values.navsystemstatus);
 
 			String videoScale = settings.readSetting("videoscale");
 			if (videoScale != null) str += " videoscale " + videoScale;
