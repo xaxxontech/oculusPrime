@@ -1,5 +1,6 @@
 package oculusPrime;
 
+import developer.Navigation;
 import developer.Ros;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.State.values;
@@ -113,6 +114,24 @@ public class SystemWatchdog {
 						}
 					}
 				} else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
+			}
+
+			// navigation running, route running, undocked, low battery, next waypoint != dock, no driver, drive to dock
+			if (state.get(values.batterylife).matches(".*\\d+.*")) {  // make sure batterylife != 'TIMEOUT', throws error
+				if (!state.exists(State.values.driver) &&
+						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", ""))
+								< ArduinoPower.LOWBATTPERCENTAGE &&
+						state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
+						settings.getBoolean(GUISettings.redock) &&
+						state.equals(State.values.navsystemstatus, Ros.navsystemstate.running) &&
+						state.exists(State.values.navigationroute) &&
+						!state.equals(State.values.roswaypoint, Navigation.DOCK)
+						)
+				{
+					Util.log("route running, undocked, low battery, no driver", this);
+					PowerLogger.append("route running, undocked, low battery, no driver", this);
+					application.driverCallServer(PlayerCommands.gotodock, null);
+				}
 			}
 
 //			 check cpu useage
@@ -362,6 +381,7 @@ public class SystemWatchdog {
 
 	public static void waitForCpu(int threshold, long timeout) {
 		State state = State.getReference();
+		if (state.getBoolean(values.waitingforcpu)) return;
 		state.set(values.waitingforcpu, true);
 		long start = System.currentTimeMillis();
 		int cpu = 0;

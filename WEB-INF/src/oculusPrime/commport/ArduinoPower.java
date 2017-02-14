@@ -13,7 +13,7 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.955; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIRED = 0.956; // trailing zeros ignored!
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -385,7 +385,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			return;
 		} 
 
-		else if (s[0].equals("timeout")) {
+		else if (s[0].equals("timeout")) { // TODO: never happens? no 'timeout' string in firmware 0.955
 			state.set(State.values.dockstatus, AutoDock.UNKNOWN);
 			state.set(State.values.batterylife, s[0]);
 			application.message(null, "battery", s[0]);
