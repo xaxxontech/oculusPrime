@@ -557,8 +557,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 			
-		// skip telnet ping broadcast
-		if(fn != PlayerCommands.statuscheck) state.set(State.values.lastusercommand, System.currentTimeMillis());
+		// track last user command
+		if(fn != PlayerCommands.statuscheck && !passengerOverride)
+			state.set(State.values.lastusercommand, System.currentTimeMillis());
 
 		// if acting as relay server, forward commands
 		if (state.exists(values.relayclient) && !PlayerCommands.nonRelayCommands(fn)) {

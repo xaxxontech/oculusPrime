@@ -33,10 +33,10 @@ public class Navigation implements Observer {
 	
 	protected static Application app = null;
 	private static State state = State.getReference();
-	private static final String DOCK = "dock"; // waypoint name
+	public static final String DOCK = "dock"; // waypoint name
 	private static final String redhome = System.getenv("RED5_HOME");
 	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
-	public static final long WAYPOINTTIMEOUT = Util.FIVE_MINUTES;
+	public static final long WAYPOINTTIMEOUT = Util.TEN_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
 	private final Settings settings = Settings.getReference();
@@ -253,8 +253,6 @@ public class Navigation implements Observer {
 			}
 
 			if ( !state.exists(State.values.rosgoalstatus)) { //this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
-//				Util.log("error, state rosgoalstatus null, waypoint may have been cancelled", this);
-//				return;
 				Util.log("error, rosgoalstatus null, setting to empty string", this); // TODO: testing
 				state.set(State.values.rosgoalstatus, "");
 			}
@@ -390,7 +388,6 @@ public class Navigation implements Observer {
 		return true;
 	}
 
-
 	public static void goalCancel() {
 		state.set(State.values.rosgoalcancel, true); // pass info to ros node
 		state.delete(State.values.roswaypoint);
@@ -458,6 +455,7 @@ public class Navigation implements Observer {
 		}
 
 		if (state.exists(State.values.navigationroute))  cancelAllRoutes(); // if another route running
+		if (state.exists(values.roscurrentgoal))   goalCancel();  // override any active goal
 
 		// check for route name
 		Document document = Util.loadXMLFromString(routesLoad());
@@ -602,6 +600,7 @@ public class Navigation implements Observer {
 					return;
 				}
 
+				// start ros nav system
 				if (!waitForNavSystem()) {
 					// check if cancelled while waiting
 					if (!state.exists(State.values.navigationroute)) return;
@@ -623,8 +622,9 @@ public class Navigation implements Observer {
 				if (!state.exists(State.values.navigationroute)) return;
 				if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-				// start!
+				// GO!
 				routestarttime = System.currentTimeMillis();
+				state.set(State.values.lastusercommand, routestarttime);  // avoid watchdog abandoned
 				routemillimeters = 0l;
 				
 				// undock if necessary
@@ -639,17 +639,27 @@ public class Navigation implements Observer {
 		    	int wpnum = 0;
 		    	while (wpnum < waypoints.getLength()) {
 
+					state.set(State.values.lastusercommand, System.currentTimeMillis()); // avoid watchdog abandoned
+
 					// check if cancelled
 			    	if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
 		    		String wpname = ((Element) waypoints.item(wpnum)).getElementsByTagName("wpname").item(0).getTextContent();
+					wpname = wpname.trim();
 
 					app.comport.checkisConnectedBlocking(); // just in case
 
 		    		if (wpname.equals(DOCK))  break;
 
 					SystemWatchdog.waitForCpu();
+
+					if (state.exists(values.roscurrentgoal)) { // current route override TODO: add waypoint name to log msg
+						navlog.newItem(NavigationLog.ERRORSTATUS, "current route override prior to set waypoint: "+wpname,
+								routestarttime, null, name, consecutiveroute, 0);
+						app.driverCallServer(PlayerCommands.messageclients, "current route override prior to set waypoint: "+wpname);
+						break;
+					}
 
 					Util.log("setting waypoint: "+wpname, this);
 		    		if (!Ros.setWaypointAsGoal(wpname)) { // can't set waypoint, try the next one
@@ -664,28 +674,28 @@ public class Navigation implements Observer {
 		    		
 		    		// wait to reach wayypoint
 					long start = System.currentTimeMillis();
+					boolean oktocontinue = true;
 					while (state.exists(State.values.roscurrentgoal) && System.currentTimeMillis() - start < WAYPOINTTIMEOUT) {
-						Util.delay(100);
-						long t = System.currentTimeMillis();
-//						if (state.getLong(State.values.lastodomreceived) - t > 1000) // malg timeout?
-//							Util.log("error, lastodomreceived: "+
-//									String.valueOf(state.getLong(State.values.lastodomreceived)-t), this);
-
+						Util.delay(10);
+						if (!state.equals(values.roswaypoint, wpname)) { // current route override
+							navlog.newItem(NavigationLog.ERRORSTATUS, "current route override on way to waypoint: "+wpname,
+									routestarttime, wpname, name, consecutiveroute, 0);
+							app.driverCallServer(PlayerCommands.messageclients, "current route override on way to waypoint: "+wpname);
+							oktocontinue = false;
+							break;
+						}
 					}
+					if (!oktocontinue) break;
 					
 					if (!state.exists(State.values.navigationroute)) return;
 			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-	
-					if (!state.exists(State.values.rosgoalstatus)) { // this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 
+					if (!state.exists(State.values.rosgoalstatus)) { // this is (harmlessly) thrown normally nav goal cancelled (by driver stop command?)
 						Util.log("error, state rosgoalstatus null", this);
-//						cancelRoute(id);
-//						return;
 						state.set(State.values.rosgoalstatus, "error");
 					}
 					
 					// failed, try next waypoint
-//					state.dumpFile("# Failed to reach waypoint: "+wpname);
 					if (!state.get(State.values.rosgoalstatus).equals(Ros.ROSGOALSTATUS_SUCCEEDED)) {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "Failed to reach waypoint: "+wpname,
 								routestarttime, wpname, name, consecutiveroute, 0);
@@ -704,44 +714,49 @@ public class Navigation implements Observer {
 		    	
 		    	if (!state.exists(State.values.navigationroute)) return;
 		    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-//		    	State.getReference().dumpFile("about to start docking");
-				dock();
-				
-				// wait while autodocking does its thing 
-				final long start = System.currentTimeMillis();
-				while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
-					if (!state.exists(State.values.navigationroute)) return;
-			    	if (!state.get(State.values.navigationrouteid).equals(id)) return;
-					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && !state.getBoolean(State.values.autodocking)) break; 
-					Util.delay(100); // success
-				}
-					
-				if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-					
-					navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
 
-					// cancelRoute(id);
-					// try docking one more time, sending alert if fail
-					Util.log("calling redock()", this);
-					stopNavigation();
-					Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
-					app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
-			
-					if (!delayToNextRoute(navroute, name, id)) return;
-					continue;
+				if (!state.exists(values.roscurrentgoal)) { // current route override check
+
+					dock();
+
+					// wait while autodocking does its thing
+					final long start = System.currentTimeMillis();
+					while (System.currentTimeMillis() - start < SystemWatchdog.AUTODOCKTIMEOUT + WAYPOINTTIMEOUT) {
+						if (!state.exists(State.values.navigationroute)) return;
+						if (!state.get(State.values.navigationrouteid).equals(id)) return;
+						if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && !state.getBoolean(State.values.autodocking))
+							break;
+						Util.delay(100); // success
+					}
+
+					if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
+
+						navlog.newItem(NavigationLog.ERRORSTATUS, "Unable to dock", routestarttime, null, name, consecutiveroute, 0);
+
+						// cancelRoute(id);
+						// try docking one more time, sending alert if fail
+						Util.log("calling redock()", this);
+						stopNavigation();
+						Util.delay(Ros.ROSSHUTDOWNDELAY / 2); // 5000 too low, massive cpu sometimes here
+						app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
+
+						if (!delayToNextRoute(navroute, name, id)) return;
+						continue;
+					}
+
+					navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routemillimeters);
+
+					// how long did docking take
+					int timetodock = 0; // (int) ((System.currentTimeMillis() - start)/ 1000);
+					// subtract from routes time
+					int routetime = (int)(System.currentTimeMillis() - routestarttime)/1000 - timetodock;
+					NavigationUtilities.routeCompleted(name, routetime, (int)routemillimeters/1000);
+
+					consecutiveroute++;
+					routemillimeters = 0;
+
 				}
-				
-				navlog.newItem(NavigationLog.COMPLETEDSTATUS, null, routestarttime, null, name, consecutiveroute, routemillimeters);
-				
-				// how long did docking take 
-				int timetodock = (int) ((System.currentTimeMillis() - start)/ 1000);
-				// subtract from routes time
-				int routetime = (int)(System.currentTimeMillis() - routestarttime)/1000 - timetodock;
-				NavigationUtilities.routeCompleted(name, routetime, (int)routemillimeters/1000);
-				
-				consecutiveroute++;
-				routemillimeters = 0;
-				
+
 				if (!delayToNextRoute(navroute, name, id)) return;
 			}
 		}  }).start();

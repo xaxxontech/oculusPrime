@@ -234,6 +234,7 @@ public class Ros {
 	public static boolean setWaypointAsGoal(String str) {
 		boolean result = false;
 		state.delete(State.values.roscurrentgoal);
+		str=str.trim();
 		
 		// try matching name
 		if (state.exists(State.values.rosmapwaypoints)) {

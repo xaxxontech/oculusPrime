@@ -786,6 +786,7 @@ function setwaypoint(pose) {
 
 function savewaypoint() {
 	var name = document.getElementById("waypointname").value;
+	name = name.replace(/^\s+|\s+$/g, '');
 	name = name.replace(/(\s|_)/g, '&nbsp;');
 	name = name.replace(/,/g, '');
 	waypoints.push(name);
@@ -946,6 +947,7 @@ function waypointdelete(i) {
 
 function renamewaypoint(i) {
 	var newname = document.getElementById("waypointrename"+i).value;
+	newname = newname.replace(/^\s+|\s+$/g, '');
 //	var oldname = waypoints[i].replace(/&nbsp;/g, ' ')
 //	if (!confirm("Rename waypoint: "+oldname+"\nto be: "+newname+"\nAre you sure?")) return;
 	waypoints[i] = newname.replace(/(\s|_)/g, '&nbsp;');
