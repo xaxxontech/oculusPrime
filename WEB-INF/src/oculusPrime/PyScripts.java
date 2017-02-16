@@ -92,7 +92,7 @@ public class PyScripts {
 		if(tokens.length >= 9) {
 			pyFile = tokens[8];
 			name = tokens[8];
-			if(name.contains("/")) name = name.substring(name.lastIndexOf("/")+1, name.indexOf(".py"));
+			if(name.contains("/")) name = name.substring(name.lastIndexOf("/")+1);//, name.indexOf(".py"));
 		}
 		
 		if(tokens.length >= 11) {	
@@ -104,7 +104,7 @@ public class PyScripts {
 		
 		if(logFile.contains("/")) {
 			
-			logFile = logFile.substring(logFile.lastIndexOf("/")+1, logFile.lastIndexOf(".log"));
+			logFile = logFile.substring(logFile.lastIndexOf("/")+1); // , logFile.lastIndexOf(".log"));
 			Util.log(logFile, this);
 
 		}

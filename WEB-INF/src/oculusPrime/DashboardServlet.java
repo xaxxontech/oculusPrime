@@ -198,22 +198,22 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("tail")){
 				
 		//		if(Util.isInteger(pid)){
-
-					String file = null; 
-					String name = "none";
-					for( int i = 0 ; i < pids.size() ; i++ ) { 
-						if(pids.get(i).pid.equals(pid)) {
-							file = pids.get(i).logFile;
-							name = pids.get(i).pyFile;
-						}
+		//		String file = null; 
+				
+				String name = "none";
+				for( int i = 0 ; i < pids.size() ; i++ ) { 
+					if(pids.get(i).pid.equals(pid)) {
+		//				file = pids.get(i).logFile;
+						name = pids.get(i).pyFile;
 					}
-					
-					Util.log(".....tail pid=" + pid + "\nname="+ name + "\nlog=" + file); //
+				}
+				
+	//			Util.log(".....tail pid=" + pid + "\nname="+ name + "\nlog=" + file); //
 
-					Vector<String> txt = Util.tail(name, 5);
-					for( int i = 0 ; i < txt.size() ; i++)
-						Util.log((String) txt.get(i));
-		//		}
+				Vector<String> txt = Util.tail(name, 10);
+				for( int i = 0 ; i < txt.size() ; i++)
+					Util.log(pids.get(i).pyFile + " : " +(String) txt.get(i));
+		
 			}
 			
 			if(action.equalsIgnoreCase("kill")){
