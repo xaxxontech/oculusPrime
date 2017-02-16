@@ -32,7 +32,7 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private long lowbattredockstart = 0;
-	private String ssid = null;
+	// private String ssid = null; nuke? 
 	
 	SystemWatchdog(Application a){ 
 		application = a;

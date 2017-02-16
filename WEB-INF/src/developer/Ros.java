@@ -239,7 +239,7 @@ public class Ros {
 		if (state.exists(State.values.rosmapwaypoints)) {
 			String waypoints[] = state.get(State.values.rosmapwaypoints).split(",");
 			for (int i = 0; i < waypoints.length - 3; i += 4) {
-				if (waypoints[i].replaceAll("&nbsp;", " ").equals(str)) {
+				if (waypoints[i].replaceAll("&nbsp;", " ").trim().equals(str)) {
 					state.set(State.values.rossetgoal, waypoints[i + 1] + "," + waypoints[i + 2] + "," + waypoints[i + 3]);
 					result = true;
 					state.set(State.values.roswaypoint, str);
@@ -257,7 +257,6 @@ public class Ros {
 			}
 		}
 		
-//		state.delete(State.values.rosmapwaypoints);
 		return result;
 	}
 

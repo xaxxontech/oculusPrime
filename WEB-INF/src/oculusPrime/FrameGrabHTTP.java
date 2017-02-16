@@ -315,10 +315,11 @@ public class FrameGrabHTTP extends HttpServlet {
 		if(args != null) if(args.startsWith("?")) urlString += args; 
 		final String url = urlString;
 		
-		String datetime = Util.getDateStamp();  // no spaces in filenames       
-		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
-        final String name = datetime + ".jpg";
+		String datetime = Util.getDateStamp();  // && state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  
+		if(state.exists(values.roswaypoint) && state.equals(values.navsystemstatus, Ros.navsystemstate.running.toString()))    
+			datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
 		
+        final String name = datetime + ".jpg";
 		new Thread(new Runnable() {
 			public void run() {
 				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
@@ -326,7 +327,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		}).start();
 		return "/oculusPrime/framegrabs/"+name;
 	}
-	
+
 	/** add extra text into file name after timestamp */
 	public static String saveToFile(final String args, final String optionalname) {
 		String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP";
@@ -334,9 +335,12 @@ public class FrameGrabHTTP extends HttpServlet {
 		final String url = urlString;
 		
 		String datetime = Util.getDateStamp();  // no spaces in filenames       
-		if(state.exists(values.roswaypoint)) datetime += "_" + state.get(values.roswaypoint);
-        final String name = (datetime + "_" + optionalname + ".jpg").replaceAll(" ", "_");
+		if(state.exists(values.roswaypoint)) //  && state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) 
+			datetime += "_" + state.get(values.roswaypoint);
 		
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) datetime += "_docked"; 
+		
+        final String name = (datetime + "_"+optionalname + ".jpg").replaceAll(" ", "_"); // no spaces in filenames       
 		new Thread(new Runnable() {
 			public void run() {
 				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
@@ -344,7 +348,6 @@ public class FrameGrabHTTP extends HttpServlet {
 		}).start();
 		return "/oculusPrime/framegrabs/"+name;
 	}
-	
 }
 
 

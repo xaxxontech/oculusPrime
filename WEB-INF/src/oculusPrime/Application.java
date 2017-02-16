@@ -77,7 +77,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		state.set(values.osarch, System.getProperty("os.arch"));
-		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+ " " +System.getProperty("sun.arch.data.model")+"===============", this);
+		Util.log("\n====Oculus Prime Java Arch:"+state.get(values.osarch)+ "=====", this);
+		Util.log("\n====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
+		Util.log("\n====Oculus Java Restarts:"+settings.getInteger(ManualSettings.restarted), this);
 		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
 
 		passwordEncryptor.setAlgorithm("SHA-1");
@@ -1577,7 +1579,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 			
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
-			if (settings.getBoolean(GUISettings.navigation)) str += " navigation true";
+			if (settings.getBoolean(GUISettings.navigation)) str += " navigation "+state.get(values.navsystemstatus);
 
 			String videoScale = settings.readSetting("videoscale");
 			if (videoScale != null) str += " videoscale " + videoScale;
@@ -2225,7 +2227,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		int lines = 100; //default	
 		if (!str.equals("")) { lines = Integer.parseInt(str); }
 		String header = "last "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
-		sendplayerfunction("showserverlog", header + Util.tail(lines));
+		sendplayerfunction("showserverlog", header + Util.tail(Settings.stdout, lines));
 	}
 
 	public void softwareUpdate(String str) {

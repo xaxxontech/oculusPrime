@@ -2,15 +2,17 @@ package oculusPrime;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
 
 import javax.servlet.ServletConfig;
@@ -27,7 +29,6 @@ import oculusPrime.commport.PowerLogger;
 public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final long serialVersionUID = 1L;	
-//	private static final int MAX_STATE_HISTORY = 40;
 	private static final String HTTP_REFRESH_DELAY_SECONDS = "30"; 
 	
 	static final String runroute = "<a href=\"dashboard?action=runroute\">";
@@ -53,26 +54,35 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?action=restart\">restart java</a>" +
 			"<a href=\"dashboard?action=email\">send email</a>\n";
 	
-	static final double VERSION = new Updater().getCurrentVersion();
-//	static Vector<String> history = new Vector<String>();
 	static Settings settings = Settings.getReference();
 	static BanList ban = BanList.getRefrence();	
 	static State state = State.getReference();
+	static final double VERSION = new Updater().getCurrentVersion();
+	static final int restarts = settings.getInteger(ManualSettings.restarted);
+	static final long DELAY = Util.ONE_MINUTE;
+	static final String css = getCSS();
+		
+	// turn on for extra state debugging 
+	private static boolean DEBUG = false;
+
+	private static final int MAX_STATE_HISTORY = 40;
+	Vector<String> history = new Vector<String>();
+	Vector<String> pointslist;	
+	Vector<PyScripts> pids;
 	static Application app = null;
-	static String httpport = null;
-	static Vector<String> pointslist;
+	String httpport = null;
 	String delay = "30";
 	String estimatedmeters;
 	String estimatedseconds; 
 	long time;
+	long allBytes;
+	long streams;
+	long archive;
+	long logs;
+	long frames;
+	int hdd;
 	
-
-	
-	
-	final String css = getCSS();
-	final int restarts = settings.getInteger(ManualSettings.restarted);
-	
-	public String getCSS(){
+	public static String getCSS(){
 		StringBuffer buffer = new StringBuffer();
 		try {	
 			String line = null;
@@ -81,10 +91,19 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			while ((line = reader.readLine()) != null) buffer.append(line + "\n");
 			reader.close();
 			filein.close();
-		} catch (Exception e) {
-			Util.log("getCSS(): " + e.getMessage(), this);
-		}
+		} catch (Exception e) { Util.log("getCSS(): " + e.getMessage()); }
 		return buffer.toString();
+	}
+
+	private class Task extends TimerTask {
+		public void run() {
+			hdd = Util.diskFullPercent(); 
+			allBytes = Util.countAllMbytes(".");
+			streams = Util.countAllMbytes(Settings.streamfolder);		
+			archive = Util.countMbytes("./log/archive");
+			frames = Util.countAllMbytes(Settings.framefolder);
+			logs = Util.countMbytes(Settings.logfolder);
+		}
 	}
 	
 	public void init(ServletConfig config) throws ServletException {
@@ -92,20 +111,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		state = State.getReference();
 		httpport = state.get(State.values.httpport);
 		settings = Settings.getReference();
-		ban = BanList.getRefrence();		
+		ban = BanList.getRefrence();	
+		new Timer().scheduleAtFixedRate(new Task(), 6000, DELAY);
 		state.addObserver(this);
-	}
-
-	public class PID {
-		
-		String logFile, id, pyFile = null;
-		
-		PID (String id, String pyFile, String log ){
-			this.pyFile = pyFile;
-			this.logFile = log;
-			this.id = id;
-		}
-		
 	}
 	
 	public static void setApp(Application a){app = a;}
@@ -187,16 +195,34 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				app.driverCallServer(PlayerCommands.gotodock, null);
 			}
 
+			if(action.equalsIgnoreCase("tail")){
+				
+		//		if(Util.isInteger(pid)){
+
+					String file = null; 
+					String name = "none";
+					for( int i = 0 ; i < pids.size() ; i++ ) { 
+						if(pids.get(i).pid.equals(pid)) {
+							file = pids.get(i).logFile;
+							name = pids.get(i).pyFile;
+						}
+					}
+					
+					Util.log(".....tail pid=" + pid + "\nname="+ name + "\nlog=" + file); //
+
+					Vector<String> txt = Util.tail(name, 5);
+					for( int i = 0 ; i < txt.size() ; i++)
+						Util.log((String) txt.get(i));
+		//		}
+			}
+			
 			if(action.equalsIgnoreCase("kill")){
-//				Util.debug("kill " + pid);
-				Util.systemCall("kill -SIGINT " + pid);	
+				Util.debug("kill " + pid);
+				if(pid.equals("pkill"))	Util.systemCall("pkill python");	
+				else Util.systemCall("kill -SIGINT " + pid);	
 			}
 			
-			if(action.equalsIgnoreCase("script")){
-//				Util.debug("python telnet_scripts/" + pid);
-				Util.systemCall("python telnet_scripts/" + pid);	
-			}
-			
+			if(action.equalsIgnoreCase("script"))      Util.systemCall("python telnet_scripts/" + pid);	
 			if(action.equalsIgnoreCase("debugon"))     app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
 			if(action.equalsIgnoreCase("debugoff"))    app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
 			if(action.equalsIgnoreCase("startrec"))    app.driverCallServer(PlayerCommands.record, "true dashboard");
@@ -222,6 +248,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 			if(action.equalsIgnoreCase("reboot")){
 				new Thread(new Runnable() { public void run(){
+					app.driverCallServer(PlayerCommands.move, "stop");
 					Util.log("reboot called, going down..", this);	
 					Util.appendUserMessage("reboot called, going down..");
 					Util.delay(3000); // redirect before calling.. 
@@ -231,7 +258,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 			if(action.equalsIgnoreCase("restart")){
 				new Thread(new Runnable(){ public void run(){
-			//		app.driverCallServer(PlayerCommands.move, "stop");
+					app.driverCallServer(PlayerCommands.move, "stop");
 					Util.log("restart called, going down..", this);
 					Util.appendUserMessage("restart called, going down..");
 					Util.delay(2000); // redirect before calling.. 
@@ -262,14 +289,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 		/* add mobile css 
 		 if(request.getHeader("User-Agent").indexOf("Mobile") != -1) {
-			    //you're in mobile land
-			 Util.log("you're in mobile land");
-		//	 response.sendRedirect("/oculusPrime/dashboard?view=drive"); 
 			 
-			// default view 
+			 	Util.log("you're in mobile land");
+			 	response.sendRedirect("/oculusPrime/dashboard?view=drive"); 
+			 
+				// default view 
 				out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
 				out.println("<html>\n<head><meta http-equiv=\"refresh\" content=\"30\">\n<title>Oculus Prime</title>\n<style type=\"text/css\">"+ css +"</style></head>\n<body> \n");
-			//	out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
+				out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 				out.println("\n  mobile view here \n");
 
 				out.println("\n</body></html>\n");
@@ -277,6 +304,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			  } */ 
 	
 		if(view != null){
+			
+			/*
 			if(view.equalsIgnoreCase("drive")){
 				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
 				out.println("<br/>&nbsp;&nbsp;<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;&nbsp;&nbsp;");
@@ -288,6 +317,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.println("\n</body></html> \n");
 				out.close();
 			}
+			*/
 			
 			if(view.equalsIgnoreCase("users")){	
 				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
@@ -323,19 +353,64 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.println("th { background-color: #4CAF50; color: white; }");
 				out.println("</style><html><body>\n");
 				out.println("\n");	
-//				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard\">back to dashboard</a></br></br>");
 				out.println(NavigationUtilities.getRouteStatsHTML() + "\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
 			
 			if(view.equalsIgnoreCase("stdout")){
-				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
-				out.println("<a href=\"dashboard\">dashboard</a>\n" + new File(Settings.stdout).getAbsolutePath() + "<br /><br />\n");
-				out.println(Util.tail(35) + "\n");
+				out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+				out.println("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"><title>Oculus Prime log file</title> \n");
+				out.println("<style type=\"text/css\">");
+				out.println("body, p, ol, ul {font-family: verdana, arial, helvetica, sans-serif; font-size: 12px;}");
+				out.println("th, td { text-align: left; padding: 5px; }");
+				out.println("tr:nth-child(even){background-color: #f2f2f2}");
+				out.println("th { background-color: #4CAF50; color: white; }");
+				out.println("</style><html><body>\n");
+				out.println("\n");
+				out.println("<table cellspacing=\"5\"><tbody>");
+
+				Vector<String> tail = Util.tail(Settings.stdout, 25);
+				for( int j = 0 ; j < tail.size() ; j++) {
+					String txt =  tail.get(j);
+					txt = Util.trimLength(txt, 88); //--------------------------------- set max width 
+					txt = txt.replaceFirst("oculusPrime", "");
+					txt = txt.replaceFirst(",", "");
+
+					if(txt.startsWith("OCULUS:")) out.println("<tr><td>oculus<td>"+ txt.substring(7) +"\n");
+					else if(txt.startsWith("DEBUG:")) out.println("<tr><td>debug<td>"+ txt.substring(6) +"\n");
+					else if(txt.startsWith("[INFO]")) out.println("<tr><td>info<td>"+ txt.substring(6) +"\n");
+					else out.println("<tr><td colspan=\"5\">"+ txt +"\n");
+				}
+				
+				out.println("</tbody></table>");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
+			/*
+			if(view.equalsIgnoreCase("roslog")){
+				out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+				out.println("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"><title>Oculus Prime log file</title> \n");
+				out.println("<style type=\"text/css\">");
+				out.println("body, p, ol, ul {font-family: verdana, arial, helvetica, sans-serif; font-size: 16px;}");
+				out.println("th, td { text-align: left; padding: 12px; }");
+				out.println("tr:nth-child(even){background-color: #f2f2f2}");
+				out.println("th { background-color: #4CAF50; color: white; }");
+				out.println("</style><html><body>\n");
+				out.println("\n");
+				out.println("<table><tbody>");
+
+				Vector<String> tail = Util.tail(Settings.logfolder + "/ros.log", 35);
+				for( int j = 0 ; j < tail.size() ; j++) {
+					String txt =  tail.get(j);
+					if(txt.length() > 88) txt = txt.substring(0, 88);
+					out.println("<tr><td>"+ tail.get(j) +"\n");
+				}
+				
+				out.println("</tbody></table>");
+				out.println("\n</body></html> \n");
+				out.close();
+			}*/
 			
 			if(view.equalsIgnoreCase("power")){	
 				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
@@ -345,16 +420,22 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.close();
 			}
 
-			/*
 			if(view.equalsIgnoreCase("history")){
-				out.println("<html><head><meta http-equiv=\"refresh\" content=\""+ delay + "\"></head><body> \n");
-				out.println("<a href=\"dashboard\">dashboard</a>");
-				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard?view=state\">state</a><br /><br />\n");
-				out.println(getHistory().replaceAll("\n", "<br>\n"));
-				out.println("\n</body></html> \n");
+				out.println("<html><head></head><body>\n");
+//				out.println("<a href=\"dashboard\">dashboard</a>");
+//				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard?view=state\">state</a><br/><br/>\n");
+				out.println("<table cellspacing=\"5\"><tbody>\n");
+				
+				Calendar c = Calendar.getInstance();
+				for(int i = 0 ; i < history.size() ; i++){
+					String[] line = history.get(i).split(" ");
+					c.setTimeInMillis(Long.parseLong(line[0]));
+					out.println("<tr><td>"+ c.getTime() + "<td>" + line[1] + "<td>" + line[2] +"\n");
+				}
+				out.println("<table><tbody>\n");
+				out.println("</body></html>");
 				out.close();
 			}
-			*/	
 		}
 		
 		// default view 
@@ -369,9 +450,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		new Thread(new Runnable() { public void run() {
 			StringBuffer text = new StringBuffer();
 			text.append("\n\r-- " + new Date() + " --\n");
-			text.append(Util.tail(999).replaceAll("<br>", "\n"));
-//			text.append("\n\r -- state history --\n");
-//			text.append(getHistory() + "\n\r");
+			Vector<String> std = Util.tail(Settings.stdout, 60);
+			for(int i = 0 ; i < std.size() ; i++) text.append(std.get(i)/*.replaceAll("&nbsp;", " ")*/ + "\n");
+			text.append("\n\r -- state history --\n");
+			text.append(getHistory() + "\n\r");
 			text.append("\n\r -- state values -- \n");
 			text.append(state.toString().replaceAll("<br>", "\n"));	
 			text.append("\n\r -- battery --\n");
@@ -433,16 +515,18 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		response.setContentType("text");
 		PrintWriter out = response.getWriter();
 		out.println("\n\r-- " + new Date() + " --\n\r");
-		out.println(Util.tail(999).replaceAll("<br>", "\n"));
-//		out.println("\n\r -- state history --\n\r");
-//		out.println(getHistory() + "\n\r");
+		Vector<String> std = Util.tail(Settings.stdout, 60);
+		for(int i = 0 ; i < std.size() ; i++) out.println(std.get(i) + "\n");
+//		out.println(Util.tail(999).replaceAll("<br>", "\n"));
+		out.println("\n\r -- state history --\n\r");
+		out.println(getHistory() + "\n\r");
 		out.println("\n\r -- state values -- \n\r");
 		out.println(state.toString().replaceAll("<br>", "\n"));	
 		out.println("\n\r -- settings --\n\r");
 		out.println(Settings.getReference().toString().replaceAll("<br>",  "\n"));
 		out.println("\n\r -- route stats -- \n\r");
 		out.println(NavigationUtilities.getRouteStats() + "\n");
-		out.println("\n\r -- batter info -- \n\r");
+		out.println("\n\r -- battery info -- \n\r");
 		out.println(PowerLogger.tail(99).replaceAll("<br>",  "\n") + "\n");
 		out.close();	
 	}
@@ -498,52 +582,51 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.equals(values.dockstatus, AutoDock.UNKNOWN))  dock = "UNKNOWN";
 		if(state.getBoolean(values.autodocking)) dock = "auto-docking";
 	
-		//------------------- now build HTML buffer ------------------------------------------------------------//  
-		StringBuffer str = new StringBuffer("<table cellspacing=\"8\"><tbody>\n");
+		String drv = state.get(values.driver);
+		if(drv == null) drv = "none";
 		
-		// version | views | ssid | rate
+		//------------------- now build HTML buffer ------------------------------------------------------------//  
+		StringBuffer str = new StringBuffer("<table cellspacing=\"5\"><tbody>\n");
+		
+		// version | ssid | driver
 		str.append("\n<tr><td class='menu'>version " + VERSION);
 		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">commands</button><div class=\"dropdown-content\">\n" + commandlinks + "\n</div></div>");
-		str.append("\n<td class='menu'>ssid<td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\">" + state.get(values.ssid)); 
-		
-		if(delay.equals("5"))  str.append("\n<td class='menu'>rate<td>" + "5 | <a href=\"dashboard?delay=10\">10</a> | <a href=\"dashboard?delay=30\">30</a>"); 
-		if(delay.equals("10")) str.append("\n<td class='menu'>rate<td>" + "<a href=\"dashboard?delay=5\">5</a> | 10 | <a href=\"dashboard?delay=30\">30</a>"); 
-		if(delay.equals("30")) str.append("\n<td class='menu'>rate<td>" + "<a href=\"dashboard?delay=5\">5</a> | <a href=\"dashboard?delay=10\">10</a> | 30"); 
+		str.append("\n<td class='menu'>ssid<td><a href=\"/oculusPrime/network\">" + state.get(values.ssid)); 	
+		str.append("\n<td class='menu'>logs <td><div class=\"dropdown\"><button class=\"dropbtn\">commands</button><div class=\"dropdown-content\">\n" + commandlinks + "\n</div></div>");
 
 		// motor | wan | hdd 		
 		str.append("\n<tr>");
 		str.append("<td class='menu'>motor<td>" + motor );
 		String ext = state.get(values.externaladdress);
 		if( ext == null ) str.append("<td class='menu'>wan<td>disconnected");
-		else str.append("<td class='menu'>wan<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime/" +"\" target=\"_blank\">" + ext + "</a>"); 
-		str.append( "<td class='menu'>hdd<td>" + Util.diskFullPercent() + "% used</a></tr> \n"); 
+		else str.append("<td class='menu'>wan<td><a href=\"http://"+ ext + ":" + httpport + "/oculusPrime/\">" + ext + "</a>"); 
+		str.append( "<td class='menu'>hdd<td>" + hdd + "% used</a></tr> \n"); 
 	
 		// power | lan | prime 
 		str.append("\n<tr>");
 		str.append("<td class='menu'>power<td>" + power );
-		str.append("<td class='menu'>lan<td><a href=\"http://"+state.get(values.localaddress) +"\" target=\"_blank\">" + state.get(values.localaddress) + "</a>"); 
-		str.append("<td class='menu'>prime<td>" + Util.countAllMbytes(".") + " mb</tr> \n");
+		str.append("<td class='menu'>lan<td><a href=\"http://"+state.get(values.localaddress) + ":" + httpport + "/oculusPrime/\">" + state.get(values.localaddress) + "</a>"); 
+		str.append("<td class='menu'>prime<td>" + allBytes + " mb</tr> \n");
 		
 		// dock | battery | streams
 		str.append("\n<tr>");
 		if( ! state.equals(values.dockstatus, AutoDock.DOCKED)) str.append("<td class='menu'>dock<td class='busy'>" + dock);	
 		else str.append("<td class='menu'>dock<td>" + dock);	
 		str.append("<td class='menu'>battery<td><a href=\"dashboard?view=power\">" + state.get(values.batterylife) + "</a>"); 
-		str.append("<td class='menu'>streams<td>" + Util.countAllMbytes(Settings.streamfolder) + "</a> mb</tr> \n" );
+		str.append("<td class='menu'>streams<td>" + streams + "</a> mb</tr> \n" );
 	
 		// record | booted | archive 
 		str.append("\n<tr>");	
 		str.append(rec);
 		str.append("<td class='menu'>booted<td>" + (((System.currentTimeMillis() - state.getLong(values.linuxboot)) / 1000) / 60)+ "</a> mins");
-		str.append("<td class='menu'>archive<td>"+ Util.countMbytes("./log/archive") + " mb</tr> \n" );
+		str.append("<td class='menu'>archive<td>"+ archive + " mb</tr> \n" );
 
 		// camera | uptime | frames 
 		str.append("\n<tr>");
 		str.append(cam);
 		if(restarts < 5) str.append("<td class='menu'>up time<td>" + (state.getUpTime()/1000)/60 + "</a> mins");
 		else str.append("<td class='menu'>up time<td class='busy'>" + (state.getUpTime()/1000)/60 + "</a> mins (" + restarts + ")");
-		
-		str.append("<td class='menu'>frames<td>" + Util.countAllMbytes(Settings.framefolder) + " mb</tr> \n" );
+		str.append("<td class='menu'>frames<td>" + frames + " mb</tr> \n" );
 
 		// navigation | cpu | logs
 		str.append("\n<tr>");
@@ -552,19 +635,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		if(state.getBoolean(values.waitingforcpu)) cpuvalue = "<td class='busy'>" + state.get(values.cpu) + "%&nbsp;&nbsp;waiting..</td>"; 
 		else cpuvalue = "<td>" + state.get(values.cpu) + "%"; 
 		str.append("<td class='menu'>cpu" + cpuvalue);
-		str.append("<td class='menu'>logs<td>" + Util.countMbytes(Settings.logfolder) + " mb</tr> \n" );
+		str.append("<td class='menu'>logs<td>" + logs + " mb</tr> \n" );
 		
-		// debug | telnet | ros
+		// debug | telnet | driver
 		str.append("\n<tr>");
-		str.append(debug  
-			+ "<td class='menu'>telnet<td>" + state.get(values.telnetusers)
-			+ "<td class='menu'>ros<td>" + Util.getRosCheck() + "</tr> \n" ); // doesn't work on hidden file? Util.countMbytes(Settings.roslogfolder)
+		str.append(debug + "<td class='menu'>telnet<td>" + state.get(values.telnetusers));
+		str.append("\n<td class='menu'>driver<td>" + drv); 
 		
 		str.append(getActiveRoute());
-		// <td class='menu'>routes
 		str.append("\n\n<tr><td>"+ getRouteLinks() +" \n");
 		String waypoint = state.get(values.roswaypoint);
-		if(waypoint == null) waypoint = "not active";
+		if(waypoint == null) waypoint = "waypoint";
 		String drop = "\n<td><div class=\"dropdown\"><button class=\"dropbtn\">"+waypoint+"</button><div class=\"dropdown-content\">";
 		Vector<String> waypointsAll = getAllWaypoints(); 
 		if(waypointsAll != null){
@@ -577,50 +658,52 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">views</button><div class=\"dropdown-content\">\n" + viewslinks + "\n</div></div>");
 
 		// pids 
-		Vector<PyScripts> pids = Util.getRunningPythonScripts();
-		if(pids.size() == 0) str.append("<td>pids 0 ");
-		else if(pids.size() > 0) {
-			str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">pids "+pids.size()+"</button><div class=\"dropdown-content\"> \n");
-			for(int i = 0 ; i < pids.size() ; i ++) str.append("<a href=\"dashboard?action=kill&pid="+pids.get(i).id+"\">"+pids.get(i).pyFile+"</a>\n");
-			str.append("\n</div></div>");
-		}
-		
-		// python files
-		if(new File(Settings.redhome+"/telnet_scripts").exists()){
-			File telnet = new File(Settings.redhome+"/telnet_scripts");
-			File[] names = telnet.listFiles(new FileFilter() {
-				@Override
-				public boolean accept(File pathname) { return pathname.getName().endsWith(".py"); }
-			});
-			if( names == null ) str.append("<td> none");
-			else {
-				str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">scripts" 
-					+ " " + names.length + "</button><div class=\"dropdown-content\">"); 
-				for(int i = 0 ; i < names.length ; i++)
-					str.append("\n<a href=\"dashboard?action=script&pid="+ names[i].getName() +"\">"+ names[i].getName() +"</a>");
-		
-				str.append("\n</div></div>\n");
-			}
-		} else str.append("<td> none");
-		
-		//
-		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">logs "+pids.size()+"</button><div class=\"dropdown-content\"> \n");
-		for(int i = 0 ; i < pids.size() ; i ++) str.append("<a href=\"dashboard?action=kill&pid="+pids.get(i).id+"\">"+pids.get(i).logFile+"</a>\n");
+		pids = Util.getRunningPythonScripts();
+		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">kill "+pids.size()+"</button><div class=\"dropdown-content\"> \n");
+		for(int i = 0 ; i < pids.size() ; i ++)
+			str.append("<a href=\"dashboard?action=kill&pid="+pids.get(i).pid+"\">"+pids.get(i).name+"</a>\n");
+		str.append("<a href=\"dashboard?action=kill&pid=pkill\">pkill python</a>\n");
 		str.append("\n</div></div>");
 		
-		//===============================================================================================================================================//
-	
+		// python script files
+		File[] names = PyScripts.getScriptFiles();
+		if( names == null ) str.append("<td> none");
+		else {
+			str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">scripts " + names.length + "</button><div class=\"dropdown-content\">"); 
+			for(int i = 0 ; i < names.length ; i++) {
+				str.append("\n<a href=\"dashboard?action=script&pid="+ names[i].getName() +"\">"+ names[i].getName() +"</a>");
+			}
+			str.append("\n</div></div>\n");
+		} 
+		
+		// tail on pid
+		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">logs</button><div class=\"dropdown-content\"> \n");
+		for(int i = 0 ; i < pids.size() ; i ++) {
+			if( ! pids.get(i).logFile.equals("none")) {
+				String txt = pids.get(i).logFile;
+				txt = Util.trimLength(txt, 9);
+				str.append("<a href=\"dashboard?action=tail&pid="+pids.get(i).pid+"\">"+ txt +"</a>\n");	
+			}
+		}
+//		str.append("<a href=\"dashboard?action=tail&pid=stdout\">stdout</a>\n");
+//		str.append("<a href=\"dashboard?action=tail&pid=ros\">ros log</a>\n");
+//		str.append("<a href=\"dashboard?action=tail&pid=stdout\">stdout</a>\n");
+		str.append("</div></div>\n");
+		
 		// --- active --- //
-		String m = "# " + Navigation.consecutiveroute + " ";
-		if(pointslist != null) // m+= pointslist;
-			for(int c = 0 ; c < pointslist.size(); c++ )
-				m+= "<a href=\"media?filter="+ pointslist.get(c) + "\" target=\"_blank\">" + pointslist.get(c) + "</a>,  ";
-		m += "  <a href=\"dashboard?action=gotodock\">return to dock</a> ";
+		if(state.exists(values.navigationrouteid) && state.equals(values.odometry, "true")){
+			String m = "#" + Navigation.consecutiveroute + " ";
+			if(pointslist != null) 
+				for(int c = 0 ; c < pointslist.size(); c++ )
+					m+= "<a href=\"media?filter="+ pointslist.get(c).replaceAll(" ", "_") + "\" target=\"_blank\">" + pointslist.get(c) + "</a>,  ";
+			m += "  <a href=\"dashboard?action=gotodock\">return to dock</a> ";
+			if(state.getBoolean(values.rosgoalcancel)) m += " *ros goal cancel* "; 
+			str.append("\n<tr><td class='tail' colspan=\"11\">"+ m.trim() +"</tr>\n");	
+		}
+		
 //		if(state.getBoolean(values.routeoverdue)) m += " *overdue* "; 		
-//		if(state.getBoolean(values.waypointbusy)) m += " *waypointbusy* "; 		
-		if(state.getBoolean(values.rosgoalcancel)) m += " *ros goal cancel* "; 
-		if(m.length() > 0) str.append("\n<tr><td class='menu'>active<td class='tail' colspan=\"11\">"+ m.trim() +"</tr>\n");	
-
+//		if(state.getBoolean(values.waypointbusy)) m += " *waypointbusy* "; 	
+		
 		// --- gui notify --- //
 		String msg = state.get(values.guinotify);
 		if(msg == null) msg = "";
@@ -630,7 +713,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			str.append(msg);
 		}
 	
-		str.append(getTail(10) + "\n");
+		str.append(tailFormated(40) + "\n");
 		str.append("\n</tbody></table>\n");
 		return str.toString();
 	}
@@ -638,7 +721,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	private String getRouteLinks(){   
 		Vector<String> list = NavigationUtilities.getRoutes();
 		String rname = state.get(values.navigationroute);
-		if(rname == null) rname = "not active";
+		if(rname == null) rname = "routes";
 		String drop = "\n<div class=\"dropdown\"><button class=\"dropbtn\">"+rname+"</button><div class=\"dropdown-content\">";
 		for(int i = 0; i < list.size(); i++) drop += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>";
 		return drop += "</div></div>";
@@ -666,37 +749,30 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		return link; 
 	}
 	
+	/**/
 	public static String tailFormated(int lines){
-		int i = 0;
-		final long now = System.currentTimeMillis();
 		StringBuffer str = new StringBuffer();
-	 	if(Util.history.size() > lines) i = Util.history.size() - lines;
-	 	
-		for(; i < Util.history.size() ; i++){
-			String line = Util.history.get(i).substring(Util.history.get(i).indexOf(",")+1).trim();
-			String stamp = Util.history.get(i).substring(0, Util.history.get(i).indexOf(","));
-			line = line.replaceFirst("\\$[0-9]", "");
-			line = line.replaceFirst("^oculusprime.", "");
-			line = line.replaceFirst("^oculusPrime.", "");
-			line = line.replaceFirst("^Application.", "");
-			line = line.replaceFirst("^static, ", "");		
-			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
-			String unit = "&nbsp;sec&nbsp;";
-			String d = Util.formatFloat(delta, 0);
-			if(delta > 60) { delta = delta / 60; unit = " min "; d =  Util.formatFloat(delta, 1); }
-			str.append("\n<tr><td class='menu'>" + d + "&nbsp;" + unit + "<td class='tail' colspan=\"11\">" + line.trim() + "</tr> \n"); 
+		Vector<String> history = Util.tail(Settings.stdout, 20);
+		for(int i = 0; i < history.size() ; i++) {
+			String line = history.get(i).trim();
+			line = line.replaceFirst("DEBUG:", "");
+			line = line.replaceFirst("OCULUS:", "");
+			line = line.replaceFirst("[INFO]", "");
+			line = line.replaceFirst("oculusprime.", "");
+			line = line.replaceFirst("oculusPrime.", "");
+			line = line.replaceFirst("Application.", "");
+			line = line.replaceFirst("static, ", "");		
+			line = line.replaceAll(">", "");	
+			line = line.replaceAll("<", "");	
+			line = line.trim();
+			
+			if(line.length() > 88) line = line.substring(0, 88);
+			str.append("\n<tr><td class='tail' colspan=\"11\">" + line + "</tr>\n"); 
 		}
+
 		return str.toString();
 	}
 	
-	private String getTail(int lines){
-		String reply = "\n\n"; // <table cellspacing=\"8\"> \n";
-		reply += tailFormated(lines); 
-		// reply += ("\n</table>\n");
-		return reply;
-	}
-
-	/*
 	private String getHistory(){
 		String reply = "";
 		for(int i = 0 ; i < history.size() ; i++) {
@@ -705,18 +781,29 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			String date =  new Date(time).toString();
 			date = date.substring(10, date.length()-8).trim();
 			double delta = (double)(System.currentTimeMillis() - time) / (double) 1000;
-			String unit = "&nbsp;sec&nbsp;";
+//			String unit = "&nbsp;sec&nbsp;";
+			String unit = " sec ";
+
 			if(delta > 60) { delta = delta / 60; unit = " min "; }
-			reply += "&nbsp;" + Util.formatFloat(delta, 1) + "&nbsp;" + unit + "" + mesg.trim() + "\n"; 
+			reply += " " + Util.formatFloat(delta, 1) + " " + unit + " " + mesg.trim() + "\n"; 
 		}
 		return reply;
 	}
-	*/
 	
 	@Override
 	public void updated(String key){
 		
-//		if(state.exists(key)) Util.log("updated: " + key + " " + state.get(key), this);
+		if(key.equals(values.networksinrange.name())) return;
+ 		if(key.equals(values.rosmapwaypoints.name())) return; 
+		if(key.equals(values.framegrabbusy.name())) return;
+		if(key.equals(values.rosglobalpath.name())) return;
+		if(key.equals(values.batteryinfo.name())) return;
+		if(key.equals(values.batterylife.name())) return;		
+ 		if(key.equals(values.batteryvolts.name())) return; 		
+		if(key.equals(values.rosscan.name())) return;
+ 		if(key.equals(values.cpu.name())) return; 
+ 		
+		if(DEBUG && state.exists(key)) Util.debug("updated: " + key + " = " + state.get(key), this);
 		
 		// only read from file on change 
 		if(key.equals(values.navigationroute.name())){
@@ -742,19 +829,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			
 //    	if(state.getBoolean(values.routeoverdue)) 
 //		state.set(values.guinotify, "route over due: " + NavigationUtilities.getActiveRoute()); 
-//		if(key.equals(values.framegrabbusy.name())) return;
-//		if(key.equals(values.rosglobalpath.name())) return;
-//		if(key.equals(values.rosscan.name())) return;
-		
-		if(key.equals(values.networksinrange.name())) return;
-		if(key.equals(values.batteryinfo.name())) return;
-		if(key.equals(values.batterylife.name())) return;		
- 		if(key.equals(values.batteryvolts.name())) return; 		
- 		if(key.equals(values.cpu.name())) return; 
- 		
+
 		// trim size
-//		if(history.size() > MAX_STATE_HISTORY) history.remove(0);
-//		if(state.exists(key)) history.add(System.currentTimeMillis() + " " +key + " = " + state.get(key));
+		if(history.size() > MAX_STATE_HISTORY) history.remove(0);
+		if(state.exists(key)) {
+//			if( ! state.get(key).equals(state.get(key))) // count changes only 
+				history.add(System.currentTimeMillis() + " " + key + " " + state.get(key));
+		}
 	}
 	
 	public static Vector<String> getAllWaypoints(){

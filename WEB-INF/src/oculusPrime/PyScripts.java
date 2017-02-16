@@ -1,10 +1,20 @@
 package oculusPrime;
 
+import java.io.File;
+import java.io.FileFilter;
+
 public class PyScripts {
 	
-//	static Vector<PyScripts> scripts = new Vector<PyScripts>();
-	String logFile, id, pyFile = null;
+	final String NONE = "none";
 	
+	String logFile = NONE;
+	String pyFile = NONE;
+	String ppid = NONE;
+	String user = NONE;
+	String name = NONE;
+	String pid = NONE;
+	
+	/*
 	PyScripts (String id, String pyFile, String log ){
 
 		//Util.log("size =" + scripts.size() + " " + scripts.toString());
@@ -12,9 +22,9 @@ public class PyScripts {
 
 		this.pyFile = pyFile;
 		this.logFile = log;
-		this.id = id;
+		this.pid = id;
 	}
-	/*
+	
 	static void add(String id, String file, String log){
 		// PyScripts py = new PyScripts(id, file, log);
 		if( ! exists(id)) scripts.add( new PyScripts(id, file, log));
@@ -29,5 +39,117 @@ public class PyScripts {
 		return pyFile;
 	}
 	*/
+	
+	static File[] getScriptFiles(){
+		File telnet = new File(Settings.telnetscripts);
+		if( ! telnet.exists()) telnet.mkdir();
+		File[] names = telnet.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(File pathname) { return pathname.getName().endsWith(".py"); }
+		});
+		return names;
+	}
+	
+
+	
+	// TODO: 
+	// lookup proc
+	// cat /proc/pid/cmdline
+	
+	PyScripts(String line){
+		
+		String tokens[] = line.trim().split("\\s+");
+		
+		// sanity 
+		if(tokens.length < 8) { 
+			Util.log("PID type? " + tokens[7], this);  
+			return; 
+		}
+		
+		if( ! tokens[7].contains("python")) {
+			Util.log("ERROR -- PID type? " + tokens[7], this); 
+			return;
+		}
+		
+		if( ! Util.isInteger(tokens[1])){
+			Util.log("ERROR -- PID is not valid? " + tokens[7], this); 
+			return;
+		}
+		
+		if( ! Util.isInteger(tokens[2])){
+			Util.log("ERROR -- PPID is not valid? " + tokens[7], this); 
+			return;
+		}
+	
+//		Util.log(tokens.length + " tokens:" + line);
+//		for(int i = 6 ; i < tokens.length ; i++ ) Util.log(i+" == " +tokens[i]);
+//		Util.log(tokens.length + " = " +tokens[tokens.length-1]);
+		
+		user = tokens[0];
+		pid = tokens[1];
+		ppid = tokens[2];
+				
+		if(tokens.length >= 9) {
+			pyFile = tokens[8];
+			name = tokens[8];
+			if(name.contains("/")) name = name.substring(name.lastIndexOf("/")+1, name.indexOf(".py"));
+		}
+		
+		if(tokens.length >= 11) {	
+			
+			logFile = tokens[10].replaceAll("__log:=", "");
+///			Util.log(logFile, this);
+		
+		}
+		
+		if(logFile.contains("/")) {
+			
+			logFile = logFile.substring(logFile.lastIndexOf("/")+1, logFile.lastIndexOf(".log"));
+			Util.log(logFile, this);
+
+		}
+		
+	}
+
+/*
+
+486537347049, static, 0 = brad 
+1486537347050, static, 1 = 4197 
+1486537347050, static, 2 = 4170 
+1486537347050, static, 3 = 7 
+1486537347050, static, 4 = 23:01 
+1486537347050, static, 5 = ? 
+1486537347050, static, 6 = 00:00:05 
+1486537347050, static, 7 = python 
+1486537347050, static, 8 = /home/brad/catkin_ws/src/oculusprime_ros/src/arcmove_globalpath_follower.py 
+1486537347050, static, 9 = __name:=arcmove_globalpath_follower 
+1486537347050, static, 10 = __log:=/home/brad/.ros/log/5c59de64-edcc-11e6-8465-b803054ce181/arcmove_globalpath_follower-2.log 
+1486537347051, static, str tokens = 11 
+1486537347051, static, 0 = brad 
+1486537347051, static, 1 = 4466 
+1486537347051, static, 2 = 4170 
+1486537347051, static, 3 = 8 
+1486537347051, static, 4 = 23:01 
+1486537347051, static, 5 = ? 
+1486537347051, static, 6 = 00:00:05 
+1486537347052, static, 7 = python 
+1486537347052, static, 8 = /home/brad/catkin_ws/src/oculusprime_ros/src/remote_nav.py 
+1486537347052, static, 9 = __name:=remote_nav 
+1486537347052, static, 10 = __log:=/home/brad/.ros/log/5c59de64-edcc-11e6-8465-b803054ce181/remote_nav-17.log 
+
+	
+1486602981623, static, 0 = brad 
+1486602981624, static, 1 = 5749 
+1486602981624, static, 2 = 1261 
+1486602981625, static, 3 = 27 
+1486602981625, static, 4 = 16:23 
+1486602981625, static, 5 = ? 
+1486602981625, static, 6 = 00:14:19 
+1486602981626, static, 7 = python
+1486602981626, static, 8 = telnet_scripts/block.py 
+
+*/
+
+	
 	
 }

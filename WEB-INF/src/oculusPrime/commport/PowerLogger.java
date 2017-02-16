@@ -1,6 +1,5 @@
 package oculusPrime.commport;
 
-import java.io.File;
 import java.io.RandomAccessFile;
 import java.util.Date;
 import java.util.Vector;
@@ -13,23 +12,26 @@ public class PowerLogger {
 	public final static String redhome = System.getenv("RED5_HOME");
 	public final static String powerlog = redhome + sep + "log" + sep + "power.log";
 
-	public static final long ROLLOVER = 250000000; 
-	private static final int MAX_HISTORY = 50;
+	// public static final long ROLLOVER = 250000000; 
+	private static final int MAX_HISTORY = 10;
 
 	private static RandomAccessFile logger = null;
 	private static Vector<String> history = new Vector<String>();
 	
 	private static void init() {
-		File logfile = new File(powerlog);
+		
+		// nuke? 
+		/*File logfile = new File(powerlog);
 		if (logfile.exists()) {
 			if (logfile.length() > ROLLOVER) {
 				Util.debug("file too large, rolling over: " + powerlog);
 				logfile.delete();
 			}
-		}
+		}*/
 		
 		try {
 			logger = new RandomAccessFile(powerlog, "rw");
+			history.add("start up");
 		} catch (Exception e) {
 			Util.debug("PowerLogger(): " + e.getMessage());
 		}
@@ -44,9 +46,10 @@ public class PowerLogger {
 			logger.seek(logger.length());
 			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
 
-			if(history.size() > MAX_HISTORY) history.remove(0);
-			history.add(msg); // data);
-
+//			if( ! history.get(history.size()-1).equals(msg)){
+				if(history.size() > MAX_HISTORY) history.remove(0);
+				history.add(Util.getDateStampShort() + " " + msg.replace("serial in:", "")); 
+//			}
 		} catch (Exception e) {
 			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data);
 		}

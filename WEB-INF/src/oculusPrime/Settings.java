@@ -10,6 +10,7 @@ public class Settings {
 
 	public final static String redhome = System.getenv("RED5_HOME");
 	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
+	public final static String telnetscripts = redhome+"/telnet_scripts"; // this folder needs to be moved or protected from update operation! 
 	public final static String appsubdir = "webapps/oculusPrime";
 	public final static String streamfolder = redhome + Util.sep+"webapps/oculusPrime/streams/";
 	public final static String framefolder = redhome+Util.sep+appsubdir+"/framegrabs";

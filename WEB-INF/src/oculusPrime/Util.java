@@ -29,7 +29,6 @@ import org.xml.sax.SAXParseException;
 
 import developer.NavigationLog;
 import oculusPrime.State.values;
-import oculusPrime.commport.PowerLogger;
 
 public class Util {
 	
@@ -46,9 +45,17 @@ public class Util {
 	public static final int MAX_HISTORY = 40;
 	public static final int PRECISION = 1;	
 	
-	static Vector<String> history = new Vector<String>(MAX_HISTORY);
-	static private String rosinfor = null;
-	static private int rosattempts = 0;
+//	static Vector<String> history = new Vector<String>(MAX_HISTORY);
+//	static private String rosinfor = null;
+//	static private int rosattempts = 0;
+	
+	public static String trimLength(String txt, int length){
+		if(txt.length() > length) {
+			txt = txt.substring(0, length);
+			txt += "..";
+		}
+		return txt.trim();
+	}
 	
 	public static void delay(long delay) {
 		try { Thread.sleep(delay); } 
@@ -133,21 +140,12 @@ public class Util {
 	public static String formatFloat(double number) {
 
 		String text = Double.toString(number);
-		if (PRECISION >= text.length()) {
-			return text;
-		}
-
+		if (PRECISION >= text.length()) { return text; }
 		int start = text.indexOf(".") + 1;
-		if (start == 0)
-			return text;
-
-		if (start <= 0) {
-			return text;
-		} else if ((start + PRECISION) <= text.length()) {
-			return text.substring(0, (start + PRECISION));
-		} else {
-			return text;
-		}
+		if (start == 0)	return text;
+		if (start <= 0) { return text; }
+		else if ((start + PRECISION) <= text.length()) { return text.substring(0, (start + PRECISION)); } 
+		else return text;
 	}
 
 	/**
@@ -178,69 +176,19 @@ public class Util {
 		}
 	}	
 	
+	public static boolean isInteger(String s) {
+	    try { Integer.parseInt(s); } catch(Exception e) { 
+	        return false; 
+	    }
+	    return true;
+	}
 	
-	public static String[] getPythonPIDS() {
-		String str = "";
-		try {	
-//			String[] cmd = new String[]{"/bin/sh", "-c", "ps -a | grep python"};		
-			String[] cmd = new String[]{"/bin/sh", "-c", "ps -fC python"};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {
-				if(line.trim().length() > 0) {
-					line = line.trim();
-					if( ! line.startsWith("UID")){
-	/*				
-	 * 
-UID        PID  PPID  C STIME TTY          TIME CMD
-brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_routes.py
-	
-						log("getPython: "+line + " tokens: " + line.trim().split(" ").length);
-						log("getPython: -0: " + line.trim().split(" ")[0]);
-						log("getPython: -1: " + line.trim().split(" ")[1]);
-						log("getPython: -2: " + line.trim().split(" ")[2]);
-						log("getPython: -5: " + line.trim().split(" ")[5]);
-						log("getPython: "+line + " -end: " + line.trim().split(" ")[line.trim().split(" ").length-1]);
-	 */
-						String tokens[] = line.split(" ");
-						str += tokens[5] + " ";
-					}
-				}
-			}
-		} catch (Exception e) { printError(e); }
-		str = str.trim();
-		if(str.length() == 0) return null;
-		else return str.split(" ");
-	}	
-				
-//UID        PID  PPID  C STIME TTY          TIME CMD
-//brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_routes.py
-
-// brad     14639 14607  7 13:43 ?        00:00:11 python /home/brad/catkin_ws/src/oculusprime_ros/src/odom_tf.py __name:=odom_tf __log:=/home/brad/.ros/log/b5594efa-ea52-11e6-8836-b803054ce181/odom_tf-1.log 23
-// OCULUS: Fri Feb 03 13:45:35 PST 2017, static, String index out of range: -64
-
-/*
-1486178918816, static, log end: home-brad-.ros-log-2275e302-ea87-11e6-8055-b803054ce181-odom_tf-1.log 
-1486178918816, static, log 0_brad 
-1486178918817, static, log 6_6717 
-1486178918817, static, log 8_6684 
-1486178918817, static, log 10_4 
-1486178918817, static, log 11_19:19 
-1486178918818, static, log 12_? 
-1486178918818, static, log 20_00:00:25 
-1486178918818, static, log 21_python 
-1486178918818, static, log 22__home_brad_catkin_ws_src_oculusprime_ros_src_arcmove_globalpath_follower.py 
-1486178918819, static, log 23___name:=arcmove_globalpath_follower 
-1486178918819, static, log 24___log:=_home_brad_.ros_log_2275e302-ea87-11e6-8055-b803054ce181_arcmove_globalpath_follower-2.log 		
-*/
-	
+	// TODO: 
+	// lookup proc
+	// cat /proc/pid/cmdline
+	/**/
 	public static Vector<PyScripts> getRunningPythonScripts() {
-		
 		Vector<PyScripts> scripts = new Vector<PyScripts>();
-		String log =""; String name = "";
-		
 		try {	
 			String[] cmd = new String[]{"/bin/sh", "-c", "ps -fC python"};
 			Process proc = Runtime.getRuntime().exec(cmd);
@@ -249,39 +197,26 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {
 				if(line.trim().length() > 0) {
-					if( ! line.startsWith("UID")) {
-						
-						String tokens[] = line.trim().split(" ");
-//	                    log(scripts.size() + " -slize- " + line);
-						
-						String pid =  tokens[6];
-						if(pid.length() == 0) pid = tokens[5];
-						String py = tokens[tokens.length-1].trim();
-					
-						if(py.contains("telnet_scripts")){
-							if(py.lastIndexOf(".py") > 0) name = py.substring(0, py.indexOf(".py"));
-							if(py.indexOf("/") > 0) name = name.substring(py.lastIndexOf("/")+1, name.length());
-						
-//							log(scripts.size() + " py: " + py);
-							scripts.add( new PyScripts(pid, name, "none"));
-							
-						} else if(py.contains(".log")){				
-							for(int i = 0 ; i < tokens.length ; i++){
-								if(tokens[i].length() > 0){
-									if(tokens[i].startsWith("__log")) log = tokens[i].replaceAll("/", "_");//.replaceAll("__name:=", "");
-									if(tokens[i].startsWith("__name")) name = tokens[i].replaceAll("/", "_").replaceAll("__name:=", "");
-//									log("log: " + log);
-								}
-							}
-						} else Util.log("pid type? " + line); // shouldn't be others! 
-							
-						if(pid != null) scripts.add( new PyScripts(pid, name, log));
-					}
+					if( ! line.startsWith("UID")) scripts.add( new PyScripts(line));
 				}
 			}
-//			debug("log python pids found = " + scripts.size());
-		} catch (Exception e) { log(e.getMessage()); printError(e); }
+		} catch (Exception e) { printError(e); }		
 		return scripts;
+	}	
+	
+	public static Vector<String> tail(String path, int lines) {
+		Vector<String> tail = new Vector<String>();
+		try {	
+			String[] cmd = new String[]{"/bin/sh", "-c", "tail -n " + lines + " " + path};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if(line.trim().length() > 0) tail.add(line);
+			}
+		} catch (Exception e) { log(e.getMessage()); printError(e); }
+		return tail;
 	}	
 	
 	/**
@@ -329,43 +264,12 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 			return response.toString();
 
 		} catch (Exception e) {
-//			printError(e);
 			Util.log("Util.readUrlToString() parse error", null);
 			return null;
 		}
-
 	}
 	
-	public static String tail(int lines){
-		int i = 0;
-		StringBuffer str = new StringBuffer();
-	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br>"); 
-		return str.toString();
-	}
 	
-	public static String tailFormated(int lines){
-		int i = 0;
-		final long now = System.currentTimeMillis();
-		StringBuffer str = new StringBuffer();
-	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) {
-			String line = history.get(i).substring(history.get(i).indexOf(",")+1).trim();
-			String stamp = history.get(i).substring(0, history.get(i).indexOf(","));
-			line = line.replaceFirst("\\$[0-9]", "");
-			line = line.replaceFirst("^oculusprime.", "");
-			line = line.replaceFirst("^oculusPrime.", "");
-			line = line.replaceFirst("^Application.", "");
-			line = line.replaceFirst("^static, ", "");		
-			double delta = (double)(now - Long.parseLong(stamp)) / (double) 1000;
-			String unit = " sec ";
-			String d = formatFloat(delta, 0);
-			if(delta > 60) { delta = delta / 60; unit = " min "; d =  formatFloat(delta, 1); }
-			str.append("\n<tr><td colspan=\"11\">" + d + "<td>" + unit + "<td>&nbsp;&nbsp;" + line + "</tr> \n"); 
-		}
-		return str.toString();
-	}
-
 	public static void log(String str){
 		log(str, null);
 	}
@@ -378,8 +282,8 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
     	if(str == null) return;
 		String filter = "static";
 		if(c!=null) filter = c.getClass().getName();
-		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(System.currentTimeMillis() + ", " + filter + ", " +str);
+//		if(history.size() > MAX_HISTORY) history.remove(0);
+//		history.add(System.currentTimeMillis() + ", " + filter + ", " +str);
 		System.out.println("OCULUS: " + getTime() + ", " + filter + ", " + str);
 	}
 	
@@ -389,7 +293,7 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
     	if(c!=null) filter = c.getClass().getName();
 		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
-			history.add(System.currentTimeMillis() + ", " +str);
+//			history.add(System.currentTimeMillis() + ", " +str);
 		}
 	}
     
@@ -397,7 +301,7 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
     	if(str == null) return;
     	if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
     		System.out.println("DEBUG: " + getTime() + ", " +str);
-    		history.add(System.currentTimeMillis() + ", " +str);
+//    		history.add(System.currentTimeMillis() + ", " +str);
     	}
     }
     
@@ -765,41 +669,12 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 	}
 
 	public static void updateExternalIPAddress(){
-//		new Thread(new Runnable() { public void run() {
-
-			State state = State.getReference();
-
-//  --- changed: updated only called on ssid change from non null
-//			if(state.exists(values.externaladdress)) {
-//				Util.log("updateExternalIPAddress(): called but already have an ext addr, try ping..", null);
-//				if(Util.pingWIFI(state.get(values.externaladdress)) != null) {
-//					Util.log("updateExternalIPAddress(): ping sucsessful, reject..", null);
-//					return;
-//				}
-//			}
-
-//			try {
-//
-//				URLConnection connection = (URLConnection) new URL("http://www.xaxxon.com/xaxxon/checkhost").openConnection();
-//				BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-//
-//				int i;
-//				String address = "";
-//				while ((i = in.read()) != -1) address += (char)i;
-//				in.close();
-//
-				String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
-
-
-				if(validIP(address)) state.set(values.externaladdress, address);
-				else state.delete(values.externaladdress);
-
-//			} catch (Exception e) {
-//				Util.debug("updateExternalIPAddress():"+ e.getMessage(), null);
-//				state.delete(values.externaladdress);
-//			}
-//		} }).start();
+		State state = State.getReference();
+		String address = readUrlToString("http://www.xaxxon.com/xaxxon/checkhost");
+		if(validIP(address)) state.set(values.externaladdress, address);
+		else state.delete(values.externaladdress);
 	}
+	
 /*
 	public static String getJettyStatus() {
 		try {
@@ -829,7 +704,7 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 	       if (files[i].isFile()) files[i].delete();
 	    }
 
-	   deleteROS();
+	   // deleteROS();
 	}
 	
 	public static void truncStaleAudioVideo(){
@@ -1109,6 +984,7 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 		state.set(values.guinotify, msg += message);
 	}
 
+	/*
 	public static void deleteROS() {
 		
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -1138,7 +1014,9 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 		} }).start();
 		
 	}
+	*/
 	
+	/*
 	public static String getRosCheck(){	
 		
 		if(rosinfor!=null) return rosinfor;
@@ -1173,8 +1051,10 @@ brad      2843   776 77 22:40 pts/8    00:42:05 python telnet_scripts/multi_rout
 				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
 		} catch (Exception e){ rosinfor = "0.00"; }
 		
-		return rosinfor;
-	}	
+		return rosinfor.replace("ROS node logs", "").trim();
+	}
+	*/
+	
 }
 
 

@@ -155,10 +155,11 @@ public class TelnetServer implements Observer {
 			return;
 		}
 
-//		if (player.equals(PlayerCommands.systemcall)) {
-//			sendToSocket("forbidden command, " + cmd[0], out);
-//			return;
-//		}
+// TODO: maybe in developer mode? 
+		if (player.equals(PlayerCommands.systemcall)) {
+			sendToSocket("forbidden command, " + cmd[0], out);
+			return;
+		}
 
 		// check for null vs string("")
 		args = args.trim();
