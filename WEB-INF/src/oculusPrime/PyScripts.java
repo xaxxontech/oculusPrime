@@ -1,7 +1,10 @@
 package oculusPrime;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.InputStreamReader;
+import java.util.Vector;
 
 public class PyScripts {
 	
@@ -39,18 +42,74 @@ public class PyScripts {
 		return pyFile;
 	}
 	*/
+
+	// TODO: 
+	// lookup proc
+	// cat /proc/pid/cmdline
+	/**/
+	
+	public static Vector<PyScripts> getRunningPythonScripts() {
+		Vector<PyScripts> scripts = new Vector<PyScripts>();
+		try {	
+			String[] cmd = new String[]{"/bin/sh", "-c", "ps -fC python"};
+			Process proc = Runtime.getRuntime().exec(cmd);
+			proc.waitFor();
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while ((line = procReader.readLine()) != null) {
+				if(line.trim().length() > 0) {
+					if( ! line.startsWith("UID")) scripts.add( new PyScripts(line));
+				}
+			}
+		} catch (Exception e) { Util.printError(e); }		
+		return scripts;
+	}	
+	
 	
 	static File[] getScriptFiles(){
 		File telnet = new File(Settings.telnetscripts);
 		if( ! telnet.exists()) telnet.mkdir();
 		File[] names = telnet.listFiles(new FileFilter() {
 			@Override
-			public boolean accept(File pathname) { return pathname.getName().endsWith(".py"); }
+			public boolean accept(File pathname) { 
+			
+				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
+				
+				if(pathname.getName().startsWith("startup_")) return false;
+				
+				return pathname.getName().endsWith(".py"); 
+				
+			}
 		});
 		return names;
 	}
 	
+	static File[] getAutoStartScriptFiles(){
+		File telnet = new File(Settings.telnetscripts);
+		if( ! telnet.exists()) telnet.mkdir();
+		File[] names = telnet.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(File pathname) { 
+			
+				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
+				
+				if(pathname.getName().startsWith("startup_") && pathname.getName().endsWith(".py")) return true;
+				
+				return false;
+				
+			}
+		});
+		return names;
+	}
 
+
+	public static void autostartPyScripts() {
+		File[] scripts = getAutoStartScriptFiles();
+		for( int i = 0 ; i < scripts.length ; i++ ){	
+			Util.log("run: " + scripts[i].getName());
+			Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
+		}
+	}
 	
 	// TODO: 
 	// lookup proc
@@ -96,20 +155,20 @@ public class PyScripts {
 		}
 		
 		if(tokens.length >= 11) {	
-			
 			logFile = tokens[10].replaceAll("__log:=", "");
-///			Util.log(logFile, this);
-		
+//			Util.log(logFile, this);
 		}
 		
 		if(logFile.contains("/")) {
-			
 			logFile = logFile.substring(logFile.lastIndexOf("/")+1); // , logFile.lastIndexOf(".log"));
-			Util.log(logFile, this);
-
 		}
 		
+		if(pyFile.equals(NONE)) pyFile = "terminal user";
+		if(logFile.equals(NONE)) logFile = "terminal user";
+	
+//		Util.log("log: "+logFile, this);
 	}
+
 
 /*
 

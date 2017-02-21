@@ -3,7 +3,6 @@ package oculusPrime;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -32,6 +31,7 @@ import oculusPrime.State.values;
 
 public class Util {
 	
+	// TODO: NUKE, JUST USE LINUX 
 	public final static String sep = System.getProperty("file.separator");
 
 	public static final long ONE_DAY = 86400000;
@@ -182,27 +182,6 @@ public class Util {
 	    }
 	    return true;
 	}
-	
-	// TODO: 
-	// lookup proc
-	// cat /proc/pid/cmdline
-	/**/
-	public static Vector<PyScripts> getRunningPythonScripts() {
-		Vector<PyScripts> scripts = new Vector<PyScripts>();
-		try {	
-			String[] cmd = new String[]{"/bin/sh", "-c", "ps -fC python"};
-			Process proc = Runtime.getRuntime().exec(cmd);
-			proc.waitFor();
-			String line = null;
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
-			while ((line = procReader.readLine()) != null) {
-				if(line.trim().length() > 0) {
-					if( ! line.startsWith("UID")) scripts.add( new PyScripts(line));
-				}
-			}
-		} catch (Exception e) { printError(e); }		
-		return scripts;
-	}	
 	
 	public static Vector<String> tail(String path, int lines) {
 		Vector<String> tail = new Vector<String>();
@@ -788,18 +767,7 @@ public class Util {
 	}
 	*/
 	
-	public static void archiveLogs(){
-		new Thread(new Runnable() { public void run() {
-			try {
-				appendUserMessage("log files being archived");
-				zipLogFile();
-				truncStaleAudioVideo();		
-				truncStaleFrames();
-			} catch (Exception e){printError(e);}
-		} }).start();
-	}
-
-	private static void zipLogFile(){	
+	static void zipLogFiles(){	
 		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " log "
 				+ NavigationLog.navigationlogpath + " " + Settings.settingsfile};
@@ -944,6 +912,19 @@ public class Util {
 			}
 		} catch (Exception e){}
 		return Settings.ERROR;
+	}
+	
+	public static String getLinuxUser(){ // TODO: Lazy.. match to proc for java 
+		try {			
+			String line = null;
+			String[] cmd = { "/bin/sh", "-c", "who" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while((line = procReader.readLine()) != null){  	
+				return line.split("\\s+")[0];
+			}
+		} catch (Exception e){}
+		return null;
 	}
 	
 	public static long countAllMbytes(final String path){ 

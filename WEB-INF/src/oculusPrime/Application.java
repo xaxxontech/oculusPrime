@@ -338,8 +338,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		
-
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
@@ -365,6 +363,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		
 		Util.debug("application initialize done", this);
+		
+//		if (!settings.readSetting(ManualSettings.developer).equals("true")) {
+			
+			Util.debug("initialize(): starting python scripts", this);
+			PyScripts.autostartPyScripts();
+		
+//		}
+
 	}
 
 	// called by remote relay client
@@ -1005,22 +1011,44 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 			
-		case deletelogs:
+		case deletelogs: // super dangerous, purge all log folders and ros logs, causes restart 
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
-			Util.deleteLogFiles();
+			
+			state.set(values.guinotify, "logs being deleted, rebooting");
+			navigation.cancelAllRoutes();
+	//		Util.deleteLogFiles();
 			break;
 			
-		case archivelogs: 
-//			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-//				Util.log("archiving busy, must be docked, skipping.. ", null);
-//				break;
-//			}
-			Util.archiveLogs();
+		case archiveLogs: // create zip of log folder 
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			state.set(values.guinotify, "logs being archived");
+			Util.zipLogFiles();
 			break;
 
+		case archiveNavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+			Util.log("nav log..", this);
+		//	Util.archiveLogs();
+			break;
+		
+		case truncMedia: // remove any frames or videos not currently linked in navigationlog html file  
+			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
+				Util.log("archiving busy, must be docked, skipping.. ", null);
+				break;
+			}
+		//	Util.archiveLogs();
+			Util.log("trunc media..", this);
+			break;
+			
 		case streammode: // TODO: testing ffmpeg/avconv streaming
 			grabberSetStream(str);
 			break;
