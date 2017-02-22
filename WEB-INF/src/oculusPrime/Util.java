@@ -26,6 +26,7 @@ import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXParseException;
 
+import developer.Navigation;
 import developer.NavigationLog;
 import oculusPrime.State.values;
 
@@ -99,35 +100,23 @@ public class Util {
 		}
 
 		int start = text.indexOf(".") + 1;
-		if (start == 0)
-			return text;
-
-		if (precision == 0) {
-			return text.substring(0, start - 1);
-		}
-
-		if (start <= 0) {
-			return text;
-		} else if ((start + precision) <= text.length()) {
+		if (start == 0) return text;
+		if (precision == 0) return text.substring(0, start - 1);
+		if (start <= 0) return text;
+		else if ((start + precision) <= text.length()) 
 			return text.substring(0, (start + precision));
-		} else {
-			return text;
-		}
+		else return text;
 	}
 
 	public static String formatFloat(String text, int precision) {
 		int start = text.indexOf(".") + 1;
 		if (start == 0) return text;
-
 		if (precision == 0) return text.substring(0, start - 1);
-	
 		if (start <= 0) {
 			return text;
 		} else if ((start + precision) <= text.length()) {
 			return text.substring(0, (start + precision));
-		} else {
-			return text;
-		}
+		} else return text;
 	}
 	
 	/**
@@ -683,7 +672,7 @@ public class Util {
 	       if (files[i].isFile()) files[i].delete();
 	    }
 
-	   // deleteROS();
+	   deleteROS();
 	}
 	
 	public static void truncStaleAudioVideo(){
@@ -767,13 +756,38 @@ public class Util {
 	}
 	*/
 	
-	static void zipLogFiles(){	
-		final String path = "./archive" + sep + "log_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " log "
-				+ NavigationLog.navigationlogpath + " " + Settings.settingsfile};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
+	static void archiveNavigation(){
+		final String path = "./log/archive/navigation_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " "
+				+ NavigationLog.navigationlogpath + " " 
+				+ Navigation.navroutesfile };
+		
+		new File(Settings.redhome + sep + "./log/archive").mkdir(); // make sure its there
 		new Thread(new Runnable() { public void run() {
-			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
+			try { 
+				Runtime.getRuntime().exec(cmd); 
+			} catch (Exception e){
+				printError(e);
+			}
+		}}).start();
+	}
+	
+	static void zipLogFiles(){	
+		String list = " ";
+		File[] files = new File(Settings.logfolder).listFiles();
+	    for(int i = 0; i < files.length; i++) if(files[i].isFile()) list += files[i].getAbsoluteFile() + " ";
+	    list += " " + NavigationLog.navigationlogpath + " " + Settings.settingsfile;
+	    
+		final String path = "./log/archive/logs_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + list};
+		
+		new File(Settings.redhome + sep + "./log/archive").mkdir(); // make sure its there
+		new Thread(new Runnable() { public void run() {
+			try { 
+				Runtime.getRuntime().exec(cmd); 
+			} catch (Exception e){
+				printError(e);
+			}
 		}}).start();
 	}
 	
@@ -965,7 +979,6 @@ public class Util {
 		state.set(values.guinotify, msg += message);
 	}
 
-	/*
 	public static void deleteROS() {
 		
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -975,11 +988,11 @@ public class Util {
 			}
 		}
 		
-		appendUserMessage("ros purge, reboot required");
+		appendUserMessage("ros purge reboot required");
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				String[] cmd = {"bash", "-ic", "rm -rf " + Settings.roslogfolder};
+				String[] cmd = {"bash", "-ic", "rm -rf ~/ros/"};
 				Runtime.getRuntime().exec(cmd);
 				new File("rlog.txt").delete();
 			} catch (Exception e){printError(e);}
@@ -987,15 +1000,14 @@ public class Util {
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				PowerLogger.append("shutting down application", this);
-				PowerLogger.close();
-				delay(10000);					
+				oculusPrime.commport.PowerLogger.append("shutting down application", this);
+				oculusPrime.commport.PowerLogger.close();
+				delay(5000);					
 				systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 			} catch (Exception e){printError(e);}
 		} }).start();
 		
 	}
-	*/
 	
 	/*
 	public static String getRosCheck(){	

@@ -366,10 +366,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 //		if (!settings.readSetting(ManualSettings.developer).equals("true")) {
 			
-			Util.debug("initialize(): starting python scripts", this);
-			PyScripts.autostartPyScripts();
+		Util.debug("initialize(): starting python scripts", this);
 		
-//		}
+		PyScripts.autostartPyScripts();
+		
 
 	}
 
@@ -1018,13 +1018,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			
 			state.set(values.guinotify, "logs being deleted, rebooting");
-			navigation.cancelAllRoutes();
+	//		navigation.cancelAllRoutes();
 	//		Util.deleteLogFiles();
 			break;
 			
 		case archiveLogs: // create zip of log folder 
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
+				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
 			state.set(values.guinotify, "logs being archived");
@@ -1033,20 +1033,22 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case archiveNavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
+				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
-			Util.log("nav log..", this);
-		//	Util.archiveLogs();
+			state.set(values.guinotify, "navigation files being archived");
+//			Util.log(".. nav log ..", this);
+			Util.archiveNavigation();
 			break;
 		
 		case truncMedia: // remove any frames or videos not currently linked in navigationlog html file  
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
+				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
-		//	Util.archiveLogs();
-			Util.log("trunc media..", this);
+			Util.truncStaleFrames();
+			Util.truncStaleAudioVideo();
+//			Util.log("...trunc media..", this);
 			break;
 			
 		case streammode: // TODO: testing ffmpeg/avconv streaming

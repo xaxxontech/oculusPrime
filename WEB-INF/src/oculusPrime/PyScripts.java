@@ -8,7 +8,7 @@ import java.util.Vector;
 
 public class PyScripts {
 	
-	final String NONE = "none";
+	final static String NONE = "none";
 	
 	String logFile = NONE;
 	String pyFile = NONE;
