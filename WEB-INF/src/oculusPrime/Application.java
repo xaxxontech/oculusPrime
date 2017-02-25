@@ -1016,10 +1016,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("archiving busy, must be docked, skipping.. ", null);
 				break;
 			}
-			
 			state.set(values.guinotify, "logs being deleted, rebooting");
-	//		navigation.cancelAllRoutes();
-	//		Util.deleteLogFiles();
+			Util.deleteLogFiles();
 			break;
 			
 		case archiveLogs: // create zip of log folder 
@@ -1027,7 +1025,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
-			state.set(values.guinotify, "logs being archived");
+			// state.set(values.guinotify, "logs being archived");
 			Util.zipLogFiles();
 			break;
 
@@ -1036,8 +1034,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
-			state.set(values.guinotify, "navigation files being archived");
-//			Util.log(".. nav log ..", this);
+			// state.set(values.guinotify, "navigation files being archived");
 			Util.archiveNavigation();
 			break;
 		
@@ -1048,7 +1045,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			Util.truncStaleFrames();
 			Util.truncStaleAudioVideo();
-//			Util.log("...trunc media..", this);
 			break;
 			
 		case streammode: // TODO: testing ffmpeg/avconv streaming

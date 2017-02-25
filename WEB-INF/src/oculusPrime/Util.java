@@ -562,7 +562,8 @@ public class Util {
 		
 		return time;	
 	}
-*/
+	*/
+	
 	public static void updateLocalIPAddress(){	
 		State state = State.getReference();
 		String wdev = lookupWIFIDevice();
@@ -643,7 +644,7 @@ public class Util {
 		else state.delete(values.externaladdress);
 	}
 	
-/*
+	/*
 	public static String getJettyStatus() {
 		try {
 			String url = "http://127.0.0.1/?action=status";
@@ -657,7 +658,8 @@ public class Util {
 			return new Date().toString() + " DISABLED";
 		}
 	}
-*/
+ 	*/
+	
 	public static void deleteLogFiles(){
 	
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -669,7 +671,10 @@ public class Util {
 
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
-	       if (files[i].isFile()) files[i].delete();
+	       if (files[i].isFile()) {
+	    	   debug(files[i].getName() + " was deleted " + i);
+	    	   files[i].delete();
+	       }
 	    }
 
 	   deleteROS();
@@ -681,7 +686,7 @@ public class Util {
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
-					debug(files[i].getName() + " was deleted");
+					debug(files[i].getName() + " was deleted " + i);
 					files[i].delete();
 				}
 	        }
@@ -693,7 +698,7 @@ public class Util {
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
-					debug(files[i].getName() + " was deleted");
+					debug(files[i].getName() + " was deleted " + i);
 					files[i].delete();
 				}
 	        }
@@ -772,7 +777,7 @@ public class Util {
 		}}).start();
 	}
 	
-	static void zipLogFiles(){	
+	public static void zipLogFiles(){	
 		String list = " ";
 		File[] files = new File(Settings.logfolder).listFiles();
 	    for(int i = 0; i < files.length; i++) if(files[i].isFile()) list += files[i].getAbsoluteFile() + " ";
@@ -958,6 +963,14 @@ public class Util {
 		return total / (1000*1000);
 	 }
 	
+	public static long countFilesMbytes(final String path){ 
+		if( ! new File(path).isDirectory()) return 0;
+		File[] f = new File(path).listFiles();
+		long total = 0;
+		for(int i = 0 ; i < f.length ; i++) total += f[i].length();
+		return total / (1000*1000);
+	 }
+	
 	public static long countFiles(final String path){ 
 		Vector<File> f = new Vector<>();
 		f = walk(path, f);
@@ -989,12 +1002,13 @@ public class Util {
 		}
 		
 		appendUserMessage("ros purge reboot required");
+		// rm -rf /home/brad/.ros/log
 		
 		new Thread(new Runnable() { public void run() {
 			try {
-				String[] cmd = {"bash", "-ic", "rm -rf ~/ros/"};
+				String[] cmd = {"bash", "-ic", "rm -rf ~/.ros/log"};
 				Runtime.getRuntime().exec(cmd);
-				new File("rlog.txt").delete();
+				new File("rlog.txt").delete(); // nuke later, kill old files 
 			} catch (Exception e){printError(e);}
 		} }).start();
 		

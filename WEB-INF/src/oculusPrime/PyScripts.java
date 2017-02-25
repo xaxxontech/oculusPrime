@@ -163,9 +163,8 @@ public class PyScripts {
 			logFile = logFile.substring(logFile.lastIndexOf("/")+1); // , logFile.lastIndexOf(".log"));
 		}
 		
-		if(pyFile.equals(NONE)) pyFile = "terminal user";
-		if(logFile.equals(NONE)) logFile = "terminal user";
-	
+//		if(pyFile.equals(NONE)) pyFile = "terminal user";
+//		if(logFile.equals(NONE)) logFile = "terminal user";
 //		Util.log("log: "+logFile, this);
 	}
 
