@@ -10,7 +10,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Vector;
 
@@ -644,22 +646,6 @@ public class Util {
 		else state.delete(values.externaladdress);
 	}
 	
-	/*
-	public static String getJettyStatus() {
-		try {
-			String url = "http://127.0.0.1/?action=status";
-			URLConnection connection = (URLConnection) new URL(url).openConnection();
-			BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-			int i; String reply = "";
-			while ((i = in.read()) != -1) reply += (char)i;
-			in.close();
-			return reply;
-		} catch (Exception e) {
-			return new Date().toString() + " DISABLED";
-		}
-	}
- 	*/
-	
 	public static void deleteLogFiles(){
 	
 		if( ! Settings.getReference().getBoolean(ManualSettings.debugenabled)){
@@ -716,12 +702,12 @@ public class Util {
 		return false;
 	}
 	
-	/*
+	
 	public static void truncStaleArchive(){
-		File[] files  = new File(Settings.archivefolder).listFiles();
+		File[] files  = new File("./log/archive").listFiles();
 		debug("truncStaleArchive(): " + files.length + " files in folder");
 		sortFiles(files);
-        for (int i = 4; i < files.length; i++){
+        for (int i = 5; i < files.length; i++){
 			if (files[i].isFile()){
 				debug("truncStaleArchive(): " + files[i].getName() + "  was deleted");
 				files[i].delete();
@@ -729,6 +715,30 @@ public class Util {
 		} 
 	}
 	
+	public static void truncStaleLog(){
+		File[] files  = new File(Settings.logfolder).listFiles();
+		debug("truncStaleArchive(): " + files.length + " files in folder");
+		sortFiles(files);
+        for (int i = 7; i < files.length; i++){
+			if (files[i].isFile()){
+				debug("truncStaleLog(): " + files[i].getName() + "  was deleted");
+				files[i].delete();
+	        }
+		} 
+	}
+	
+	public static void sortFiles(File[] files) {
+		Arrays.sort(files, new Comparator<File>(){
+			public int compare( File f1, File f2){
+                long result = f2.lastModified() - f1.lastModified();
+                if( result > 0 ){ return 1;
+                } else if( result < 0 ){ return -1;
+                } else return 0;
+            }
+        });	
+	}
+	
+	/*
 	public static void truncState(){
 		File[] files  = new File(Settings.logfolder).listFiles(new stateFilter());	
 		debug("truncState(): " + files.length + " files in folder");
@@ -747,17 +757,6 @@ public class Util {
         public boolean accept(File dir, String name) {
             return name.contains("state");
         }
-	}
-	
-	private static void sortFiles(File[] files) {
-		Arrays.sort(files, new Comparator<File>(){
-			public int compare( File f1, File f2){
-                long result = f2.lastModified() - f1.lastModified();
-                if( result > 0 ){ return 1;
-                } else if( result < 0 ){ return -1;
-                } else return 0;
-            }
-        });	
 	}
 	*/
 	
@@ -796,11 +795,10 @@ public class Util {
 		}}).start();
 	}
 	
-	/* not needed?
 	public static String archiveImages(){
-		final String path = "./archive" + sep + "img_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.framefolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
+		final String path = "./log/archive/frames_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.framefolder};
+		new File(Settings.redhome + sep + "./log/archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
@@ -808,15 +806,16 @@ public class Util {
 	}
 	
 	public static String archiveStreams(){
-		final String path = "./archive" + sep + "vid_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + " " + Settings.streamfolder};
-		new File(Settings.redhome + sep + "archive").mkdir(); 
+		final String path = "./log/archive/streams_" + System.currentTimeMillis() + ".tar";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.streamfolder};
+		new File(Settings.redhome + sep + "./log/archive").mkdir(); 
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
 		return path;
 	}
 	
+	/* not needed?
 	public static String archiveROS(){
 		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
@@ -857,9 +856,8 @@ public class Util {
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
 		}}).start();
-	}*/
+	}
 
-	/*
 	public static boolean archivePID(){ 
 		Process proc = null;
 		String line = null;
@@ -878,7 +876,6 @@ public class Util {
 		return false;
 	}
 
-	
 	public static boolean waitForArchive(){
 		if(archivePID()){ 
 			long start = System.currentTimeMillis();
@@ -1002,7 +999,6 @@ public class Util {
 		}
 		
 		appendUserMessage("ros purge reboot required");
-		// rm -rf /home/brad/.ros/log
 		
 		new Thread(new Runnable() { public void run() {
 			try {

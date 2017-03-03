@@ -66,7 +66,7 @@ public class TelnetServer implements Observer {
 			String ip_address = clientSocket.getInetAddress().toString().substring(1);
 			sendToSocket(ip_address + " connected via socket", out);
 			Util.log(ip_address+" connected via socket", this);
-			banlist.appendLog(ip_address+" connected via socket");
+			// banlist.appendLog(ip_address+" connected via socket");
 			this.start();
 		}
 		

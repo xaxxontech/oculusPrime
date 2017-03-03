@@ -40,19 +40,21 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	
 	static final String commandlinks = 
 			"<a href=\"dashboard?action=save\">save snapshot</a>" +
-			"<a href=\"dashboard?action=archiveNavigation\">zip navigation</a>" +
-			"<a href=\"dashboard?action=archiveLogs\">zip log folder</a>\n" +
+			"<a href=\"dashboard?action=archivenav\">zip navigation</a>" +
+			"<a href=\"dashboard?action=archivelogs\">zip log folder</a>\n" +
+			"<a href=\"dashboard?action=archiveframes\">zip frames</a>\n" +
+			"<a href=\"dashboard?action=archivestreams\">zip streams</a>\n" +
 			"<a href=\"dashboard?action=email\">send email</a>\n" +
 			"<a href=\"dashboard?action=restart\">restart java</a>" +
 			"<a href=\"dashboard?action=reboot\">reboot linux</a>" ;
 	
 	static final String loglinks = 
-			"<a href=\"dashboard?action=truncMedia\">truncate media</a>" +
+			"<a href=\"dashboard?action=truncmedia\">truncate media</a>" +
+			"<a href=\"dashboard?action=trunclogs\">truncate logs</a>" +
 			"<a href=\"dashboard?action=deletelogs\">DELETE LOGS</a>\n";
 	
 	static final long serialVersionUID = 1L;	
-// 	private static final String HTTP_REFRESH_DELAY_SECONDS = "45"; 
-	private static final int MAX_LINE_LENGTH = 120; 
+	private static final int MAX_LINE_LENGTH = 90; 
 	private static boolean DEBUG = false; // turn on for extra state debugging
 
 	static Settings settings = Settings.getReference();
@@ -69,7 +71,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	Vector<PyScripts> pids;
 	static Application app = null;
 	String httpport = null;
-//	String delay = "30";
 	String estimatedmeters;
 	String estimatedseconds; 
 	long time;
@@ -139,162 +140,150 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			return;
 		}
 		
-		String action = null;
-		String route = null;
-		String view = null;	
-//		String move = null;
-		String pid = null;
+		
+		String r = null;
+		String view = null;
+		String a = null;
+		String p = null;
 		
 		try {
 			view = request.getParameter("view");
-//			delay = request.getParameter("delay");
-			action = request.getParameter("action");
-			route = request.getParameter("route");
-//			move = request.getParameter("move");
-			pid = request.getParameter("pid");
+			a = request.getParameter("action");
+			r = request.getParameter("route");
+			p = request.getParameter("pid");
 		} catch (Exception e) {}
-			
-//		if(delay == null) delay = HTTP_REFRESH_DELAY_SECONDS;
 		
-//		if(move != null){ 
-//			if(state.equals(values.dockstatus, AutoDock.DOCKED)){ 
-//				state.set(values.motionenabled, true);
-//				double distance = 1.0;
-//				app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
-//				Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.name())) + 2000);
-//			} else app.driverCallServer(PlayerCommands.nudge, move);
-//		}
-		
-		if(action != null && app != null){
-			
-			if(action.equalsIgnoreCase("debugon"))            app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
-			if(action.equalsIgnoreCase("debugoff"))           app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
-			if(action.equalsIgnoreCase("startrec"))           app.driverCallServer(PlayerCommands.record, "true dashboard");
-			if(action.equalsIgnoreCase("stoprec"))            app.driverCallServer(PlayerCommands.record, "false");
-			if(action.equalsIgnoreCase("motor"))              app.driverCallServer(PlayerCommands.motorsreset, null);
-			if(action.equalsIgnoreCase("power"))              app.driverCallServer(PlayerCommands.powerreset, null);			
-			if(action.equalsIgnoreCase("gotodock"))           app.driverCallServer(PlayerCommands.gotodock, null);
-			if(action.equalsIgnoreCase("startnav"))           app.driverCallServer(PlayerCommands.startnav, null);
-			if(action.equalsIgnoreCase("stopnav"))            app.driverCallServer(PlayerCommands.stopnav, null);
-			if(action.equalsIgnoreCase("redock"))             app.driverCallServer(PlayerCommands.redock, null); 
-			if(action.equalsIgnoreCase("script"))             Util.systemCall("python telnet_scripts/" + pid);	
-			if(action.equalsIgnoreCase("gui"))                state.delete(values.guinotify);
-			if(action.equalsIgnoreCase("email"))              sendEmail();
-					
- 			if(action.equalsIgnoreCase("truncMedia")){      
- 				new Thread(new Runnable() { public void run(){
- 					app.driverCallServer(PlayerCommands.truncMedia, null); 
- 					// Util.delay(2000);
- 	 				readFileSizes(); 
-				}}).start();
- 			}		
- 			
- 			
- 			if(action.equalsIgnoreCase("deletelogs")){   
- 				new Thread(new Runnable() { public void run(){
- 					app.driverCallServer(PlayerCommands.deletelogs, null); 
- 					// Util.delay(2000);
- 	 				readFileSizes();
-				}}).start();
- 			}			
- 			
-			if(action.equalsIgnoreCase("archivelogs")){
-				new Thread(new Runnable() { public void run(){
-					app.driverCallServer(PlayerCommands.archiveLogs, null); readFileSizes();
- 					// Util.delay(2000);
- 	 				readFileSizes(); 
-				}}).start();
-			}	
- 			
-			if(action.equalsIgnoreCase("archiveNavigation")){ 
-				new Thread(new Runnable() { public void run(){
+		final String action = a;
+		final String route = r;
+		final String pid = p;
+
+		if(action != null && app != null) {
+			new Thread(new Runnable() { public void run() {
+				if(action.equalsIgnoreCase("debugon"))    app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
+				if(action.equalsIgnoreCase("debugoff"))   app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
+				if(action.equalsIgnoreCase("startrec"))   app.driverCallServer(PlayerCommands.record, "true dashboard");
+				if(action.equalsIgnoreCase("stoprec"))    app.driverCallServer(PlayerCommands.record, "false");
+				if(action.equalsIgnoreCase("motor"))      app.driverCallServer(PlayerCommands.motorsreset, null);
+				if(action.equalsIgnoreCase("power"))      app.driverCallServer(PlayerCommands.powerreset, null);			
+				if(action.equalsIgnoreCase("gotodock"))   app.driverCallServer(PlayerCommands.gotodock, null);
+				if(action.equalsIgnoreCase("startnav"))   app.driverCallServer(PlayerCommands.startnav, null);
+				if(action.equalsIgnoreCase("stopnav"))    app.driverCallServer(PlayerCommands.stopnav, null);
+				if(action.equalsIgnoreCase("redock"))     app.driverCallServer(PlayerCommands.redock, null); 
+				if(action.equalsIgnoreCase("script"))     Util.systemCall("python telnet_scripts/" + pid);	
+				if(action.equalsIgnoreCase("gui"))        state.delete(values.guinotify);
+				if(action.equalsIgnoreCase("email"))      sendEmail();
+						
+	 			if(action.equalsIgnoreCase("truncmedia")){      
+	 				app.driverCallServer(PlayerCommands.truncMedia, null); 
+	 				readFileSizes(); 
+				}		
+				
+	 			if(action.equalsIgnoreCase("trunclogs")){   
+	 				Util.truncStaleArchive();
+	 				Util.truncStaleLog();
+	 	 			readFileSizes(); 
+	 			}		
+	 			
+	 			if(action.equalsIgnoreCase("deletelogs")){   
+	 				app.driverCallServer(PlayerCommands.deletelogs, null); 
+	 				readFileSizes();
+				}			
+	 			
+				if(action.equalsIgnoreCase("archivenav")){ 
 					app.driverCallServer(PlayerCommands.archiveNavigation, null);	
- 					// Util.delay(2000);
- 	 				readFileSizes();
-				}}).start();
-			}	
- 			
-			if(action.equalsIgnoreCase("camon")){
-				new Thread(new Runnable() { public void run(){
+	 				readFileSizes();
+				}	
+				
+				if(action.equalsIgnoreCase("archivestreams")){ 
+					Util.log("archivestreams");
+					Util.archiveStreams();
+		 	 		readFileSizes();
+				}	
+				
+				if(action.equalsIgnoreCase("archiveframes")){ 
+					Util.log("archiveframes");
+					Util.archiveImages();
+					readFileSizes();
+				}	
+		 			
+				if(action.equalsIgnoreCase("camon")){
 					app.driverCallServer(PlayerCommands.publish, "camera");
 					Util.delay(4000); // TODO: BETTER WAY TO KNOW IF CAMERA IS ON?
 					if(Navigation.turnLightOnIfDark()) Util.log("light was turned on because was dark", this);
-				}}).start();
-			}
-				
-			if(action.equalsIgnoreCase("camoff")) {
-				app.driverCallServer(PlayerCommands.publish, "stop");
-				app.driverCallServer(PlayerCommands.spotlight, "0");
-			}
-			
-			if( route != null ){
-				
-//				Util.debug("......doGet(): route: " + route, this);
-//				if(action.equalsIgnoreCase("resetstats")) app.driverCallServer(PlayerCommands.resetroutedata, route);
-				if(action.equalsIgnoreCase("gotowp")) app.driverCallServer(PlayerCommands.gotowaypoint, route);
-				if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);		
-			}
-			
-			if(action.equalsIgnoreCase("cancel")) {
-				
-//				Util.debug("......doGet(): cancel route: " + state.get(values.navigationroute), this);
-				
-				app.driverCallServer(PlayerCommands.move, "stop");
-				app.driverCallServer(PlayerCommands.cancelroute, null);
-				Util.delay(3000);
-				app.driverCallServer(PlayerCommands.gotodock, null);
-			}
-
-			if(action.equalsIgnoreCase("tail")){
-				String log = PyScripts.NONE;
-				for( int i = 0 ; i < pids.size() ; i++ ) if(pids.get(i).pid.equals(pid)) log = pids.get(i).logFile;
-				if( ! log.equals(PyScripts.NONE)){
-					Util.log("[" + pid + "] " + log); 
-					Vector<String> txt = Util.tail(log, 5);
-					for( int i = 0 ; i < txt.size() ; i++)
-						Util.log("["+pids.get(i).pyFile + "] " + (String) txt.get(i));
 				}
-			}
-			
-			if(action.equalsIgnoreCase("kill")){
-				Util.debug("kill pid = " + pid);
-				if(pid.equals("pkill"))	Util.systemCall("pkill python");	
-				else Util.systemCall("kill -SIGINT " + pid);	
-			}
-			
-			if(action.equalsIgnoreCase("reboot")){
-				new Thread(new Runnable() { public void run(){
+					
+				if(action.equalsIgnoreCase("camoff")) {
+					app.driverCallServer(PlayerCommands.publish, "stop");
+					app.driverCallServer(PlayerCommands.spotlight, "0");
+				}
+				
+				if( route != null ){
+					if(action.equalsIgnoreCase("gotowp")) app.driverCallServer(PlayerCommands.gotowaypoint, route);
+					if(action.equalsIgnoreCase("runroute")) app.driverCallServer(PlayerCommands.runroute, route);		
+				}
+				
+				if(action.equalsIgnoreCase("cancel")) {
 					app.driverCallServer(PlayerCommands.move, "stop");
-					Util.log("reboot called, going down..", this);	
-					Util.appendUserMessage("reboot called, going down..");
-					Util.delay(3000); // redirect before calling.. 
-					app.driverCallServer(PlayerCommands.reboot, null);
-				}}).start();
-			}
+					app.driverCallServer(PlayerCommands.cancelroute, null);
+					Util.delay(3000);
+					app.driverCallServer(PlayerCommands.gotodock, null);
+				}
 	
-			if(action.equalsIgnoreCase("restart")){
-				new Thread(new Runnable(){ public void run(){
-					app.driverCallServer(PlayerCommands.move, "stop");
-					Util.log("restart called, going down..", this);
-					Util.appendUserMessage("restart called, going down..");
-					Util.delay(2000); // redirect before calling.. 
-					app.driverCallServer(PlayerCommands.restart, null);
-				}}).start();
-			}
-			
+				if(action.equalsIgnoreCase("tail")){
+					String log = PyScripts.NONE;
+					for( int i = 0 ; i < pids.size() ; i++ ) if(pids.get(i).pid.equals(pid)) log = pids.get(i).logFile;
+					if( ! log.equals(PyScripts.NONE)){
+						Util.log("[" + pid + "] " + log); 
+						Vector<String> txt = Util.tail(log, 5);
+						for( int i = 0 ; i < txt.size() ; i++)
+							Util.log("["+pids.get(i).pyFile + "] " + (String) txt.get(i));
+					}
+				}
+				
+				if(action.equalsIgnoreCase("kill")){
+					Util.debug("kill pid = " + pid);
+					if(pid.equals("pkill"))	Util.systemCall("pkill python");	
+					else Util.systemCall("kill -SIGINT " + pid);	
+				}
+				
+				if(action.equalsIgnoreCase("reboot")){
+				//	new Thread(new Runnable() { public void run(){
+						app.driverCallServer(PlayerCommands.move, "stop");
+						Util.log("reboot called, going down..", this);	
+						Util.appendUserMessage("reboot called, going down..");
+						Util.delay(3000); // redirect before calling.. 
+						app.driverCallServer(PlayerCommands.reboot, null);
+				//	}}).start();
+				}
+		
+				if(action.equalsIgnoreCase("restart")){
+				//	new Thread(new Runnable(){ public void run(){
+						app.driverCallServer(PlayerCommands.move, "stop");
+						Util.log("restart called, going down..", this);
+						Util.appendUserMessage("restart called, going down..");
+						Util.delay(2000); // redirect before calling.. 
+						app.driverCallServer(PlayerCommands.restart, null);
+				//	}}).start();
+				}
+				
+				
+				
+				if(action.equalsIgnoreCase("save")) {	
+				//	new Thread(new Runnable() { public void run() {
+						if( ! new Downloader().FileDownload("http://" + state.get(values.localaddress)  
+							+ ":" + httpport + "/oculusPrime/dashboard?action=snapshot", "snapshot_"+ System.currentTimeMillis() +".txt", "log"))
+								Util.log("snapshot save failed", this);
+				//	}}).start();
+				}
+				
+			}}).start();
+		
 			if(action.equalsIgnoreCase("snapshot")) {
-				sendSnap(request, response);
+				try { sendSnap(request, response);
+				} catch (Exception e) { Util.printError(e);	}
 				return;
 			}
 			
-			if(action.equalsIgnoreCase("save")) {	
-				new Thread(new Runnable() { public void run() {
-					if( ! new Downloader().FileDownload("http://" + state.get(values.localaddress)  
-						+ ":" + httpport + "/oculusPrime/dashboard?action=snapshot", "snapshot_"+ System.currentTimeMillis() +".txt", "log"))
-							Util.log("snapshot save failed", this);
-				}}).start();
-			}
-		
 			response.sendRedirect("/oculusPrime/dashboard"); 
 		}
 			 
@@ -416,31 +405,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.close();
 			}
 			
-			/*
-			if(view.equalsIgnoreCase("roslog")){
-				out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
-				out.println("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"><title>Oculus Prime log file</title> \n");
-				out.println("<style type=\"text/css\">");
-				out.println("body, p, ol, ul {font-family: verdana, arial, helvetica, sans-serif; font-size: 16px;}");
-				out.println("th, td { text-align: left; padding: 12px; }");
-				out.println("tr:nth-child(even){background-color: #f2f2f2}");
-				out.println("th { background-color: #4CAF50; color: white; }");
-				out.println("</style><html><body>\n");
-				out.println("\n");
-				out.println("<table><tbody>");
-
-				Vector<String> tail = Util.tail(Settings.logfolder + "/ros.log", 35);
-				for( int j = 0 ; j < tail.size() ; j++) {
-					String txt =  tail.get(j);
-					if(txt.length() > 88) txt = txt.substring(0, 88);
-					out.println("<tr><td>"+ tail.get(j) +"\n");
-				}
-				
-				out.println("</tbody></table>");
-				out.println("\n</body></html> \n");
-				out.close();
-			}*/
-			
 			if(view.equalsIgnoreCase("power")){	
 				out.println("<html><head></head><body> \n");
 				out.println("<a href=\"dashboard\">dashboard</a>\n"+ new File(PowerLogger.powerlog).getAbsolutePath() + "<br /><br />\n");
@@ -451,10 +415,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 
 			if(view.equalsIgnoreCase("history")){
 				out.println("<html><head></head><body>\n");
-//				out.println("<a href=\"dashboard\">dashboard</a>");
-//				out.println("&nbsp&nbsp&nbsp&nbsp<a href=\"dashboard?view=state\">state</a><br/><br/>\n");
-				out.println("<table cellspacing=\"9\"><tbody>\n");
-				
 				Calendar c = Calendar.getInstance();
 				for(int i = 0 ; i < history.size() ; i++){
 					String[] line = history.get(i).split(" ");
@@ -684,7 +644,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		}
 		drop += "</div></div>\n";
 		str.append(drop);
-		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;views</button><div class=\"dropdown-content\">&nbsp;&nbsp;" + viewslinks + "\n</div></div>");
+		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">views</button><div class=\"dropdown-content\">\n" + viewslinks + "\n</div></div>");
 
 		// pids 
 		pids = PyScripts.getRunningPythonScripts();
@@ -709,7 +669,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		for(int i = 0 ; i < pids.size() ; i ++) {
 			if( ! pids.get(i).logFile.equals(PyScripts.NONE)) {
 				String txt = pids.get(i).logFile;
-				txt = Util.trimLength(txt, 9);
+				txt = Util.trimLength(txt, 15);
 				str.append("<a href=\"dashboard?action=tail&pid="+pids.get(i).pid+"\">"+ txt +"</a>\n");	
 			}
 		}
@@ -741,7 +701,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			str.append(msg);
 		}
 	
-		str.append(tailFormated(30) + "\n");
+		str.append(tailFormated(22) + "\n");
 		str.append("\n</tbody></table>\n");
 		return str.toString();
 	}
@@ -750,7 +710,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		Vector<String> list = NavigationUtilities.getRoutes();
 		String rname = state.get(values.navigationroute);
 		if(rname == null) rname = "routes";
-		String drop = "\n<div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;"+rname+"</button><div class=\"dropdown-content\">";
+		String drop = "\n<div class=\"dropdown\"><button class=\"dropbtn\">routes</button><div class=\"dropdown-content\">";
 		for(int i = 0; i < list.size(); i++) drop += "<a href=\"dashboard?action=runroute&route="+list.get(i)+"\">" + list.get(i) + "</a>";
 		drop +="<a href=\"dashboard?action=gotodock\">return dock</a>\n<a href=\"dashboard?action=cancel\">cancel route</a>\n"; 
 		return drop += "</div></div>";
@@ -779,7 +739,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		return link; 
 	}
 	
-	/**/
 	public static String tailFormated(int lines){
 		StringBuffer str = new StringBuffer();
 		Vector<String> history = Util.tail(Settings.stdout, lines);
@@ -792,17 +751,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			line = line.replaceFirst("oculusPrime.", "");
 			line = line.replaceFirst("Application.", "");
 			line = line.replaceFirst("static, ", "");	
-		//	line = line.replaceFirst("$ConnectionHandler,", "");
-
+			line = line.replaceFirst("commport.", "");
 			line = line.replaceFirst("Downloader", "");
-
 			line = line.replace("TelnetServer$ConnectionHandler,", "telnet: ");
 			line = line.replaceAll(">", "");	
 			line = line.replaceAll("<", "");	
 			line = line.replaceAll(",", "");	
-			line = line.trim();
-			
-			if(line.length() > 88) line = line.substring(0, 88);
+			// line = line.trim();
+			line = Util.trimLength(line, MAX_LINE_LENGTH);
 			str.append("\n<tr><td class='tail' colspan=\"11\">" + line + "</tr>\n"); 
 		}
 
@@ -817,9 +773,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			String date =  new Date(time).toString();
 			date = date.substring(10, date.length()-8).trim();
 			double delta = (double)(System.currentTimeMillis() - time) / (double) 1000;
-//			String unit = "&nbsp;sec&nbsp;";
 			String unit = " sec ";
-
 			if(delta > 60) { delta = delta / 60; unit = " min "; }
 			reply += " " + Util.formatFloat(delta, 1) + " " + unit + " " + mesg.trim() + "\n"; 
 		}

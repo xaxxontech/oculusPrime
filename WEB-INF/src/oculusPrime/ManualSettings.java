@@ -10,7 +10,10 @@ public enum ManualSettings {
 
 	// undocumented
 	redockifweakconnection,
-	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, undockdistance, restarted,
+	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, undockdistance, 
+	
+	restarted,     // count java resets, warn if needing reboot vs restart
+	batterytoolow, //
 
 	;
 	
@@ -37,7 +40,7 @@ public enum ManualSettings {
 		config.setProperty(soundthresholdalt.name(), "-8");
 		config.setProperty(undockdistance.name(), "0.75");
 		config.setProperty(restarted.name(), "0");
-
+		config.setProperty(batterytoolow.name(), "0");
 		return config;
 	}
 	

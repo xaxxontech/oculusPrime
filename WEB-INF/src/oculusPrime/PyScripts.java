@@ -17,36 +17,9 @@ public class PyScripts {
 	String name = NONE;
 	String pid = NONE;
 	
-	/*
-	PyScripts (String id, String pyFile, String log ){
-
-		//Util.log("size =" + scripts.size() + " " + scripts.toString());
-		//for( int i = 0 ; i < scripts.size() ; i++) Util.log(i + " =" + scripts.get(i).toString());
-
-		this.pyFile = pyFile;
-		this.logFile = log;
-		this.pid = id;
-	}
-	
-	static void add(String id, String file, String log){
-		// PyScripts py = new PyScripts(id, file, log);
-		if( ! exists(id)) scripts.add( new PyScripts(id, file, log));
-	}
-	
-	static boolean exists(String id){
-		for( int i = 0 ; i < scripts.size() ; i++) if( scripts.get(i).equals(id)) return true;
-		return false;
-	}
-	
-	public String toString(){
-		return pyFile;
-	}
-	*/
-
 	// TODO: 
 	// lookup proc
 	// cat /proc/pid/cmdline
-	/**/
 	
 	public static Vector<PyScripts> getRunningPythonScripts() {
 		Vector<PyScripts> scripts = new Vector<PyScripts>();
@@ -65,20 +38,15 @@ public class PyScripts {
 		return scripts;
 	}	
 	
-	
 	static File[] getScriptFiles(){
 		File telnet = new File(Settings.telnetscripts);
 		if( ! telnet.exists()) telnet.mkdir();
 		File[] names = telnet.listFiles(new FileFilter() {
 			@Override
 			public boolean accept(File pathname) { 
-			
 				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
-				
 				if(pathname.getName().startsWith("startup_")) return false;
-				
 				return pathname.getName().endsWith(".py"); 
-				
 			}
 		});
 		return names;
@@ -90,23 +58,18 @@ public class PyScripts {
 		File[] names = telnet.listFiles(new FileFilter() {
 			@Override
 			public boolean accept(File pathname) { 
-			
 				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
-				
 				if(pathname.getName().startsWith("startup_") && pathname.getName().endsWith(".py")) return true;
-				
-				return false;
-				
+				return false;	
 			}
 		});
 		return names;
 	}
 
-
 	public static void autostartPyScripts() {
 		File[] scripts = getAutoStartScriptFiles();
 		for( int i = 0 ; i < scripts.length ; i++ ){	
-			Util.log("run: " + scripts[i].getName());
+			Util.log("autostarting scripts: " + scripts[i].getName());
 			Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
 		}
 	}

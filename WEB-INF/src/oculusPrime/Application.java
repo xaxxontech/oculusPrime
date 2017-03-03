@@ -363,14 +363,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 		
 		Util.debug("application initialize done", this);
-		
-//		if (!settings.readSetting(ManualSettings.developer).equals("true")) {
-			
 		Util.debug("initialize(): starting python scripts", this);
-		
 		PyScripts.autostartPyScripts();
-		
-
 	}
 
 	// called by remote relay client

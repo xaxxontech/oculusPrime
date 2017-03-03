@@ -39,11 +39,11 @@ public class Navigation implements Observer {
 	public static final long WAYPOINTTIMEOUT = Util.TEN_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
-	private final Settings settings = Settings.getReference();
+	private final static Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
 	public static int consecutiveroute = 1;
 	public static long routemillimeters = 0;
-	public static long routestarttime;
+	public static long routestarttime = 0;
 	public NavigationLog navlog;
 	
 	/** Constructor */
@@ -434,9 +434,41 @@ public class Navigation implements Observer {
 				break;
 			}
 		}
-
 	}
-
+	
+	/** only used before starting a route, ignored if un-docked */
+	public static boolean batteryTooLow(){	
+		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) return false;
+		final int toolow = settings.getInteger(ManualSettings.batterytoolow);
+		if( toolow == 0) return false; // disabled
+		long start = System.currentTimeMillis();
+		String current;
+		int value = 0;
+		while(true){	
+			current = state.get(values.batterylife); 
+			if(current!=null) if(current.contains("%")) break;
+			Util.delay(100);
+			if(System.currentTimeMillis()-start > 10000){ 
+				Util.debug("batteryTooLow(): timeout, assume too low");
+				return true;
+			}
+		}
+	
+		try {
+			value = Integer.parseInt(current.split("%")[0]);
+		} catch (NumberFormatException e) {
+			Util.log("Navigation.batteryTooLow(): can't read battery info from state", null);
+			return true;
+		}
+		
+		if(value < toolow){
+			app.driverCallServer(PlayerCommands.messageclients, "skipping route, battery too low");
+			return true; 
+		}
+		
+		return false;
+	}
+	
 	public void runRoute(final String name) {
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
@@ -600,6 +632,18 @@ public class Navigation implements Observer {
 					return;
 				}
 
+				// developer -- skip route if battery low 
+				// if(settings.getBoolean(ManualSettings.developer.name())){
+				if(batteryTooLow()){
+					Util.log("battery too low: " + state.get(values.batterylife), this);
+					navlog.newItem(NavigationLog.ALERTSTATUS, "Battery too low to start: " + state.get(values.batterylife), 0, null, name, consecutiveroute, 0);
+					if (!delayToNextRoute(navroute, name, id)){
+						 Util.log("runRoute(): waiting for the battery", this);
+						return; 
+					}
+					continue;
+				}
+				
 				// start ros nav system
 				if (!waitForNavSystem()) {
 					// check if cancelled while waiting

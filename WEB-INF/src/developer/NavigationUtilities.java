@@ -10,7 +10,6 @@ import java.util.Vector;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -140,50 +139,6 @@ public class NavigationUtilities {
 	/** */
 	public static Vector<String> getWaypointsForRoute(String rname) {
 		return getWaypointsForRoute(rname, routesLoad());
-	}
-
-	/** */
-	public static String getTag(final String tag, final String xml) throws ParserConfigurationException{
-		if(tag == null || xml == null) return null;
-		
-		/*
-		
-		<routeslist>
-			<route>
-				<rname>back door</rname>
-				<minbetween>2</minbetween>
-				<starthour>00</starthour>
-				<startmin>00</startmin>
-				<routeduration>24</routeduration>
-				<day>Sun</day>
-				<active>false</active>
-				<waypoint>
-					<wpname>deck</wpname>
-						<duration>10</duration>
-						<action>photo</action>
-				</waypoint>
-				<estimateddistance>5</estimateddistance>
-				<estimatedtime>158</estimatedtime>
-				<day>Mon</day><day>Tue</day><day>Wed</day><day>Thu</day><day>Fri</day><day>Sat</day>
-				<routecount>151</routecount>
-				<routefail>5</routefail>
-				<waypoint>
-					<wpname>coner</wpname>
-					<duration>10</duration>
-					<action>photo</action></waypoint><waypoint><wpname>sink</wpname><duration>10</duration><action>photo</action></waypoint></route>
-			... 
-		</routeslist>
-		
-		neelcant and case worker donna and raven song  
-
-		
-		*/ 
-
-		String start = "<" + tag + ">";
-		String end = "</" + tag + ">";
-		
-		String sub = xml.substring( xml.indexOf(start) + start.length(), xml.indexOf(end));
-		return sub;
 	}
 	
 	//---------------- route fails
