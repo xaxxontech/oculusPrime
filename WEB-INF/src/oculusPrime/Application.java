@@ -1019,7 +1019,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
-			// state.set(values.guinotify, "logs being archived");
+			state.set(values.guinotify, "logs being archived");
 			Util.zipLogFiles();
 			break;
 

@@ -45,6 +45,9 @@ public class Navigation implements Observer {
 	public static long routemillimeters = 0;
 	public static long routestarttime = 0;
 	public NavigationLog navlog;
+	int batteryskips = 0;
+	// String batteryvoltswarning = "0";
+	
 	
 	/** Constructor */
 	public Navigation(Application a) {
@@ -470,6 +473,9 @@ public class Navigation implements Observer {
 	}
 	
 	public void runRoute(final String name) {
+		
+	
+		
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
 
@@ -632,17 +638,21 @@ public class Navigation implements Observer {
 					return;
 				}
 
-				// developer -- skip route if battery low 
-				// if(settings.getBoolean(ManualSettings.developer.name())){
-				if(batteryTooLow()){
-					Util.log("battery too low: " + state.get(values.batterylife), this);
-					navlog.newItem(NavigationLog.ALERTSTATUS, "Battery too low to start: " + state.get(values.batterylife), 0, null, name, consecutiveroute, 0);
-					if (!delayToNextRoute(navroute, name, id)){
-						 Util.log("runRoute(): waiting for the battery", this);
-						return; 
+				// skip route if battery low (must be in settings.txt)  
+				if(batteryTooLow()){			
+					batteryskips++;
+					Util.log("battery too low: " + state.get(values.batterylife) + " skips: " + batteryskips, this);
+					if(batteryskips == 1){	// only log once !
+						navlog.newItem(NavigationLog.ALERTSTATUS, "Battery too low to start: " + state.get(values.batterylife), 0, null, name, consecutiveroute, 0);	
+					} else {
+						if( ! state.get(values.batterylife).contains("_charging")) {
+							Util.log("batteryTooLow(): not charging, powerreset: "+ state.get(values.batterylife));
+							app.driverCallServer(PlayerCommands.powerreset, null);		
+						}
 					}
+					if( ! delayToNextRoute(navroute, name, id)) return; 
 					continue;
-				}
+				} else { batteryskips = 0; }
 				
 				// start ros nav system
 				if (!waitForNavSystem()) {
@@ -650,8 +660,7 @@ public class Navigation implements Observer {
 					if (!state.exists(State.values.navigationroute)) return;
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							null, name, consecutiveroute, 0);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime, null, name, consecutiveroute, 0);
 
 					if (state.getUpTime() > Util.TEN_MINUTES) {
 						app.driverCallServer(PlayerCommands.reboot, null);
@@ -1255,7 +1264,7 @@ public class Navigation implements Observer {
 
 		String xmlString = Util.XMLtoString(document);
 		saveRoute(xmlString);
-
+		batteryskips = 0;
 		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 	}
 

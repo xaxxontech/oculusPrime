@@ -30,6 +30,7 @@ import org.xml.sax.SAXParseException;
 
 import developer.Navigation;
 import developer.NavigationLog;
+import developer.NavigationUtilities;
 import oculusPrime.State.values;
 
 public class Util {
@@ -655,20 +656,23 @@ public class Util {
 			}
 		}
 
+		// delete all files but leave sub folders like /archive 
 	 	File[] files = new File(Settings.logfolder).listFiles();
 	    for (int i = 0; i < files.length; i++){
 	       if (files[i].isFile()) {
-	    	   debug(files[i].getName() + " was deleted " + i);
+	    	   log(files[i].getName() + " was deleted " + i);
 	    	   files[i].delete();
 	       }
 	    }
 
-	   deleteROS();
+	    NavigationUtilities.resetAllRouteStats(); // clear xml 
+	    new File(NavigationLog.navigationlogpath).delete(); // Delete index.html
+	    deleteROS(); // CAUSE REBOOT
 	}
 	
 	public static void truncStaleAudioVideo(){
 		File[] files  = new File(Settings.streamfolder).listFiles();	
-		debug("truncStaleAudioVideo: files found = " + files.length);
+		log("truncStaleAudioVideo(): files found = " + files.length);
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
@@ -681,6 +685,7 @@ public class Util {
 	
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
+		log("truncStaleFrames(): files found = " + files.length);
         for (int i = 0; i < files.length; i++){
 			if (files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
@@ -777,13 +782,13 @@ public class Util {
 	}
 	
 	public static void zipLogFiles(){	
-		String list = " ";
+		String list = " " + NavigationLog.navigationlogpath + " " + Settings.settingsfile + " ";
 		File[] files = new File(Settings.logfolder).listFiles();
 	    for(int i = 0; i < files.length; i++) if(files[i].isFile()) list += files[i].getAbsoluteFile() + " ";
-	    list += " " + NavigationLog.navigationlogpath + " " + Settings.settingsfile;
+	    // for(int i = 0; i < files.length; i++) if(files[i].isFile()) log("log zip list: " + list);
 	    
 		final String path = "./log/archive/logs_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + list};
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + list};
 		
 		new File(Settings.redhome + sep + "./log/archive").mkdir(); // make sure its there
 		new Thread(new Runnable() { public void run() {
