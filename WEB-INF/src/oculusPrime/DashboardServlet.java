@@ -1,10 +1,7 @@
 package oculusPrime;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.Calendar;
 import java.util.Date;
@@ -31,19 +28,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String viewslinks = 
 			"<a href=\"navigationlog/index.html\" target=\"_blank\">navigation log</a>\n"+      
 			"<a href=\"/oculusPrime/media\" target=\"_blank\">media files</a>" +                
-			"<a href=\"dashboard?view=\">route stats</a>\n" +
-			"<a href=\"dashboard?view=users\">users</a>\n" +
-			"<a href=\"dashboard?view=stdout\">stdout</a>\n" +
-			"<a href=\"dashboard?view=history\">history</a>\n" +
+			"<a href=\"dashboard?view=routes\" target=\"_blank\">route stats</a>\n" +
+			"<a href=\"dashboard?view=users\" target=\"_blank\">users</a>\n" +
+			"<a href=\"dashboard?view=stdout\"target=\"_blank\">stdout</a>\n" +
+			"<a href=\"dashboard?view=history\" target=\"_blank\">history</a>\n" +
 			"<a href=\"dashboard?action=snapshot\" target=\"_blank\">snaphot</a>\n"+ 
 			"<a href=\"dashboard?view=state\">state</a>\n"; 
 	
 	static final String commandlinks = 
 			"<a href=\"dashboard?action=save\">save snapshot</a>" +
-			"<a href=\"dashboard?action=archivenav\">zip navigation</a>" +
 			"<a href=\"dashboard?action=archivelogs\">zip log folder</a>\n" +
-			"<a href=\"dashboard?action=archiveframes\">zip frames</a>\n" +
-			"<a href=\"dashboard?action=archivestreams\">zip streams</a>\n" +
+			"<a href=\"dashboard?action=archivemedia\">zip media</a>\n" +
 			"<a href=\"dashboard?action=email\">send email</a>\n" +
 			"<a href=\"dashboard?action=restart\">restart java</a>" +
 			"<a href=\"dashboard?action=reboot\">reboot linux</a>" ;
@@ -51,17 +46,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	static final String loglinks = 
 			"<a href=\"dashboard?action=truncmedia\">truncate media</a>" +
 			"<a href=\"dashboard?action=trunclogs\">truncate logs</a>" +
-			"<a href=\"dashboard?action=deletelogs\">DELETE LOGS</a>\n";
+			"<a href=\"dashboard?action=deletelogs\"><font color=\"red\">DELETE LOGS</font></a>\n";
 	
 	static final long serialVersionUID = 1L;	
-	private static final int MAX_LINE_LENGTH = 99; 
+	private static final int MAX_LINE_LENGTH = 88; 
 	private static boolean DEBUG = false; // turn on for extra state debugging
 
 	static Settings settings = Settings.getReference();
 	static BanList ban = BanList.getRefrence();	
 	static State state = State.getReference();
 	static final double VERSION = new Updater().getCurrentVersion();
-	static final int restarts = settings.getInteger(ManualSettings.restarted);
+//	static final int restarts = settings.getInteger(ManualSettings.restarted);
 	static final long DELAY = Util.ONE_MINUTE;
 	static final String css = getCSS();
 		
@@ -81,9 +76,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	long frames;
 	int hdd;
 	
-	
-	
 	public static void setApp(Application a){app = a;}
+	
 	public static String getCSS(){
 		StringBuffer buffer = new StringBuffer();
 		/*
@@ -97,7 +91,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		} catch (Exception e) { Util.log("getCSS(): " + e.getMessage()); }
 		*/
 		buffer.append("body, p, ol, ul {font-family: verdana, arial, helvetica, sans-serif; font-size: 16px;}");
-		buffer.append(".dropbtn { border: none; cursor: pointer; font-family: verdana, arial, helvetica, sans-serif; text-align: left; background-color: #ffffff; padding: 0px; font-size: 16px; } \n");
+		buffer.append(".dropbtn { border: none; cursor: pointer; font-family: verdana, arial, helvetica, sans-serif; text-align: left; background-color: #fffff0; padding: 0px; font-size: 16px; } \n");
 		buffer.append(".dropdown { position: relative; display: inline-block; } \n");
 		buffer.append(".dropdown-content { font-size: 18px; display: none; position: absolute; background-color: #ccd9ff; min-width: 170px;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); } \n");
 		buffer.append(".dropdown-content a { color: black; padding: 5px 5px; text-decoration: none; display: block; } \n");
@@ -107,17 +101,15 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		buffer.append(".busy {	border: 3px solid red; } \n");
 		buffer.append(".on { border: 3px solid blue; } \n");
 		buffer.append(".off { border: 2px solid grey; } \n");
-		buffer.append(".tail { #border-collapse: collapse;	border: 0px solid; font-size: 14px; } \n");
-		buffer.append("table { border: 0px solid grey; min-width: 730px; max-width: 800px; padding: 2px; } \n");
+		buffer.append(".tail { #border-collapse: collapse;	border: 0px solid; font-size: 15px; } \n");
+		buffer.append("table { border: 0px solid grey; min-width: 800px; max-width: 800px; padding: 3px; } \n");
 		buffer.append("td { border: 2px solid grey; } \n");
 		buffer.append("a { text-decoration: none; } \n");
 		return buffer.toString();
 	}
 
 	private class Task extends TimerTask {
-		public void run() {
-			readFileSizes();
-		}
+		public void run() { readFileSizes(); }
 	}
 	
 	void readFileSizes(){
@@ -189,7 +181,10 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(action.equalsIgnoreCase("script"))     Util.systemCall("python telnet_scripts/" + pid);	
 				if(action.equalsIgnoreCase("gui"))        state.delete(values.guinotify);
 				if(action.equalsIgnoreCase("email"))      sendEmail();
-						
+				
+
+				if(action.equalsIgnoreCase("dockcancel"))    app.driverCallServer(PlayerCommands.autodock, "cancel");
+				
 	 			if(action.equalsIgnoreCase("truncmedia")){      
 					Util.log("truncmedia", this);
 	 				app.driverCallServer(PlayerCommands.truncMedia, null); 
@@ -214,29 +209,24 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					app.driverCallServer(PlayerCommands.archiveNavigation, null);	
 	 				readFileSizes();
 				}	
-				
-				if(action.equalsIgnoreCase("archivestreams")){ 
-					Util.log("archivestreams", this);
+
+				if(action.equalsIgnoreCase("archivemedia")){ 
+					Util.log("archivemedia", this);
 					Util.archiveStreams();
-		 	 		readFileSizes();
-				}	
-				
-				if(action.equalsIgnoreCase("archiveframes")){ 
-					Util.log("archiveframes", this);
 					Util.archiveImages();
-					readFileSizes();
+		 	 		readFileSizes();
 				}	
 				
 				if(action.equalsIgnoreCase("archivelogs")){ 
 					Util.log("archivelogs", this);
-					Util.zipLogFiles();
+					Util.archiveLogFiles();
 					readFileSizes();
 				}	
 				
 				if(action.equalsIgnoreCase("camon")){
 					app.driverCallServer(PlayerCommands.publish, "camera");
 					Util.delay(4000); // TODO: BETTER WAY TO KNOW IF CAMERA IS ON?
-					if(Navigation.turnLightOnIfDark()) Util.log("light was turned on because was dark", this);
+//					if(Navigation.turnLightOnIfDark()) Util.log("light was turned on because was dark", this);
 				}
 					
 				if(action.equalsIgnoreCase("camoff")) {
@@ -447,7 +437,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		// default view 
 		out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
-		out.println("<html>\n<head><meta http-equiv=\"refresh\" content=\"45\">\n<title>Oculus Prime</title>\n<style type=\"text/css\">"+ css +"</style></head>\n<body> \n");
+		out.println("<html>\n<head><meta http-equiv=\"refresh\" content=\"20\">\n<title>Oculus Prime</title>\n<style type=\"text/css\">"+ css +"</style></head>\n<body> \n");
 		out.println(toDashboard(request.getServerName()+":"+request.getServerPort() + "/oculusPrime/dashboard") + "\n");
 		out.println("\n</body></html>\n");
 		out.close();	
@@ -592,18 +582,18 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			dock = "<a href=\"dashboard?action=redock\" title=\"force re-dock the robot\">docked</a>";	
 		
 		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) dock = "<a href=\"dashboard?action=redock\">un-docked</a>";	
-		if(state.equals(values.dockstatus, AutoDock.DOCKING))  dock = "docking";
-		if(state.equals(values.dockstatus, AutoDock.UNKNOWN))  dock = "UNKNOWN";
+		if(state.equals(values.dockstatus, AutoDock.DOCKING))  dock = "<a href=\"dashboard?action=dockcancel\">docking</a>";
+		if(state.equals(values.dockstatus, AutoDock.UNKNOWN))  dock = "<a href=\"dashboard?action=redock\">UNKNOWN</a>";
 		if(state.getBoolean(values.autodocking)) dock = "auto-docking";
 	
 		String drv = state.get(values.driver);
 		if(drv == null) drv = "none";
 		
 		//------------------- now build HTML buffer ------------------------------------------------------------//  
-		StringBuffer str = new StringBuffer("<table cellspacing=\"5\"><tbody>\n");
+		StringBuffer str = new StringBuffer("<table cellspacing=\"3\"><tbody>\n");
 		
 		// version | ssid | driver
-		str.append("\n<tr><td class='menu'>&nbsp;&nbsp;version&nbsp;" + VERSION + "&nbsp;");
+		str.append("\n<tr><td class='menu'>&nbsp;&nbsp;bulid&nbsp;" + VERSION + "&nbsp;");
 		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;commands</button><div class=\"dropdown-content\">\n" + commandlinks + "\n</div></div>");
 		str.append("\n<td class='menu'>&nbsp;&nbsp;ssid<td>&nbsp;&nbsp;<a href=\"/oculusPrime/network\">" + state.get(values.ssid)); 	
 		str.append("\n<td class='menu'>&nbsp;&nbsp;logs <td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;DEL</button><div class=\"dropdown-content\">\n" + loglinks + "\n</div></div>");
@@ -634,8 +624,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		// camera | uptime | archive
 		str.append("\n<tr>" + cam);
-		if(restarts < 5) str.append("<td class='menu'>&nbsp;&nbsp;up time<td>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins");
-		else str.append("<td class='menu'>&nbsp;&nbsp;up time<td class='busy'>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins " + restarts + "");
+		if(settings.getInteger(ManualSettings.restarted) < 5) 
+		str.append("<td class='menu'>&nbsp;&nbsp;up time<td>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins");
+		else str.append("<td class='menu'>&nbsp;&nbsp;up time<td class='busy'>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins " + settings.getInteger(ManualSettings.restarted) + "");
 		str.append("<td class='menu'>&nbsp;&nbsp;archive<td>&nbsp;&nbsp;"+ archive + " mb</tr> \n" );
 		
 		// navigation | cpu | logs
@@ -650,20 +641,25 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		str.append("\n<tr>" + debug + "<td class='menu'>&nbsp;&nbsp;user<td>&nbsp;&nbsp;" + Util.getLinuxUser() + " " +state.get(values.telnetusers));
 		str.append("\n<td class='menu'>&nbsp;&nbsp;driver<td>&nbsp;&nbsp;" + drv); 
 		
-		str.append(getActiveRoute());
-		str.append("\n\n<tr><td>"+ getRouteLinks() +" \n");
+		// next | meters | time
+		str.append(getActiveRoute());	
+		
+		// views 
+		str.append("<tr><td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;views</button><div class=\"dropdown-content\">\n" + viewslinks + "\n</div></div>");
+
+		// route list 
+		str.append("\n<td>"+ getRouteLinks() +" \n");
+		
+		// waypoints | routes | pids | scripts | logs 
 		String waypoint = state.get(values.roswaypoint);
 		if(waypoint == null) waypoint = "waypoint";	
 		final Vector<String> waypointsAll = getAllWaypoints(); 
 		String drop = "\n<td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;points "+ waypointsAll.size() +"</button><div class=\"dropdown-content\">";
-		if(waypointsAll != null){
-			for(int i = 0 ; i < waypointsAll.size() ; i++) 
-				drop += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i).replaceAll("&nbsp;", " ").trim() +"\">" + waypointsAll.get(i) + "</a> ";
-		}
+		if(waypointsAll != null) for(int i = 0 ; i < waypointsAll.size() ; i++) 
+			drop += "\n<a href=\"dashboard?action=gotowp&route="+ waypointsAll.get(i).replaceAll("&nbsp;", " ").trim() +"\">" + waypointsAll.get(i) + "</a> ";
 		drop += "</div></div>\n";
 		str.append(drop);
-		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;views</button><div class=\"dropdown-content\">\n" + viewslinks + "\n</div></div>");
-
+		
 		// pids 
 		pids = PyScripts.getRunningPythonScripts();
 		str.append("<td><div class=\"dropdown\"><button class=\"dropbtn\">&nbsp;&nbsp;kill "+pids.size()+"</button><div class=\"dropdown-content\"> \n");
@@ -698,13 +694,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		// --- active --- //
 		if(state.exists(values.navigationrouteid) && state.equals(values.odometry, "true")){
-			String m = "#" + Navigation.consecutiveroute + " " + state.get(values.navigationroute) + " | ";
-			if(pointslist != null) 
-				for(int c = 0 ; c < pointslist.size(); c++ )
+			String m = state.get(values.navigationroute) + " ||  ";
+			if(pointslist != null) {
+				for(int c = 0 ; c < pointslist.size(); c++ ) {
 					m+= "<a href=\"media?filter="+ pointslist.get(c).replaceAll(" ", "_") + "\" target=\"_blank\">" + pointslist.get(c) + "</a>,  ";
-			m += "  <a href=\"dashboard?action=gotodock\">return to dock</a> ";
-			if(state.getBoolean(values.rosgoalcancel)) m += " *ros goal cancel* "; 
-			str.append("\n<tr><td class='tail' colspan=\"11\">&nbsp;&nbsp;"+ m.trim() +"</tr>\n");	
+			}
+		}
+		
+// m += "  <a href=\"dashboard?action=gotodock\">return to dock</a> ";
+			
+//TODO: FLAGS ROW			if(state.getBoolean(values.rosgoalcancel)) m += " *goal cancel* "; 
+			str.append("\n<tr><td>&nbsp;&nbsp;lap# " + Navigation.consecutiveroute +"<td class='tail' colspan=\"11\">&nbsp;&nbsp;"+ m.trim() +"</tr>\n");	
 		}
 		
 //		if(state.getBoolean(values.routeoverdue)) m += " *overdue* "; 		
@@ -718,8 +718,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			msg = "<tr><td class='menu'>&nbsp;&nbsp;message<td class='tail' colspan=\"11\">&nbsp;&nbsp;" + msg + "</tr> \n";
 			str.append(msg);
 		}
-	
-		str.append(tailFormated(22) + "\n");
+//		str.append("\n <TR><TD></TR> \n");
+		str.append(tailFormated(25) + "\n");
 		str.append("\n</tbody></table>\n");
 		return str.toString();
 	}

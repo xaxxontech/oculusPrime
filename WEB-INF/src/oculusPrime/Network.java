@@ -5,18 +5,19 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import oculusPrime.State.values;
+
 
 public class Network {
 
     Application app;
-    State state;
-    Settings settings;
-    int networkInfoToStateFailCount = 0;
+    State state = State.getReference();
+    Settings settings = Settings.getReference();
+    boolean polling = true;
+	int attempts = 0;
 
     public Network (Application a) {
         app = a;
-        state = State.getReference();
-        settings = Settings.getReference();
         pollInfo();
     }
 
@@ -24,12 +25,14 @@ public class Network {
         new Thread(new Runnable() {
             public void run() {
                 try {
-
+                	
+                	int networkInfoToStateFailCount = 0;
                     long wait = 0;
 
-                    while (true) {
+                    while (polling) {
 
-                        if (!state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
+                    	if( ! state.exists(values.ssid)) state.set(State.values.ssid, Util.lookupCurrentSSID());
+                        if( ! state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
                         else if (state.equals(State.values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
                         if (!state.exists(State.values.externaladdress)) updateExternalIPAddress();
 
@@ -37,8 +40,7 @@ public class Network {
                             if (networkInfoToState()) {
                                 wait = 0;
                                 networkInfoToStateFailCount = 0;
-                            }
-                            else {
+                            } else {
                                 wait = System.currentTimeMillis() + Util.ONE_MINUTE;
                                 networkInfoToStateFailCount ++;
                             }
@@ -46,6 +48,8 @@ public class Network {
 
                         Thread.sleep(10000);
                     }
+                    
+                    Util.log("ACCESS POINT MANAGER DISABLED after attepts: " + attempts, this);
 
                 } catch (Exception e) {
                     Util.printError(e);
@@ -56,11 +60,15 @@ public class Network {
 
     private boolean networkInfoToState() {
 
-        String data = Util.readUrlToString("http://127.0.0.1/?action=xmlinfo");
-
-        if ("".equals(data) || data == null) {
-            Util.log("network unavailable", this);
-            nukeStateValues();
+        String data = Util.readUrlToString("http://127.0.0.1/?action=xmlinfo"); 
+        if(data == null) data = ""; // null obj pukes on .equals() 
+        if(data.equals("")) {
+        	if( attempts++ > 5) {
+        		polling = false; // stop polling, give up..    
+	        	Util.appendUserMessage("network manager unavailable"); // just give one message about it    
+	        	// TODO: run grep on jetty.xml and see if AP Manager is on wrong port or not even there
+	        	// jetty.port jetty.xml  <Set name="Port"><SystemProperty name="jetty.port" default="8080"/></Set>
+        	}
             return false;
         }
 
@@ -147,8 +155,8 @@ public class Network {
 
     public static void nukeStateValues() {
         State state = State.getReference();
-        state.delete(State.values.networksknown);
         state.delete(State.values.ssid);
+        state.delete(State.values.networksknown);
         state.delete(State.values.gatewayaddress);
         state.delete(State.values.networksinrange);
     }

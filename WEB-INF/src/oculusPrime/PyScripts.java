@@ -65,13 +65,70 @@ public class PyScripts {
 		});
 		return names;
 	}
+	
+	@Override
+	public String toString(){
+		return name;	
+	}
+	
+//	@Override
+//	public boolean contains(){
+		
+//		String ans = ""; 
+//		Vector<PyScripts> scripts = getRunningPythonScripts();
+//		for( int i = 0 ; i < scripts.size() ; i++ ) ans += scripts.get(i).name + " ---- ";
+//		return ans;
+//		return "";	
+//	}
+	
+	public static boolean isRunning(final String name){
+		Vector<PyScripts> scripts = getRunningPythonScripts();
+
+		for( int i = 0 ; i < scripts.size() ; i++ )	Util.log("active: " + scripts.get(i).name);
+		
+		return true; // jumper off 
+	}
 
 	public static void autostartPyScripts() {
-		File[] scripts = getAutoStartScriptFiles();
-		for( int i = 0 ; i < scripts.length ; i++ ){	
-			Util.log("autostarting scripts: " + scripts[i].getName());
-			Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
-		}
+		
+	
+		
+		
+		new Thread() {
+			@Override
+			public void run() {
+				
+				Util.delay(30000); 
+				// TODO: LOOK AT THIS AGAIN? 
+				Util.systemCall("pkill python");
+				SystemWatchdog.waitForCpu();
+				
+	//			final Vector<PyScripts> running = getRunningPythonScripts();;	 
+	//			Util.log("**** "+running);
+					
+				File[] scripts = getAutoStartScriptFiles();
+				for( int i = 0 ; i < scripts.length ; i++ ){	
+					
+					// TODO: LOOK AT THIS AGAIN..... 
+					// don't start dups if still running? .. or kill all python scripts on boot? 
+				
+		
+//					if( ! isRunning(scripts[i].getName()) ) {
+						
+						Util.log("py startup: " + scripts[i].getName());
+						Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
+						
+//					} else {
+		
+//						Util.log("autostarting === running: " + running);
+//						Util.log("autostarting === scripts: " + scripts[i].getName());
+						
+						// Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
+						
+//					} 
+				}
+			}
+		}.start();
 	}
 	
 	// TODO: 
@@ -132,9 +189,9 @@ public class PyScripts {
 	}
 
 
-/*
+/* example 
 
-486537347049, static, 0 = brad 
+1486537347049, static, 0 = brad 
 1486537347050, static, 1 = 4197 
 1486537347050, static, 2 = 4170 
 1486537347050, static, 3 = 7 

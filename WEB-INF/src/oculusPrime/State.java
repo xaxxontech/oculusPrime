@@ -1,12 +1,7 @@
 package oculusPrime;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
 
@@ -96,7 +91,18 @@ public class State {
 	private State() {
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
 		props.put(values.telnetusers.name(), "0");
-		getLinuxUptime();
+		Util.getLinuxUptime();
+		
+		new Thread() {
+			@Override
+			public void run() {
+				Util.delay(Util.TWO_MINUTES); 
+				if(Math.abs(getLong(values.linuxboot) - getLong(values.javastartup)) < Util.TWO_MINUTES) {
+					oculusPrime.Settings.getReference().writeSettings(ManualSettings.restarted, "0");
+					Util.log("HARD REBOOT DETECTED");
+				}
+			}
+		}.start();
 	}
 	
 	public void addObserver(Observer obs){
@@ -349,24 +355,6 @@ public class State {
 		return getDouble(key.name());
 	}
 
-	private void getLinuxUptime(){
-		new Thread(new Runnable() {
-			@Override
-			public void run() {	
-				try {
-					
-					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
-					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
-					String line = procReader.readLine();
-					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
-					set(values.linuxboot, date.getTime());
-					
-				} catch (Exception e) {
-					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
-				}										
-			}
-		}).start();
-	}
 	
 	/*
 	public String dumpFile(){	

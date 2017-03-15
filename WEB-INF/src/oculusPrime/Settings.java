@@ -313,9 +313,8 @@ public class Settings {
 		Util.debug("writeSettings(): "+setting+" "+value, this);
 		if(settings.get(setting) == null) Util.debug("settings.get(setting) == null", this);
 		
-		//TODO: revisit -- test if is existing setting already 
 		if(settings.get(setting).equals(value)) {
-			Util.debug("setting rejected, "+setting+" already set to: " + value, this);
+			// Util.debug("setting rejected, "+setting+" already set to: " + value, this);
 			return;
 		}
 		

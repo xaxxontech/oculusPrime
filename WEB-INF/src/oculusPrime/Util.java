@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Vector;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -218,7 +219,6 @@ public class Util {
 	}
 
 	public static String readUrlToString(String urlString) {
-
 		try {
 			URL website = new URL(urlString);
 			URLConnection connection = website.openConnection();
@@ -227,15 +227,12 @@ public class Util {
 			StringBuilder response = new StringBuilder();
 			String inputLine;
 
-			while ((inputLine = in.readLine()) != null)
-				response.append(inputLine);
-
+			while ((inputLine = in.readLine()) != null) response.append(inputLine);
 			in.close();
-
 			return response.toString();
 
 		} catch (Exception e) {
-			Util.log("Util.readUrlToString() parse error", null);
+			Util.debug("Util.readUrlToString() parse error"); 
 			return null;
 		}
 	}
@@ -378,6 +375,45 @@ public class Util {
 		return percent;
 	}
 
+	static void getLinuxUptime(){
+		new Thread(new Runnable() {
+			@Override
+			public void run() {	
+				try {
+					
+					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
+					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
+					String line = procReader.readLine();
+					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
+					State.getReference().set(values.linuxboot, date.getTime());
+					
+				} catch (Exception e) {
+					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
+				}										
+			}
+		}).start();
+	}
+	 
+	public static String lookupCurrentSSID(){
+		String currentSSID = null;
+		try {
+			
+			String[] cmd = new String[]{"/bin/sh", "-c", "nmcli -t -f active,ssid dev wifi"}; // works with old/new nmcli
+			Process proc = Runtime.getRuntime().exec(cmd);
+
+			String line = null;
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			
+			while ((line = procReader.readLine()) != null) {
+				if(line.contains("yes:")) {
+					currentSSID = line.substring(line.indexOf(":") + 1, line.length());
+					currentSSID = currentSSID.replaceAll("^'|'$",""); // nuke surrounding quotes if any (old nmcli)
+				}
+			}
+		} catch (Exception e) {}
+		return currentSSID;	
+	}
+	 
 	// top -bn 2 -d 0.1 | grep '^%Cpu' | tail -n 1 | awk '{print $2+$4+$6}'
 	// http://askubuntu.com/questions/274349/getting-cpu-usage-realtime
 	/*
@@ -679,6 +715,10 @@ public class Util {
 					debug(files[i].getName() + " was deleted " + i);
 					files[i].delete();
 				}
+				if(files[i].length() == 0) {
+					debug(files[i].getName() + " was deleted, zero bytes" + i);
+					files[i].delete();
+				}
 	        }
 		} 
 	}
@@ -686,10 +726,14 @@ public class Util {
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
 		log("truncStaleFrames(): files found = " + files.length);
-        for (int i = 0; i < files.length; i++){
-			if (files[i].isFile()){
+        for(int i = 0; i < files.length; i++){
+			if(files[i].isFile()){
 				if(!linkedFrame(files[i].getName())){
-					debug(files[i].getName() + " was deleted " + i);
+					debug(files[i].getName() + " was deleted");
+					files[i].delete();
+				}
+				if(files[i].length() == 0) {
+					debug(files[i].getName() + " was deleted, zero bytes");
 					files[i].delete();
 				}
 	        }
@@ -724,8 +768,17 @@ public class Util {
 		File[] files  = new File(Settings.logfolder).listFiles();
 		debug("truncStaleArchive(): " + files.length + " files in folder");
 		sortFiles(files);
-        for (int i = 7; i < files.length; i++){
-			if (files[i].isFile()){
+        for (int i = 5; i < files.length; i++){
+			if(files[i].isFile()){
+				debug("truncStaleLog(): " + files[i].getName() + "  was deleted");
+				files[i].delete();
+	        }
+		} 
+        files  = new File(Settings.logfolder+"/archive").listFiles();
+		debug("truncStaleArchive(): " + files.length + " files in archive folder");
+		sortFiles(files);
+        for (int i = 5; i < files.length; i++){
+			if(files[i].isFile()){
 				debug("truncStaleLog(): " + files[i].getName() + "  was deleted");
 				files[i].delete();
 	        }
@@ -781,14 +834,20 @@ public class Util {
 		}}).start();
 	}
 	
-	public static void zipLogFiles(){	
-		String list = " " + NavigationLog.navigationlogpath + " " + Settings.settingsfile + " ";
+	public static void archiveLogFiles(){	
+		String list = Settings.settingsfile + " ";
 		File[] files = new File(Settings.logfolder).listFiles();
-	    for(int i = 0; i < files.length; i++) if(files[i].isFile()) list += files[i].getAbsoluteFile() + " ";
+	    for(int i = 0; i < files.length; i++)
+	    	if(files[i].isFile()) 
+	    		// if(files[i].getName().endsWith(".log"))
+	    			list += files[i].getAbsoluteFile() + " ";
+	   
 	    // for(int i = 0; i < files.length; i++) if(files[i].isFile()) log("log zip list: " + list);
 	    
-		final String path = "./log/archive/logs_" + System.currentTimeMillis() + ".tar";
-		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + list};
+		final String path = "./log/archive/logs_" + System.currentTimeMillis() + ".tar ";
+		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + list};
+		
+		// log("[tar -jcf " + path + list+"]");
 		
 		new File(Settings.redhome + sep + "./log/archive").mkdir(); // make sure its there
 		new Thread(new Runnable() { public void run() {

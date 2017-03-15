@@ -77,10 +77,12 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public Application() {
 		super();
 		state.set(values.osarch, System.getProperty("os.arch"));
-		Util.log("\n====Oculus Prime Java Arch:"+state.get(values.osarch)+ "=====", this);
-		Util.log("\n====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
-		Util.log("\n====Oculus Java Restarts:"+settings.getInteger(ManualSettings.restarted), this);
-		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
+		
+		// don't put whitespace, breaks line with timestamp 
+		Util.log("====Oculus Prime Java Arch:"+state.get(values.osarch)+ "=====", this);
+		Util.log("====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
+		Util.log("====Oculus Java Restarts:"+settings.getInteger(ManualSettings.restarted) + "\n", this);
+		PowerLogger.append("==============Oculus Prime Java Start===============\n", this); // extra newline on end
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
@@ -657,10 +659,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case quitserver: shutdownApplication(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
-		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
+		case uptime:
+			// messageplayer("uptime: " + state.getUpTime() + " ms", null, null); 
+			commandServer.sendToGroup("uptime: " + state.getUpTime() + " ms");
+			break;
+			// SEND TO TELNET NOT GUI 
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
-		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
+		// case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
 			if (str!=null) if (str.equals(AutoDock.HIGHRES)) docker.lowres = false;
@@ -672,7 +678,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.dockGrab(AutoDock.dockgrabmodes.test, 0, 0);
 			docker.lowres = true; // ?
 			break;
-		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
+		case rssadd: new RssFeed().newItem(str); break;
 		case nudge: nudge(str); break;
 		
 		case state: 
@@ -879,13 +885,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			break;
 			
-		case block:
-			banlist.addBlockedFile(str);
-			break;
-			
-		case unblock:
-			banlist.removeblockedFile(str);
-			break;
+	
 
 		case roslaunch:
 			if (Ros.launch(str))
@@ -899,25 +899,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("waypoints saved", null, null);
 			break;
 			
-		case gotowaypoint:
-			if (navigation != null) navigation.gotoWaypoint(str);
-			break;
-		
-		case startnav:
-			if (navigation != null) navigation.startNavigation(); 
-			break;
-		
-		case stopnav:
-			if (navigation != null) navigation.stopNavigation();
-			break;
-		
-		case gotodock:
-			if (navigation != null) navigation.dock(); 
-			break;
-			
 		case saveroute: 
-			if (navigation != null) navigation.saveRoute(str);
-			messageplayer("route saved", null, null);
+			if (navigation != null) {
+				navigation.saveRoute(str);
+				messageplayer("route saved", null, null);
+			}
 			break;
 			
 		case runroute:
@@ -936,57 +922,49 @@ public class Application extends MultiThreadedApplicationAdapter {
 				navigation.cancelAllRoutes();
 			}
 			break;
-
-		case startmapping:
-			if (navigation != null) navigation.startMapping();
-			break;
-
-		case savemap:
-			if (navigation != null) navigation.saveMap();
-			break;
-
-		case clearmap: Mapper.clearMap();
-			break;
-
+		
+		case gotowaypoint: if (navigation != null) navigation.gotoWaypoint(str); break;
+		case startnav:     if (navigation != null) navigation.startNavigation(); break;
+		case stopnav:      if (navigation != null) navigation.stopNavigation(); break;
+		case startmapping: if (navigation != null) navigation.startMapping(); break;
+		case savemap:      if (navigation != null) navigation.saveMap(); break;
+		case gotodock:     if (navigation != null) navigation.dock(); break;
+		
+		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
+		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
-		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
-		case sounddetect: video.sounddetect(str); break;
 		case objectdetect: new OpenCVObjectDetect(this).detectGo(str); break;
+		case settings: messageplayer(settings.toString(), null, null); break;
 		case objectdetectcancel: state.delete(values.objectdetect); break;
-		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
-
+		case waitforcpu: watchdog.waitForCpuThread(); break;	
+		case unblock: banlist.removeblockedFile(str); break;
+		case block:	banlist.addBlockedFile(str); break;
+		case log: Util.log("log: "+str, this); break;
+		case sounddetect: video.sounddetect(str); break;
+		case clearmap: Mapper.clearMap(); break;
+		
+		case cpu: 
+			Util.getCPU(); 
+			commandServer.sendToGroup("cpu: " + state.get(values.cpu));
+			break;
+		
 		// case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
 		case framegrabtofile: // allow extra name to be added 
-		//	final String c = str.trim(); 
-			
-			Util.debug("framegrabtofile(): length = " + cmd.length, this);
-			
-			
 			if(cmd.length == 2) { 
 				FrameGrabHTTP.saveToFile(cmd[0], cmd[1]); // ?mode=processedImgJPG 
 				Util.debug("framegrabtofile(mode, fname): " + cmd[0] + " " + cmd[1], this);
 			}
 			if(cmd.length == 1) { 
 				FrameGrabHTTP.saveToFile(cmd[0]); // ?mode=processedImgJPG 
-				Util.debug("framegrabtofile(mode): "+cmd[0], this);
+				// Util.debug("framegrabtofile(mode): "+cmd[0], this);
 			}
 			if(cmd.length == 0){
 				FrameGrabHTTP.saveToFile(null); // default filename
-				Util.debug("framegrabtofile(default):", this);
-			}
-					
+				// Util.debug("framegrabtofile(default):", this);
+			}			
 			break;
-			
-		case log: Util.log("log: "+str, this); break;
-		case settings: messageplayer(settings.toString(), null, null); break;
 		
-		case cpu: 
-			String cpu = String.valueOf(Util.getCPU());
-			if(cpu != null) state.set(values.cpu, cpu);
-			break;
-		case waitforcpu: watchdog.waitForCpuThread();  break;
-
 		// dev tool only
 		case test:
 			try {
@@ -1007,7 +985,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			
 		case deletelogs: // super dangerous, purge all log folders and ros logs, causes restart 
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
+				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
 			state.set(values.guinotify, "logs being deleted, rebooting");
@@ -1020,7 +998,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			state.set(values.guinotify, "logs being archived");
-			Util.zipLogFiles();
+			Util.archiveLogFiles();
 			break;
 
 		case archiveNavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 

@@ -1,18 +1,25 @@
 package oculusPrime;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Vector;
 
 import javax.imageio.ImageIO;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
@@ -27,50 +34,107 @@ import developer.depth.ScanUtils;
 import oculusPrime.State.values;
 
 @SuppressWarnings("serial")
-@MultipartConfig(fileSizeThreshold=1024*1024*2, // 2MB
-		maxFileSize=1024*1024*10,      // 10MB
-		maxRequestSize=1024*1024*50)   // 50MB
-public class FrameGrabHTTP extends HttpServlet {
-		
+@MultipartConfig(fileSizeThreshold=1024*1024*2,    // 2MB
+		maxFileSize=1024*1024*10,                  // 10MB
+		maxRequestSize=1024*1024*50)               // 50MB
+
+public class FrameGrabHTTP extends HttpServlet implements Observer {
+	
+	private static final boolean DEBUG = true; // false;
+	
+//	private static final int MAX_HISTORY = 30;
+//	Vector<String> history = new Vector<String>(MAX_HISTORY);
+	
+	private static State state = State.getReference();
+	private static BanList ban = BanList.getRefrence();
+	private static BufferedImage batteryImage = null;
+	private static RenderedImage cpuImage = null;
 	private static BufferedImage radarImage = null;
 	private static Application app = null;
-	private static State state;
-	private static BanList ban;
-	private static int var;
+	private static int var = 0;
+	
+	private class Task extends TimerTask {
+		public void run() { 
+			/*
+			for( int i = 0 ; i < history.size() ; i++ ){
+				
+				String v = history.get(i).trim();
+				if( Integer.parseInt(v) < 9 ) if( ! v.startsWith("0")) history.set(i, ("0" + v)); 
+				if( history.get(i).equals("0")) history.set(i, ("00")); 
+				
+			}
+			
+			Util.log(history.toString());      
+			
+			Util.log (  history.toString() );     
+			
+			Util.getCPU();                      // Sample 
+			history.add(state.get(values.cpu)); // read
+ 			if(history.size() > MAX_HISTORY) history.remove(0);
+ 			*/
+			
+		}
+	}
+	
+	public static void setApp(Application a) { app = a; }
+	
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+//		state.addObserver(this);		
+//		new Timer().scheduleAtFixedRate(new Task(), Util.TWO_MINUTES*2, 30000); // wait until after boot up 
+	}
 
-	public static void setApp(Application a) {
-		if(app != null) return;
-		state = State.getReference();
-		ban = BanList.getRefrence();
-		app = a;
-		var = 0;
-	}
+	@Override // read cpu and battery updates for chats 
+	public void updated(String key) {
+
+		/*
+		if(key.equals(values.batteryinfo.name())) {
+ 			
+ 			if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
+		
+ 		}
+		
+		if(key.equals(values.batterylife.name())) {
+			
+			if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
 	
-	public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-		doPost(req,res);
+		}
+			
+ 		if(key.equals(values.batteryvolts.name())) {
+ 			
+ 			if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
+		
+ 		}
+ 		*/
+		
+ 		if(key.equals(values.cpu.name())) {
+ 			
+ 	//		if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
+ 			
+ 	//		history.add(state.get(key));
+ 	//		if(history.size() > MAX_HISTORY) history.remove(0);
+ 			
+ 		}	
 	}
+	/*
+*/ 			
 	
+	public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException { doPost(req,res); }
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
 		if( ! ban.knownAddress(req.getRemoteAddr())){
-			
 			Util.log("unknown address: danger: "+req.getRemoteAddr(), this);
-			
-			// response.setContentType("text/html");
-			// PrintWriter out = response.getWriter();
-			//out.println("unknown address: danger: "+req.getServerName() + " \n " + ban.toString());
-			//out.close();
-			
 			return;
 		}
 
         if (req.getParameter("mode") != null) {
-
-        	String mode = req.getParameter("mode");
+        	final String mode = req.getParameter("mode");
             
-            if (mode.equals("radar"))  radarGrab(req,res);            	
-            else if(mode.equals("processedImg"))  processedImg(req,res);
-			else if(mode.equals("processedImgJPG"))  processedImgJPG(req,res);
+            if (mode.equals("radar"))  radarGrab(req,res);     
+            else if (mode.equals("battery")) batteryGrab(req, res);
+            else if (mode.equals("cpu")) cpuGrab(req, res);       	
+            else if (mode.equals("processedImg"))  processedImg(req,res);
+			else if (mode.equals("processedImgJPG"))  processedImgJPG(req,res);
 			else if (mode.equals("videoOverlayImg")) videoOverlayImg(req, res);
             else if (mode.equals("depthFrame") &&  Application.openNIRead.depthCamGenerating) { 	
             	Application.processedImage = Application.openNIRead.generateDepthFrameImg();
@@ -94,6 +158,7 @@ public class FrameGrabHTTP extends HttpServlet {
 //            	}
             	processedImg(req,res);
             }
+         
             else if (mode.equals("rosmap")) {
             	Application.processedImage = Ros.rosmapImg();
 				if (!state.exists(State.values.rosmapinfo))
@@ -206,8 +271,21 @@ public class FrameGrabHTTP extends HttpServlet {
 		ImageIO.write(Application.videoOverlayImage, "JPG", out);
 	}
 	
-	private void radarGrab(HttpServletRequest req, HttpServletResponse res) 
-		throws ServletException, IOException {
+	private void batteryGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		generateBatteryImage();
+		res.setContentType("image/gif");
+		OutputStream out = res.getOutputStream();
+		ImageIO.write(batteryImage, "GIF", out);
+	}
+	
+	private void cpuGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		generateCpuImagemage();
+		res.setContentType("image/gif");
+		OutputStream out = res.getOutputStream();
+		ImageIO.write(cpuImage, "GIF", out);
+	} 
+	
+	private void radarGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
 		generateRadarImage();
 		
@@ -216,7 +294,6 @@ public class FrameGrabHTTP extends HttpServlet {
 		OutputStream out = res.getOutputStream();
 		ImageIO.write(radarImage, "GIF", out);
 	}
-
 	
 	private void generateRadarImage() {
 
@@ -306,6 +383,42 @@ public class FrameGrabHTTP extends HttpServlet {
 //		} }).start();
 	}
 
+	private void generateBatteryImage() {
+
+			final int w = 500;
+			final int h = 100;
+			BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+			Graphics2D g2d = image.createGraphics();
+			
+			//render background
+			g2d.setColor(new Color(10,10,10));  
+			g2d.fill(new Rectangle2D.Double(0, 0, w, h));
+			
+			batteryImage = image;
+	}
+
+	private void generateCpuImagemage() {
+
+		final int w = 600;
+		final int h = 320;
+		BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2d = image.createGraphics();
+	
+		g2d.setPaint(Color.red);
+        g2d.setFont(new Font("Serif", Font.BOLD, 20));
+        String s = "Hello, world!";
+       // FontMetrics fm = g2d.getFontMetrics();
+       // int x = w - fm.stringWidth(s) - 5;
+       // int y = fm.getHeight();
+        g2d.drawString(s, w, h);
+      
+		//render background
+		//g2d.setColor(new Color(10,10,10));  
+		//g2d.fill(new Rectangle2D.Double(0, 0, w, h));
+		
+		cpuImage = image;
+	}
+	
 	/**
 	 * @param args download url params, can be null
 	 * @return returns download url of saved image
@@ -322,7 +435,7 @@ public class FrameGrabHTTP extends HttpServlet {
         final String name = datetime + ".jpg";
 		new Thread(new Runnable() {
 			public void run() {
-				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
+				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs"); // TODO: EVENT ON NULL ?
 			}
 		}).start();
 		return "/oculusPrime/framegrabs/"+name;
