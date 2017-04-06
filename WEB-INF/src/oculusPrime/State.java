@@ -96,10 +96,14 @@ public class State {
 		new Thread() {
 			@Override
 			public void run() {
-				Util.delay(Util.TWO_MINUTES); 
-				if(Math.abs(getLong(values.linuxboot) - getLong(values.javastartup)) < Util.TWO_MINUTES) {
-					oculusPrime.Settings.getReference().writeSettings(ManualSettings.restarted, "0");
-					Util.log("HARD REBOOT DETECTED");
+				Util.delay(Util.FIVE_MINUTES + 10000); 
+				if(Math.abs(getLong(values.linuxboot) - getLong(values.javastartup)) < Util.FIVE_MINUTES) {
+					if(oculusPrime.Settings.getReference().getInteger(ManualSettings.restarted) > 0) {
+						Util.log("HARD REBOOT DETECTED: " + oculusPrime.Settings.getReference().getInteger(ManualSettings.restarted) + " restarts");
+						oculusPrime.Settings.getReference().writeSettings(ManualSettings.restarted, "0");
+						// TODO: DO SOMETHING, set flag file? 
+						Util.appendUserMessage("HARD REBOOT DETECTED");
+					}
 				}
 			}
 		}.start();

@@ -25,6 +25,10 @@ public class Settings {
 	public static final String TRUE = "true";	
 	public static final int ERROR = -1;
 
+// usesable stats 
+//	public static int writes = 0;
+//	public static int reads = 0;
+
 	private static Settings singleton = null;
 	public static Settings getReference() {
 		if (singleton == null) singleton = new Settings();
@@ -43,6 +47,7 @@ public class Settings {
 	
 	private void importFile(){
 		try {
+			//reads++;
 			String line;
 			FileInputStream filein = new FileInputStream(settingsfile);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
@@ -130,6 +135,7 @@ public class Settings {
 		
 		if(settings.containsKey(str)) return settings.get(str);
 	
+		// reads++;
 		FileInputStream filein;
 		String result = null;
 		try {
@@ -206,7 +212,7 @@ public class Settings {
 	
 	/** Organize the settings file into 3 sections. Use Enums's to order the file */
 	public synchronized void writeFile(){
-		
+		// writes++;
 		try {
 			
 			final String temp = redhome + Util.sep+"conf"+Util.sep+"oculus_created.txt";
@@ -310,11 +316,11 @@ public class Settings {
 		setting = setting.trim();
 		value = value.trim();
 
-		Util.debug("writeSettings(): "+setting+" "+value, this);
-		if(settings.get(setting) == null) Util.debug("settings.get(setting) == null", this);
+		// Util.debug("writeSettings(): "+setting+" "+value + " file writes: " + writes++, this);
+		// if(settings.get(setting) == null) Util.debug("settings.get(setting) == null", this); nuke? 
 		
 		if(settings.get(setting).equals(value)) {
-			// Util.debug("setting rejected, "+setting+" already set to: " + value, this);
+			Util.debug("setting rejected, "+setting+" already set to: " + value, this);
 			return;
 		}
 		
@@ -355,7 +361,7 @@ public class Settings {
 	}
 
 	public void newSetting(String setting, String value) {
-
+		//writes++;
 		setting = setting.trim();
 		value = value.trim();
 
@@ -394,13 +400,14 @@ public class Settings {
 
 	public void deleteSetting(String setting) {
 		// read whole file, remove offending line, write whole file
+		// writes++;
+		// reads++;
 		setting = setting.replaceAll("\\s+$", ""); 
 		FileInputStream filein;
 		String[] lines = new String[999];
 		try {
 			filein = new FileInputStream(settingsfile);
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					filein));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
 			int i = 0;
 			while ((lines[i] = reader.readLine()) != null) {
 				String items[] = lines[i].split(" ");

@@ -9,6 +9,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
+import java.util.Vector;
 
 import developer.*;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
@@ -25,6 +26,7 @@ import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.PowerHistory;
 import oculusPrime.commport.PowerLogger;
 
 /** red5 application */
@@ -767,9 +769,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case forwardtimed: comport.goForward(Integer.parseInt(str)); break;
 		
 		case systemcall:
-			Util.log("received: " + str,this);
-			messageplayer("system command received", null, null);
-			Util.systemCall(str);
+			if(str != null){
+				if(str.length() > 1){
+					Util.log("received: " + str,this);
+					messageplayer("system command received", null, null);
+					Util.systemCall(str);
+				}
+			}
 			break;
 
 		case serverbrowser:
@@ -884,9 +890,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("power error purposefully dismissed",this);
 			}
 			break;
-			
-	
-
+		
 		case roslaunch:
 			if (Ros.launch(str))
 				messageplayer("roslaunch "+str+".launch", null, null);
@@ -967,9 +971,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		// dev tool only
 		case test:
-			try {
-
-			} catch (Exception e)  { Util.printError(e); }
 			break;
 
 		case jpgstream:
@@ -1002,19 +1003,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case archiveNavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("must be docked, skipping.. ", null);
-				break;
-			}
 			// state.set(values.guinotify, "navigation files being archived");
 			Util.archiveNavigation();
 			break;
 		
 		case truncMedia: // remove any frames or videos not currently linked in navigationlog html file  
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("must be docked, skipping.. ", null);
-				break;
-			}
 			Util.truncStaleFrames();
 			Util.truncStaleAudioVideo();
 			break;
@@ -1637,6 +1630,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		int b = settings.getInteger(ManualSettings.restarted); // count java restarts vs booting 
 		settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
+
+		Util.log("Restart uptime was: "+ state.getUpTime(), this);
 
 // THIS in developer mode, or just warning? 	
 //					if(settings.getInteger(ManualSettings.restarted) > 10){

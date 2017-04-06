@@ -1,8 +1,6 @@
 package oculusPrime;
 
 import java.awt.Color;
-import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
@@ -40,85 +38,53 @@ import oculusPrime.State.values;
 
 public class FrameGrabHTTP extends HttpServlet implements Observer {
 	
-	private static final boolean DEBUG = true; // false;
-	
-//	private static final int MAX_HISTORY = 30;
-//	Vector<String> history = new Vector<String>(MAX_HISTORY);
 	
 	private static State state = State.getReference();
-	private static BanList ban = BanList.getRefrence();
+	private static BanList ban = BanList.getRefrence();  // TODO: PULL DATA FROM LOG FILES 
 	private static BufferedImage batteryImage = null;
 	private static RenderedImage cpuImage = null;
 	private static BufferedImage radarImage = null;
 	private static Application app = null;
 	private static int var = 0;
-	
-	private class Task extends TimerTask {
-		public void run() { 
-			/*
-			for( int i = 0 ; i < history.size() ; i++ ){
-				
-				String v = history.get(i).trim();
-				if( Integer.parseInt(v) < 9 ) if( ! v.startsWith("0")) history.set(i, ("0" + v)); 
-				if( history.get(i).equals("0")) history.set(i, ("00")); 
-				
-			}
-			
-			Util.log(history.toString());      
-			
-			Util.log (  history.toString() );     
-			
-			Util.getCPU();                      // Sample 
-			history.add(state.get(values.cpu)); // read
- 			if(history.size() > MAX_HISTORY) history.remove(0);
- 			*/
-			
-		}
-	}
+
+	private static final int MAX_STATE_HISTORY = 100;
+	Vector<String> history = new Vector<String>(MAX_STATE_HISTORY);
 	
 	public static void setApp(Application a) { app = a; }
 	
+	@Override
+	public void updated(String key) {
+		if(key.equals(values.cpu.name())) history.add(state.get(values.cpu));
+	}
+	
+	/*
+	private class Task extends TimerTask {
+		public void run() {
+			
+			Util.getCPU();
+
+			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
+			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
+			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
+			history.add(state.get(values.cpu));
+			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
+			
+		}
+	}
+	*/
+	
+	
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
-//		state.addObserver(this);		
-//		new Timer().scheduleAtFixedRate(new Task(), Util.TWO_MINUTES*2, 30000); // wait until after boot up 
+		state.addObserver(this);		
+		
+//		for(int j = 0 ; j < MAX_STATE_HISTORY ; j++) history.add("77");
+//   	new Timer().scheduleAtFixedRate(new Task(), 0, 10000);  
 	}
 
-	@Override // read cpu and battery updates for chats 
-	public void updated(String key) {
+//	@Override // read cpu and battery updates for chats 
+//	public void updated(String key) {}
 
-		/*
-		if(key.equals(values.batteryinfo.name())) {
- 			
- 			if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
-		
- 		}
-		
-		if(key.equals(values.batterylife.name())) {
-			
-			if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
-	
-		}
-			
- 		if(key.equals(values.batteryvolts.name())) {
- 			
- 			if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
-		
- 		}
- 		*/
-		
- 		if(key.equals(values.cpu.name())) {
- 			
- 	//		if(DEBUG) Util.debug("updated: " + key + " = " + state.get(key), this);
- 			
- 	//		history.add(state.get(key));
- 	//		if(history.size() > MAX_HISTORY) history.remove(0);
- 			
- 		}	
-	}
-	/*
-*/ 			
-	
 	public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException { doPost(req,res); }
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
@@ -386,37 +352,57 @@ public class FrameGrabHTTP extends HttpServlet implements Observer {
 	private void generateBatteryImage() {
 
 			final int w = 500;
-			final int h = 100;
+			final int h = 200;
 			BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
 			Graphics2D g2d = image.createGraphics();
 			
 			//render background
-			g2d.setColor(new Color(10,10,10));  
-			g2d.fill(new Rectangle2D.Double(0, 0, w, h));
-			
+		//	g2d.setColor(new Color(60,60,90));  
+		//	g2d.fill(new Rectangle2D.Double(0, 0, w, h));
+		//
+	    //    g2d.setFont(new Font("Serif", Font.BOLD, 45));
+	        String s = "generateBatteryImage";
+	        g2d.drawString(s, 10, h/2);
+	        g2d.drawLine(0, 0, w, h);	
+	        g2d.setPaint(Color.red);
+	        g2d.drawLine(0, h/3, w/3, h/3);
+	        
 			batteryImage = image;
 	}
 
 	private void generateCpuImagemage() {
-
-		final int w = 600;
-		final int h = 320;
+ 
+		final int radius = 6;
+		final int w = 500;
+		final int h = 100;
 		BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g2d = image.createGraphics();
 	
-		g2d.setPaint(Color.red);
-        g2d.setFont(new Font("Serif", Font.BOLD, 20));
-        String s = "Hello, world!";
-       // FontMetrics fm = g2d.getFontMetrics();
-       // int x = w - fm.stringWidth(s) - 5;
-       // int y = fm.getHeight();
-        g2d.drawString(s, w, h);
-      
-		//render background
-		//g2d.setColor(new Color(10,10,10));  
-		//g2d.fill(new Rectangle2D.Double(0, 0, w, h));
-		
+		g2d.setPaint(Color.yellow);
+        drawCenteredCircle(g2d, 8, 8, radius);
+        g2d.drawPolyline(new int[]{10, w/3, w/2, w-radius}, new int[]{10, 20, 90, 50}, 4);
+        
+        g2d.setPaint(Color.green);
+        for( int i = 0 ; i < history.size() ; i++ ){
+    //    	Util.log(i + " " +  Integer.parseInt(history.get(i)));
+        	drawCenteredCircle(g2d, i*5, Integer.parseInt(history.get(i)), radius);
+        }
+
+  
+    //    g2d.setPaint(Color.red);
+    //    drawCenteredCircle(g2d, w/2, h/2, radius);
+        
+        g2d.setPaint(Color.red);
+   //     drawCenteredCircle(g2d, w-radius, h-radius, radius);
+   //     drawCenteredCircle(g2d, 1, 1, 8);
+        g2d.drawPolyline(new int[]{5, w-5, w-5, 5, 5}, new int[]{5, 5, h-5, h-5, 5}, 5);
+         
 		cpuImage = image;
+	}
+	public void drawCenteredCircle(Graphics2D g, int x, int y, int r) {
+		x = x-(r/2);
+		y = y-(r/2);
+		g.fillOval(x,y,r,r);
 	}
 	
 	/**
@@ -461,6 +447,7 @@ public class FrameGrabHTTP extends HttpServlet implements Observer {
 		}).start();
 		return "/oculusPrime/framegrabs/"+name;
 	}
+
 }
 
 

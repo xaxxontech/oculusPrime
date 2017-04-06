@@ -176,6 +176,13 @@ public class Util {
 	    return true;
 	}
 	
+	public static boolean isDouble(String s) {
+	    try { Double.parseDouble(s); } catch(Exception e) { 
+	        return false; 
+	    }
+	    return true;
+	}
+	
 	public static Vector<String> tail(String path, int lines) {
 		Vector<String> tail = new Vector<String>();
 		try {	
@@ -197,6 +204,8 @@ public class Util {
 	 * @param str is the command to run, like: "restart"
 	 */
 	public static void systemCall(final String str){
+		debug("systemCall: " + str);
+		if(str == null) return;
 		try { Runtime.getRuntime().exec(str); 
 		} catch (Exception e) { printError(e); }
 	}
@@ -709,9 +718,10 @@ public class Util {
 	public static void truncStaleAudioVideo(){
 		File[] files  = new File(Settings.streamfolder).listFiles();	
 		log("truncStaleAudioVideo(): files found = " + files.length);
-        for (int i = 0; i < files.length; i++){
-			if (files[i].isFile()){
-				if(!linkedFrame(files[i].getName())){
+		boolean nav = new File(NavigationLog.navigationlogpath).exists();
+		for (int i = 0; i < files.length; i++){
+			if(files[i].isFile()){
+				if(!linkedFrame(files[i].getName()) && nav){
 					debug(files[i].getName() + " was deleted " + i);
 					files[i].delete();
 				}
@@ -726,9 +736,10 @@ public class Util {
 	public static void truncStaleFrames(){
 		File[] files  = new File(Settings.framefolder).listFiles();	
 		log("truncStaleFrames(): files found = " + files.length);
+		boolean nav = new File(NavigationLog.navigationlogpath).exists();
         for(int i = 0; i < files.length; i++){
 			if(files[i].isFile()){
-				if(!linkedFrame(files[i].getName())){
+				if(!linkedFrame(files[i].getName()) && nav){
 					debug(files[i].getName() + " was deleted");
 					files[i].delete();
 				}
@@ -1007,6 +1018,18 @@ public class Util {
 		return null;
 	}
 	
+	public static Vector<String> getLinuxWho(){ // TODO: Lazy.. match to proc for java 
+		Vector<String> who = new Vector<String>();
+		try {		
+			String line = null;
+			String[] cmd = { "/bin/sh", "-c", "who" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
+			while((line = procReader.readLine()) != null) who.add(line);
+		} catch (Exception e){}
+		return who;
+	}
+	
 	public static long countAllMbytes(final String path){ 
 		if( ! new File(path).exists()) return 0;
 		Vector<File> f = new Vector<>();
@@ -1045,11 +1068,11 @@ public class Util {
 		if(msg.contains(message)) return;
 		else msg += ", ";
 		msg = msg.trim();
-		if(msg.startsWith("<br>")) msg = msg.substring(4, msg.length());
-		if(msg.endsWith("<br>")) msg = msg.substring(0, msg.length()-4);
+//		if(msg.startsWith("<br>")) msg = msg.substring(4, msg.length());
+//		if(msg.endsWith("<br>")) msg = msg.substring(0, msg.length()-4);
 		if(msg.startsWith(",")) msg = msg.substring(1, msg.length());
 		if(msg.endsWith(",")) msg = msg.substring(0, msg.length()-1);
-		msg = msg.trim();
+//		msg = msg.trim();
 		state.set(values.guinotify, msg += message);
 	}
 

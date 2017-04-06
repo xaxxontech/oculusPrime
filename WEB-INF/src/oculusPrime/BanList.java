@@ -253,7 +253,6 @@ public class BanList {
 	
 	@Override
 	public String toString(){
-		// if(override) return " override: " + banned.toString();
-		return " banned: " + banned.toString() + "   known:" + known.toString();
+		return "<br> banned: " + banned.toString() + "<br> known:" + known.toString();
 	}
 }

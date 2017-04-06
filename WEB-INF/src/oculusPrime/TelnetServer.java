@@ -121,7 +121,7 @@ public class TelnetServer implements Observer {
 
 		// log to console, and notify other users of leaving
 		sendToSocket("shutting down, "+reason, out);
-		Util.debug("closing socket [" + clientSocket + "] " + reason, this);
+		// Util.debug("closing socket [" + clientSocket + "] " + reason, this);
 		
 		try {
 

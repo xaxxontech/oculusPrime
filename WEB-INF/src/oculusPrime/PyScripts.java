@@ -90,19 +90,14 @@ public class PyScripts {
 	}
 
 	public static void autostartPyScripts() {
-		
-	
-		
-		
 		new Thread() {
 			@Override
 			public void run() {
 				
-				Util.delay(30000); 
+				Util.delay(20000); 
 				// TODO: LOOK AT THIS AGAIN? 
 				Util.systemCall("pkill python");
-				SystemWatchdog.waitForCpu();
-				
+				SystemWatchdog.waitForCpu();		
 	//			final Vector<PyScripts> running = getRunningPythonScripts();;	 
 	//			Util.log("**** "+running);
 					
@@ -110,9 +105,8 @@ public class PyScripts {
 				for( int i = 0 ; i < scripts.length ; i++ ){	
 					
 					// TODO: LOOK AT THIS AGAIN..... 
-					// don't start dups if still running? .. or kill all python scripts on boot? 
-				
-		
+					// don't start dups if still running? .. or kill all python scripts on boot?
+					
 //					if( ! isRunning(scripts[i].getName()) ) {
 						
 						Util.log("py startup: " + scripts[i].getName());
