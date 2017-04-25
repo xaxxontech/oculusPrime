@@ -183,17 +183,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(action.equalsIgnoreCase("script"))     Util.systemCall("python telnet_scripts/" + pid);	
 				if(action.equalsIgnoreCase("motor"))      app.driverCallServer(PlayerCommands.motorsreset, null);
 				if(action.equalsIgnoreCase("gui"))        state.delete(values.guinotify);
+				if(action.equalsIgnoreCase("state"))      state.delete(member);
 				if(action.equalsIgnoreCase("email"))      sendEmail();	
 				
-				if(action.equalsIgnoreCase("state")) {	
-					state.delete(member);
-				}
 				
 				if(action.equalsIgnoreCase("batterylog")){
-					
-					
+									
 					Vector<PowerHistory> tt = PowerHistory.getTail(9);
-					Util.debug("size: " + tt.size(), this);
+					// Util.debug("size: " + tt.size(), this);
 				
 					for( int i = 0 ; i < tt.size() ; i++ ) app.driverCallServer(PlayerCommands.log,  tt.get(0).toString()); 
 					
@@ -215,11 +212,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					// t = BatteryStatus.getChargingString(5);
 					// Util.debug("size: " + t.size());
 					// for( int i = 0 ; i < t.size() ; i++ ) Util.debug((String)t.get(i));
-					
+					// Util.delay(300);
+					// try { response.sendRedirect("/oculusPrime/dashboard"); } catch (IOException e) { e.printStackTrace(); } 
 				}
 				
 				if(action.equalsIgnoreCase("power")){
 					app.driverCallServer(PlayerCommands.powercommand, "4");		
+					Util.delay(1300);
 					app.driverCallServer(PlayerCommands.powerreset, null);
 				}
 				
@@ -372,21 +371,24 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			*/
 			
 			if(view.equalsIgnoreCase("users")){	
-				out.println("<html><head></head><body> \n");
-				out.println("<a href=\"dashboard\">dashboard</a>&nbsp;&nbsp;<br/>\n");
-				out.println(ban + "<br />\n");
-				out.println(ban.tail(30) + "\n");
-				
-				String str = "RTMP users login records:<br>";
-				for (int i = 0; i < LoginRecords.list.size(); i++) str += i + " " + LoginRecords.list.get(i) + "<br>";
-				out.println("<br>" + str);
-				
-				str = "LINUX userss:<br>";
+				out.println("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+				out.println("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"><title>Oculus Prime log file</title> \n");
+				out.println("<style type=\"text/css\">");
+				out.println("body, p, ol, ul {font-family: verdana, arial, helvetica, sans-serif; font-size: 12px;}");
+				out.println("th, td { text-align: left; padding: 5px; }");
+				out.println("tr:nth-child(even){background-color: #f2f2f2}");
+				out.println("th { background-color: #4CAF50; color: white; }");
+				out.println("</style><html><body>\n");
+				out.println("\n\n" + LoginRecords.getReference().geHTML() +"\n\n");			
+				out.println("\n<table cellspacing=\"5\">\n<tbody><tr><th>LINUX<th>info</tr>\n");
 				Vector<String> who = Util.getLinuxWho(); 
-				for (int i = 0; i < who.size(); i++)
-					str += i + " " + who.get(i).toString() + "<br>";
-				
-				out.println("<br>" + str);
+				for (int i = 0; i < who.size(); i++){
+					String user = who.get(i).split(" ")[0].trim();
+					String str =  who.get(i).toString().replace(user, "").trim();
+					out.println("<tr><td>"+user + " <td>"+str+"\n");
+				}
+				out.println("</tbody></table>\n\n");
+				out.println(ban.geHTML() + "<br />\n");
 				out.println("\n</body></html> \n");
 				out.close();
 			}
@@ -775,7 +777,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// --- state flags --- //
 		String flags = "";
 //		if(state.getBoolean(values.routeoverdue))  flags += " * overdue* "; 		
-//		if(state.getBoolean(values.waypointbusy))  flags += " * waypointbusy* "; 	
+		if(state.getBoolean(values.waypointbusy))  flags += " * waypointbusy* "; 	
 		if(state.getBoolean(values.rosgoalcancel))  flags += "<a href=\"dashboard?action=state&member=rosgoalcancel\">goal cancel</a>"; 
 		if(state.getBoolean(values.framegrabbusy))  flags += "&nbsp;&nbsp;<a href=\"dashboard?action=state&member=framegrabbusy\">framegrab busy</a>"; 		
 		if(state.exists(values.writingframegrabs))  flags += "&nbsp;&nbsp;<a href=\"dashboard?action=state&member=writingframegrabs\">writing framegrabs</a>"; 	

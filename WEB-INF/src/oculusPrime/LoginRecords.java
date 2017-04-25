@@ -8,17 +8,18 @@ public class LoginRecords {
 	public static final String PASSENGER = "passenger";
 	public static final String DRIVER = "driver";
 	
-	private static Application app = null; 
 	public static Vector<Record> list = new Vector<Record>();
 	public static Settings settings = Settings.getReference();
 	public static State state = State.getReference();
 	
-	public LoginRecords(Application a) { app = a; }
-	
+	private LoginRecords(){} 
+	private static LoginRecords singleton = new LoginRecords();
+	public static LoginRecords getReference() { return singleton; }
+
 	public void beDriver() { 
 		list.add(new Record(state.get(State.values.driver), DRIVER)); 
 		state.set(State.values.logintime, System.currentTimeMillis());
-		Util.debug("beDriver(): " + state.get(State.values.driver), this);
+		Util.debug("beDriver(): " + state.get(State.values.driver));
 	}
 	
 	public void bePassenger(String user) {			
@@ -36,9 +37,7 @@ public class LoginRecords {
 		return admin.equals(user.toLowerCase());
 	}
 	
-	public void signoutDriver() {
-		
-		// try all instances
+	public  void signoutDriver() {
 		for (int i = 0; i < list.size(); i++){
 			Record rec = list.get(i);
 			if (rec.isActive() && rec.getRole().equals(DRIVER)){
@@ -50,7 +49,7 @@ public class LoginRecords {
 	}
 	
 	/** @return the number of users */
-	public int getActive() {
+	public  int getActive() {
 		int active = 0;
 		for (int i = 0; i < list.size(); i++){
 			Record rec = list.get(i);
@@ -61,32 +60,49 @@ public class LoginRecords {
 		return active;
 	}
 	
+	// TODO: REFORMAT BETTER FOR TELNET 
 	public String toString() {
 		String str = "RTMP users login records:<br>";
 		if (list.isEmpty()) return null;
 		for (int i = 0; i < list.size(); i++)
-			str += i + " " + list.get(i).toString() + "<br>";
+			str += list.get(i).toString() + "<br>";
 
 		return str;
 	}
 	
+	public String geHTML(){
+		
+		String info = "\n<table cellspacing=\"5\">\n<tbody><tr><th>User<th>Login<th>Logout</tr>\n";
+		
+		for (int i = 0; i < list.size(); i++){
+			String out = "Active"; 
+			if(list.get(i).timeout != 0) out = new Date(list.get(i).timeout).toString();
+			info += "<tr><td>" + list.get(i).user + "<td>" + new Date(list.get(i).timein).toString() + "<td>"+out+"</tr> \n";
+		}
+		
+		info += "\n</tbody></table>\n";
+		return info;
+	}
+	
 	/** @return list of connected users */
-	public String who() {
+	public  String who() {
 		String result = "";
 		result += "active RTMP users: " + getActive()+"<br>" ;
 		if (!list.isEmpty()) {
 			for (int i = 0; i < list.size(); i++) {
-				if (list.get(i).toString().matches(".*ACTIVE$")) {
+				//if(list.get(i).toString().matches(".*ACTIVE$")) {
 					result += list.get(i).toString() + "<br>";
-				}
 			}
 		}
-		if (app.commandServer!=null) {
-			result+="telnet connections: "+state.get(State.values.telnetusers); // +app.commandServer.printers.size();
-		}
+
+// nuke 
+// read from state
+//		if (app.commandServer!=null) {
+//			result+="telnet connections: "+state.get(State.values.telnetusers); // +app.commandServer.printers.size();
+//		}
 
 		return result;
-	}
+	} 
 	
 	/** store each record in an object */
 	class Record {
@@ -95,6 +111,16 @@ public class LoginRecords {
 		private long timeout = 0;
 		private String user = null;
 		private String role = null;
+		
+		@Override
+		public String toString() {
+			String str = user + " " + role.toUpperCase(); 
+			str += " login: " + new Date(timein).toString();
+			if(isActive() && getRole().equals(DRIVER)) str += " is ACTIVE";
+			else str += " logout: " + new Date(timeout).toString();
+			
+			return str;
+		}
 		
 		Record(String usr, String role){
 			this.user = usr;
@@ -110,16 +136,6 @@ public class LoginRecords {
 			else { return false; }
 		}
 		
-		@Override
-		public String toString() {
-			String str = user + " " + role.toUpperCase(); 
-			str += " login: " + new Date(timein).toString();
-			if(isActive() && getRole().equals(DRIVER)) str += " is ACTIVE";
-			else str += " logout: " + new Date(timeout).toString();
-			
-			return str;
-		}
-
 		public void logout() {
 			if(timeout==0){
 				timeout = System.currentTimeMillis();

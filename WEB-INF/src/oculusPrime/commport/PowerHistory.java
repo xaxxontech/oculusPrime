@@ -29,7 +29,7 @@ public class PowerHistory {
 
 		String tokens[] = line.split("\\s+");		
 		if(tokens[0].equals(AutoDock.DOCKED)) isDocked = true;
-		if(tokens[1].contains("charging")) isCharging = true;
+		if(tokens[0].contains("charging")) isCharging = true;  //////////// fails? 
 		
 		String batt = tokens[1].replace("%_charging", "").replaceFirst("%", "");
 		if(Util.isInteger(batt)) batteryPercentage = Integer.parseInt(batt);

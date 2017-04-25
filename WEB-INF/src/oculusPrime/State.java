@@ -57,7 +57,7 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint,
-		rosarcmove, // to be documented
+		rosarcmove, waypointbusy, // to be documented
 
 	}
 
@@ -84,9 +84,7 @@ public class State {
 	/** properties object to hold configuration */
 	private HashMap<String, String> props = new HashMap<String, String>(); 
 	
-	public static State getReference() {
-		return singleton;
-	}
+	public static State getReference() { return singleton; }
 
 	private State() {
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	

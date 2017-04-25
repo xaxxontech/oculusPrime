@@ -886,6 +886,8 @@ public class Navigation implements Observer {
 		 * if no alerts, log only
 		 */
     	// takes 5-10 seconds to init if mic is on (mic only, or mic + camera)
+		
+		state.set(values.waypointbusy, "true");
 
 		boolean rotate = false;
 		boolean email = false;
@@ -1217,6 +1219,8 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
 		}
 		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
+
+		state.set(values.waypointbusy, "false");
 
 	}
 

@@ -88,7 +88,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
-		loginRecords = new LoginRecords(this);
+		loginRecords = LoginRecords.getReference();
 		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
@@ -668,7 +668,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			// SEND TO TELNET NOT GUI 
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
-		// case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
 			if (str!=null) if (str.equals(AutoDock.HIGHRES)) docker.lowres = false;

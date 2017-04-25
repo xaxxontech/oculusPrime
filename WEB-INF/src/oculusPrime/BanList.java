@@ -24,11 +24,11 @@ public class BanList {
 	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
 	public static final int BAN_ATTEMPTS = 10;
 	public static final int MAX_ATTEMPTS = 12;
-	public static final int MAX_HISTORY = 50;
+//	public static final int MAX_HISTORY = 50;
 	
 	private HashMap<String, Integer> attempts = new HashMap<String, Integer>();
 	private HashMap<String, Long> blocked = new HashMap<String, Long>();
-	private Vector<String> history = new Vector<String>();
+//	private Vector<String> history = new Vector<String>();
 	private Vector<String> banned = new Vector<String>();
 	private Vector<String> known = new Vector<String>();
 	private State state = State.getReference();
@@ -36,9 +36,7 @@ public class BanList {
 	private Timer timer = new Timer();
 	
 	static BanList singleton = new BanList();
-	public static BanList getRefrence(){
-		return singleton;
-	}
+	public static BanList getRefrence(){return singleton;}
 	
 	private BanList() {		
 		try {	
@@ -73,17 +71,17 @@ public class BanList {
 		timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
 	}
 	
-	public String tail(int lines){
-		int i = 0;
-		StringBuffer str = new StringBuffer();
-	 	if(history.size() > lines) i = history.size() - lines;
-		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
-		return str.toString();
-	}
+//	public String tail(int lines){
+//		int i = 0;
+//		StringBuffer str = new StringBuffer();
+//	 	if(history.size() > lines) i = history.size() - lines;
+//		for(; i < history.size() ; i++) str.append(history.get(i) + "\n<br />"); 
+//		return str.toString();
+//	}
 	
 	public void appendLog(final String str){
-		if(history.size() > MAX_HISTORY) history.remove(0);
-		history.add(Util.getTime() + ", " + str);
+//		if(history.size() > MAX_HISTORY) history.remove(0);
+//		history.add(Util.getTime() + ", " + str);
 		
 		if(logfile==null) return;
 		
@@ -253,6 +251,20 @@ public class BanList {
 	
 	@Override
 	public String toString(){
-		return "<br> banned: " + banned.toString() + "<br> known:" + known.toString();
+		return "<br>banned: " + banned.toString() + "<br> known:" + known.toString();
+	}
+	
+	public String geHTML(){
+		String info = "\n<table cellspacing=\"5\">\n<tbody><tr><th>Known Address<th>Banned Address</tr>\n";
+		
+		String knw = known.toString().replaceAll(",", "<br>").trim();
+		knw = knw.substring(1, knw.length()-1);
+		
+		String ban = banned.toString().replaceAll(",", "<br>").trim();
+		ban = ban.substring(1,  ban.length()-1);
+		
+		info += "<tr><td>" + knw + "<td>"  + ban+ "</tr> \n";
+		info += "\n</tbody></table>\n";
+		return info;
 	}
 }
