@@ -4,6 +4,12 @@ import java.io.*;
 import java.net.*;
 
 public class Downloader {
+
+	public boolean FileDownload(final String fileAddress,
+								final String localFileName, final String destinationDir) {
+
+		return FileDownload(fileAddress, localFileName, destinationDir, Util.ONE_MINUTE*5); // default 5 min timeout
+	}
 	
 	/**
 	 * 
@@ -16,7 +22,7 @@ public class Downloader {
 	 * 
 	 */
 	public boolean FileDownload(final String fileAddress,
-			final String localFileName, final String destinationDir) {
+		final String localFileName, final String destinationDir, long timeout) {
 
 		// long start = System.currentTimeMillis();
 		String sep = System.getProperty("file.separator");
@@ -50,7 +56,14 @@ public class Downloader {
 			byte[] buf = new byte[1024];
 
 			// pull in the bytes
+			long t = System.currentTimeMillis();
 			while ((ByteRead = is.read(buf)) != -1) {
+				if (System.currentTimeMillis() - t > timeout) {
+					Util.log("Download timed out, aborted", this);
+					is.close();
+					os.close();
+					return false;
+				}
 				os.write(buf, 0, ByteRead);
 				ByteWritten += ByteRead;
 			}

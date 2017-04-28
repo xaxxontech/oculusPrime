@@ -22,6 +22,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public enum mode { on, off };
 
 	public static final double FIRMWARE_VERSION_REQUIRED = 0.129; // trailing zeros ignored!
+	public static final String FIRMWARE_ID = "malg";
+	public static final double MALGDB_FIRMWARE_VERSION_REQUIRED = 1.05; // trailing zeros ignored!
+	public static final String MALGDB_FIRMWARE_ID = "malgdb";
+	public static String boardid = "unknown";
 	public static final long DEAD_TIME_OUT = 20000;
 	public static final int WATCHDOG_DELAY = 8000;
 	public static final long RESET_DELAY = (long) (Util.ONE_HOUR*4.5); // 4 hrs
@@ -59,7 +63,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	public static final int CAM_NUDGE = 3; // degrees
 	public static final long CAM_SMOOTH_DELAY = 50;
 	public static final long CAM_RELEASE_DELAY = 500;
-	public static final String FIRMWARE_ID = "malg";
 	public static final int LINEAR_STOP_DELAY = 750;
 	public static final int TURNING_STOP_DELAY = 500;
 
@@ -205,15 +208,15 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 						}
 					}
 
-					Util.log(FIRMWARE_ID+" PCB periodic reset", this);
+					Util.log(boardid+" PCB periodic reset", this);
 					Util.delay(10000); // allow time for camera to return to horiz, if reset right after docking
 					lastReset = now;
 					reset();
 				}
 
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
-					application.message(FIRMWARE_ID+" PCB timeout, attempting reset", null, null);
-					Util.log(FIRMWARE_ID + " PCB timeout, attempting reset", this);
+					application.message(boardid+" PCB timeout, attempting reset", null, null);
+					Util.log(boardid+ " PCB timeout, attempting reset", this);
 					lastRead = now;
 					reset();
 				}
@@ -229,31 +232,40 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	private void checkFirmWareVersion() {
 		if (!isconnected) return;
 
+		Double version_required = FIRMWARE_VERSION_REQUIRED;
+
+		if (boardid.equals(MALGDB_FIRMWARE_ID)) {
+			version_required = MALGDB_FIRMWARE_VERSION_REQUIRED;
+//			Util.log(boardid + ": firmware version check skipped", this);
+//			return;
+		}
+
 		firmwareversion = 0;
 		sendCommand(GET_VERSION);
 		long start = System.currentTimeMillis();
 		while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000) { Util.delay(100);  }
 		if (firmwareversion == 0) {
-			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
+			String msg = "failed to determine current "+boardid+" firmware version";
 			Util.log("error, "+msg, this);
 			state.set(State.values.guinotify, msg);
 			return;
 		}
-		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+		if (firmwareversion != version_required) {
+
 			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
-				String msg = "current power firmware: "+firmwareversion+
-						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+				String msg = "current "+boardid+" firmware: "+firmwareversion+
+						" out of date! Update to: "+version_required;
 //				state.set(State.values.guinotify, msg);
 				Util.log(msg, this);
 				return;
 			}
 
-			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
+			Util.log("Required "+boardid+" firmware version is "+version_required+", attempting update...", this);
 			String port = state.get(State.values.motorport); // disconnect() nukes this state value
 			disconnect();
 
 			// TODO: do update here, blocking
-			Updater.updateFirmware(FIRMWARE_ID, FIRMWARE_VERSION_REQUIRED, port);
+			Updater.updateFirmware(boardid, version_required, port);
 
 			connect();
 			if (cs.isAlive())  Util.log("error, CommmandSender still alive", this);
@@ -265,8 +277,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			sendCommand(GET_VERSION);
 			start = System.currentTimeMillis();
 			while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000)  { Util.delay(100); }
-			if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
-				String msg = "unable to update " + FIRMWARE_ID + " firmware to version "+FIRMWARE_VERSION_REQUIRED;
+			if (firmwareversion != version_required) {
+				String msg = "unable to update " + boardid + " firmware to version "+version_required;
 				Util.log("error, "+msg, this);
 				state.set(State.values.guinotify, msg);
 			}
@@ -345,7 +357,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		
 		if(response.startsWith("version:")) {
 			String versionstr = response.substring(response.indexOf("version:") + 8, response.length());
-			Util.log(FIRMWARE_ID + " firmware version: "+versionstr, this);
+			Util.log(boardid + " firmware version: "+versionstr, this);
 			firmwareversion = Double.valueOf(versionstr);
 		}
 	
@@ -391,6 +403,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			if (state.getBoolean(State.values.stopbetweenmoves)) 
 				state.set(State.values.direction, direction.stop.toString());
 		}
+//		else if (s[0].equals("gyroOVR")) Util.debug("MALGDB gyroOVR", this); // testing
 	}
 
 	/**
@@ -440,9 +453,9 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
     				if (device.trim().startsWith("id")) device = device.substring(2, device.length());
     				Util.debug(device+" "+portNames[i], this);
     				
-    				if (device.equals(FIRMWARE_ID)) {
-    					
-    					Util.log("malg connected to "+portNames[i], this);
+    				if (device.equals(FIRMWARE_ID) || device.equals(MALGDB_FIRMWARE_ID)) {
+    					boardid = device;
+    					Util.log(boardid + " connected to "+portNames[i], this);
     					
     					isconnected = true;
     					state.set(State.values.motorport, portNames[i]);

@@ -119,7 +119,7 @@ public class Updater {
 		String folder = "avrdude";
 		Util.log("Updater.updateFirmware() downloading url: " + fileurl, null);
 		Downloader dl = new Downloader();
-		if (! dl.FileDownload(fileurl, filename, folder)) {
+		if (! dl.FileDownload(fileurl, filename, folder, Util.ONE_MINUTE)) {
 			Util.log("Updater.updateFirmware() error, file download failed", null);
 			return;
 		}

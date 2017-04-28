@@ -869,7 +869,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case malgcommand:
-				messageplayer("malgcommand: "+str, null, null);
+				if (!passengerOverride) messageplayer("malgcommand: "+str, null, null);
 				comport.malgcommand(str);
 				break;
 
