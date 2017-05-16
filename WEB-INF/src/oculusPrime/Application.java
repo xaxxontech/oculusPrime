@@ -39,6 +39,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
 	public static final String ARM = "arm";
+	public static final String UBUNTU1604 = "16.04";
 	public static final String LOCALHOST = "127.0.0.1";
 
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
@@ -101,7 +102,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		// always accept local avconv/ffmpeg
 		if (params.length==0 && connection.getRemoteAddress().equals("127.0.0.1") ) {
-			grabber = Red5.getConnectionLocal();
+			grabber = Red5.getConnectionLocal(); // TODO: cause of unknown bug? dumpframegrabs sometimes connects after initial video source
 			return true;
 		}
 
@@ -156,7 +157,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 		
-		banlist.loginFailed(connection.getRemoteAddress(), logininfo[0]);			
+		banlist.loginFailed(connection.getRemoteAddress(), logininfo[0]);
 		return false;
 	}
 
@@ -328,13 +329,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			scanUtils = new developer.depth.ScanUtils();
 		}
 
-		if (!state.get(values.osarch).equals(ARM)) {
-			try {
-				System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-			} catch (UnsatisfiedLinkError e) {
-				Util.log("opencv native lib not available", this);
-			}
-		}
+		// OpenCV, requires restart if ubuntu 14.04 running, with jar file targeted at 16.04 was present
+		OpenCVUtils ocv = new OpenCVUtils(this);
+		ocv.loadOpenCVnativeLib();
+		if (ocv.jarfiledeleted) restart();
 
 		if (settings.getBoolean(GUISettings.navigation)) {
 			navigation = new developer.Navigation(this);
@@ -999,7 +997,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		// dev tool only
 		case test:
 			try {
-
+				Util.log("testing", this.getClass().getEnclosingMethod().toString());
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 
@@ -1643,7 +1641,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		return result;
 	}
 
-	public void restart() {
+	private void restart() {
 		messageplayer("restarting server application", null, null);	
 		
 		int b = settings.getInteger(ManualSettings.restarted); // count java restarts vs booting 
@@ -1660,7 +1658,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		shutdownApplication();
 	}
 	
-	public  void reboot() {
+	private void reboot() {
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
@@ -1687,7 +1685,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	}
 
-	public void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
+	private void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
 		Util.log("powering down system", this);
 		PowerLogger.append("powering down system", this);
 		powerport.writeStatusToEeprom();
@@ -1701,7 +1699,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 	}
 
-	public void shutdownApplication() {
+	private void shutdownApplication() {
 		
 		Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
@@ -1733,7 +1731,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}
 
-	public void move(final String str) {
+	private void move(final String str) {
 
 		if (str.equals(ArduinoPrime.direction.stop.name())) {
 			if (state.getBoolean(State.values.autodocking))
@@ -1775,7 +1773,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer("command received: " + str, "motion", "MOVING");
 	}
 
-	public void nudge(String str) {
+	private void nudge(String str) {
 
 		if (str == null) return;
 		if (!state.getBoolean(State.values.motionenabled)) {
@@ -1836,7 +1834,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		}
 	}
 
-	public String logintest(String user, String pass) {
+	private String logintest(String user, String pass) {
 		int i;
 		String value = "";
 		String returnvalue = null;
@@ -2240,7 +2238,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		sendplayerfunction("showserverlog", header + Util.tail(lines));
 	}
 
-	public void softwareUpdate(String str) {
+	private void softwareUpdate(String str) {
 
 		if (str.equals("check")) {
 			messageplayer("checking for new software...", null, null);

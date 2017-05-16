@@ -30,7 +30,7 @@ public enum ManualSettings {
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "150");
 		config.setProperty(redockifweakconnection.name(), Settings.TRUE);   
-		config.setProperty(useflash.name(), Settings.TRUE);
+		config.setProperty(useflash.name(), Settings.FALSE);
 		config.setProperty(arcmovecomp.name(), "0.8");
 		config.setProperty(usearcmoves.name(), Settings.TRUE);
 		config.setProperty(arcpwmthreshold.name(), "150");

@@ -1891,6 +1891,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			} }).start();
 		}
 	}
+
+	public void hardStop() {
+		final long moveID = System.nanoTime();
+		currentMoveID = moveID;
+
+		state.set(State.values.moving, false);
+		state.set(State.values.movingforward, false);
+		state.set(State.values.direction, direction.stop.toString());
+
+		sendCommand(HARD_STOP);
+	}
 	
 	private void clickCam(final Integer y) {
 		if (state.getBoolean(State.values.autodocking)) return;

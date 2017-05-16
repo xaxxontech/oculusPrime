@@ -48,10 +48,12 @@ public class Video {
     private static final String VIDEO = "_video";
     private static final String STREAM1 = "stream1";
     private static final String STREAM2 = "stream2";
+    private static String ubuntuVersion;
 
     public Video(Application a) {
         app = a;
         port = Settings.getReference().readRed5Setting("rtmp.port");
+        ubuntuVersion = Util.getUbuntuVersion();
     }
 
     public void initAvconv() {
@@ -202,11 +204,11 @@ public class Video {
                 width=lowreswidth;
             }
 
-            if (!state.exists(State.values.writingframegrabs)) {
+            if (!state.exists(values.writingframegrabs)) {
                 dumpframegrabs(res);
                 Util.delay(STREAM_CONNECT_DELAY);
             }
-            else if (state.getInteger(State.values.writingframegrabs) != width) {
+            else if (state.getInteger(values.writingframegrabs) != width) {
 //                Util.log("dumpframegrabs() not using width: "+width, this);
                 forceShutdownFrameGrabs();
                 Util.delay(STREAM_CONNECT_DELAY);
@@ -214,31 +216,53 @@ public class Video {
                 Util.delay(STREAM_CONNECT_DELAY);
             }
 
-            // determine latest image file
-            File dir=new File(PATH);
-            File imgfile = null;
-            long start = System.currentTimeMillis();
-            while (imgfile == null && System.currentTimeMillis()-start < 10000) {
-                int highest = 0;
-                for (File file : dir.listFiles()) {
-                    int i = Integer.parseInt(file.getName().split("\\.")[0]);
-                    if (i > highest) {
-                        imgfile = file;
-                        highest = i;
+            // determine latest image file -- use second latest to resolve incomplete file issues
+            int attempts = 0;
+            while (attempts < 15) {
+                File dir = new File(PATH);
+                File imgfile = null;
+                long start = System.currentTimeMillis();
+                while (imgfile == null && System.currentTimeMillis() - start < 10000) {
+                    int highest = 0;
+                    int secondhighest = 0;
+                    for (File file : dir.listFiles()) {
+                        int i = Integer.parseInt(file.getName().split("\\.")[0]);
+                        if (i > highest) {
+//                            imgfile = file;
+                            highest = i;
+                        }
+                        if (i > secondhighest && i < highest) {
+                            imgfile = file;
+                            secondhighest = i;
+                        }
                     }
+                    Util.delay(1);
                 }
-                Util.delay(1);
-            }
-            if (imgfile == null) { Util.log(avprog+" frame unavailable", this); }
-            else {
-                try {
-                    app.processedImage = ImageIO.read(imgfile);
-                } catch (IOException e) {
-                    Util.printError(e);
+                if (imgfile == null) {
+                    Util.log(avprog + " frame unavailable", this);
+                    break;
+                } else {
+                    try {
+                        // 640x480 = 921654 bytes (640*480*3 + 54)
+                        // 320x240 = 230454  bytes (320*240*3 + 54)
+//                        long size = imgfile.length();
+//                        if (size != 230454 && size != 921654) {  // doesn't allow for max res, or any other res
+//                       if (size <= 54) { // image must be bigger than bitmap header size!
+//                       if (size != imgsizebytes) { // image must be correct size
+//                            Util.log("wrong size ("+size+" bytes) image file, trying again, attempt "+(attempts+1), this);
+//                            attempts++;
+//                            continue;
+//                        }
+                        app.processedImage = ImageIO.read(imgfile);
+                        break;
+                    } catch (IOException e) {
+                        Util.printError(e);
+                        attempts++;
+                    }
                 }
             }
 
-            state.set(State.values.framegrabbusy, false);
+            state.set(values.framegrabbusy, false);
 
         } }).start();
     }
@@ -266,10 +290,17 @@ public class Video {
             host = state.get(State.values.relayserver);
 
         try {
-            Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
-                    "rtmp://" + host + ":" + port + "/oculusPrime/"+STREAM1+" live=1", "-s", width+"x"+height,
-                    "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH+"%d"+EXT  });
-            // avconv -analyzeduration 0 -i rtmp://127.0.0.1:1935/oculusPrime/stream1 live=1 -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
+            if ( ! Application.UBUNTU1604.equals(ubuntuVersion)) { // 14.04 and lower
+                Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
+                        "rtmp://" + host + ":" + port + "/oculusPrime/" + STREAM1 + " live=1", "-s", width + "x" + height,
+                        "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH + "%d" + EXT});
+                // avconv -analyzeduration 0 -i "rtmp://127.0.0.1:1935/oculusPrime/stream1 live=1" -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
+            } else {
+                Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-rtmp_live", "live", "-i",
+                        "rtmp://" + host + ":" + port + "/oculusPrime/" + STREAM1, "-s", width + "x" + height,
+                        "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH + "%d" + EXT});
+                // avconv -analyzeduration 0 -rtmp_live live -i rtmp://127.0.0.1:1935/oculusPrime/stream1 -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
+            }
         }catch (Exception e) { Util.printError(e); }
 
         new Thread(new Runnable() { public void run() {

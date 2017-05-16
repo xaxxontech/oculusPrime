@@ -3,12 +3,10 @@ package developer.image;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.io.File;
 
 
-import oculusPrime.Application;
-import oculusPrime.AutoDock;
-import oculusPrime.State;
-import oculusPrime.Util;
+import oculusPrime.*;
 
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
@@ -20,12 +18,41 @@ import org.opencv.objdetect.CascadeClassifier;
 public class OpenCVUtils {
 	State state;
 	Application app;
+	public boolean jarfiledeleted = false;
 //	VideoCapture capture;
 
 	public OpenCVUtils(Application a) {    // constructor
 //		System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // moved to Application so only loaded once
 		state = State.getReference();
 		app = a;
+	}
+
+	public void loadOpenCVnativeLib() {
+		if ( State.getReference().get(State.values.osarch).equals(Application.ARM)) {
+			Util.log("ARM system detected, openCV skipped", this);
+			return;
+		}
+
+		// need to nuke newer opencv jar if older linux only, otherwise won't load native lib
+		if (! Application.UBUNTU1604.equals(Util.getUbuntuVersion())) {
+			String jarfile = Settings.redhome+ Util.sep+"webapps"+Util.sep+"oculusPrime"+Util.sep+"WEB-INF"+Util.sep+"lib"+
+					Util.sep+"opencv-2413.jar";
+
+			File file = new File(jarfile);
+			if (file.exists()) {
+				file.delete();
+				Util.log("deleted file " + file.getAbsolutePath(), this);
+				jarfiledeleted = true;
+			}
+		}
+
+		try {
+			System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+			Util.log("opencv native lib "+Core.NATIVE_LIBRARY_NAME+" loaded OK", this);
+		} catch (UnsatisfiedLinkError e) {
+			Util.log("opencv native lib "+Core.NATIVE_LIBRARY_NAME+" not available", this);
+		}
+
 	}
 
 	public static BufferedImage matToBufferedImage(Mat matrix) { // type_intRGB

@@ -129,7 +129,8 @@ public class NavigationUtilities {
 	        		ans.add(wp.item(j).getTextContent());
 	        		
 	        		// TODO: 
-	        		if( wp.item(j).getTextContent().contains("&nbsp;")) Util.log("getWaypointsForRoute(): ... WARNING .... HTML CHARATERS IN  NAV XML ...");
+	        		if( wp.item(j).getTextContent().contains("&nbsp;"))
+	        			Util.log("getWaypointsForRoute(): ... WARNING .... HTML CHARATERS IN  NAV XML ...", "NavigationUtilities.getWaypointsForRoute()");
 
 	    		}
 			}
@@ -475,14 +476,16 @@ public class NavigationUtilities {
 		if(estsec == 0) setRouteTimeEstimate(name, seconds); 
 		else if(estsec != seconds) {
 			setRouteTimeEstimate(name, (seconds+estsec)/2); // average them	
-			Util.log("routeCompleted("+name+", " + seconds + ", " + meters + "): average seconds = " + seconds + " updated = "+ (seconds+estsec)/2);
+			Util.log("routeCompleted("+name+", " + seconds + ", " + meters + "): average seconds = " + seconds + " updated = "+ (seconds+estsec)/2,
+					"NavigationUtilities, routeCompleted()");
 		}
 
 		final int distance = getRouteDistanceEstimate(name);
 		if(distance == 0) setRouteDistanceEstimate(name, meters);
 		else if(distance != meters){
 			setRouteDistanceEstimate(name, (distance+meters)/2); // average them	
-			Util.log("routeCompleted("+name+", " + seconds + ", " + meters + "): average meters = " + meters + " updated = "+ (distance+meters)/2);
+			Util.log("routeCompleted("+name+", " + seconds + ", " + meters + "): average meters = " + meters + " updated = "+ (distance+meters)/2,
+					"NavigationUtilities, routeCompleted()");
 		}
 	}
 

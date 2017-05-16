@@ -128,7 +128,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 		Util.debug("initialize", this);
 		batterypresent = true;
 		sendCommand(READERROR);
-		lastReset = System.currentTimeMillis();
 		sendCommand(READCAPACITY);
 		sendCommand(READ_SAFECURRENT);
 		sendCommand(READ_DOCKVOLTAGE);
@@ -187,10 +186,9 @@ public class ArduinoPower implements SerialPortEventListener  {
     					Util.log("power board connected to  "+portNames[i], this);
     					PowerLogger.append("power board connected to  "+portNames[i], this);
     					
-    					lastRead = System.currentTimeMillis();
+    					lastRead = lastReset = System.currentTimeMillis();
     					isconnected = true;
     					state.set(State.values.powerport, portNames[i]);
-//    	        		serialPort.setEventsMask(SerialPort.MASK_DSR);//Set mask to data ready
     		            serialPort.addEventListener(this, SerialPort.MASK_RXCHAR);//Add SerialPortEventListener
     					break; // job done, don't read any more ports
     				}
@@ -236,6 +234,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (now - lastRead > DEAD_TIME_OUT && isconnected) {
 					timeoutlogmessages();
 					reset();
+					Util.delay(ALLOW_FOR_RESET);
 				}
 				
 				if (now - lastReset > RESET_DELAY && isconnected &&
@@ -243,8 +242,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 					application.message("power PCB periodic reset", "battery", "resetting");
 					Util.log("power PCB periodic reset", this);
 					PowerLogger.append("power PCB periodic reset", this);
-					lastReset = now;
 					reset();
+					Util.delay(ALLOW_FOR_RESET);
 				}
 
 				if (now - lastHostHeartBeat > HOST_HEARTBEAT_DELAY && isconnected) { 
@@ -255,10 +254,31 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (now - lastRead > ERROR_TIME_OUT && !isconnected) { // comm with pcb lost!
 					if (state.exists(oculusPrime.State.values.powererror.toString())){
 						String err = state.get(oculusPrime.State.values.powererror);
-						if (!err.matches(".*"+COMM_LOST+"$")) // only set once
-							state.set(oculusPrime.State.values.powererror, err+","+COMM_LOST);
-					} else { 
-						state.set(oculusPrime.State.values.powererror, COMM_LOST);
+						if (!err.matches(".*"+COMM_LOST+"$")) { // only set once
+
+							// one last reset try
+							reset();
+							long start = System.currentTimeMillis();
+							while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+								Util.delay(10);
+
+							if (!isconnected) { // still not connected after waiting for reset
+								state.set(oculusPrime.State.values.powererror, err + "," + COMM_LOST);
+							}
+
+						}
+
+					} else {
+
+						// one last reset try
+						reset();
+						long start = System.currentTimeMillis();
+						while (!isconnected && System.currentTimeMillis() - start < ALLOW_FOR_RESET)
+							Util.delay(10);
+
+						if (!isconnected) // still not connected after waiting for reset
+							state.set(oculusPrime.State.values.powererror, COMM_LOST);
+
 					}
 				}
 
@@ -477,7 +497,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 				Util.debug("debugenabled, skipping graceful shutodwn");
 				PowerLogger.append("debugenabled, skipping graceful shutodwn", this);
 			} else
-				application.powerdown();
+				application.driverCallServer(PlayerCommands.powershutdown, null);
 		}
 		
 		else if (s[0].equals("redock") && state.getUpTime() > Util.TWO_MINUTES) {
@@ -557,11 +577,11 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 	}
 	
-	protected void disconnect() {
+	private void disconnect() {
 		try {
 			isconnected = false;
-			serialPort.closePort();
 			state.delete(State.values.powerport);
+			serialPort.closePort();
 		} catch (Exception e) {
 			Util.log("error in disconnect(): " + e.getMessage(), this);
 		}
@@ -603,8 +623,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 				Util.delay(10);
 
 			if (!isconnected) { // still not connected after waiting for rest
-				Util.log("power pcb not connected", this);
-				PowerLogger.append("power pcb not connected", this);
+				Util.log("power pcb not connected after waiting for reset", this);
+				PowerLogger.append("power pcb not connected after waiting for reset", this);
 				return false;
 			}
 		}

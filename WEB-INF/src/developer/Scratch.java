@@ -26,13 +26,23 @@ public class Scratch {
         System.out.println("192.168.0.107".replaceFirst("\\.\\d+\\.\\d+$", ""));
     }
 
+    public void zork(Object c) {
+
+        System.out.println(c);
+        if (c instanceof String)
+              System.out.println(c.toString());
+    }
+
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
+        long r = 0;
+        long n= 1;
+        r = n = System.currentTimeMillis();
 
-        String[] asdf = new String[0];
-        asdf = "lasdfjlksdf ewer7s98e wer78w90e8r".split(" ");
-        System.out.println(asdf.length);
+//        new Scratch().zork(null);
+
+        System.out.println("r: "+r+", n: "+n);
 
     }
 }

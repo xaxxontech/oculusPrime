@@ -183,7 +183,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			if(action.equalsIgnoreCase("archivelogs")) app.driverCallServer(PlayerCommands.archivelogs, null);
 			
 			if(action.equalsIgnoreCase("trunclogs")){
-				Util.log(".... trunc logs stub ....");
+				Util.log(".... trunc logs stub ....",this);
 				// Util.truncStaleNavigationFiles();
 				Util.truncStaleAudioVideo();
 				Util.truncStaleFrames();
