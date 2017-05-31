@@ -290,7 +290,7 @@ public class Video {
             host = state.get(State.values.relayserver);
 
         try {
-            if ( ! Application.UBUNTU1604.equals(ubuntuVersion)) { // 14.04 and lower
+            if ( ! Application.UBUNTU1604.equals(ubuntuVersion) ) { // 14.04 and lower
                 Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
                         "rtmp://" + host + ":" + port + "/oculusPrime/" + STREAM1 + " live=1", "-s", width + "x" + height,
                         "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH + "%d" + EXT});
@@ -303,6 +303,7 @@ public class Video {
             }
         }catch (Exception e) { Util.printError(e); }
 
+        
         new Thread(new Runnable() { public void run() {
 
             Util.delay(500); // required?

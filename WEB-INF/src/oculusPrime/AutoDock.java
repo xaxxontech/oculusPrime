@@ -169,18 +169,18 @@ public class AutoDock {
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
 									comport.camCommand(ArduinoPrime.cameramove.reverse);
-//									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
-									if (state.getInteger(State.values.floodlightlevel) == 0) comport.floodLight(FLHIGH); 
-//									Thread.sleep(25); // sometimes above command being ignored, maybe this will help
-
-//									comport.rotate(ArduinoPrime.direction.left, 180);
-
 									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + ArduinoPrime.FIRMWARE_TIMED_OFFSET);
 									String tmpspeed = state.get(State.values.motorspeed);
 									comport.speedset(ArduinoPrime.speeds.fast.toString());
 									comport.turnLeft((int) d);
 									Util.delay((long) d);
 									comport.stopGoing();
+									if (state.getInteger(State.values.floodlightlevel) == 0) {
+										for (int i=0; i<FLHIGH; i+=FLHIGH/25) { // TODO: scale!
+											comport.floodLight(i);
+											Thread.sleep(12); // 25*10=300ms total
+										}
+									}
 									comport.speedset(tmpspeed);
 									Thread.sleep(2000);
 

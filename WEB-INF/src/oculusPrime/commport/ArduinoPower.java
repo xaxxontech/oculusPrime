@@ -494,10 +494,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 			PowerLogger.append("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
 
 			if (settings.getBoolean(ManualSettings.debugenabled)) {
-				Util.debug("debugenabled, skipping graceful shutodwn");
-				PowerLogger.append("debugenabled, skipping graceful shutodwn", this);
+//				Util.debug("debugenabled, skipping graceful shutodwn");
+//				PowerLogger.append("debugenabled, skipping graceful shutodwn", this);
 			} else
-				application.driverCallServer(PlayerCommands.powershutdown, null);
+				application.driverCallServer(PlayerCommands.systemshutdown, null);
 		}
 		
 		else if (s[0].equals("redock") && state.getUpTime() > Util.TWO_MINUTES) {
