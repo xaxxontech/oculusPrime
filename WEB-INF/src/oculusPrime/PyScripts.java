@@ -7,19 +7,16 @@ import java.io.InputStreamReader;
 import java.util.Vector;
 
 public class PyScripts {
-	
+		
+	PyScriptsEvents events = PyScriptsEvents.getRefrence(); // state state event listener 
+
 	final static String NONE = "none";
-	
 	String logFile = NONE;
 	String pyFile = NONE;
 	String ppid = NONE;
 	String user = NONE;
 	String name = NONE;
 	String pid = NONE;
-	
-	// TODO: 
-	// lookup proc
-	// cat /proc/pid/cmdline
 	
 	public static Vector<PyScripts> getRunningPythonScripts() {
 		Vector<PyScripts> scripts = new Vector<PyScripts>();
@@ -31,14 +28,18 @@ public class PyScripts {
 			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));					
 			while ((line = procReader.readLine()) != null) {
 				if(line.trim().length() > 0) {
-					if( ! line.startsWith("UID")) scripts.add( new PyScripts(line));
+					if( ! line.startsWith("UID")) 
+						scripts.add( new PyScripts(line));
 				}
 			}
 		} catch (Exception e) { Util.printError(e); }		
 		return scripts;
 	}	
 	
-	static File[] getScriptFiles(){
+	/**
+	 * @return names of regular python scripts, event driven ones shouldn't be shown in dashboard
+	 */
+	static File[] getScriptFiles(){ 
 		File telnet = new File(Settings.telnetscripts);
 		if( ! telnet.exists()) telnet.mkdir();
 		File[] names = telnet.listFiles(new FileFilter() {
@@ -46,20 +47,50 @@ public class PyScripts {
 			public boolean accept(File pathname) { 
 				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
 				if(pathname.getName().startsWith("startup_")) return false;
+				if(pathname.getName().startsWith("shutdown_")) return false;
+				if(pathname.getName().startsWith("docked_")) return false;
 				return pathname.getName().endsWith(".py"); 
 			}
 		});
 		return names;
 	}
 	
+	static File[] getScriptFiles(final String pre){
+		File auto = new File(Settings.telnetscripts);
+		if( ! auto.exists()) auto.mkdir();
+		File[] names = auto.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(File pathname) { 
+				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
+				if(pathname.getName().startsWith(pre) && pathname.getName().endsWith(".py")) return true;
+				return false;	
+			}
+		});
+		return names;
+	}
+	
 	static File[] getAutoStartScriptFiles(){
-		File telnet = new File(Settings.telnetscripts);
-		if( ! telnet.exists()) telnet.mkdir();
-		File[] names = telnet.listFiles(new FileFilter() {
+		File auto = new File(Settings.telnetscripts);
+		if( ! auto.exists()) auto.mkdir();
+		File[] names = auto.listFiles(new FileFilter() {
 			@Override
 			public boolean accept(File pathname) { 
 				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
 				if(pathname.getName().startsWith("startup_") && pathname.getName().endsWith(".py")) return true;
+				return false;	
+			}
+		});
+		return names;
+	}
+
+	static File[] getShutdownScriptFiles(){
+		File shut = new File(Settings.telnetscripts);
+		if( ! shut.exists()) shut.mkdir();
+		File[] names = shut.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(File pathname) { 
+				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
+				if(pathname.getName().startsWith("shutdown_") && pathname.getName().endsWith(".py")) return true;
 				return false;	
 			}
 		});
@@ -71,70 +102,53 @@ public class PyScripts {
 		return name;	
 	}
 	
-//	@Override
-//	public boolean contains(){
-		
-//		String ans = ""; 
-//		Vector<PyScripts> scripts = getRunningPythonScripts();
-//		for( int i = 0 ; i < scripts.size() ; i++ ) ans += scripts.get(i).name + " ---- ";
-//		return ans;
-//		return "";	
-//	}
-	
-	public static boolean isRunning(final String name){
-		Vector<PyScripts> scripts = getRunningPythonScripts();
-
-		for( int i = 0 ; i < scripts.size() ; i++ )	Util.log("active: " + scripts.get(i).name);
-		
-		return true; // jumper off 
-	}
-
 	public static void autostartPyScripts() {
+		PyScriptsEvents.getRefrence();
 		new Thread() {
 			@Override
 			public void run() {
 				
-				Util.delay(20000); 
-				// TODO: LOOK AT THIS AGAIN? 
-				Util.systemCall("pkill python");
-				SystemWatchdog.waitForCpu();		
-	//			final Vector<PyScripts> running = getRunningPythonScripts();;	 
-	//			Util.log("**** "+running);
-					
+				// system settle 
+				// Util.delay(BOOTUP_DELAY);
+				// TODO: LOOK AT THIS AGAIN? don't let deamon scripts duplicate 
+				// if(Settings.getReference().getBoolean(ManualSettings.developer)) Util.systemCall("pkill python");
+				// remember the scripts will wait on telnet opening  
+				
 				File[] scripts = getAutoStartScriptFiles();
 				for( int i = 0 ; i < scripts.length ; i++ ){	
-					
-					// TODO: LOOK AT THIS AGAIN..... 
-					// don't start dups if still running? .. or kill all python scripts on boot?
-					
-//					if( ! isRunning(scripts[i].getName()) ) {
-						
-						Util.log("py startup: " + scripts[i].getName());
-						Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
-						
-//					} else {
-		
-//						Util.log("autostarting === running: " + running);
-//						Util.log("autostarting === scripts: " + scripts[i].getName());
-						
-						// Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
-						
-//					} 
+					Util.log("py startup: " + scripts[i].getName());
+					Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
 				}
 			}
 		}.start();
 	}
 	
-	// TODO: 
-	// lookup proc
-	// cat /proc/pid/cmdline
+	public static void runShutdownPyScripts() {
+		new Thread() {
+			@Override
+			public void run() {
+				
+				// let scripts run shutdown handlers 
+				final Vector<PyScripts> running = getRunningPythonScripts();
+				for(int c = 0 ; c < running.size() ; c++){
+					Util.log("runShutdownPyScripts: kill pid: " + running.get(c).pid);
+					Util.systemCall("kill -SIGINT " + running.get(c).pid + " " + running.get(c).pid);	
+				}
+				
+				File[] scripts = getShutdownScriptFiles();
+				for( int i = 0 ; i < scripts.length ; i++ ){	
+					Util.log("runShutdownPyScripts: " + scripts[i].getName());
+					Util.systemCall("python telnet_scripts/" + scripts[i].getName());	
+				}
+			}
+		}.start();
+	}
 	
+	// parse process info 
 	PyScripts(String line){
 		
 		String tokens[] = line.trim().split("\\s+");
-		
-		// sanity 
-		if(tokens.length < 8) { 
+		if(tokens.length < 8) { // sanity 
 			Util.log("PID type? " + tokens[7], this);  
 			return; 
 		}
@@ -165,63 +179,10 @@ public class PyScripts {
 		if(tokens.length >= 9) {
 			pyFile = tokens[8];
 			name = tokens[8];
-			if(name.contains("/")) name = name.substring(name.lastIndexOf("/")+1);//, name.indexOf(".py"));
+			if(name.contains("/")) name = name.substring(name.lastIndexOf("/")+1);
 		}
 		
-		if(tokens.length >= 11) {	
-			logFile = tokens[10].replaceAll("__log:=", "");
-//			Util.log(logFile, this);
-		}
-		
-		if(logFile.contains("/")) {
-			logFile = logFile.substring(logFile.lastIndexOf("/")+1); // , logFile.lastIndexOf(".log"));
-		}
-		
-//		if(pyFile.equals(NONE)) pyFile = "terminal user";
-//		if(logFile.equals(NONE)) logFile = "terminal user";
-//		Util.log("log: "+logFile, this);
+		if(tokens.length >= 11) logFile = tokens[10].replaceAll("__log:=", "");
+		if(logFile.contains("/")) logFile = logFile.substring(logFile.lastIndexOf("/")+1); 
 	}
-
-
-/* example 
-
-1486537347049, static, 0 = brad 
-1486537347050, static, 1 = 4197 
-1486537347050, static, 2 = 4170 
-1486537347050, static, 3 = 7 
-1486537347050, static, 4 = 23:01 
-1486537347050, static, 5 = ? 
-1486537347050, static, 6 = 00:00:05 
-1486537347050, static, 7 = python 
-1486537347050, static, 8 = /home/brad/catkin_ws/src/oculusprime_ros/src/arcmove_globalpath_follower.py 
-1486537347050, static, 9 = __name:=arcmove_globalpath_follower 
-1486537347050, static, 10 = __log:=/home/brad/.ros/log/5c59de64-edcc-11e6-8465-b803054ce181/arcmove_globalpath_follower-2.log 
-1486537347051, static, str tokens = 11 
-1486537347051, static, 0 = brad 
-1486537347051, static, 1 = 4466 
-1486537347051, static, 2 = 4170 
-1486537347051, static, 3 = 8 
-1486537347051, static, 4 = 23:01 
-1486537347051, static, 5 = ? 
-1486537347051, static, 6 = 00:00:05 
-1486537347052, static, 7 = python 
-1486537347052, static, 8 = /home/brad/catkin_ws/src/oculusprime_ros/src/remote_nav.py 
-1486537347052, static, 9 = __name:=remote_nav 
-1486537347052, static, 10 = __log:=/home/brad/.ros/log/5c59de64-edcc-11e6-8465-b803054ce181/remote_nav-17.log 
-
-	
-1486602981623, static, 0 = brad 
-1486602981624, static, 1 = 5749 
-1486602981624, static, 2 = 1261 
-1486602981625, static, 3 = 27 
-1486602981625, static, 4 = 16:23 
-1486602981625, static, 5 = ? 
-1486602981625, static, 6 = 00:14:19 
-1486602981626, static, 7 = python
-1486602981626, static, 8 = telnet_scripts/block.py 
-
-*/
-
-	
-	
 }

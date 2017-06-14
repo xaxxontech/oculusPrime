@@ -39,14 +39,17 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			"<a href=\"dashboard?action=save\">save snapshot</a>" +
 			"<a href=\"dashboard?action=archivelogs\">zip log folder</a>\n" +
 			"<a href=\"dashboard?action=archivemedia\">zip media</a>\n" +
+			"<a href=\"dashboard?action=archivenavigation\">zip navigation</a>\n" +
 			"<a href=\"dashboard?action=email\">send email</a>\n" +
 			"<a href=\"dashboard?action=restart\">restart java</a>" +
 			"<a href=\"dashboard?action=reboot\">reboot linux</a>" ;
 	
 	static final String loglinks = 
+
+			"<a href=\"dashboard?action=resetnavstats\">reset nav stats</a>" +
 			"<a href=\"dashboard?action=truncmedia\">truncate media</a>" +
 			"<a href=\"dashboard?action=trunclogs\">truncate logs</a>" +
-			"<a href=\"dashboard?action=deletelogs\"><font color=\"red\">DELETE LOGS</font></a>\n";
+			"<a href=\"dashboard?action=deletelogs\"><font color=\"#8533ff\">DELETE LOGS</font></a>\n";
 	
 	static final long serialVersionUID = 1L;	
 	private static final int MAX_LINE_LENGTH = 83; 
@@ -173,15 +176,14 @@ public class DashboardServlet extends HttpServlet implements Observer {
 			new Thread(new Runnable() { public void run() {
 				if(action.equalsIgnoreCase("debugon"))    app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " true");
 				if(action.equalsIgnoreCase("debugoff"))   app.driverCallServer(PlayerCommands.writesetting, ManualSettings.debugenabled.name() + " false");
-				if(action.equalsIgnoreCase("dockcancel")) app.driverCallServer(PlayerCommands.autodock, "cancel");
 				if(action.equalsIgnoreCase("startrec"))   app.driverCallServer(PlayerCommands.record, "true dashboard");
+				if(action.equalsIgnoreCase("dockcancel")) app.driverCallServer(PlayerCommands.autodock, "cancel");
+				if(action.equalsIgnoreCase("motor"))      app.driverCallServer(PlayerCommands.motorsreset, null);
 				if(action.equalsIgnoreCase("gotodock"))   app.driverCallServer(PlayerCommands.gotodock, null);
 				if(action.equalsIgnoreCase("stoprec"))    app.driverCallServer(PlayerCommands.record, "false");	
 				if(action.equalsIgnoreCase("startnav"))   app.driverCallServer(PlayerCommands.startnav, null);
 				if(action.equalsIgnoreCase("stopnav"))    app.driverCallServer(PlayerCommands.stopnav, null);
-				if(action.equalsIgnoreCase("redock"))     app.driverCallServer(PlayerCommands.redock, null); 
 				if(action.equalsIgnoreCase("script"))     Util.systemCall("python telnet_scripts/" + pid);	
-				if(action.equalsIgnoreCase("motor"))      app.driverCallServer(PlayerCommands.motorsreset, null);
 				if(action.equalsIgnoreCase("gui"))        state.delete(values.guinotify);
 				if(action.equalsIgnoreCase("state"))      state.delete(member);
 				if(action.equalsIgnoreCase("email"))      sendEmail();	
@@ -189,6 +191,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				
 				if(action.equalsIgnoreCase("batterylog")){
 									
+					Vector lines = PowerHistory.getFile(5);
+					for( int i = 0 ; i < lines.size() ; i++ )
+						Util.log("file: "+lines.get(i));
+						
+					/*
 					Vector<PowerHistory> tt = PowerHistory.getTail(9);
 					// Util.debug("size: " + tt.size(), this);
 				
@@ -196,12 +203,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					
 					// Util.debug(i + " " + tt.get(0));
 					// Util.debug("size: " + tt.size());
+					*/
 					
-					// Util.debug("---------------------tail----9--------------");
-					// Vector<PowerHistory> tt = PowerHistory.getTail(9);
-					// Util.debug("size: " + tt.size());
-					// for( int i = 0 ; i < tt.size() ; i++ ) Util.debug(i + " " + tt.get(0));
-					// Util.debug("size: " + tt.size());
+					Util.debug("---------------------tail------------------");
+					Vector<PowerHistory> tt = PowerHistory.getTail(9);
+					Util.debug("size: " + tt.size());
+					for( int i = 0 ; i < tt.size() ; i++ ) Util.debug(i + " " + tt.get(0));
+					Util.debug("size: " + tt.size());
 					
 					// Util.debug("---------------------undocked---------------------");
 					// Vector<String> t = BatteryStatus.getUnDockedString(5);
@@ -214,6 +222,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					// for( int i = 0 ; i < t.size() ; i++ ) Util.debug((String)t.get(i));
 					// Util.delay(300);
 					// try { response.sendRedirect("/oculusPrime/dashboard"); } catch (IOException e) { e.printStackTrace(); } 
+					
+				
+					
 				}
 				
 				if(action.equalsIgnoreCase("power")){
@@ -224,7 +235,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				
 	 			if(action.equalsIgnoreCase("truncmedia")){      
 					Util.log("truncmedia", this);
-	 				app.driverCallServer(PlayerCommands.truncMedia, null); 
+	 				app.driverCallServer(PlayerCommands.truncmedia, null); 
 	 				readFileSizes(); 
 				}		
 				
@@ -241,9 +252,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	 				readFileSizes();
 				}			
 	 			
-				if(action.equalsIgnoreCase("archivenav")){ 
+				if(action.equalsIgnoreCase("archivenavigation")){ 
 					Util.log("archivenav", this);
-					app.driverCallServer(PlayerCommands.archiveNavigation, null);	
+					app.driverCallServer(PlayerCommands.archivenavigation, null);	
 	 				readFileSizes();
 				}	
 
@@ -259,6 +270,12 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					Util.archiveLogFiles();
 					readFileSizes();
 				}	
+				
+				if(action.equalsIgnoreCase("resetnavstats")){
+					Util.log("resetnavstats", this);
+					NavigationUtilities.resetAllRouteStats();
+				}	
+				
 				
 				if(action.equalsIgnoreCase("camon")){
 					app.driverCallServer(PlayerCommands.publish, "camera");
@@ -316,6 +333,11 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					app.driverCallServer(PlayerCommands.restart, null);
 				}
 				
+				if(action.equalsIgnoreCase("redock")) {
+					if(state.equals(values.dockstatus, AutoDock.DOCKED)) app.driverCallServer(PlayerCommands.redock, null); 
+					else app.driverCallServer(PlayerCommands.redock, SystemWatchdog.NOFORWARD);
+				}
+
 				if(action.equalsIgnoreCase("save")) {	
 					if( ! new Downloader().FileDownload("http://" + state.get(values.localaddress)  
 						+ ":" + httpport + "/oculusPrime/dashboard?action=snapshot", "snapshot_"+ System.currentTimeMillis() +".txt", "log"))
@@ -327,8 +349,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 			// different views
 			if(action.equalsIgnoreCase("snapshot")) {
-				try { sendSnap(request, response);
-				} catch (Exception e) { Util.printError(e);	}
+				try { sendSnap(request, response); } catch (Exception e) { Util.printError(e);	}
 				return;
 			}
 			
@@ -378,8 +399,8 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				out.println("th, td { text-align: left; padding: 5px; }");
 				out.println("tr:nth-child(even){background-color: #f2f2f2}");
 				out.println("th { background-color: #4CAF50; color: white; }");
-				out.println("</style><html><body>\n");
-				out.println("\n\n" + LoginRecords.getReference().geHTML() +"\n\n");			
+				out.println("</style><html><body>\n\n");
+				out.println(LoginRecords.getReference().geHTML() +"\n\n");			
 				out.println("\n<table cellspacing=\"5\">\n<tbody><tr><th>LINUX<th>info</tr>\n");
 				Vector<String> who = Util.getLinuxWho(); 
 				for (int i = 0; i < who.size(); i++){
@@ -683,9 +704,9 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		
 		// camera | uptime | archive
 		str.append("\n<tr>" + cam);
-		if(settings.getInteger(ManualSettings.restarted) < 5) 
+//		if(settings.getInteger(ManualSettings.restarted) < 5) 
 		str.append("<td class='menu'>&nbsp;&nbsp;up time<td>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins");
-		else str.append("<td class='menu'>&nbsp;&nbsp;up time<td class='busy'>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins " + settings.getInteger(ManualSettings.restarted) + "");
+//		else str.append("<td class='menu'>&nbsp;&nbsp;up time<td class='busy'>&nbsp;&nbsp;" + (state.getUpTime()/1000)/60 + "</a> mins " + settings.getInteger(ManualSettings.restarted) + "");
 		str.append("<td class='menu'>&nbsp;&nbsp;archive<td>&nbsp;&nbsp;"+ archive + " mb</tr> \n" );
 		
 		// navigation | cpu | logs
@@ -777,14 +798,13 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		// --- state flags --- //
 		String flags = "";
 //		if(state.getBoolean(values.routeoverdue))  flags += " * overdue* "; 		
-		if(state.getBoolean(values.waypointbusy))  flags += " * waypointbusy* "; 	
-		if(state.getBoolean(values.rosgoalcancel))  flags += "<a href=\"dashboard?action=state&member=rosgoalcancel\">goal cancel</a>"; 
+		if(state.getBoolean(values.waypointbusy))   flags += "&nbsp;&nbsp;<a href=\"dashboard?action=state&member=waypointbusy\">waypointbusy</a>";
+		if(state.getBoolean(values.rosgoalcancel))  flags += "&nbsp;&nbsp;<a href=\"dashboard?action=state&member=rosgoalcancel\">goal cancel</a>"; 
 		if(state.getBoolean(values.framegrabbusy))  flags += "&nbsp;&nbsp;<a href=\"dashboard?action=state&member=framegrabbusy\">framegrab busy</a>"; 		
 		if(state.exists(values.writingframegrabs))  flags += "&nbsp;&nbsp;<a href=\"dashboard?action=state&member=writingframegrabs\">writing framegrabs</a>"; 	
 		if(flags.length() > 0) str.append("\n<tr><td class='menu'>&nbsp;&nbsp;flags<td class='tail' colspan=\"11\">&nbsp;&nbsp;" + flags + "</tr>\n");
 
-//		str.append("\n <TR><TD></TR> \n");
-		str.append(tailFormated(19) + "\n");
+		str.append(tailFormated(17) + "\n");
 		str.append("\n</tbody></table>\n");
 		return str.toString();
 	}

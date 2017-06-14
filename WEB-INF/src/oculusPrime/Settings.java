@@ -12,11 +12,10 @@ public class Settings {
 	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
 	public final static String telnetscripts = redhome+"/telnet_scripts"; // this folder needs to be moved or protected from update operation! 
 	public final static String appsubdir = "webapps/oculusPrime";
-	public final static String streamfolder = redhome + Util.sep+"webapps/oculusPrime/streams/";
+	public final static String streamfolder = redhome + "/webapps/oculusPrime/streams/";
 	public final static String framefolder = redhome+Util.sep+appsubdir+"/framegrabs";
 	public final static String streamsfolder = redhome+Util.sep+appsubdir+"/streams";
-	public final static String stdout = redhome+Util.sep+"log"+Util.sep+"jvm.stdout";
-	// public final static String archivefolder = redhome+Util.sep+"archive";
+	public final static String stdout = redhome+Util.sep+"log/jvm.stdout";
 	public final static String logfolder = redhome+Util.sep+"log";
 	
 	public final static String DISABLED= "disabled";
@@ -24,10 +23,6 @@ public class Settings {
 	public static final String FALSE = "false";
 	public static final String TRUE = "true";	
 	public static final int ERROR = -1;
-
-// usesable stats 
-//	public static int writes = 0;
-//	public static int reads = 0;
 
 	private static Settings singleton = null;
 	public static Settings getReference() {
@@ -47,7 +42,6 @@ public class Settings {
 	
 	private void importFile(){
 		try {
-			//reads++;
 			String line;
 			FileInputStream filein = new FileInputStream(settingsfile);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
@@ -212,7 +206,6 @@ public class Settings {
 	
 	/** Organize the settings file into 3 sections. Use Enums's to order the file */
 	public synchronized void writeFile(){
-		// writes++;
 		try {
 			
 			final String temp = redhome + Util.sep+"conf"+Util.sep+"oculus_created.txt";
@@ -250,9 +243,7 @@ public class Settings {
 					fw.append("user" + j + " " + users[j][0] + "\r\n");
 					fw.append("pass" + j + " " + users[j][1] + "\r\n");
 				}
-			} else {
-
-			}
+			} 
 			fw.close();
 			
 			// now swap temp for real file
@@ -316,11 +307,8 @@ public class Settings {
 		setting = setting.trim();
 		value = value.trim();
 
-		// Util.debug("writeSettings(): "+setting+" "+value + " file writes: " + writes++, this);
-		// if(settings.get(setting) == null) Util.debug("settings.get(setting) == null", this); nuke? 
-		
 		if(settings.get(setting).equals(value)) {
-			Util.debug("setting rejected, "+setting+" already set to: " + value, this);
+			// Util.debug("setting rejected, "+setting+" already set to: " + value, this);
 			return;
 		}
 		
@@ -361,7 +349,6 @@ public class Settings {
 	}
 
 	public void newSetting(String setting, String value) {
-		//writes++;
 		setting = setting.trim();
 		value = value.trim();
 
@@ -400,8 +387,6 @@ public class Settings {
 
 	public void deleteSetting(String setting) {
 		// read whole file, remove offending line, write whole file
-		// writes++;
-		// reads++;
 		setting = setting.replaceAll("\\s+$", ""); 
 		FileInputStream filein;
 		String[] lines = new String[999];

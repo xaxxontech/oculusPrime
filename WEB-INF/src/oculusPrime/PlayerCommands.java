@@ -73,7 +73,7 @@ public enum PlayerCommands {
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
     
     // file manage 
-	deletelogs, truncMedia, archiveLogs, archiveNavigation, 
+	deletelogs, truncmedia, archivelogs, archivenavigation, 
 	
     ;
 	

@@ -12,12 +12,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.Vector;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
@@ -36,8 +33,7 @@ import oculusPrime.State.values;
 		maxFileSize=1024*1024*10,                  // 10MB
 		maxRequestSize=1024*1024*50)               // 50MB
 
-public class FrameGrabHTTP extends HttpServlet implements Observer {
-	
+public class FrameGrabHTTP extends HttpServlet {
 	
 	private static State state = State.getReference();
 	private static BanList ban = BanList.getRefrence();  // TODO: PULL DATA FROM LOG FILES 
@@ -52,39 +48,6 @@ public class FrameGrabHTTP extends HttpServlet implements Observer {
 	
 	public static void setApp(Application a) { app = a; }
 	
-	@Override
-	public void updated(String key) {
-		if(key.equals(values.cpu.name())) history.add(state.get(values.cpu));
-	}
-	
-	/*
-	private class Task extends TimerTask {
-		public void run() {
-			
-			Util.getCPU();
-
-			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
-			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
-			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
-			history.add(state.get(values.cpu));
-			if(history.size() > MAX_STATE_HISTORY) history.remove(0);
-			
-		}
-	}
-	*/
-	
-	
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		state.addObserver(this);		
-		
-//		for(int j = 0 ; j < MAX_STATE_HISTORY ; j++) history.add("77");
-//   	new Timer().scheduleAtFixedRate(new Task(), 0, 10000);  
-	}
-
-//	@Override // read cpu and battery updates for chats 
-//	public void updated(String key) {}
-
 	public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException { doPost(req,res); }
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
@@ -349,6 +312,7 @@ public class FrameGrabHTTP extends HttpServlet implements Observer {
 //		} }).start();
 	}
 
+	//TODO: STUB ONLY, FILL IN FROM power HISTORY 
 	private void generateBatteryImage() {
 
 			final int w = 500;
@@ -362,14 +326,16 @@ public class FrameGrabHTTP extends HttpServlet implements Observer {
 		//
 	    //    g2d.setFont(new Font("Serif", Font.BOLD, 45));
 	        String s = "generateBatteryImage";
-	        g2d.drawString(s, 10, h/2);
-	        g2d.drawLine(0, 0, w, h);	
+	        
+	        //g2d.drawString(s, 10, h/2);
+	        //g2d.drawLine(0, 0, w, h);	
 	        g2d.setPaint(Color.red);
-	        g2d.drawLine(0, h/3, w/3, h/3);
+	        //g2d.drawLine(0, h/3, w/3, h/3);
 	        
 			batteryImage = image;
 	}
 
+	//TODO: STUB ONLY, FILL IN FROM CPU HISTORY 
 	private void generateCpuImagemage() {
  
 		final int radius = 6;

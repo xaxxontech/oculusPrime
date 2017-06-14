@@ -1,14 +1,25 @@
 package oculusPrime.commport;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.util.Vector;
+
+import org.python.google.common.io.Files;
 
 import oculusPrime.AutoDock;
 import oculusPrime.Util;
 
 public class PowerHistory {
-	
+	//public final static String redhome = System.getenv("RED5_HOME");
+	//public final static String powerlogTemp = redhome + "/log/power.copy";
+
 	static final String SERIAL_IN = "serial in:";
 	
 	// grep -r 'serial in:' ~/oculusPrime/log/power.log | tail -n 90
@@ -21,6 +32,119 @@ public class PowerHistory {
 	boolean isCharging = false;
 	double volts, cell1, cell2, cell3, amps = 0;
 	int batteryPercentage = 0;
+	
+	public static synchronized Vector<String> getFile(final int results){
+		
+		final Long start = System.currentTimeMillis();
+		final String name = "log/power_copy_" + System.currentTimeMillis() + ".txt";
+		Vector<String> data = new Vector<String>(results);
+		
+		// let the linux system do it 
+		Util.systemCall("cp " + PowerLogger.powerlog + " " + name);
+
+		/*
+		File temp = new File(name);
+		try {
+			Files.copy(new File(PowerLogger.powerlog), temp);
+		} catch (IOException e) {
+			Util.printError(e);
+		}
+		*/
+		
+		// wait for copy to finish 
+		File temp = new File(name);
+		int c = 0;
+		while( ! temp.exists()) {
+			try { Thread.sleep(2); } catch (InterruptedException e) { e.printStackTrace();	}
+			// Util.debug(".. waiting on file creation: " + name);
+			temp = new File(name);
+			if(c++ > 10){
+				Util.log("fail to create copy of power log");
+				return null;
+			}
+		}
+		
+		FileLock lock = null;
+		FileChannel fileChannel = null;
+		RandomAccessFile logfile = null;
+		
+		try {
+			logfile = new RandomAccessFile(temp, "rw");
+		} catch (FileNotFoundException e) {
+			Util.printError(e);
+			new File(name).delete();
+			return null;
+		}
+		
+		fileChannel = logfile.getChannel();
+		if(fileChannel == null) {
+			// Util.debug("failed to lock.. : " + temp.getAbsolutePath());
+			try { logfile.close(); } catch (IOException e) { Util.printError(e); }	
+			new File(name).delete();
+			return null;
+		}
+	
+		// blocking call
+		Util.log(".. waiting on lockfile");
+		try {
+			lock = fileChannel.lock();
+		} catch (IOException e) {
+			Util.printError(e);
+			try { logfile.close();	} catch (IOException e2) { Util.printError(e2); }		
+//			try { lock.release();	} catch (IOException e1) { Util.printError(e1); }		
+			new File(name).delete();
+			return null;	
+		}
+		
+		String line;
+		int count = 0; 
+		try {
+
+			BufferedReader br = new BufferedReader(new FileReader(temp));			
+			while((line = br.readLine()) != null) {
+				if(line.contains(SERIAL_IN)){
+					if(data.size()-1 == results) data.remove(0);
+					data.addElement(line.trim());
+				}
+				count++;
+			}
+			br.close();		
+				
+		} catch (IOException e) {
+			
+			Util.printError(e);
+			
+			try {
+				logfile.close();
+			} catch (IOException e1) { Util.printError(e); }		
+			try{
+				lock.release();
+			} catch (IOException e1) { Util.printError(e); }		
+			new File(name).delete();
+			return data;	
+		}
+		
+		// clean up
+		try {
+			lock.release();
+		} catch (IOException e) {
+			Util.printError(e);
+			Util.log("can't release file");
+			new File(name).delete();
+		}
+		try {
+			logfile.close();
+		} catch (IOException e) {
+			Util.printError(e);
+			Util.log("can't close file");
+			new File(name).delete();
+		}
+		
+		new File(name).delete();
+		Util.log("PowerHistory copy to temp file: " + (System.currentTimeMillis() - start) + " ms, lines read: " + count);		
+		return data;
+	
+	}
 	
 	public PowerHistory(String line){
 		
@@ -63,8 +187,14 @@ OCULUS: Tue Mar 28 00:46:44 PDT 2017, static, 10 eR:0
 	}
 	 
 	@Override public String toString() { 
+		
+	//	getFile();
+		
 		if(isCharging) return "charging life " + batteryPercentage + "% volts " + volts + " cell#1 " + cell1 + " cell#2" + cell2 + " cell#3 " + cell3 + " amps " + amps; 
 		else return "life " + batteryPercentage + "% volts " + volts + " cell#1 " + cell1 + " cell#2" + cell2 + " cell#3 " + cell3 + " amps " + amps; 
+		
+	//	return PowerHistory.getChargingString(10).get(0);
+		
 	}
 	 
 	public static Vector<PowerHistory> getTail(int lines){

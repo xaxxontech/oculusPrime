@@ -9,9 +9,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
-import java.util.Vector;
 
-import developer.*;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
@@ -19,6 +17,10 @@ import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
 
+import developer.Calibrate;
+import developer.Navigation;
+import developer.NavigationLog;
+import developer.Ros;
 import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
@@ -26,7 +28,6 @@ import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
-import oculusPrime.commport.PowerHistory;
 import oculusPrime.commport.PowerLogger;
 
 /** red5 application */
@@ -41,6 +42,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private static final int GRABBERRELOADTIMEOUT = 5000;
 	public static final int GRABBERRESPAWN = 8000;
 	public static final String ARM = "arm";
+	public static final String UBUNTU1604 = "16.04";
 	public static final String LOCALHOST = "127.0.0.1";
 
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
@@ -76,22 +78,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public IConnection relayclient = null;
 	public Network network = null;
 
+	
 	public Application() {
 		super();
-		state.set(values.osarch, System.getProperty("os.arch"));
-		
-		// don't put whitespace, breaks line with timestamp 
-		Util.log("====Oculus Prime Java Arch:"+state.get(values.osarch)+ "=====", this);
-		Util.log("====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
-		Util.log("====Oculus Java Restarts:"+settings.getInteger(ManualSettings.restarted) + "\n", this);
-		PowerLogger.append("==============Oculus Prime Java Start===============\n", this); // extra newline on end
 
+		// moved to state.java 
+		// state.set(values.osarch, System.getProperty("os.arch"));
+		
+		PowerLogger.append("==============Oculus Prime Java Start===============\n", this); // extra newline on end
+		Util.log          ("==============Oculus Prime Java Start===============\n", this); // extra newline on end
+		Util.log("====Oculus Prime Linux Version:"+Util.getUbuntuVersion(), this);
+		Util.log("====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
+		Util.log("====Oculus Prime Java Arch:"+state.get(values.osarch), this);
+//		Util.log("====Oculus Java Home:"+Settings.redhome, this);
+	
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = LoginRecords.getReference();
 		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
+	
 	}
 
 	@Override
@@ -99,7 +106,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		authtoken = null;
 
-		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
+// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
 //		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
 //			Util.log("localhost/LAN/known netstream connect, no params", this);
 //			return true;
@@ -663,7 +670,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case email: new SendMail(str, this); break;
 		case uptime:
 			// messageplayer("uptime: " + state.getUpTime() + " ms", null, null); 
-			commandServer.sendToGroup("uptime: " + state.getUpTime() + " ms");
+			commandServer.sendToGroup(TelnetServer.TELNETTAG + " uptime " + state.getUpTime()); 
 			break;
 			// SEND TO TELNET NOT GUI 
 		case memory: messageplayer(Util.memory(), null, null); break;
@@ -835,7 +842,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.fwdflood(Integer.parseInt(str));  
 			messageplayer("forward floodLight brightness set to "+str+"%", "fwdflood", str);
 			break;
-			
 		case autodock:
 			docker.autoDock(str); 
 			break;
@@ -849,11 +855,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			int duration = 0;
 			int intensity = 0;
 			if (str != null) {
-				String[] STR = str.split(" ");
-				mode = STR[0];
-				if (STR.length >= 3) {
-					duration = Integer.parseInt(STR[1]);
-					intensity = Integer.parseInt(STR[2]);
+				String[] t = str.split(" ");
+				mode = t[0];
+				if (t.length >= 3) {
+					duration = Integer.parseInt(t[1]);
+					intensity = Integer.parseInt(t[2]);
 				}
 			}
 			comport.strobeflash(mode, duration, intensity);
@@ -891,10 +897,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case roslaunch:
-			if (Ros.launch(str))
-				messageplayer("roslaunch "+str+".launch", null, null);
-			else
-				messageplayer("roslaunch already running", null, null);
+			if (Ros.launch(str)) messageplayer("roslaunch "+str+".launch", null, null);
+			else messageplayer("roslaunch already running", null, null);
 			break;
 		
 		case savewaypoints:
@@ -948,23 +952,26 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case clearmap: Mapper.clearMap(); break;
 		
 		case cpu: 
-			Util.getCPU(); 
-			commandServer.sendToGroup("cpu: " + state.get(values.cpu));
+			Util.getCPU(); // force update
+			commandServer.sendToGroup(TelnetServer.STATETAG + " cpu " + state.get(values.cpu));
 			break;
 		
+		// 
+		// (was before) 	
 		// case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		// 
 		case framegrabtofile: // allow extra name to be added 
 			if(cmd.length == 2) { 
-				FrameGrabHTTP.saveToFile(cmd[0], cmd[1]); // ?mode=processedImgJPG 
+				FrameGrabHTTP.saveToFile(cmd[0], cmd[1]); // ?mode=processedImgJPG file_name
 				Util.debug("framegrabtofile(mode, fname): " + cmd[0] + " " + cmd[1], this);
 			}
 			if(cmd.length == 1) { 
-				FrameGrabHTTP.saveToFile(cmd[0]); // ?mode=processedImgJPG 
-				// Util.debug("framegrabtofile(mode): "+cmd[0], this);
+				FrameGrabHTTP.saveToFile(cmd[0]); // framegrabtofile?mode=processedImgJPG 
+				Util.debug("framegrabtofile(mode): "+cmd[0], this);
 			}
 			if(cmd.length == 0){
 				FrameGrabHTTP.saveToFile(null); // default filename
-				// Util.debug("framegrabtofile(default):", this);
+				Util.debug("framegrabtofile(default):", this);
 			}			
 			break;
 		
@@ -992,21 +999,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 			Util.deleteLogFiles();
 			break;
 			
-		case archiveLogs: // create zip of log folder 
-			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("must be docked, skipping.. ", null);
-				break;
-			}
-			state.set(values.guinotify, "logs being archived");
+		case archivelogs: // create zip of log folder 
 			Util.archiveLogFiles();
 			break;
 
-		case archiveNavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 
-			// state.set(values.guinotify, "navigation files being archived");
+		case archivenavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 
 			Util.archiveNavigation();
 			break;
 		
-		case truncMedia: // remove any frames or videos not currently linked in navigationlog html file  
+		case truncmedia: // remove any frames or videos not currently linked in navigation log  
 			Util.truncStaleFrames();
 			Util.truncStaleAudioVideo();
 			break;
@@ -1391,7 +1392,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			state.set(State.values.framegrabbusy.name(), false);
 			
-		} catch (Exception e) {			Util.printError(e);		}
+		} catch (Exception e) { Util.printError(e); }
 
 //		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
 	}
@@ -1624,18 +1625,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		return result;
 	}
 
-	public void restart() {
+	// TODO: ALLOW TO ONLY BE CALLED ONCE? 
+	// state.set(shuttingdown, true); 
+	public void restart() { 
+
+		if(settings.getBoolean(ManualSettings.developer)) PyScripts.runShutdownPyScripts();	
+				
+		Util.debug("Restart uptime was: "+ state.getUpTime(), this);	
 		messageplayer("restarting server application", null, null);	
 		
-		int b = settings.getInteger(ManualSettings.restarted); // count java restarts vs booting 
-		settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
-
-		Util.log("Restart uptime was: "+ state.getUpTime(), this);
-
-// THIS in developer mode, or just warning? 	
-//					if(settings.getInteger(ManualSettings.restarted) > 10){
-//					Util.log("restart called but reboot needed, going down..", this);
-					
 		// write file as restart flag for script
 		File f = new File(Settings.redhome + Util.sep + "restart");
 		if (!f.exists()) try { f.createNewFile(); } catch (Exception e) {}
@@ -1643,12 +1641,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		shutdownApplication();
 	}
 	
-	public  void reboot() {
+	public void reboot() {
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
-		settings.writeSettings(ManualSettings.restarted, "0");
 
 		if (navigation != null) { // TODO: << condition required?
 			if (state.exists(values.odomlinearpwm)) {
@@ -1661,11 +1658,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		Util.delay(1000);
+	
 //		if (!state.get(values.osarch).equals(ARM)) {
 //			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 //		}
 //		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+		
+		// if(settings.getBoolean(ManualSettings.developer)) PyScripts.runShutdownPyScripts();	
+		
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 
 	}
@@ -1681,7 +1681,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		}
 //		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
 		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
-
 	}
 
 	public void shutdownApplication() {
@@ -1711,8 +1710,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
-
+		if(! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}
 

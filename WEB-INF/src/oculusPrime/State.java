@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.Vector;
 
+import com.sun.scenario.Settings;
+
 import developer.Ros.navsystemstate;
 
 public class State {
@@ -63,7 +65,7 @@ public class State {
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived,
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, odomupdated, lastodomreceived,
 		redockifweakconnection, networksinrange,
 	}
 
@@ -77,38 +79,18 @@ public class State {
 	
 	/** notify these on change events */
 	public Vector<Observer> observers = new Vector<Observer>();
-	
-	/** reference to this singleton class */
 	private static State singleton = new State();
 
 	/** properties object to hold configuration */
 	private HashMap<String, String> props = new HashMap<String, String>(); 
-	
+	public void addObserver(Observer obs){ observers.add(obs); }
 	public static State getReference() { return singleton; }
 
 	private State() {
+		props.put(values.osarch.name(), System.getProperty("os.arch"));
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
 		props.put(values.telnetusers.name(), "0");
 		Util.getLinuxUptime();
-		
-		new Thread() {
-			@Override
-			public void run() {
-				Util.delay(Util.FIVE_MINUTES + 10000); 
-				if(Math.abs(getLong(values.linuxboot) - getLong(values.javastartup)) < Util.FIVE_MINUTES) {
-					if(oculusPrime.Settings.getReference().getInteger(ManualSettings.restarted) > 0) {
-						Util.log("HARD REBOOT DETECTED: " + oculusPrime.Settings.getReference().getInteger(ManualSettings.restarted) + " restarts");
-						oculusPrime.Settings.getReference().writeSettings(ManualSettings.restarted, "0");
-						// TODO: DO SOMETHING, set flag file? 
-						Util.appendUserMessage("HARD REBOOT DETECTED");
-					}
-				}
-			}
-		}.start();
-	}
-	
-	public void addObserver(Observer obs){
-		observers.add(obs);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -133,7 +115,7 @@ public class State {
 
 	@Override
 	public String toString(){
-		String str = "";
+		String str = "number of observers: " + observers.size();
 		final Set<String> keys = props.keySet();
 		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			final String key = i.next();
@@ -186,7 +168,6 @@ public class State {
 			Util.log("set() null valu for key: " + key, this);
 			return;
 		}
-
 		try {
 			props.put(key.trim(), value.trim());
 		} catch (Exception e) {

@@ -229,10 +229,13 @@ public class BanList {
 					known.add(state.get(values.localaddress));
 			}
 			
-//			if(state.exists(values.ethernetaddress)){ 
-//				if( ! known.contains(state.get(values.ethernetaddress)))
-//					known.add(state.get(values.ethernetaddress));
-//			}
+// was added to let external ip access dashboard without flash logging in 
+			if(Settings.getReference().getBoolean(ManualSettings.developer)){
+				if(state.exists(values.externaladdress)){ 
+					if( ! known.contains(state.get(values.externaladdress)))
+						known.add(state.get(values.externaladdress));
+				}
+			}
 			
 			if(blocked.isEmpty()) return;
 						

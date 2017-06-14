@@ -38,7 +38,7 @@ public class Navigation implements Observer {
 	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.TEN_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 10; // TODO: set to 15 in production
 	private final static Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
 	public static int consecutiveroute = 1;
@@ -46,7 +46,6 @@ public class Navigation implements Observer {
 	public static long routestarttime = 0;
 	public NavigationLog navlog;
 	int batteryskips = 0;
-	// String batteryvoltswarning = "0";
 	
 	
 	/** Constructor */
@@ -463,7 +462,9 @@ public class Navigation implements Observer {
 			Util.log("Navigation.batteryTooLow(): can't read battery info from state", null);
 			return true;
 		}
-		
+
+		// app.driverCallServer(PlayerCommands.messageclients, "battery: " + value);
+
 		if(value < toolow){
 			app.driverCallServer(PlayerCommands.messageclients, "skipping route, battery too low");
 			return true; 
@@ -638,7 +639,7 @@ public class Navigation implements Observer {
 					return;
 				}
 
-				// skip route if battery low (must be in settings.txt)  
+				// skip route if battery low (settings.txt)  
 				if(batteryTooLow()){			
 					batteryskips++;
 					Util.log("battery too low: " + state.get(values.batterylife) + " skips: " + batteryskips, this);
@@ -711,6 +712,7 @@ public class Navigation implements Observer {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "current route override prior to set waypoint: "+wpname,
 								routestarttime, null, name, consecutiveroute, 0);
 						app.driverCallServer(PlayerCommands.messageclients, "current route override prior to set waypoint: "+wpname);
+						NavigationUtilities.routeFailed(state.get(values.navigationroute));
 						break;
 					}
 

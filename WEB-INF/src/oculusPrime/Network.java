@@ -65,12 +65,13 @@ public class Network {
         if(data.equals("")) {
         	if( attempts++ > 5) {
         		polling = false; // stop polling, give up..    
-	        	Util.appendUserMessage("network manager unavailable"); // just give one message about it    
+	        	
+        		// Util.appendUserMessage("network manager unavailable"); // just give one message about it    
 	        	// TODO: run grep on jetty.xml and see if AP Manager is on wrong port or not even there
 	        	// jetty.port jetty.xml  <Set name="Port"><SystemProperty name="jetty.port" default="8080"/></Set>
         	}
-            return false;
-        }
+            return false;    
+        } else attempts = 0; // reset fail count 
 
         Document document = Util.loadXMLFromString(data);
         if (document == null) {

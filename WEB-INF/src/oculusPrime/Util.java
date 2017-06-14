@@ -54,6 +54,8 @@ public class Util {
 //	static private String rosinfor = null;
 //	static private int rosattempts = 0;
 	
+	static State state = State.getReference();
+	
 	public static String trimLength(String txt, int length){
 		if(txt.length() > length) {
 			txt = txt.substring(0, length);
@@ -383,7 +385,25 @@ public class Util {
 		State.getReference().set(values.cpu, percent);
 		return percent;
 	}
-
+	
+	public static String getUbuntuVersion() {
+		String version = null;
+		try {
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream("/etc/os-release")));
+			String line;
+			while ((line = reader.readLine()) != null) {
+				if(line.contains("VERSION_ID")) {
+					version = line.split("\"")[1];
+					break;
+				}
+			}
+			reader.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return version;
+	}
+	
 	static void getLinuxUptime(){
 		new Thread(new Runnable() {
 			@Override
@@ -1105,45 +1125,6 @@ public class Util {
 		} }).start();
 		
 	}
-	
-	/*
-	public static String getRosCheck(){	
-		
-		if(rosinfor!=null) return rosinfor;
-		
-		if(rosattempts++ > 5){
-			log("getRosCheck: "+rosattempts++, null);	
-			return "err";
-		}
-	
-		try {
-			new Thread(new Runnable() { public void run() {
-				try {
-					String[] cmd = {"bash", "-ic", "rosclean check > rlog.txt"};
-					Runtime.getRuntime().exec(cmd);		
-				} catch (Exception e){printError(e);}
-			}}).start();
-		} catch (Exception e){printError(e);}
-
-		try{ 
-			String line;
-			BufferedReader reader;
-			try {
-				reader = new BufferedReader(new FileReader("rlog.txt"));
-				while ((line = reader.readLine()) != null) rosinfor = line;
-				reader.close();		
-			} catch (Exception e) { rosinfor = null; }
-			
-			if(new File("rlog.txt").exists() && rosinfor==null) rosinfor = "0.00";
-			
-			if(rosinfor.contains("K ROS node logs")) rosinfor = "1";
-			if(rosinfor != null) if(rosinfor.contains("M ROS node logs")) 
-				rosinfor = rosinfor.substring(0, rosinfor.indexOf("M")).trim();
-		} catch (Exception e){ rosinfor = "0.00"; }
-		
-		return rosinfor.replace("ROS node logs", "").trim();
-	}
-	*/
 	
 }
 

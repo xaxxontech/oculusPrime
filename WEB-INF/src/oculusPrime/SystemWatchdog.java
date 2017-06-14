@@ -135,9 +135,9 @@ public class SystemWatchdog {
 			}
 
 //			 check cpu useage
-//			int cpuNow = Util.getCPU();
-//			if(cpuNow > 60) Util.log("cpu: "+cpuNow, this);
-			
+			int cpuNow = Util.getCPU();
+			if(cpuNow > 60) Util.debug("cpu: "+cpuNow, this);
+			 
 			// notify driver if any system messages
 			if (state.exists(values.guinotify)) {
 				if (state.exists(State.values.driver.toString())) {
@@ -148,7 +148,6 @@ public class SystemWatchdog {
 					application.sendplayerfunction("guinotify", str );
 				}
 			}
-
 		}
 	}
 	

@@ -52,7 +52,7 @@ public class NavStateMonitor extends JFrame {
 		this.ip = ip;
 		this.port = port;
 	
-		JTable table = new JTable(model);
+		final JTable table = new JTable(model);
         table.setPreferredScrollableViewportSize(new Dimension(500, 800));
         //table.getColumnModel().getColumn(0).setPreferredWidth(150); 
         //table.getColumnModel().getColumn(0).setMinWidth(100); 
@@ -269,8 +269,8 @@ public class NavStateMonitor extends JFrame {
 	}
 
     public static void main(String[] args) {
-    	String ip = args[0];
-		int port = Integer.parseInt(args[1]);
+    	final String ip = args[0];
+		final int port = Integer.parseInt(args[1]);
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
             	new NavStateMonitor(ip, port);

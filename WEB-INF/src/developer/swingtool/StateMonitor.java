@@ -44,7 +44,7 @@ public class StateMonitor extends JFrame {
 		this.ip = ip;
 		this.port = port;
 	
-		JTable table = new JTable(model);
+		final JTable table = new JTable(model);
         table.setPreferredScrollableViewportSize(new Dimension(500, 800));
         table.getColumnModel().getColumn(0).setPreferredWidth(150); 
         table.getColumnModel().getColumn(0).setMinWidth(100); 
@@ -62,8 +62,8 @@ public class StateMonitor extends JFrame {
 			public void mouseClicked(MouseEvent arg) {
 				if(arg.getClickCount() == 2){			
 					 int row = table.rowAtPoint(arg.getPoint());
-				     // int col = table.columnAtPoint(arg.getPoint());
-				     // System.out.println("["+row+", "+col+"] "+ table.getValueAt(row, 0));
+				     int col = table.columnAtPoint(arg.getPoint());
+				     System.out.println("... double clicked, force update ["+row+", "+col+"] "+ table.getValueAt(row, 0));
 				     printer.println("state "+ table.getValueAt(row, 0));
 				}
 			}
@@ -77,7 +77,7 @@ public class StateMonitor extends JFrame {
 				if(e.getKeyCode() == 10){
 					String update = "";
 					if(table.getValueAt(table.getSelectedRow(), 1) != null) update = (String) table.getValueAt(table.getSelectedRow(), 1);
-					// System.out.println(" ... typed: " + table.getValueAt(table.getSelectedRow(), 0) + " [" + update + "]");
+					System.out.println(" ... typed: " + table.getValueAt(table.getSelectedRow(), 0) + " [" + update + "]");
 					if(update.length() == 0) printer.println("state delete " + table.getValueAt(table.getSelectedRow(), 0));
 					else printer.println("state " + table.getValueAt(table.getSelectedRow(), 0) + " " + update);
 				}	
@@ -91,9 +91,9 @@ public class StateMonitor extends JFrame {
         getContentPane().add(scrollPane);
         pack();
         setVisible(true);
-		new Timer().scheduleAtFixedRate(new Task(), 2000, 10000);
-	
-	//	new Timer().scheduleAtFixedRate(new nullTask(), Util.TWO_MINUTES, Util.TWO_MINUTES);
+        
+		new Timer().scheduleAtFixedRate(new Task(), 2000, 9000);
+		new Timer().scheduleAtFixedRate(new nullTask(), oculusPrime.Util.TWO_MINUTES, oculusPrime.Util.TWO_MINUTES);
 
     }
  
@@ -106,7 +106,6 @@ public class StateMonitor extends JFrame {
 		StateTableModel(){
 			for(int i = 0; i < stateValues.length; i++){
 				data[i][0] = stateValues[i].name();
-			//	data[i][1] = "null";
 				data[i][2] = 0;
 			}	
 		}
@@ -116,7 +115,7 @@ public class StateMonitor extends JFrame {
         public String getColumnName(int col) { return columnNames[col]; }
         public Object getValueAt(int row, int col) { return data[row][col]; }
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public Class getColumnClass(int c) {
             if(c == 0 || c == 1) return String.class;
 			return Integer.class;
@@ -133,6 +132,7 @@ public class StateMonitor extends JFrame {
               fireTableCellUpdated(row, col);
         }       
     }
+    
     
 	private class Task extends TimerTask {
 		public void run(){
@@ -190,7 +190,7 @@ public class StateMonitor extends JFrame {
 			}
 		}
 	}
-	
+    
 	void openSocket(){	
 		try {	
 			setTitle("trying to connect");
@@ -199,13 +199,17 @@ public class StateMonitor extends JFrame {
 			reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			System.out.println("openSocket(): connected to: " + socket.getInetAddress().toString());
 			setTitle(socket.getInetAddress().toString());
-			rx = 0;
-			printer.println("state"); 
+//			rx = 0;
 		} catch (Exception e) {
 			setTitle("disconnected");
 			System.out.println("openSocket(): " + e.getMessage());
 			closeSocket();
 		}
+		
+		new Thread(new Runnable() { public void run() { 
+			try { Thread.sleep(5000); } catch (InterruptedException e) {}
+			if(printer != null) printer.println("log " + this.getClass().getName().toString() + " connected to telnet"); 
+		}}).start();
 	}
 
 	void closeSocket(){
@@ -253,7 +257,7 @@ public class StateMonitor extends JFrame {
 						input = input.trim();
 						
 						String[] tokens = input.split(" ");	
-						//, System.out.println("[" + input + "] tokens:" + tokens.length);
+						System.out.println("read: [" + input + "] tokens:" + tokens.length);
 						
 						if(input.contains("deleted")){
 							for( int i = 0 ; i < model.getRowCount() ; i++ )
@@ -262,7 +266,7 @@ public class StateMonitor extends JFrame {
 						}
 					
 						if(input.contains("<state>")){
-							System.out.println(input);
+//							System.out.println(".. state input: "+input);
 							for( int i = 0 ; i < model.getRowCount() ; i++ ){
 								if(model.getValueAt(i, 0).equals(tokens[1])){
 									String value = input.substring(input.indexOf(tokens[2]), input.length());
@@ -275,7 +279,7 @@ public class StateMonitor extends JFrame {
 						}
 						
 						if(tokens.length == 2){
-							System.out.println("[" + input + "] tokens:" + tokens.length);
+//							System.out.println("[" + input + "] tokens:" + tokens.length);
 							for( int i = 0 ; i < model.getRowCount() ; i++ ){
 								if(model.getValueAt(i, 0).equals(tokens[0])){
 									model.setValueAt(tokens[1], i, 1);
@@ -293,8 +297,8 @@ public class StateMonitor extends JFrame {
 	}
 
     public static void main(String[] args) {
-    	String ip = args[0];
-		int port = Integer.parseInt(args[1]);
+    	final String ip = args[0];
+		final int port = Integer.parseInt(args[1]);
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
             	new StateMonitor(ip, port);
