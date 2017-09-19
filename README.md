@@ -1,4 +1,4 @@
-# OCULUS PRIME  SERVER#
+# OCULUS PRIME  SERVER
 
 ![Alt text](http://www.xaxxon.com/images/oculusprime/oculusprime_charging.jpg)
 

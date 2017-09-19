@@ -289,10 +289,11 @@ public class Navigation implements Observer {
 			}
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
-			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 			// do 180 deg turn
 			app.driverCallServer(PlayerCommands.left, "180");
-			Util.delay(app.comport.fullrotationdelay/2 + 4000);  // tried changing this to 4000, didn't help
+			Util.delay(app.comport.fullrotationdelay / 2);  
+			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
+			Util.delay(4000);
 
 			if (!navdockactive) return;
 
