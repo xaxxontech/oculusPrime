@@ -5,12 +5,14 @@ import java.awt.Graphics2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.Vector;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletException;
@@ -27,50 +29,41 @@ import developer.depth.ScanUtils;
 import oculusPrime.State.values;
 
 @SuppressWarnings("serial")
-@MultipartConfig(fileSizeThreshold=1024*1024*2, // 2MB
-		maxFileSize=1024*1024*10,      // 10MB
-		maxRequestSize=1024*1024*50)   // 50MB
+@MultipartConfig(fileSizeThreshold=1024*1024*2,    // 2MB
+		maxFileSize=1024*1024*10,                  // 10MB
+		maxRequestSize=1024*1024*50)               // 50MB
+
 public class FrameGrabHTTP extends HttpServlet {
-		
+	
+	private static State state = State.getReference();
+	private static BanList ban = BanList.getRefrence();  // TODO: PULL DATA FROM LOG FILES 
+	private static BufferedImage batteryImage = null;
+	private static RenderedImage cpuImage = null;
 	private static BufferedImage radarImage = null;
 	private static Application app = null;
-	private static State state;
-	private static BanList ban;
-	private static int var;
+	private static int var = 0;
 
-	public static void setApp(Application a) {
-		if(app != null) return;
-		state = State.getReference();
-		ban = BanList.getRefrence();
-		app = a;
-		var = 0;
-	}
+	private static final int MAX_STATE_HISTORY = 100;
+	Vector<String> history = new Vector<String>(MAX_STATE_HISTORY);
 	
-	public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-		doPost(req,res);
-	}
+	public static void setApp(Application a) { app = a; }
 	
+	public void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException { doPost(req,res); }
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
 		if( ! ban.knownAddress(req.getRemoteAddr())){
-			
 			Util.log("unknown address: danger: "+req.getRemoteAddr(), this);
-			
-			// response.setContentType("text/html");
-			// PrintWriter out = response.getWriter();
-			//out.println("unknown address: danger: "+req.getServerName() + " \n " + ban.toString());
-			//out.close();
-			
 			return;
 		}
 
         if (req.getParameter("mode") != null) {
-
-        	String mode = req.getParameter("mode");
+        	final String mode = req.getParameter("mode");
             
-            if (mode.equals("radar"))  radarGrab(req,res);            	
-            else if(mode.equals("processedImg"))  processedImg(req,res);
-			else if(mode.equals("processedImgJPG"))  processedImgJPG(req,res);
+            if (mode.equals("radar"))  radarGrab(req,res);     
+            else if (mode.equals("battery")) batteryGrab(req, res);
+            else if (mode.equals("cpu")) cpuGrab(req, res);       	
+            else if (mode.equals("processedImg"))  processedImg(req,res);
+			else if (mode.equals("processedImgJPG"))  processedImgJPG(req,res);
 			else if (mode.equals("videoOverlayImg")) videoOverlayImg(req, res);
             else if (mode.equals("depthFrame") &&  Application.openNIRead.depthCamGenerating) { 	
             	Application.processedImage = Application.openNIRead.generateDepthFrameImg();
@@ -94,6 +87,7 @@ public class FrameGrabHTTP extends HttpServlet {
 //            	}
             	processedImg(req,res);
             }
+         
             else if (mode.equals("rosmap")) {
             	Application.processedImage = Ros.rosmapImg();
 				if (!state.exists(State.values.rosmapinfo))
@@ -206,8 +200,21 @@ public class FrameGrabHTTP extends HttpServlet {
 		ImageIO.write(Application.videoOverlayImage, "JPG", out);
 	}
 	
-	private void radarGrab(HttpServletRequest req, HttpServletResponse res) 
-		throws ServletException, IOException {
+	private void batteryGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		generateBatteryImage();
+		res.setContentType("image/gif");
+		OutputStream out = res.getOutputStream();
+		ImageIO.write(batteryImage, "GIF", out);
+	}
+	
+	private void cpuGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		generateCpuImagemage();
+		res.setContentType("image/gif");
+		OutputStream out = res.getOutputStream();
+		ImageIO.write(cpuImage, "GIF", out);
+	} 
+	
+	private void radarGrab(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
 		generateRadarImage();
 		
@@ -216,7 +223,6 @@ public class FrameGrabHTTP extends HttpServlet {
 		OutputStream out = res.getOutputStream();
 		ImageIO.write(radarImage, "GIF", out);
 	}
-
 	
 	private void generateRadarImage() {
 
@@ -306,6 +312,65 @@ public class FrameGrabHTTP extends HttpServlet {
 //		} }).start();
 	}
 
+	//TODO: STUB ONLY, FILL IN FROM power HISTORY 
+	private void generateBatteryImage() {
+
+			final int w = 500;
+			final int h = 200;
+			BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+			Graphics2D g2d = image.createGraphics();
+			
+			//render background
+		//	g2d.setColor(new Color(60,60,90));  
+		//	g2d.fill(new Rectangle2D.Double(0, 0, w, h));
+		//
+	    //    g2d.setFont(new Font("Serif", Font.BOLD, 45));
+	        String s = "generateBatteryImage";
+	        
+	        //g2d.drawString(s, 10, h/2);
+	        //g2d.drawLine(0, 0, w, h);	
+	        g2d.setPaint(Color.red);
+	        //g2d.drawLine(0, h/3, w/3, h/3);
+	        
+			batteryImage = image;
+	}
+
+	//TODO: STUB ONLY, FILL IN FROM CPU HISTORY 
+	private void generateCpuImagemage() {
+ 
+		final int radius = 6;
+		final int w = 500;
+		final int h = 100;
+		BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2d = image.createGraphics();
+	
+		g2d.setPaint(Color.yellow);
+        drawCenteredCircle(g2d, 8, 8, radius);
+        g2d.drawPolyline(new int[]{10, w/3, w/2, w-radius}, new int[]{10, 20, 90, 50}, 4);
+        
+        g2d.setPaint(Color.green);
+        for( int i = 0 ; i < history.size() ; i++ ){
+    //    	Util.log(i + " " +  Integer.parseInt(history.get(i)));
+        	drawCenteredCircle(g2d, i*5, Integer.parseInt(history.get(i)), radius);
+        }
+
+  
+    //    g2d.setPaint(Color.red);
+    //    drawCenteredCircle(g2d, w/2, h/2, radius);
+        
+        g2d.setPaint(Color.red);
+   //     drawCenteredCircle(g2d, w-radius, h-radius, radius);
+   //     drawCenteredCircle(g2d, 1, 1, 8);
+        g2d.drawPolyline(new int[]{5, w-5, w-5, 5, 5}, new int[]{5, 5, h-5, h-5, 5}, 5);
+         
+		cpuImage = image;
+	}
+	public void drawCenteredCircle(Graphics2D g, int x, int y, int r) {
+		x = x-(r/2);
+		y = y-(r/2);
+		g.fillOval(x,y,r,r);
+	}
+	
 	/**
 	 * @param args download url params, can be null
 	 * @return returns download url of saved image
@@ -315,20 +380,19 @@ public class FrameGrabHTTP extends HttpServlet {
 		if(args != null) if(args.startsWith("?")) urlString += args; 
 		final String url = urlString;
 		
-		String datetime = Util.getDateStamp();  // no spaces in filenames       
-		if(state.exists(values.roswaypoint) &&
-				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
-					) datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
-        final String name = datetime + ".jpg";
+		String datetime = Util.getDateStamp();  // && state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString()))  
+		if(state.exists(values.roswaypoint) && state.equals(values.navsystemstatus, Ros.navsystemstate.running.toString()))    
+			datetime += "_" + state.get(values.roswaypoint).replaceAll(" ", "_");
 		
+        final String name = datetime + ".jpg";
 		new Thread(new Runnable() {
 			public void run() {
-				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
+				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs"); // TODO: EVENT ON NULL ?
 			}
 		}).start();
 		return "/oculusPrime/framegrabs/"+name;
 	}
-	
+
 	/** add extra text into file name after timestamp */
 	public static String saveToFile(final String args, final String optionalname) {
 		String urlString = "http://127.0.0.1:" + state.get(State.values.httpport) + "/oculusPrime/frameGrabHTTP";
@@ -336,11 +400,12 @@ public class FrameGrabHTTP extends HttpServlet {
 		final String url = urlString;
 		
 		String datetime = Util.getDateStamp();  // no spaces in filenames       
-		if(state.exists(values.roswaypoint) &&
-				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
-					) datetime += "_" + state.get(values.roswaypoint);
-        final String name = (datetime + optionalname + ".jpg").replaceAll(" ", "_");
+		if(state.exists(values.roswaypoint)) //  && state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) 
+			datetime += "_" + state.get(values.roswaypoint);
 		
+		if(state.equals(values.dockstatus, AutoDock.DOCKED)) datetime += "_docked"; 
+		
+        final String name = (datetime + "_"+optionalname + ".jpg").replaceAll(" ", "_"); // no spaces in filenames       
 		new Thread(new Runnable() {
 			public void run() {
 				new Downloader().FileDownload(url, name, "webapps/oculusPrime/framegrabs");
@@ -348,7 +413,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		}).start();
 		return "/oculusPrime/framegrabs/"+name;
 	}
-	
+
 }
 
 

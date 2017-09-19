@@ -1,36 +1,22 @@
 package oculusPrime;
 
-import oculusPrime.commport.ArduinoPrime;
-import org.red5.client.net.rtmp.BaseRTMPClientHandler;
+import java.util.Collection;
+import java.util.Set;
+
 import org.red5.client.net.rtmp.ClientExceptionHandler;
-import org.red5.client.net.rtmp.INetStreamEventHandler;
 import org.red5.client.net.rtmp.RTMPClient;
 import org.red5.io.utils.ObjectMap;
 import org.red5.server.api.IConnection;
-import org.red5.server.api.event.IEvent;
-import org.red5.server.api.event.IEventDispatcher;
 import org.red5.server.api.service.IPendingServiceCall;
 import org.red5.server.api.service.IPendingServiceCallback;
 import org.red5.server.api.service.IServiceCapableConnection;
-import org.red5.server.net.rtmp.Channel;
-import org.red5.server.net.rtmp.RTMPConnection;
-import org.red5.server.net.rtmp.event.Notify;
-import org.red5.server.net.rtmp.event.Ping;
-import org.red5.server.net.rtmp.message.Header;
-import org.red5.server.net.rtmp.status.StatusCodes;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-
+import oculusPrime.commport.ArduinoPrime;
 
 public class Red5Client extends RTMPClient {
     private State state = State.getReference();
     private Settings settings = Settings.getReference();
     private Application app;
-    private NetworkServlet networkServlet = new NetworkServlet();
+//  private NetworkServlet networkServlet = new NetworkServlet();
     private long lastping;
     private static final long PINGTIMEOUT = 10000;
     private long stayConnectedId;

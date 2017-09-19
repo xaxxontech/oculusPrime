@@ -38,13 +38,15 @@ public class Navigation implements Observer {
 	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.TEN_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
-	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15; // TODO: set to 15 in production
-	private final Settings settings = Settings.getReference();
+	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15;
+	private final static Settings settings = Settings.getReference();
 	public volatile boolean navdockactive = false;
 	public static int consecutiveroute = 1;
 	public static long routemillimeters = 0;
-	public static long routestarttime;
+	public static long routestarttime = 0;
 	public NavigationLog navlog;
+	int batteryskips = 0;
+	
 	
 	/** Constructor */
 	public Navigation(Application a) {
@@ -435,10 +437,47 @@ public class Navigation implements Observer {
 				break;
 			}
 		}
-
 	}
+	
+	/** only used before starting a route, ignored if un-docked */
+	public static boolean batteryTooLow(){	
+		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) return false;
+		final int toolow = settings.getInteger(ManualSettings.batterytoolow);
+		if( toolow == 0) return false; // disabled
+		long start = System.currentTimeMillis();
+		String current;
+		int value = 0;
+		while(true){	
+			current = state.get(values.batterylife); 
+			if(current!=null) if(current.contains("%")) break;
+			Util.delay(100);
+			if(System.currentTimeMillis()-start > 10000){ 
+				Util.debug("batteryTooLow(): timeout, assume too low");
+				return true;
+			}
+		}
+	
+		try {
+			value = Integer.parseInt(current.split("%")[0]);
+		} catch (NumberFormatException e) {
+			Util.log("Navigation.batteryTooLow(): can't read battery info from state", null);
+			return true;
+		}
 
+		// app.driverCallServer(PlayerCommands.messageclients, "battery: " + value);
+
+		if(value < toolow){
+			app.driverCallServer(PlayerCommands.messageclients, "skipping route, battery too low");
+			return true; 
+		}
+		
+		return false;
+	}
+	
 	public void runRoute(final String name) {
+		
+	
+		
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
 
@@ -601,14 +640,29 @@ public class Navigation implements Observer {
 					return;
 				}
 
+				// skip route if battery low (settings.txt)  
+				if(batteryTooLow()){			
+					batteryskips++;
+					Util.log("battery too low: " + state.get(values.batterylife) + " skips: " + batteryskips, this);
+					if(batteryskips == 1){	// only log once !
+						navlog.newItem(NavigationLog.ALERTSTATUS, "Battery too low to start: " + state.get(values.batterylife), 0, null, name, consecutiveroute, 0);	
+					} else {
+						if( ! state.get(values.batterylife).contains("_charging")) {
+							Util.log("batteryTooLow(): not charging, powerreset: "+ state.get(values.batterylife), "Navigation.runRoute()");
+							app.driverCallServer(PlayerCommands.powerreset, null);
+						}
+					}
+					if( ! delayToNextRoute(navroute, name, id)) return; 
+					continue;
+				} else { batteryskips = 0; }
+				
 				// start ros nav system
 				if (!waitForNavSystem()) {
 					// check if cancelled while waiting
 					if (!state.exists(State.values.navigationroute)) return;
 					if (!state.get(State.values.navigationrouteid).equals(id)) return;
 
-					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime,
-							null, name, consecutiveroute, 0);
+					navlog.newItem(NavigationLog.ERRORSTATUS, "unable to start navigation system", routestarttime, null, name, consecutiveroute, 0);
 
 					if (state.getUpTime() > Util.TEN_MINUTES) {
 						app.driverCallServer(PlayerCommands.reboot, null);
@@ -659,6 +713,7 @@ public class Navigation implements Observer {
 						navlog.newItem(NavigationLog.ERRORSTATUS, "current route override prior to set waypoint: "+wpname,
 								routestarttime, null, name, consecutiveroute, 0);
 						app.driverCallServer(PlayerCommands.messageclients, "current route override prior to set waypoint: "+wpname);
+						NavigationUtilities.routeFailed(state.get(values.navigationroute));
 						break;
 					}
 
@@ -834,6 +889,8 @@ public class Navigation implements Observer {
 		 * if no alerts, log only
 		 */
     	// takes 5-10 seconds to init if mic is on (mic only, or mic + camera)
+		
+		state.set(values.waypointbusy, "true");
 
 		boolean rotate = false;
 		boolean email = false;
@@ -1166,6 +1223,8 @@ public class Navigation implements Observer {
 		}
 		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
 
+		state.set(values.waypointbusy, "false");
+
 	}
 
 	public static boolean turnLightOnIfDark() {
@@ -1212,7 +1271,7 @@ public class Navigation implements Observer {
 
 		String xmlString = Util.XMLtoString(document);
 		saveRoute(xmlString);
-
+		batteryskips = 0;
 		app.driverCallServer(PlayerCommands.messageclients, "all routes cancelled");
 	}
 

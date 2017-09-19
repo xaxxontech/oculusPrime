@@ -33,7 +33,7 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private long lowbattredockstart = 0;
-	private String ssid = null;
+	// private String ssid = null; nuke? 
 	
 	SystemWatchdog(Application a){ 
 		application = a;
@@ -136,9 +136,8 @@ public class SystemWatchdog {
 
 //			 check cpu useage
 			int cpuNow = Util.getCPU();
-			if(cpuNow > 60) Util.log("cpu: "+cpuNow, this);
-			state.set(values.cpu, Util.getCPU());
-
+			if(cpuNow > 60) Util.debug("cpu: "+cpuNow, this);
+			 
 			// notify driver if any system messages
 			if (state.exists(values.guinotify)) {
 				if (state.exists(State.values.driver.toString())) {
@@ -146,11 +145,9 @@ public class SystemWatchdog {
 					String str = state.get(values.guinotify);
 					str += "<br><br><a href='javascript: guinotify(&quot;ok&quot;);'>";
 					str += "<span class='cancelbox'>&#x2714;</span> OK</a> &nbsp; &nbsp; ";
-
 					application.sendplayerfunction("guinotify", str );
 				}
 			}
-
 		}
 	}
 	

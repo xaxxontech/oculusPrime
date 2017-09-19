@@ -9,13 +9,14 @@ public enum PlayerCommands {
     softwareupdate, relaydisconnect,
 
 	// operating system
-    reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu, waitforcpu,
+    reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu, waitforcpu, 
 	networkconnect,
 	// not typically used by scripts, undocumented:
 	networksettings,
 
 	//user, accounts
-    who, chat, disconnectotherconnections, driverexit, loginrecords, messageclients,  
+    who, chat, disconnectotherconnections, driverexit, messageclients,
+    
     //undocumented (not typically used by scripts):
     password_update, beapassenger, assumecontrol,  
     new_user_add, user_list, delete_user, extrauser_password_update, username_update,
@@ -70,9 +71,10 @@ public enum PlayerCommands {
     
     // undocumented    
     statuscheck, block, unblock, getemailsettings, emailsettingsupdate,
-	deletelogs, truncimages, truncros, truncarchive, archive,
-	archiveros, archiveimages, archivelogs,
-
+    
+    // file manage 
+	deletelogs, truncmedia, archivelogs, archivenavigation, 
+	
     ;
 	
 	// sub-set that are restricted to "user0"

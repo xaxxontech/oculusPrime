@@ -10,7 +10,6 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Set;
 
-import developer.*;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
 import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
@@ -18,6 +17,10 @@ import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
 import org.red5.server.api.service.IServiceCapableConnection;
 
+import developer.Calibrate;
+import developer.Navigation;
+import developer.NavigationLog;
+import developer.Ros;
 import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
@@ -75,18 +78,27 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public IConnection relayclient = null;
 	public Network network = null;
 
+	
 	public Application() {
 		super();
-		state.set(values.osarch, System.getProperty("os.arch"));
-		Util.log("\n==============Oculus Prime Java Start Arch:"+state.get(values.osarch)+"===============", this);
-		PowerLogger.append("\n==============Oculus Prime Java Start===============", this);
 
+		// moved to state.java 
+		// state.set(values.osarch, System.getProperty("os.arch"));
+		
+		PowerLogger.append("==============Oculus Prime Java Start===============\n", this); // extra newline on end
+		Util.log          ("==============Oculus Prime Java Start===============\n", this); // extra newline on end
+		Util.log("====Oculus Prime Linux Version:"+Util.getUbuntuVersion(), this);
+		Util.log("====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
+		Util.log("====Oculus Prime Java Arch:"+state.get(values.osarch), this);
+//		Util.log("====Oculus Java Home:"+Settings.redhome, this);
+	
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
-		loginRecords = new LoginRecords(this);
+		loginRecords = LoginRecords.getReference();
 		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
+	
 	}
 
 	@Override
@@ -94,7 +106,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		authtoken = null;
 
-		// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
+// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
 //		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
 //			Util.log("localhost/LAN/known netstream connect, no params", this);
 //			return true;
@@ -112,7 +124,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				grabber = Red5.getConnectionLocal();
 
 				if (settings.getBoolean(ManualSettings.useflash)) {
-					driverCallServer(PlayerCommands.messageclients, "relay server in use, setting &quot;useflash&quot; set to false");
+					driverCallServer(PlayerCommands.messageclients, "relay server in use, setting &quot;useflash&quot; to false");
 					Util.log("setting useflash false", this);
 					settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
 				}
@@ -334,43 +346,33 @@ public class Application extends MultiThreadedApplicationAdapter {
 		ocv.loadOpenCVnativeLib();
 		if (ocv.jarfiledeleted) restart();
 
-		if (settings.getBoolean(GUISettings.navigation)) {
-			navigation = new developer.Navigation(this);
-			navigation.runAnyActiveRoute();
-		}
-
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
 		// use relay server if set
 		if (!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
-
 			red5client = new Red5Client(this); // connects to remote server
 			red5client.connectToRelay();
 		}
 
-		if (state.get(values.osarch).equals(ARM))
-			settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if (!settings.getBoolean(ManualSettings.useflash))
-			state.set(values.driverstream, driverstreamstate.disabled.toString());
-		else
-			state.set(State.values.driverstream, driverstreamstate.stop.toString());
+		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
+		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
+		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
 
 		grabberInitialize();
 		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
-
-		// below network stuff should be called before SystemWatchdog (prevent redundant updates)
-//		Util.updateExternalIPAddress();
-//		Util.updateLocalIPAddress();
-		network = new Network(this);
-
-		Util.log("prime folder: " + Util.countMbytes(".") + " mybtes, " + Util.diskFullPercent() + "% used", this);
-		
+		network = new Network(this);	
 		watchdog = new SystemWatchdog(this);
 
-		Util.debug("application initialize done", this);
+		if(settings.getBoolean(GUISettings.navigation)) {
+			navigation = new developer.Navigation(this);
+			navigation.runAnyActiveRoute();
+		}
 		
+		Util.debug("application initialize done", this);
+		Util.debug("initialize(): starting python scripts", this);
+		PyScripts.autostartPyScripts();
 	}
 
 	// called by remote relay client
@@ -393,7 +395,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 				loginRecords.signoutDriver();
 				driverCallServer(PlayerCommands.publish, streamstate.stop.toString());
 			}
-
 		}
 	}
 
@@ -664,10 +665,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case quitserver: shutdownApplication(); break;
 		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
-		case uptime: messageplayer(state.getUpTime() + " ms", null, null); break;
+		case uptime:
+			// messageplayer("uptime: " + state.getUpTime() + " ms", null, null); 
+			commandServer.sendToGroup(TelnetServer.TELNETTAG + " uptime " + state.getUpTime()); 
+			break;
+			// SEND TO TELNET NOT GUI 
 		case memory: messageplayer(Util.memory(), null, null); break;
 		case who: messageplayer(loginRecords.who(), null, null); break;
-		case loginrecords: messageplayer(loginRecords.toString(), null, null); break;
 		case messageclients: messageplayer(str, null,null); Util.log("messageclients: "+str,this); break;
 		case dockgrab: 
 			if (str!=null) if (str.equals(AutoDock.HIGHRES)) docker.lowres = false;
@@ -679,7 +683,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			docker.dockGrab(AutoDock.dockgrabmodes.test, 0, 0);
 			docker.lowres = true; // ?
 			break;
-		case rssadd: RssFeed feed = new RssFeed(); feed.newItem(str); break;
+		case rssadd: new RssFeed().newItem(str); break;
 		case nudge: nudge(str); break;
 		
 		case state: 
@@ -768,9 +772,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case forwardtimed: comport.goForward(Integer.parseInt(str)); break;
 		
 		case systemcall:
-			Util.log("received: " + str,this);
-			messageplayer("system command received", null, null);
-			Util.systemCall(str);
+			if(str != null){
+				if(str.length() > 1){
+					Util.log("received: " + str,this);
+					messageplayer("system command received", null, null);
+					Util.systemCall(str);
+				}
+			}
 			break;
 
 		case serverbrowser:
@@ -831,7 +839,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.fwdflood(Integer.parseInt(str));  
 			messageplayer("forward floodLight brightness set to "+str+"%", "fwdflood", str);
 			break;
-			
 		case autodock:
 			docker.autoDock(str); 
 			break;
@@ -845,11 +852,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			int duration = 0;
 			int intensity = 0;
 			if (str != null) {
-				String[] STR = str.split(" ");
-				mode = STR[0];
-				if (STR.length >= 3) {
-					duration = Integer.parseInt(STR[1]);
-					intensity = Integer.parseInt(STR[2]);
+				String[] t = str.split(" ");
+				mode = t[0];
+				if (t.length >= 3) {
+					duration = Integer.parseInt(t[1]);
+					intensity = Integer.parseInt(t[2]);
 				}
 			}
 			comport.strobeflash(mode, duration, intensity);
@@ -885,20 +892,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 				Util.log("power error purposefully dismissed",this);
 			}
 			break;
-			
-		case block:
-			banlist.addBlockedFile(str);
-			break;
-			
-		case unblock:
-			banlist.removeblockedFile(str);
-			break;
-
+		
 		case roslaunch:
-			if (Ros.launch(str))
-				messageplayer("roslaunch "+str+".launch", null, null);
-			else
-				messageplayer("roslaunch already running", null, null);
+			if (Ros.launch(str)) messageplayer("roslaunch "+str+".launch", null, null);
+			else messageplayer("roslaunch already running", null, null);
 			break;
 		
 		case savewaypoints:
@@ -906,25 +903,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("waypoints saved", null, null);
 			break;
 			
-		case gotowaypoint:
-			if (navigation != null) navigation.gotoWaypoint(str);
-			break;
-		
-		case startnav:
-			if (navigation != null) navigation.startNavigation(); 
-			break;
-		
-		case stopnav:
-			if (navigation != null) navigation.stopNavigation();
-			break;
-		
-		case gotodock:
-			if (navigation != null) navigation.dock(); 
-			break;
-			
 		case saveroute: 
-			if (navigation != null) navigation.saveRoute(str);
-			messageplayer("route saved", null, null);
+			if (navigation != null) {
+				navigation.saveRoute(str);
+				messageplayer("route saved", null, null);
+			}
 			break;
 			
 		case runroute:
@@ -943,57 +926,52 @@ public class Application extends MultiThreadedApplicationAdapter {
 				navigation.cancelAllRoutes();
 			}
 			break;
-
-		case startmapping:
-			if (navigation != null) navigation.startMapping();
-			break;
-
-		case savemap:
-			if (navigation != null) navigation.saveMap();
-			break;
-
-		case clearmap: Mapper.clearMap();
-			break;
-
+		
+		case gotowaypoint: if (navigation != null) navigation.gotoWaypoint(str); break;
+		case startnav:     if (navigation != null) navigation.startNavigation(); break;
+		case stopnav:      if (navigation != null) navigation.stopNavigation(); break;
+		case startmapping: if (navigation != null) navigation.startMapping(); break;
+		case savemap:      if (navigation != null) navigation.saveMap(); break;
+		case gotodock:     if (navigation != null) navigation.dock(); break;
+		
+		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
+		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
 		case motiondetect: new OpenCVMotionDetect(this).motionDetectGo(); break;
 		case motiondetectcancel: state.delete(State.values.motiondetect); break;
-		case motiondetectstream: new OpenCVMotionDetect(this).motionDetectStream(); break;
-		case sounddetect: video.sounddetect(str); break;
 		case objectdetect: new OpenCVObjectDetect(this).detectGo(str); break;
+		case settings: messageplayer(settings.toString(), null, null); break;
 		case objectdetectcancel: state.delete(values.objectdetect); break;
-		case objectdetectstream: new OpenCVObjectDetect(this).detectStream(str); break;
-
+		case waitforcpu: watchdog.waitForCpuThread(); break;	
+		case unblock: banlist.removeblockedFile(str); break;
+		case block:	banlist.addBlockedFile(str); break;
+		case log: Util.log("log: "+str, this); break;
+		case sounddetect: video.sounddetect(str); break;
+		case clearmap: Mapper.clearMap(); break; // TODO: old dev only maybe nuke
+		
+		case cpu:
+			String cpu = String.valueOf(Util.getCPU());
+			if(cpu != null) state.set(values.cpu, cpu);
+			break;
+		
+		// 
+		// (was before) 	
 		// case framegrabtofile: messageplayer(FrameGrabHTTP.saveToFile(str), null, null); break;
+		// 
 		case framegrabtofile: // allow extra name to be added 
-		//	final String c = str.trim(); 
-			
-			Util.debug("framegrabtofile(): length = " + cmd.length, this);
-			
-			
 			if(cmd.length == 2) { 
-				FrameGrabHTTP.saveToFile(cmd[0], cmd[1]); // ?mode=processedImgJPG 
+				FrameGrabHTTP.saveToFile(cmd[0], cmd[1]); // ?mode=processedImgJPG file_name
 				Util.debug("framegrabtofile(mode, fname): " + cmd[0] + " " + cmd[1], this);
 			}
 			if(cmd.length == 1) { 
-				FrameGrabHTTP.saveToFile(cmd[0]); // ?mode=processedImgJPG 
+				FrameGrabHTTP.saveToFile(cmd[0]); // framegrabtofile?mode=processedImgJPG 
 				Util.debug("framegrabtofile(mode): "+cmd[0], this);
 			}
 			if(cmd.length == 0){
 				FrameGrabHTTP.saveToFile(null); // default filename
 				Util.debug("framegrabtofile(default):", this);
-			}
-					
+			}			
 			break;
-			
-		case log: Util.log("log: "+str, this); break;
-		case settings: messageplayer(settings.toString(), null, null); break;
 		
-		case cpu: 
-			String cpu = String.valueOf(Util.getCPU());
-			if(cpu != null) state.set(values.cpu, cpu);
-			break;
-		case waitforcpu: watchdog.waitForCpuThread();  break;
-
 		// dev tool only
 		case test:
 			try {
@@ -1012,22 +990,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 //			opencvutils.jpgStream(str);
 			break;
 			
-		case deletelogs:
+		case deletelogs: // super dangerous, purge all log folders and ros logs, causes restart 
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-				Util.log("archiving busy, must be docked, skipping.. ", null);
+				Util.log("must be docked, skipping.. ", null);
 				break;
 			}
+			state.set(values.guinotify, "logs being deleted, rebooting");
 			Util.deleteLogFiles();
 			break;
 			
-		case archivelogs: 
-//			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
-//				Util.log("archiving busy, must be docked, skipping.. ", null);
-//				break;
-//			}
-			Util.archiveLogs();
+		case archivelogs: // create zip of log folder 
+			Util.archiveLogFiles();
 			break;
 
+		case archivenavigation: // create zip file with settings, tailf of main logs, nav log, routes.xml 
+			Util.archiveNavigation();
+			break;
+		
+		case truncmedia: // remove any frames or videos not currently linked in navigation log  
+			Util.truncStaleFrames();
+			Util.truncStaleAudioVideo();
+			break;
+			
 		case streammode: // TODO: testing ffmpeg/avconv streaming
 			grabberSetStream(str);
 			break;
@@ -1408,7 +1392,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 			state.set(State.values.framegrabbusy.name(), false);
 			
-		} catch (Exception e) {			Util.printError(e);		}
+		} catch (Exception e) { Util.printError(e); }
 
 //		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
 	}
@@ -1641,16 +1625,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 		return result;
 	}
 
-	private void restart() {
+	// TODO: ALLOW TO ONLY BE CALLED ONCE?
+	// state.set(shuttingdown, true); 
+	public void restart() { 
+
+		if(settings.getBoolean(ManualSettings.developer)) PyScripts.runShutdownPyScripts();	
+				
+		Util.debug("Restart uptime was: "+ state.getUpTime(), this);	
+
 		messageplayer("restarting server application", null, null);	
 		
-		int b = settings.getInteger(ManualSettings.restarted); // count java restarts vs booting 
-		settings.writeSettings(ManualSettings.restarted, Integer.toString(b+1));
-
-// THIS in developer mode, or just warning? 	
-//					if(settings.getInteger(ManualSettings.restarted) > 10){
-//					Util.log("restart called but reboot needed, going down..", this);
-					
 		// write file as restart flag for script
 		File f = new File(Settings.redhome + Util.sep + "restart");
 		if (!f.exists()) try { f.createNewFile(); } catch (Exception e) {}
@@ -1659,11 +1643,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	private void reboot() {
+
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
 		powerport.writeStatusToEeprom();
 		killGrabber(); // prevents error dialog on chrome startup
-		settings.writeSettings(ManualSettings.restarted, "0");
 
 		if (navigation != null) { // TODO: << condition required?
 			if (state.exists(values.odomlinearpwm)) {
@@ -1676,11 +1660,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
+	
 		Util.delay(1000);
-//		if (!state.get(values.osarch).equals(ARM)) {
-//			Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
-//		}
-//		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -r now");
+		
 		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 
 	}
@@ -1696,7 +1678,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 //		}
 //		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
 		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
-
 	}
 
 	private void shutdownApplication() {
@@ -1726,8 +1707,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 		}
 
-		if (! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
-
+		if(! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
 		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
 	}
 
@@ -2235,7 +2215,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		int lines = 100; //default	
 		if (!str.equals("")) { lines = Integer.parseInt(str); }
 		String header = "last "+ Integer.toString(lines)  +" line(s) from "+Settings.stdout+" :<br>";
-		sendplayerfunction("showserverlog", header + Util.tail(lines));
+		sendplayerfunction("showserverlog", header + Util.tail(Settings.stdout, lines));
 	}
 
 	private void softwareUpdate(String str) {

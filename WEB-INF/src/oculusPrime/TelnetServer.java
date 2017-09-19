@@ -120,7 +120,7 @@ public class TelnetServer implements Observer {
 
 		// log to console, and notify other users of leaving
 		sendToSocket("shutting down, "+reason, out);
-		Util.debug("closing socket [" + clientSocket + "] " + reason, this);
+		// Util.debug("closing socket [" + clientSocket + "] " + reason, this);
 		
 		try {
 
@@ -154,10 +154,11 @@ public class TelnetServer implements Observer {
 			return;
 		}
 
-		if (player.equals(PlayerCommands.systemcall)) {
-			sendToSocket("forbidden command, " + cmd[0], out);
-			return;
-		}
+// TODO: maybe in developer mode? 
+//		if (player.equals(PlayerCommands.systemcall)) {
+//			sendToSocket("forbidden command, " + cmd[0], out);
+//			return;
+//		}
 
 		// check for null vs string("")
 		args = args.trim();

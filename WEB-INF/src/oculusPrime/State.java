@@ -1,12 +1,7 @@
 package oculusPrime;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Set;
 import java.util.Vector;
 
@@ -61,14 +56,14 @@ public class State {
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
-		navigationrouteid, nextroutetime, roswaypoint,
-		rosarcmove, // to be documented
+		navigationrouteid, nextroutetime, roswaypoint, rosarcmove,
+		waypointbusy, // to be documented
 
 	}
 
 	/** not to be broadcast over telnet channel when updated, to reduce chatter */
 	public enum nonTelnetBroadcast { batterylife, sysvolts, batteryinfo, rosscan, rosmapwaypoints, rosglobalpath,
-		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, cpu, odomupdated, lastodomreceived,
+		odomturnpwm, odomlinearpwm, framegrabbusy, lastusercommand, odomupdated, lastodomreceived,
 		redockifweakconnection, networksinrange,
 	}
 
@@ -82,25 +77,18 @@ public class State {
 	
 	/** notify these on change events */
 	public Vector<Observer> observers = new Vector<Observer>();
-	
-	/** reference to this singleton class */
 	private static State singleton = new State();
 
 	/** properties object to hold configuration */
 	private HashMap<String, String> props = new HashMap<String, String>(); 
-	
-	public static State getReference() {
-		return singleton;
-	}
+	public void addObserver(Observer obs){ observers.add(obs); }
+	public static State getReference() { return singleton; }
 
 	private State() {
+		props.put(values.osarch.name(), System.getProperty("os.arch"));
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
 		props.put(values.telnetusers.name(), "0");
-		getLinuxUptime();
-	}
-	
-	public void addObserver(Observer obs){
-		observers.add(obs);
+		Util.getLinuxUptime();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -125,7 +113,7 @@ public class State {
 
 	@Override
 	public String toString(){
-		String str = "";
+		String str = "number of observers: " + observers.size();
 		final Set<String> keys = props.keySet();
 		for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
 			final String key = i.next();
@@ -160,7 +148,7 @@ public class State {
 	
 			Util.delay(1); // no higher, used by motion, odometry
 			if (System.currentTimeMillis()-start > timeout){ 
-				Util.debug("block() timeout: " + member.name(), this);
+//				Util.debug("block() timeout: " + member.name(), this);
 				return false;
 			}
 		}
@@ -178,7 +166,6 @@ public class State {
 			Util.log("set() null valu for key: " + key, this);
 			return;
 		}
-
 		try {
 			props.put(key.trim(), value.trim());
 		} catch (Exception e) {
@@ -288,7 +275,7 @@ public class State {
 		if(!exists(key)) return;
 		if(props.containsKey(key)) props.remove(key);
 		for(int i = 0 ; i < observers.size() ; i++) observers.get(i).updated(key);	
-		Util.debug("delete: " + key, this);
+//		Util.debug("delete: " + key, this);
 	}
 	
 	public void delete(values key) {
@@ -349,24 +336,6 @@ public class State {
 		return getDouble(key.name());
 	}
 
-	private void getLinuxUptime(){
-		new Thread(new Runnable() {
-			@Override
-			public void run() {	
-				try {
-					
-					Process proc = Runtime.getRuntime().exec(new String[]{"uptime", "-s"});
-					BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));									
-					String line = procReader.readLine();
-					Date date = new SimpleDateFormat("yyyy-MM-dd h:m:s", Locale.ENGLISH).parse(line);
-					set(values.linuxboot, date.getTime());
-					
-				} catch (Exception e) {
-					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
-				}										
-			}
-		}).start();
-	}
 	
 	/*
 	public String dumpFile(){	

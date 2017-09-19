@@ -1,36 +1,55 @@
 package oculusPrime;
 
 
-import oculusPrime.commport.ArduinoPrime;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import oculusPrime.State.values;
+
 
 public class Network {
 
-    Application app;
-    State state;
-    Settings settings;
-    int networkInfoToStateFailCount = 0;
+    Application app = null;
+    static State state = State.getReference();
+    Settings settings = Settings.getReference();
+	private static String preferredrouter = null;;
+    
+    // boolean polling = true;
+	// int attempts = 0;
 
     public Network (Application a) {
         app = a;
-        state = State.getReference();
-        settings = Settings.getReference();
         pollInfo();
     }
 
+    // from Access Point Manager xml message
+    public static boolean preferrefRouterConnected() {
+    	return state.equals(values.ssid, preferredrouter);
+    	
+    	/*
+    	if (preferredrouter == null) return false;
+    	if (state.exists(values.ssid))
+    		if (state.equals(values.ssid, preferredrouter))
+    			return true;
+    	
+    	return false;
+    	
+    	*/
+    }
+    
     private void pollInfo() {
         new Thread(new Runnable() {
             public void run() {
                 try {
-
+                	
+                	int networkInfoToStateFailCount = 0;
                     long wait = 0;
 
-                    while (true) {
+//                    while (polling) {
 
-                        if (!state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
+                    	if( ! state.exists(values.ssid)) state.set(State.values.ssid, Util.lookupCurrentSSID());
+                        if( ! state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
                         else if (state.equals(State.values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
                         if (!state.exists(State.values.externaladdress)) updateExternalIPAddress();
 
@@ -38,15 +57,16 @@ public class Network {
                             if (networkInfoToState()) {
                                 wait = 0;
                                 networkInfoToStateFailCount = 0;
-                            }
-                            else {
+                            } else {
                                 wait = System.currentTimeMillis() + Util.ONE_MINUTE;
                                 networkInfoToStateFailCount ++;
                             }
-                        }
+ //                       }
 
                         Thread.sleep(10000);
                     }
+                    
+//                    Util.log("ACCESS POINT MANAGER DISABLED after attempts: " + attempts, this);
 
                 } catch (Exception e) {
                     Util.printError(e);
@@ -57,13 +77,20 @@ public class Network {
 
     private boolean networkInfoToState() {
 
-        String data = Util.readUrlToString("http://127.0.0.1/?action=xmlinfo");
-
-        if ("".equals(data) || data == null) {
-            Util.log("network unavailable", this);
-            nukeStateValues();
-            return false;
+        String data = Util.readUrlToString("http://127.0.0.1/?action=xmlinfo"); 
+        if(data == null) data = ""; // null obj pukes on .equals() 
+        if(data.equals("")) {
+        	
+//        	if( attempts++ > 5) {
+//        		polling = false; // stop polling, give up..    	
+        		// Util.appendUserMessage("network manager unavailable"); // just give one message about it    
+	        	// TODO: run grep on jetty.xml and see if AP Manager is on wrong port or not even there
+	        	// jetty.port jetty.xml  <Set name="Port"><SystemProperty name="jetty.port" default="8080"/></Set>
+ //       	}
+            return false;    
         }
+        
+        // else attempts = 0; // reset fail count 
 
         Document document = Util.loadXMLFromString(data);
         if (document == null) {
@@ -89,6 +116,12 @@ public class Network {
             }
         }
 
+        // preferred router
+        if (document.getElementsByTagName("preferredrouter").getLength() > 0) {
+            Element preferred = (Element) document.getElementsByTagName("preferredrouter").item(0);
+            preferredrouter = preferred.getTextContent();
+        }
+        
         // gateway
         if (document.getElementsByTagName("gatewayaddress").getLength() > 0) {
             Element gateway = (Element) document.getElementsByTagName("gatewayaddress").item(0);
@@ -148,8 +181,8 @@ public class Network {
 
     public static void nukeStateValues() {
         State state = State.getReference();
-        state.delete(State.values.networksknown);
         state.delete(State.values.ssid);
+        state.delete(State.values.networksknown);
         state.delete(State.values.gatewayaddress);
         state.delete(State.values.networksinrange);
     }
@@ -271,5 +304,4 @@ public class Network {
         app.driverCallServer(PlayerCommands.messageclients, "attempting connect to network: "+str);
         Util.readUrlToString("http://127.0.0.1/?action=up&router="+str);
     }
-
 }

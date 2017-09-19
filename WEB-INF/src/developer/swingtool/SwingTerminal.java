@@ -225,7 +225,7 @@ public class SwingTerminal extends JFrame {
 			closeSocket();
 		}
 		
-		in.setText(""); // reset text input field 
+		// in.setText(""); // reset text input field 
 	}
 	
 	void appendMessages(final String input){

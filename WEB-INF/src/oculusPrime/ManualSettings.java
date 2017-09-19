@@ -10,8 +10,8 @@ public enum ManualSettings {
 
 	// undocumented
 	redockifweakconnection,
-	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, undockdistance, restarted,
-
+	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, undockdistance, batterytoolow,
+	
 	;
 	
 	/** get basic settings, set defaults for all */
@@ -36,8 +36,7 @@ public enum ManualSettings {
 		config.setProperty(arcpwmthreshold.name(), "150");
 		config.setProperty(soundthresholdalt.name(), "-8");
 		config.setProperty(undockdistance.name(), "0.75");
-		config.setProperty(restarted.name(), "0");
-
+		config.setProperty(batterytoolow.name(), "0");
 		return config;
 	}
 	
