@@ -16,6 +16,7 @@ public enum PlayerCommands {
 
 	//user, accounts
     who, chat, disconnectotherconnections, driverexit, messageclients,
+	logout, // undocumented
     
     //undocumented (not typically used by scripts):
     password_update, beapassenger, assumecontrol,  

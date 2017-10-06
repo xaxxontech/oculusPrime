@@ -156,7 +156,6 @@ public class BanList {
 	public synchronized boolean knownAddress(final String address) {
 
 		if( ! Settings.getReference().getBoolean(ManualSettings.checkaddresses)) {
-			if( ! known.contains(address)) known.add(address); // put in list even if disabled 
 			return true;
 		}
 				
@@ -195,8 +194,19 @@ public class BanList {
 		if(blocked.containsKey(address)) blocked.remove(address);
 		if( ! known.contains(address)) known.add(address);
 	}
-	
-	public synchronized void loginFailed(final String remoteAddress, final String user) {
+
+	public synchronized void removeAddress(String remoteAddress) {
+		if(remoteAddress == null) return;
+		if(remoteAddress.equals("null")) return;
+		if(remoteAddress.equals("127.0.0.1")) return;
+		if( ! Util.validIP(remoteAddress)){
+			appendLog(remoteAddress + " is not a valid address?");
+			return;
+		}
+		if(known.contains(remoteAddress)) known.remove(remoteAddress);
+	}
+
+		public synchronized void loginFailed(final String remoteAddress, final String user) {
 		
 		if(remoteAddress.equals("127.0.0.1")) return;
 	

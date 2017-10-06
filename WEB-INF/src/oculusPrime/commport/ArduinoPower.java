@@ -453,7 +453,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
 			}
 
-			state.set(State.values.redockifweakconnection, true); // TODO: testing
+			if (!state.equals(State.values.redockifweakconnection, Settings.TRUE))
+				state.set(State.values.redockifweakconnection, true);
 		}
 		
 		else if (s[0].equals("undocked")) {
@@ -492,13 +493,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			sendCommand(CONFIRMSHUTDOWN);
 			Util.log("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
 			PowerLogger.append("POWER BOARD CALLED SYSTEM SHUTDOWN", this);
-
-			if (settings.getBoolean(ManualSettings.debugenabled)) {
-
-				Util.debug("debugenabled, skipping graceful shutdown");
-				PowerLogger.append("debugenabled, skipping graceful shutdown", this);
-			} else
-				application.driverCallServer(PlayerCommands.systemshutdown, null);
+			application.driverCallServer(PlayerCommands.systemshutdown, null);
 		}
 		
 		else if (s[0].equals("redock") && state.getUpTime() > Util.TWO_MINUTES) {

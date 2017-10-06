@@ -71,13 +71,13 @@ public class PyScripts {
 	
 	static File[] getAutoStartScriptFiles(){
 		File auto = new File(Settings.telnetscripts);
-		if( ! auto.exists()) auto.mkdir();
+		if( ! auto.exists()) return null; // auto.mkdir();
 		File[] names = auto.listFiles(new FileFilter() {
 			@Override
 			public boolean accept(File pathname) { 
 				if(pathname.getName().endsWith("oculusprimesocket.py")) return false;
 				if(pathname.getName().startsWith("startup_") && pathname.getName().endsWith(".py")) return true;
-				return false;	
+				return false;
 			}
 		});
 		return names;

@@ -141,7 +141,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
 		if( ! settings.getBoolean(ManualSettings.developer.name())){
-			Util.log("dangerous.. not in developer mode: "+request.getRemoteAddr(), this);
+			Util.debug("dangerous.. not in developer mode: "+request.getRemoteAddr(), this);
 			response.sendRedirect("/oculusPrime");
 			return;
 		}

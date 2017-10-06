@@ -369,10 +369,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 			navigation = new developer.Navigation(this);
 			navigation.runAnyActiveRoute();
 		}
-		
+
+		if(settings.getBoolean(ManualSettings.developer)) PyScripts.autostartPyScripts();
+
 		Util.debug("application initialize done", this);
-		Util.debug("initialize(): starting python scripts", this);
-		PyScripts.autostartPyScripts();
 	}
 
 	// called by remote relay client
@@ -636,6 +636,13 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case streamsettingscustom: streamSettingsCustom(str);break;
 		case streamsettingsset:streamSettingsSet(str);break;
 		case driverexit: appDisconnect(player); break;
+		case logout:
+			Util.log("browser user logout", this);
+			if (player != null) {
+				banlist.removeAddress(player.getRemoteAddress());
+			}
+			appDisconnect(player);
+			break;
 		case playerbroadcast: playerBroadCast(str); break;
 		case password_update: account("password_update", str); break;
 		case new_user_add: account("new_user_add", str); break;

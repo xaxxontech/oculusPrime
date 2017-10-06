@@ -52,7 +52,7 @@ public class FrameGrabHTTP extends HttpServlet {
 	public void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
 		if( ! ban.knownAddress(req.getRemoteAddr())){
-			Util.log("unknown address: danger: "+req.getRemoteAddr(), this);
+			Util.log("unknown address, blocked: "+req.getRemoteAddr(), this);
 			return;
 		}
 

@@ -116,7 +116,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
 	public static final Double METERSPERSEC = 0.33;
-	public static final Double DEGPERMS = 0.0857;
+	public static final Double DEGPERMS = 0.0857; // max that gyro can keep up with
 	public static final int MAXDOCKEDPWM = 120;
 
 	private volatile List<Byte> commandList = new ArrayList<>();
@@ -1079,8 +1079,103 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	 * state odomlinearmpms
 	 * state odomturndpms
 	 */
+
+	/*
 	private void trackturnrate(final long moveID) {
 		
+		new Thread(new Runnable() {public void run() {
+			final long turnstart = System.currentTimeMillis();
+			long start = turnstart;
+			long now = turnstart;
+			final double tolerance = state.getDouble(State.values.odomturndpms.toString())*0.08;
+			final int pwmincr = 5;
+			final int accel = 500;
+			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
+			double totalangle = 0;
+
+			byte dir = 0;
+			if ( state.get(State.values.direction).equals(direction.left.toString()))
+				dir = LEFT;
+			else if ( state.get(State.values.direction).equals(direction.right.toString())) // extra thread safe
+				dir = RIGHT;
+
+			while (currentMoveID == moveID)  {
+
+				if (state.getBoolean(State.values.odomupdated)) {
+					state.set(State.values.odomupdated, false);
+
+					totalangle += Math.abs(lastodomangle);
+
+					now = System.currentTimeMillis();
+					if (now - turnstart < accel) {
+						start = now;
+						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
+					}
+					
+					double rate = Math.abs(lastodomangle)/(now - start);
+
+					int currentpwm = state.getInteger(State.values.odomturnpwm);
+					int newpwm = currentpwm;
+
+					if (rate > targetrate + tolerance) {
+						newpwm = currentpwm - pwmincr;
+						if (newpwm < speedslow) newpwm = speedslow;
+					}
+					else if (rate < targetrate - tolerance) {
+						newpwm = currentpwm + pwmincr;
+						if (newpwm > 255) newpwm = 255;
+					}
+//					else // within tolerance, kill thread to save cpu
+//						break;
+
+					// modify speed
+					state.set(State.values.odomturnpwm, newpwm);
+
+					if (currentMoveID == moveID && dir != 0 ) // extra thread safe
+						sendCommand(new byte[] { dir, (byte) newpwm, (byte) newpwm });
+					else break;
+
+					start = now;
+					
+				}
+				Util.delay(1);
+
+			}
+
+			// end of move. now further comp odomturnpwm if necessary (if odomturndpms * time doesn't match angle moved)
+			if (totalangle < 60 && totalangle > 5) {
+
+				double expectedangle = (now - turnstart) * targetrate;
+				double diffratio = expectedangle / totalangle; // signed
+				// 30deg expected, 20 moved    30/20 -1 = 0.5 or 20 expected but overshot: 20/30 - 1 = -0.33
+//			double anglediff = Math.abs(expectedangle - totalangle);
+
+				if (Math.abs(diffratio) > 0.04) {
+					int currentpwm = state.getInteger(State.values.odomturnpwm);
+					int newpwm = (int) (currentpwm * (diffratio*0.7));
+					if (newpwm - currentpwm > 20) newpwm = currentpwm + 20;
+					else if (newpwm - currentpwm < -20) newpwm = currentpwm - 20;
+					if (newpwm < speedslow) newpwm = speedslow;
+					else if (newpwm > 255) newpwm = 255;
+
+					// modify speed
+					state.set(State.values.odomturnpwm, newpwm);
+
+					Util.log("totalangle: " + totalangle + ", expectedangle: " + expectedangle + ", diffratio: " + diffratio +
+							", oldpwm: " + currentpwm + ", newpwm: " + newpwm, this);
+				}
+			}
+
+			floorFrictionCheck();
+
+		} }).start();
+		
+	}
+	*/
+
+	//(original version)
+	private void trackturnrate(final long moveID) {
+
 		new Thread(new Runnable() {public void run() {
 			final long turnstart = System.currentTimeMillis();
 			long start = turnstart;
@@ -1093,13 +1188,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 				if (state.getBoolean(State.values.odomupdated)) {
 					state.set(State.values.odomupdated, false);
-					
+
 					long now = System.currentTimeMillis();
 					if (now - turnstart < accel) {
 						start = now;
 						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
 					}
-					
+
 					double rate = Math.abs(lastodomangle)/(now - start);
 
 					int currentpwm = state.getInteger(State.values.odomturnpwm);
@@ -1130,7 +1225,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					else break;
 
 					start = now;
-					
+
 				}
 				Util.delay(1);
 
@@ -1139,7 +1234,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			floorFrictionCheck();
 
 		} }).start();
-		
+
 	}
 
 	private void floorFrictionCheck() {

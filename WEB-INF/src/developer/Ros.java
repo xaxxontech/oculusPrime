@@ -222,7 +222,7 @@ public class Ros {
 			reader.close();
 
 		} catch (FileNotFoundException e) {
-			Util.debug("no waypoints file yet");
+			Util.debug("no waypoints file found");
 			return;
 		} catch (IOException e) {
 			e.printStackTrace();

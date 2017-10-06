@@ -1874,7 +1874,8 @@ function loginsend() {
 
 function logout() {
 	eraseCookie("auth");
-	window.location.reload();
+	callServer("logout","");
+	setTimeout("window.location.reload()", 250);
 }
 
 function someonealreadydriving(value) {
