@@ -433,29 +433,38 @@ function drawmapinfo(str) {
 		
 	context.rotate(th);
 	
-	/*<telnet> <state> rosscan nan,nan,2.699,3.451,3.46,3.502,nan,2.325,3.504,3.486,nan,nan,nan,
-	 * nan,nan,nan,nan,nan,nan,nan,6.479,nan,nan,nan,6.066,5.946,6.036,5.63,5.53,5.266,5.422,5.247,
-	 * 5.24,5.155,5.227,5.068,5.14,4.916,4.913,4.843,4.911,4.983,4.984,nan,4.988,5.219,5.223,5.31,
-	 * 2.947,nan,2.955,3.038,3.044,3.049,3.056,3.01,3.018,3.0,2.983,2.917,2.903,2.842,2.876,2.91,
-	 * 2.994,3.058,2.83,2.777,2.769,2.741,2.754,2.729,2.742,2.718,2.695,2.692,2.67,2.528,2.511,nan
-	 */
-	
-	if (laserscan) {
-		// alert(laserscan.length); // 31 for xaxxon lidar (step = 8 in remotenav.py 8x31 = 248)
-		// orbbec/xtion should be 640/8 = 80... actually is closer to 90?
-		var anglemax = 0.51; // radians
-		var anglestep = (anglemax*2)/(laserscan.length-1);
-		var angle = anglemax;
+	if (laserscan) { 
+
 		context.fillStyle = "#ff00ff";
-		for (i = 0; i < laserscan.length; i++) {
-			if (laserscan[i] != "nan") {
-				var px = Math.cos(angle)*parseFloat(laserscan[i]) / res * mapzoom;
-				var py = Math.sin(angle)*parseFloat(laserscan[i]) / res * mapzoom;
-				context.fillRect(px-1, py-1, 3, 3);
+		if (laserscan.length < 100) { // depth cam 80-90 points
+			var anglemax = 0.51; // radians
+			var anglestep = (anglemax*2)/(laserscan.length-1);
+			var angle = anglemax;
+			
+			for (i = 0; i < laserscan.length; i++) {
+				if (laserscan[i] != "nan") {
+					var px = Math.cos(angle)*parseFloat(laserscan[i]) / res * mapzoom;
+					var py = Math.sin(angle)*parseFloat(laserscan[i]) / res * mapzoom;
+					context.fillRect(px-1, py-1, 3, 3);
+				}
+				angle -= anglestep;
 			}
-			angle -= anglestep;
+		} 
+		else { // lidar ~129+points
+			var anglemax = Math.PI; // radians
+			var anglestep = (anglemax*2)/(laserscan.length-1);
+			var angle = anglemax;
+			
+			for (i = 0; i < laserscan.length; i++) {
+				if (laserscan[i] != "nan") {
+					var px = -Math.cos(angle)*parseFloat(laserscan[i]) / res * mapzoom;
+					var py = Math.sin(-angle)*parseFloat(laserscan[i]) / res * mapzoom;
+					context.fillRect(px-1, py-1, 3, 3);
+				}
+				angle -= anglestep;
+			}
 		}
-	}
+}
 
 	// draw robot
 	var linewidth = 3;

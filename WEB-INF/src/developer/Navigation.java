@@ -136,7 +136,7 @@ public class Navigation implements Observer {
 
 		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
-		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+//		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
 
 	}
 
@@ -826,9 +826,12 @@ public class Navigation implements Observer {
 		long start = System.currentTimeMillis();
 		while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
 				&& System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
+
+		if (state.getBoolean(values.lidar)) return; // rotate not needed
+
 		Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
-		// rotate to localize
+		/* rotate to localize */
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
 		app.driverCallServer(PlayerCommands.left, "360");
 		Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 1000);

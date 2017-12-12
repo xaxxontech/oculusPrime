@@ -48,7 +48,7 @@ public class State {
 
 		// odometry
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast,
-		odomturndpms, odomturnpwm, odomupdated, odomlinearmpms, odomlinearpwm,
+		odomturndpms, odomturnpwm, odomlinearmpms, odomlinearpwm,
 		// not typically used by scripts, undocumented:
 		calibratingrotation,
 
@@ -57,7 +57,7 @@ public class State {
 		roscurrentgoal, rosmapupdated, rosmapwaypoints, navsystemstatus,
 		rossetgoal, rosgoalstatus, rosgoalcancel, navigationroute, rosinitialpose,
 		navigationrouteid, nextroutetime, roswaypoint, rosarcmove,
-		waypointbusy, // to be documented
+		waypointbusy, lidar, // to be documented
 
 	}
 

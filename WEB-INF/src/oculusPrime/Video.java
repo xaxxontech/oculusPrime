@@ -59,6 +59,7 @@ public class Video {
     public void initAvconv() {
         state.set(State.values.stream, Application.streamstate.stop.toString());
         setAudioDevice();
+        setVideoDevice();
         if (state.get(State.values.osarch).equals(Application.ARM)) {
 //            avprog = FFMPEG;
 //            dumpfps = 8;
@@ -80,6 +81,24 @@ public class Video {
             while ((line = procReader.readLine()) != null) {
                 if(line.startsWith("card") && line.contains("LifeCam")) {
                     adevicenum = Integer.parseInt(line.substring(5,6));      // "card 0"
+                }
+            }
+
+        } catch (Exception e) { Util.printError(e);}
+    }
+
+    private void setVideoDevice() {
+        try {
+            String cmd[] = new String[]{"v4l2-ctl", "--list-devices"};
+            Process proc = Runtime.getRuntime().exec(cmd);
+            proc.waitFor();
+
+            String line = null;
+            BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            while ((line = procReader.readLine()) != null) {
+                if(line.contains("LifeCam")) {
+                    line = procReader.readLine().trim();
+                    devicenum = Integer.parseInt(line.substring(line.length() - 1));
                     Util.debug(line, this);
                 }
             }
@@ -175,7 +194,7 @@ public class Video {
                 lastmode = Application.streamstate.stop;
                 Util.delay(STREAM_CONNECT_DELAY);
                 publish(mode, w,h,fps);
-//                app.driverCallServer(PlayerCommands.messageclients, "stream restart after "+(System.currentTimeMillis()-start+"ms"));
+                app.driverCallServer(PlayerCommands.messageclients, "video stream restarting");
             }
 
         } }).start();

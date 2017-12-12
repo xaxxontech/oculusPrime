@@ -13,10 +13,7 @@ public class Network {
     Application app = null;
     static State state = State.getReference();
     Settings settings = Settings.getReference();
-	private static String preferredrouter = null;;
-    
-    // boolean polling = true;
-	// int attempts = 0;
+    private static String preferredrouter = null;;
 
     public Network (Application a) {
         app = a;
@@ -24,32 +21,21 @@ public class Network {
     }
 
     // from Access Point Manager xml message
-    public static boolean preferrefRouterConnected() {
-    	return state.equals(values.ssid, preferredrouter);
-    	
-    	/*
-    	if (preferredrouter == null) return false;
-    	if (state.exists(values.ssid))
-    		if (state.equals(values.ssid, preferredrouter))
-    			return true;
-    	
-    	return false;
-    	
-    	*/
+    public static boolean connectedToPreferred() {
+        return state.equals(values.ssid, preferredrouter);
     }
-    
+
     private void pollInfo() {
         new Thread(new Runnable() {
             public void run() {
                 try {
-                	
-                	int networkInfoToStateFailCount = 0;
+
+                    int networkInfoToStateFailCount = 0;
                     long wait = 0;
 
-//                    while (polling) {
+                    while (true) {
 
-                    	if( ! state.exists(values.ssid)) state.set(State.values.ssid, Util.lookupCurrentSSID());
-                        if( ! state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
+                        if (!state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
                         else if (state.equals(State.values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
                         if (!state.exists(State.values.externaladdress)) updateExternalIPAddress();
 
@@ -57,17 +43,15 @@ public class Network {
                             if (networkInfoToState()) {
                                 wait = 0;
                                 networkInfoToStateFailCount = 0;
-                            } else {
+                            }
+                            else {
                                 wait = System.currentTimeMillis() + Util.ONE_MINUTE;
                                 networkInfoToStateFailCount ++;
                             }
- //                       }
+                        }
 
                         Thread.sleep(10000);
                     }
-                    
-//                    Util.log("ACCESS POINT MANAGER DISABLED after attempts: " + attempts, this);
-
                 } catch (Exception e) {
                     Util.printError(e);
                 }
@@ -77,20 +61,9 @@ public class Network {
 
     private boolean networkInfoToState() {
 
-        String data = Util.readUrlToString("http://127.0.0.1/?action=xmlinfo"); 
-        if(data == null) data = ""; // null obj pukes on .equals() 
-        if(data.equals("")) {
-        	
-//        	if( attempts++ > 5) {
-//        		polling = false; // stop polling, give up..    	
-        		// Util.appendUserMessage("network manager unavailable"); // just give one message about it    
-	        	// TODO: run grep on jetty.xml and see if AP Manager is on wrong port or not even there
-	        	// jetty.port jetty.xml  <Set name="Port"><SystemProperty name="jetty.port" default="8080"/></Set>
- //       	}
-            return false;    
-        }
-        
-        // else attempts = 0; // reset fail count 
+        String data = Util.readUrlToString("http://127.0.0.1/?action=xmlinfo");
+        if(data == null) data = "";
+        if(data.equals("")) return false;
 
         Document document = Util.loadXMLFromString(data);
         if (document == null) {
@@ -121,7 +94,7 @@ public class Network {
             Element preferred = (Element) document.getElementsByTagName("preferredrouter").item(0);
             preferredrouter = preferred.getTextContent();
         }
-        
+
         // gateway
         if (document.getElementsByTagName("gatewayaddress").getLength() > 0) {
             Element gateway = (Element) document.getElementsByTagName("gatewayaddress").item(0);
@@ -216,7 +189,7 @@ public class Network {
         if (state.exists(State.values.networksknown))
             networksknown = state.get(State.values.networksknown).split(",");
 
-            // current ssid + strength
+        // current ssid + strength
         String currentnetwork = state.get(State.values.ssid);
         for (int n=0; n<networksinrange.length; n++) {
             if (networksinrange[n].split(" ")[0].equals(state.get(State.values.ssid))) {
