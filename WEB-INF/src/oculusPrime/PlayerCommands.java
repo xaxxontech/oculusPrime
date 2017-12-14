@@ -48,7 +48,7 @@ public enum PlayerCommands {
     // lights and camera tilt
     strobeflash, spotlight, floodlight, cameracommand, camtilt,
 	// undocumented (unused):
-    fwdflood,
+    fwdflood, rotate,
 
 	// navigation
 	roslaunch, savewaypoints, gotowaypoint, startnav, stopnav,

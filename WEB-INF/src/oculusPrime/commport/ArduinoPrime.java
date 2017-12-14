@@ -99,6 +99,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
     private volatile Boolean odomangleupdated = false;
     private volatile Boolean odomlinearupdated = false;
     private double expectedangle;
+    private long rotatestoptime = 0;
+    private volatile double finalangle;
 
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
@@ -1227,19 +1229,28 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					
 					double rate = Math.abs(lastodomangle)/(now - start);
 
-					if (!timecompd) {
-//						asdf
-					}
-
 					int currentpwm = state.getInteger(State.values.odomturnpwm);
 					int newpwm = currentpwm;
 
+					if (!timecompd && rotatestoptime > turnstart) {
+						long projectedstopdiff = (turnstart + ACCEL_DELAY + (long) ((expectedangle-2) / rate)) - rotatestoptime;
+						if (projectedstopdiff > rotatestoptime-turnstart) // sanity check for positive comp only
+							projectedstopdiff = rotatestoptime-turnstart;
+						rotatestoptime += (long) (projectedstopdiff*0.7);
+						if (Math.abs(projectedstopdiff) > ACCEL_DELAY) {
+							if (projectedstopdiff > 0) newpwm += PWMINCR;
+							else newpwm -= PWMINCR;
+						}
+						timecompd = true;
+						Util.debug("projectedstopdiff: "+projectedstopdiff);
+					}
+
 					if (rate > targetrate + tolerance) {
-						newpwm = currentpwm - PWMINCR;
+						newpwm -= PWMINCR;
 						if (newpwm < speedslow) newpwm = speedslow;
 					}
 					else if (rate < targetrate - tolerance) {
-						newpwm = currentpwm + PWMINCR;
+						newpwm += PWMINCR;
 						if (newpwm > 255) newpwm = 255;
 					}
 //					else // within tolerance, kill thread to save cpu
@@ -1264,106 +1275,45 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			// end of move. now further comp odomturnpwm if necessary
 			// (if odomturndpms * time doesn't match angle moved)
 
-			now = System.currentTimeMillis();
-			while (!odomangleupdated && System.currentTimeMillis() - now < 5000 ) Util.delay(1);
-            odomangleupdated = false;
-			totalangle += Math.abs(lastodomangle);
+			if (rotatestoptime > turnstart) {
 
-//			double expectedangle = (now - turnstart - ACCEL_DELAY) * targetrate;
-			double anglediffpercent = totalangle/expectedangle - 1;
-			final double ADPTOLERANCE = 0.05;
-			double anglediff = totalangle - expectedangle;
-			final double ADTOLERANCE = 3.0;
+				now = System.currentTimeMillis();
+				while (!odomangleupdated && System.currentTimeMillis() - now < 5000) Util.delay(1);
+				odomangleupdated = false;
+				totalangle += Math.abs(lastodomangle);
 
-            Util.debug("totalangle: " + totalangle + ", expectedangle: " + expectedangle +
-                    ", anglediffpercent: " + anglediffpercent, this);
+				double anglediffpercent = totalangle / expectedangle - 1;
+				final double ADPTOLERANCE = 0.05;
+				double anglediff = totalangle - expectedangle;
+				final double ADTOLERANCE = 3.0;
 
-			if (Math.abs(anglediffpercent) > ADPTOLERANCE && Math.abs(anglediff) > ADTOLERANCE) {
-				int currentpwm = state.getInteger(State.values.odomturnpwm);
-				int newpwm = currentpwm;
+				Util.debug("totalangle: " + totalangle + ", expectedangle: " + expectedangle +
+						", anglediffpercent: " + anglediffpercent, this);
 
-				if (anglediffpercent < 0) newpwm += PWMINCR;
-				else newpwm -= PWMINCR;
+				if (Math.abs(anglediffpercent) > ADPTOLERANCE && Math.abs(anglediff) > ADTOLERANCE) {
+					int currentpwm = state.getInteger(State.values.odomturnpwm);
+					int newpwm = currentpwm;
 
-				if (newpwm < speedslow) newpwm = speedslow;
-				else if (newpwm > 255) newpwm = 255;
+					if (anglediffpercent < 0) newpwm += PWMINCR;
+					else newpwm -= PWMINCR;
 
-				// modify speed
-				state.set(State.values.odomturnpwm, newpwm);
+					if (newpwm < speedslow) newpwm = speedslow;
+					else if (newpwm > 255) newpwm = 255;
 
-				Util.debug("oldpwm: " + currentpwm + ", newpwm: " + newpwm, this);
+					// modify speed
+					state.set(State.values.odomturnpwm, newpwm);
+
+					Util.debug("oldpwm: " + currentpwm + ", newpwm: " + newpwm, this);
+				}
+
+				finalangle = totalangle;
+
 			}
 
 			floorFrictionCheck();
 
 		} }).start();
 		
-	}
-
-
-	//(original version)
-	private void trackturnrateORIGINAL(final long moveID) {
-		if (!state.exists(State.values.odometrybroadcast)) return;
-
-		new Thread(new Runnable() {public void run() {
-			final long turnstart = System.currentTimeMillis();
-			long start = turnstart;
-			final double tolerance = state.getDouble(State.values.odomturndpms.toString())*0.08;
-			final int pwmincr = 5;
-			final int accel = 500;
-			final double targetrate = state.getDouble(State.values.odomturndpms.toString());
-
-			while (currentMoveID == moveID)  {
-
-                if (odomangleupdated) {
-                    odomangleupdated = false;
-
-					long now = System.currentTimeMillis();
-					if (now - turnstart < accel) {
-						start = now;
-						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
-					}
-
-					double rate = Math.abs(lastodomangle)/(now - start);
-
-					int currentpwm = state.getInteger(State.values.odomturnpwm);
-					int newpwm = currentpwm;
-
-					if (rate > targetrate + tolerance) {
-						newpwm = currentpwm - pwmincr;
-						if (newpwm < speedslow) newpwm = speedslow;
-					}
-					else if (rate < targetrate - tolerance) {
-						newpwm = currentpwm + pwmincr;
-						if (newpwm > 255) newpwm = 255;
-					}
-//					else // within tolerance, kill thread to save cpu
-//						break;
-
-					byte dir = 0;
-
-					// modify speed
-					state.set(State.values.odomturnpwm, newpwm);
-					if ( state.get(State.values.direction).equals(direction.left.toString()))
-						dir = LEFT;
-					else if ( state.get(State.values.direction).equals(direction.right.toString())) // extra thread safe
-						dir = RIGHT;
-
-					if (currentMoveID == moveID && dir != 0 ) // extra thread safe
-						sendCommand(new byte[] { dir, (byte) newpwm, (byte) newpwm });
-					else break;
-
-					start = now;
-
-				}
-				Util.delay(1);
-
-			}
-
-			floorFrictionCheck();
-
-		} }).start();
-
 	}
 
 	private void floorFrictionCheck() {
@@ -1700,9 +1650,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay((int) voltsComp(n));
 				} 
 				else { // using gyro feedback
-                    Util.delay(ACCEL_DELAY); // accel
-					Util.delay((long) ((degrees-2) / state.getDouble(State.values.odomturndpms.toString())) );
+					rotatestoptime = System.currentTimeMillis() + ACCEL_DELAY +
+							(long) ((degrees-2) / state.getDouble(State.values.odomturndpms));
 					expectedangle = degrees;
+					while (System.currentTimeMillis() < rotatestoptime) Util.delay(1);
 				}
 
 				state.set(State.values.motorspeed, tempspeed);
@@ -1711,6 +1662,50 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 				stopGoing();
 				application.message(null, "motion", "stopped");
+			}
+		}).start();
+	}
+
+	// progressive rotate, using odom feedback
+	public void rotate(final int degrees) {
+		new Thread(new Runnable() {
+			public void run() {
+
+				direction dir = direction.left;
+				if (degrees < 0) dir = direction.right;
+
+				double angle = Math.abs(degrees);
+
+				if (!state.exists(State.values.odomturndpms.toString())) { // odometry not running, use normal
+					rotate(dir, (int) angle);
+					return;
+				}
+
+				final double TOLERANCE  = 2.0;
+				final int MAXATTEMPTS = 5;
+				int attempts = 0;
+				while (angle > TOLERANCE && attempts < MAXATTEMPTS) {
+
+					finalangle = 0;
+
+					rotate (dir, (int) Math.round(angle));
+
+					// wait for final angle
+					long timeout = System.currentTimeMillis()+2000;
+					while (finalangle == 0 && System.currentTimeMillis() < timeout) Util.delay(1);
+
+					if (finalangle > angle) { // overshoot, reverse direction
+						if (dir == direction.left) dir = direction.right;
+						else dir = direction.left;
+					}
+
+					angle = Math.abs(angle - finalangle);
+
+					attempts ++;
+
+					Util.debug("angle: "+angle+", attempts: "+attempts);
+				}
+
 			}
 		}).start();
 	}

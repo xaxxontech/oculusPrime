@@ -747,7 +747,21 @@ public class Application extends MultiThreadedApplicationAdapter {
 			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Integer.parseInt(str));
 			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"&deg;", "motion", "moving");
 			break;
-			
+
+		case rotate:
+			if (!state.getBoolean(State.values.motionenabled.name())) {
+				messageplayer("motion disabled", "motion", "disabled");
+				break;
+			}
+			if (state.getBoolean(State.values.autodocking.name())) {
+				messageplayer("command dropped, autodocking", null, null);
+				break;
+			}
+			moveMacroCancel();
+			comport.rotate(Integer.parseInt(str));
+			messageplayer(null, "motion", "moving");
+			break;
+
 		case forward:
 		case backward:
 			if (!state.getBoolean(State.values.motionenabled.name())) {
@@ -1423,11 +1437,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (status !=null) {
 				commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " <status> " + status + " " + value);
 			}
-		}
-		
-		if(str!=null){
-			if(! str.equals("status check received")) // basic ping from client, ignore
-				Util.debug("messageplayer: "+str+", "+status+", "+value, this);
 		}
 
 	}
