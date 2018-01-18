@@ -13,7 +13,10 @@ import oculusPrime.*;
 
 public class ArduinoPower implements SerialPortEventListener  {
 
-	public static final double FIRMWARE_VERSION_REQUIRED = 0.957; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIREDV1 = 0.957; // trailing zeros ignored!
+	public static final String FIRMWARE_IDV1 = "oculusPower";
+	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.21; // trailing zeros ignored!
+	public static final String FIRMWARE_IDV2 = "xaxxonpowerv2";
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
 	public static final int ALLOW_FOR_RESET = 10000;
@@ -22,7 +25,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final int RESET_DELAY = 12 * (int) Util.ONE_HOUR; // xaxxonpower clock rollover is ~18 hrs
 	private static final int HOST_HEARTBEAT_DELAY =  (int) Util.ONE_MINUTE;
 	public static final int BAUD = 115200;
-	public static final String FIRMWARE_ID = "oculusPower";
 	public static final byte INITIATESHUTDOWN= 'p';
 	public static final byte CONFIRMSHUTDOWN= 'w'; 
 	public static final byte GET_VERSION = '7';
@@ -35,9 +37,10 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte GET_PRODUCT = 'x';
 	public static final byte READ_SAFECURRENT = 'G';
 	public static final byte READ_DOCKVOLTAGE = 'E';
+	public static final byte TEMPORARY_SHUTDOWN = 'K';
 	public static final int COMM_LOST = -99;
-	public static final int LOWBATTPERCENTAGE = 30; // same or less than firmware var: gettingLowCell to enable capacity recalc
-	
+//	public static final int LOWBATTPERCENTAGE = 90; // same or less than firmware var: gettingLowCell to enable capacity recalc
+
 	protected Application application = null;
 	protected State state = State.getReference();
 	protected static SerialPort serialPort = null;	
@@ -53,6 +56,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	protected String portname = settings.readSetting(ManualSettings.powerport);
 //	protected String version = null;
 	private double firmwareversion = 0;
+	public String boardid;
 
 	// errors
 	public static Map<Integer, String> pwrerr = new HashMap<Integer, String>();
@@ -172,7 +176,7 @@ public class ArduinoPower implements SerialPortEventListener  {
         			String device = new String();
         			for (int n=0; n<buffer.length; n++) {
         				if((int)buffer[n] == 13 || (int)buffer[n] == 10) { break; }
-        				if(Character.isLetter((char) buffer[n]))
+        				if(Character.isLetterOrDigit((char) buffer[n]))
         					device += (char) buffer[n];
         			}
         			
@@ -181,7 +185,7 @@ public class ArduinoPower implements SerialPortEventListener  {
     				if (device.trim().startsWith("id")) device = device.substring(2, device.length());
     				Util.debug(device+" "+portNames[i], this);
     				
-    				if (device.equals(FIRMWARE_ID)) {
+    				if (device.equals(FIRMWARE_IDV1) || device.equals(FIRMWARE_IDV2)) {
 
     					Util.log("power board connected to  "+portNames[i], this);
     					PowerLogger.append("power board connected to  "+portNames[i], this);
@@ -190,6 +194,7 @@ public class ArduinoPower implements SerialPortEventListener  {
     					isconnected = true;
     					state.set(State.values.powerport, portNames[i]);
     		            serialPort.addEventListener(this, SerialPort.MASK_RXCHAR);//Add SerialPortEventListener
+						boardid = device;
     					break; // job done, don't read any more ports
     				}
     				serialPort.closePort();
@@ -313,34 +318,39 @@ public class ArduinoPower implements SerialPortEventListener  {
 	private void checkFirmWareVersion() {
 		if (!isconnected) return;
 
+		double versionrequired;
+		if (boardid.equals(FIRMWARE_IDV1)) versionrequired = FIRMWARE_VERSION_REQUIREDV1;
+		else if (boardid.equals(FIRMWARE_IDV2)) versionrequired = FIRMWARE_VERSION_REQUIREDV2;
+		else return;
+
 		firmwareversion = 0;
 		sendCommand(GET_VERSION);
 		long start = System.currentTimeMillis();
 		while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000) { Util.delay(100);  }
 		if (firmwareversion == 0) {
-			String msg = "failed to determine current "+FIRMWARE_ID+" firmware version";
+			String msg = "failed to determine current "+boardid+" firmware version";
 			Util.log("error, "+msg, this);
 			PowerLogger.append(msg, this);
 			state.set(State.values.guinotify, msg);
 			return;
 		}
-		if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
+		if (firmwareversion != versionrequired) {
 
 			if (state.get(State.values.osarch).equals(Application.ARM)) {// TODO: add ARM avrdude to package!
 				String msg = "current power firmware: "+firmwareversion+
-						" out of date! Update to: "+FIRMWARE_VERSION_REQUIRED;
+						" out of date! Update to: "+versionrequired;
 //				state.set(State.values.guinotify, msg);
 				Util.log(msg, this);
 				PowerLogger.append(msg, this);
 				return;
 			}
 
-			Util.log("Required "+FIRMWARE_ID+" firmware version is "+FIRMWARE_VERSION_REQUIRED+", attempting update...", this);
+			Util.log("Required "+boardid+" firmware version is "+versionrequired+", attempting update...", this);
 			String port = state.get(State.values.powerport); // disconnect() nukes this state value
 			disconnect();
 
-			// TODO: do update here, blocking
-			Updater.updateFirmware(FIRMWARE_ID, FIRMWARE_VERSION_REQUIRED, port);
+			// note: blocking
+			Updater.updateFirmware(boardid, versionrequired, port);
 
 			connect();
 
@@ -349,8 +359,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 			sendCommand(GET_VERSION);
 			start = System.currentTimeMillis();
 			while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000)  { Util.delay(100); }
-			if (firmwareversion != FIRMWARE_VERSION_REQUIRED) {
-				String msg = "unable to update " + FIRMWARE_ID + " firmware to version "+FIRMWARE_VERSION_REQUIRED;
+			if (firmwareversion != versionrequired) {
+				String msg = "unable to update " + boardid + " firmware to version "+versionrequired;
 				Util.log("error, "+msg, this);
 				state.set(State.values.guinotify, msg);
 			}
@@ -400,7 +410,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		String s[] = response.split(" ");
 
 		if(s[0].equals("version")) {
-			Util.log(FIRMWARE_ID + " firmware version: " + s[1], this);
+			Util.log("power firmware version: " + s[1], this);
 			firmwareversion = Double.valueOf(s[1]);
 			return;
 		} 
@@ -720,11 +730,22 @@ public class ArduinoPower implements SerialPortEventListener  {
 		}
 	}
 
-	public void shutdown() {
+	public void shutdown(String seconds) {
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
-			application.message("can't power down when docked", null, null);
+			application.message("unable to power down when docked", null, null);
+			return;
 		}
-		else sendCommand(INITIATESHUTDOWN);
+
+		if (boardid.equals(FIRMWARE_IDV1) || seconds == null) {
+			sendCommand(INITIATESHUTDOWN);
+			return;
+		}
+
+		// boardid.equals(FIRMWARE_IDV2), seconds != null
+		if (seconds.matches("\\d+"))
+			powercommand(new String(new byte[] {TEMPORARY_SHUTDOWN})+" "+seconds);
+		else
+			sendCommand(INITIATESHUTDOWN);
 	}
 	
 	public void writeStatusToEeprom() {
@@ -739,7 +760,8 @@ public class ArduinoPower implements SerialPortEventListener  {
 		else if (s.length == 1) sendCommand(str.getBytes());
 		else {
 			int val = Integer.parseInt(s[1]);
-			if (val <= 255) sendCommand(new byte[]{s[0].getBytes()[0], (byte) val});
+			if (val <= 255 && s[0].getBytes()[0] != TEMPORARY_SHUTDOWN)
+				sendCommand(new byte[]{s[0].getBytes()[0], (byte) val});
 			else {
 				byte val1 = (byte) (val & 0xFF);
 				byte val2 = (byte) ((val >>8) & 0xFF);

@@ -206,7 +206,7 @@ public class Util {
 	 * @param str is the command to run, like: "restart"
 	 */
 	public static void systemCall(final String str){
-		debug("systemCall: " + str);
+		debug("systemCall: " + str, "Util.systemCall");
 		if(str == null) return;
 		try { Runtime.getRuntime().exec(str);
 		} catch (Exception e) { printError(e); }
@@ -243,7 +243,7 @@ public class Util {
 			return response.toString();
 
 		} catch (Exception e) {
-			Util.debug("Util.readUrlToString() parse error");
+			Util.debug("Util.readUrlToString() parse error", "Util.readUrlToString()");
 			return null;
 		}
 	}
@@ -261,21 +261,13 @@ public class Util {
 	}
 
 	public static void debug(String str, Object c) {
+		if(!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return;
 		if(str == null) return;
 		String filter = "static";
 		if(c!=null) filter = c.getClass().getName();
-		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)) {
+
 			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
 //			history.add(System.currentTimeMillis() + ", " +str);
-		}
-	}
-
-	public static void debug(String str) {
-		if(str == null) return;
-		if(Settings.getReference().getBoolean(ManualSettings.debugenabled)){
-			System.out.println("DEBUG: " + getTime() + ", " +str);
-//    		history.add(System.currentTimeMillis() + ", " +str);
-		}
 	}
 
 	public static String memory() {
@@ -411,7 +403,7 @@ public class Util {
 					State.getReference().set(values.linuxboot, date.getTime());
 
 				} catch (Exception e) {
-					Util.debug("getLinuxUptime(): "+ e.getLocalizedMessage());
+					e.printStackTrace();
 				}
 			}
 		}).start();
@@ -736,11 +728,11 @@ public class Util {
 		for (int i = 0; i < files.length; i++){
 			if(files[i].isFile()){
 				if(!linkedFrame(files[i].getName()) && nav){
-					debug(files[i].getName() + " was deleted " + i);
+					debug(files[i].getName() + " was deleted " + i, "Util.truncStaleAudioVideo");
 					files[i].delete();
 				}
 				if(files[i].length() == 0) {
-					debug(files[i].getName() + " was deleted, zero bytes" + i);
+					debug(files[i].getName() + " was deleted, zero bytes" + i, "Util.truncStaleAudioVideo");
 					files[i].delete();
 				}
 			}
@@ -754,11 +746,11 @@ public class Util {
 		for(int i = 0; i < files.length; i++){
 			if(files[i].isFile()){
 				if(!linkedFrame(files[i].getName()) && nav){
-					debug(files[i].getName() + " was deleted");
+					debug(files[i].getName() + " was deleted", "Util.truncStaleFrames");
 					files[i].delete();
 				}
 				if(files[i].length() == 0) {
-					debug(files[i].getName() + " was deleted, zero bytes");
+					debug(files[i].getName() + " was deleted, zero bytes", "Util.truncStaleFrames");
 					files[i].delete();
 				}
 			}
@@ -779,11 +771,12 @@ public class Util {
 
 	public static void truncStaleArchive(){
 		File[] files  = new File("./log/archive").listFiles();
-		debug("truncStaleArchive(): " + files.length + " files in folder");
+		debug("truncStaleArchive(): " + files.length + " files in folder", "Util.truncStaleArchive");
+
 		sortFiles(files);
 		for (int i = 5; i < files.length; i++){
 			if (files[i].isFile()){
-				debug("truncStaleArchive(): " + files[i].getName() + "  was deleted");
+				debug("truncStaleArchive(): " + files[i].getName() + "  was deleted", "Util.truncStaleArchive");
 				files[i].delete();
 			}
 		}
@@ -791,20 +784,17 @@ public class Util {
 
 	public static void truncStaleLog(){
 		File[] files  = new File(Settings.logfolder).listFiles();
-		debug("truncStaleArchive(): " + files.length + " files in folder");
 		sortFiles(files);
 		for (int i = 5; i < files.length; i++){
 			if(files[i].isFile()){
-				debug("truncStaleLog(): " + files[i].getName() + "  was deleted");
+
 				files[i].delete();
 			}
 		}
 		files  = new File(Settings.logfolder+"/archive").listFiles();
-		debug("truncStaleArchive(): " + files.length + " files in archive folder");
 		sortFiles(files);
 		for (int i = 5; i < files.length; i++){
 			if(files[i].isFile()){
-				debug("truncStaleLog(): " + files[i].getName() + "  was deleted");
 				files[i].delete();
 			}
 		}

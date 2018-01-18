@@ -86,7 +86,7 @@ public class Calibrate implements Observer{
 //            app.driverCallServer(PlayerCommands.messageclients, "found target off-center: "+firstangledegrees); // TODO: debug
 
             // start gyro recording
-            state.set(values.odometrybroadcast, 250);
+            state.set(values.odometrybroadcast, ArduinoPrime.ODOMBROADCASTDEFAULT);
             app.driverCallServer(PlayerCommands.odometrystart, null);
             cumulativeangle = 0; // negative because cam reversed
 

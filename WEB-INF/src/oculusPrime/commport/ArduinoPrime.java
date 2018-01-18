@@ -101,6 +101,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
     private double expectedangle;
     private long rotatestoptime = 0;
     private volatile double finalangle;
+    public static final double ROTATETOLERANCE = 3.0;
+    public static final int ODOMBROADCASTDEFAULT = 250;
 
 	// take from settings 
 	private static final double clicknudgemomentummult = 0.25;	
@@ -432,7 +434,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
         			String device = new String();
         			for (int n=0; n<buffer.length; n++) {
         				if((int)buffer[n] == 13 || (int)buffer[n] == 10) { break; }
-        				if(Character.isLetter((char) buffer[n]))
+        				if(Character.isLetterOrDigit((char) buffer[n]))
         					device += (char) buffer[n];
         			}
         			
@@ -717,8 +719,6 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		// if already moving forward, go full speed and exit
 		if (state.get(State.values.direction).equals(direction.forward.toString()) ) {
 			int s = speed2;
-			if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
-				s = MAXDOCKEDPWM;
 			int[] comp = applyComp(s);
 			int L, R;
 			L = comp[0];
@@ -736,8 +736,12 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		// always start slow, un-comped
 		int s = speed1;
-		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
-			s = MAXDOCKEDPWM;
+
+		// limit pwm on dock voltage for powerv1 boards
+        if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM
+                && application.powerport.boardid.equals(ArduinoPower.FIRMWARE_IDV1))
+            s = MAXDOCKEDPWM;
+
 		if (delay == 0) {
 			sendCommand(new byte[]{FORWARD, (byte) s, (byte) s});
 		}
@@ -761,8 +765,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay(ACCEL_DELAY);
 
 					int s = spd;
-					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
-						s = MAXDOCKEDPWM;
+
+                    // limit pwm on dock voltage for powerv1 boards
+                    if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM
+                            && application.powerport.boardid.equals(ArduinoPower.FIRMWARE_IDV1))
+                        s = MAXDOCKEDPWM;
 
 					if (currentMoveID != moveID)  return;
 
@@ -793,8 +800,11 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					Util.delay(COMP_DELAY);
 
 					int s = spd;
-					if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM)
-						s = MAXDOCKEDPWM;
+
+                    // limit pwm on dock voltage for powerv1 boards
+                    if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED) && s>MAXDOCKEDPWM
+                            && application.powerport.boardid.equals(ArduinoPower.FIRMWARE_IDV1))
+                        s = MAXDOCKEDPWM;
 
 					int[] comp = applyComp(s); // actual speed, comped
 					int L,R;
@@ -938,10 +948,16 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	public void turnRight(int delay) {
+		long moveID = System.nanoTime();
+		turnRight(delay, moveID);
+	}
+
+	public void turnRight(final int delay, final long moveID) {
+
+//		Util.debug("turnRight", this);
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) return;
 
-		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
@@ -949,15 +965,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			if ( !(state.get(State.values.direction).equals(direction.right.toString()) ||
 					state.get(State.values.direction).equals(direction.stop.toString()) ) ) {
 
-				stopGoing();
-				currentMoveID = moveID;
+//				Util.debug("turnRight, stop required 1st", this);
+
+				stopGoing(moveID);
 
 				new Thread(new Runnable() {public void run() {
 
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
 							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
-					if (currentMoveID == moveID)  turnRight();
+					if (currentMoveID == moveID)  turnRight(delay, moveID);
+					else Util.debug("turnRight() !moveID",this);
 
 				} }).start();
 
@@ -1064,15 +1082,21 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		turnLeft(0);
 	}
 
+	public void turnLeft(int delay) {
+		long moveID = System.nanoTime();
+		turnLeft(delay, moveID);
+	}
+
 	/**
 	 * Turn Left
 	 * @param delay milliseconds, then stop (timed directly by firmware). If 0, continuous movement
 	 */
-	public void turnLeft(int delay) {
+	public void turnLeft(final int delay, final long moveID) {
+
+//		Util.debug("turnLeft", this);
 
 		if (state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) return;
 
-		final long moveID = System.nanoTime();
 		currentMoveID = moveID;
 
 		if (state.getBoolean(State.values.stopbetweenmoves)) {
@@ -1080,15 +1104,17 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			if ( !(state.get(State.values.direction).equals(direction.left.toString()) ||
 					state.get(State.values.direction).equals(direction.stop.toString()) ) ) {
 
-				stopGoing();
-				currentMoveID = moveID;
+//				Util.debug("turnLeft, stop required 1st", this);
+
+				stopGoing(moveID);
 
 				new Thread(new Runnable() {public void run() {
 
 					long stopwaiting = System.currentTimeMillis()+1000;
 					while(!state.get(State.values.direction).equals(direction.stop.toString()) &&
 							System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait
-					if (currentMoveID == moveID)  turnLeft();
+					if (currentMoveID == moveID)  turnLeft(delay, moveID);
+					else Util.debug("turnLeft() !moveID",this);
 
 				} }).start();
 
@@ -1197,6 +1223,8 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	private void trackturnrate(final long moveID) {
 		if (!state.exists(State.values.odometrybroadcast)) return;
 
+//		Util.debug("tracking turn rate, "+rotatestoptime, this);
+
 		new Thread(new Runnable() {public void run() {
 			final long turnstart = System.currentTimeMillis();
 			long start = turnstart;
@@ -1221,18 +1249,31 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 					totalangle += Math.abs(lastodomangle);
 
+
+
 					now = System.currentTimeMillis();
 					if (now - turnstart < ACCEL) {
 						start = now;
 						continue; // throw away 1st during accel, assuming broadcast interval is around 250ms
 					}
-					
-					double rate = Math.abs(lastodomangle)/(now - start);
 
 					int currentpwm = state.getInteger(State.values.odomturnpwm);
 					int newpwm = currentpwm;
 
-					if (!timecompd && rotatestoptime > turnstart) {
+                    if (rotatestoptime > turnstart) {
+                        if (Math.abs(totalangle - expectedangle) <= ROTATETOLERANCE*2 && expectedangle > 15) {
+                            Util.debug("rotate cancelled" ,this);
+                            rotatestoptime = now;
+                            newpwm -= PWMINCR;
+                            if (newpwm < speedslow) newpwm = speedslow;
+                            state.set(State.values.odomturnpwm, newpwm);
+                            break;
+                        }
+                    }
+
+                    double rate = Math.abs(lastodomangle)/(now - start);
+
+                    if (!timecompd && rotatestoptime > turnstart) {
 						long projectedstopdiff = (turnstart + ACCEL_DELAY + (long) ((expectedangle-2) / rate)) - rotatestoptime;
 						if (projectedstopdiff > rotatestoptime-turnstart) // sanity check for positive comp only
 							projectedstopdiff = rotatestoptime-turnstart;
@@ -1242,7 +1283,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 							else newpwm -= PWMINCR;
 						}
 						timecompd = true;
-						Util.debug("projectedstopdiff: "+projectedstopdiff);
+//						Util.debug("projectedstopdiff: "+projectedstopdiff, this);
 					}
 
 					if (rate > targetrate + tolerance) {
@@ -1511,11 +1552,10 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					int currentpos = state.getInteger(State.values.cameratilt);
 					if ( (up && currentpos <= goalposition) || (!up && currentpos >= goalposition) ) { // position reached, stop
 						camRelease(camMoveID);
+						// check if inverted
+						checkIfInverted();
 						break;
 					}
-
-					// check if inverted
-					checkIfInverted();
 
 					// define new position
 					int newposition;
@@ -1629,36 +1669,52 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}).start();
 	}
 
-	public void rotate(final direction dir, final int degrees) {
+	public void rotate(direction dir, double degrees) {
+		long moveID = System.nanoTime();
+		rotate(dir, degrees, moveID);
+	}
+
+	public void rotate(final direction dir, final double degrees, final long moveID) {
 		new Thread(new Runnable() {
 			@SuppressWarnings("incomplete-switch")
 			public void run() {
 
 				int tempspeed = state.getInteger(State.values.motorspeed);
 				state.set(State.values.motorspeed, speedfast);
-				long moveid = 0;
+				long delay = ACCEL_DELAY;
 
 				switch (dir) {
-					case right: turnRight(); break;
-					case left: turnLeft();
+					case right:
+						if (state.get(State.values.direction).equals(direction.right.toString())) delay = 0;
+						turnRight(0, moveID);
+						break;
+					case left:
+						if (state.get(State.values.direction).equals(direction.left.toString())) delay = 0;
+						turnLeft(0, moveID);
 				}
-
-				moveid = currentMoveID;
 
 				if (!state.exists(State.values.odomturndpms.toString())) { // normal
 					double n = fullrotationdelay * degrees / 360;
 					Util.delay((int) voltsComp(n));
-				} 
+				}
+				
 				else { // using gyro feedback
-					rotatestoptime = System.currentTimeMillis() + ACCEL_DELAY +
-							(long) ((degrees-2) / state.getDouble(State.values.odomturndpms));
+					long timeout = System.currentTimeMillis()+1000;
+					while (!state.get(State.values.direction).equals(dir.name()) && System.currentTimeMillis() < timeout)
+						Util.delay(1);
+					double delaycomp = 3;
+					if (degrees <=3) { delay = ACCEL_DELAY-(long)(ACCEL_DELAY/degrees); delaycomp = 0; }
+					long now = System.currentTimeMillis();
+					rotatestoptime = now + delay +
+							(long) ((degrees-delaycomp) / state.getDouble(State.values.odomturndpms));
 					expectedangle = degrees;
+//					Util.debug("rotatestoptime: "+rotatestoptime+", rotatedelay: "+(rotatestoptime-now), this);
 					while (System.currentTimeMillis() < rotatestoptime) Util.delay(1);
 				}
 
 				state.set(State.values.motorspeed, tempspeed);
 
-				if (moveid != currentMoveID) return;
+				if (moveID != currentMoveID) { Util.debug("rotate() !moveid", this); return; }
 
 				stopGoing();
 				application.message(null, "motion", "stopped");
@@ -1667,35 +1723,61 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	}
 
 	// progressive rotate, using odom feedback
-	public void rotate(final int degrees) {
+	public void rotate(final double degrees) {
+
+		Util.debug ("rotate double: "+degrees, this);
+
+		if (degrees == 0) return;
+
+		direction dir = direction.left;
+		if (degrees < 0) dir = direction.right;
+
+		if (!state.exists(State.values.odomturndpms.toString())) { // odometry not running, use normal
+			rotate(dir, (int) Math.abs(degrees));
+			return;
+		}
+
+		// TODO: required?
+		if (state.getDouble(State.values.odomrotating) > 0) {
+			Util.debug("error, odomrotating already", this);
+			return;
+		}
+
+		// important to set in main thread
+		long moveID = System.nanoTime();
+		state.set(State.values.odomrotating, moveID);
+
+		final direction directn = dir;
+
+
 		new Thread(new Runnable() {
 			public void run() {
 
-				direction dir = direction.left;
-				if (degrees < 0) dir = direction.right;
-
+				final int MAXATTEMPTS = 3;
 				double angle = Math.abs(degrees);
-
-				if (!state.exists(State.values.odomturndpms.toString())) { // odometry not running, use normal
-					rotate(dir, (int) angle);
-					return;
-				}
-
-				final double TOLERANCE  = 2.0;
-				final int MAXATTEMPTS = 5;
 				int attempts = 0;
-				while (angle > TOLERANCE && attempts < MAXATTEMPTS) {
+				direction dir = directn;
+				if (!state.exists(State.values.rotatetolerance))
+					state.set(State.values.rotatetolerance, ROTATETOLERANCE);
 
-					finalangle = 0;
+				while ((angle > state.getDouble(State.values.rotatetolerance) || attempts == 0)
+						&& attempts < MAXATTEMPTS && state.getDouble(State.values.odomrotating)==moveID) {
 
-					rotate (dir, (int) Math.round(angle));
+					finalangle = moveID;
+
+					rotate (dir, angle);
 
 					// wait for final angle
-					long timeout = System.currentTimeMillis()+2000;
-					while (finalangle == 0 && System.currentTimeMillis() < timeout) Util.delay(1);
+					long timeout = System.currentTimeMillis()+30000;
+					while (finalangle == moveID && System.currentTimeMillis() < timeout) Util.delay(1);
+
+					if (finalangle == moveID) {
+						Util.debug("error, finalangle: "+moveID, this);
+						break;
+					}
 
 					if (finalangle > angle) { // overshoot, reverse direction
-						if (dir == direction.left) dir = direction.right;
+						if (directn == direction.left) dir = direction.right;
 						else dir = direction.left;
 					}
 
@@ -1703,8 +1785,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 					attempts ++;
 
-					Util.debug("angle: "+angle+", attempts: "+attempts);
+					Util.delay(TURNING_STOP_DELAY);
+
 				}
+
+				if (state.getDouble(State.values.odomrotating) == moveID)
+				    state.set(State.values.odomrotating, false);
+				else Util.debug("rotate deg: odomrotating !moveiD", this);
 
 			}
 		}).start();
@@ -1999,9 +2086,13 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		}).start();
 	
 	}
-	
+
 	public void stopGoing() {
-		final long moveID = System.nanoTime();
+		long moveID = System.nanoTime();
+		stopGoing(moveID);
+	}
+	
+	public void stopGoing(final long moveID) {
 		currentMoveID = moveID;
 
 		state.set(State.values.moving, false);

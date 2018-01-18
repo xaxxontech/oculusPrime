@@ -317,6 +317,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public void initialize() {
 		settings.writeFile();
 		salt = settings.readSetting("salt");
+		Util.getLinuxUptime();
 
 		if (settings.readSetting("user0") == null) {
 			driverCallServer(PlayerCommands.new_user_add, "oculus robot");
@@ -556,7 +557,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 	
 	@SuppressWarnings("incomplete-switch")
-	public void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
+	private void playerCallServer(PlayerCommands fn, String str, boolean passengerOverride) {
 
 		if (PlayerCommands.requiresAdmin(fn) && !passengerOverride) {
 			if ( ! loginRecords.isAdmin()){ 
@@ -663,7 +664,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case redock: watchdog.redock(str); break;
 
 		case restart: restart(); break;
-		case powershutdown: powerport.shutdown(); break;
+		case powershutdown: powerport.shutdown(str); break;
 		case reboot: reboot(); break;
 		case systemshutdown: powerdown(); break;
 
@@ -744,7 +745,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			moveMacroCancel();
-			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Integer.parseInt(str));
+			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Double.parseDouble(str));
 			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"&deg;", "motion", "moving");
 			break;
 
@@ -758,7 +759,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			moveMacroCancel();
-			comport.rotate(Integer.parseInt(str));
+			comport.rotate(Double.parseDouble(str));
 			messageplayer(null, "motion", "moving");
 			break;
 
@@ -1733,6 +1734,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (state.getBoolean(State.values.autodocking))
 				docker.autoDockCancel();
 			state.set(values.calibratingrotation, false);
+			state.set(values.odomrotating, false);
 
 			comport.stopGoing();
 			moveMacroCancel();

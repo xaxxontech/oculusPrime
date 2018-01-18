@@ -29,9 +29,11 @@ public enum PlayerCommands {
 
 
 	// power board
-    battstats, powerreset, powershutdown, powercommand,
+    battstats, powerreset, powercommand,
 	// not typically used by scripts, undocumented:
     erroracknowledged,
+	// undocumented
+	powershutdown, // added timed interval option
     
     // video/audio
     streamsettingscustom, playerbroadcast, videosoundmode, publish,

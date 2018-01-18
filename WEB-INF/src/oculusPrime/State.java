@@ -50,7 +50,7 @@ public class State {
 		distanceangle, direction, odometry, distanceanglettl, stopbetweenmoves, odometrybroadcast,
 		odomturndpms, odomturnpwm, odomlinearmpms, odomlinearpwm,
 		// not typically used by scripts, undocumented:
-		calibratingrotation,
+		calibratingrotation, odomrotating, rotatetolerance,
 
 		// navigation
 		rosmapinfo, rosamcl, rosglobalpath, rosscan,
@@ -88,7 +88,6 @@ public class State {
 		props.put(values.osarch.name(), System.getProperty("os.arch"));
 		props.put(values.javastartup.name(), String.valueOf(System.currentTimeMillis()));	
 		props.put(values.telnetusers.name(), "0");
-		Util.getLinuxUptime();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -326,7 +325,7 @@ public class State {
 		try {
 			value = Double.valueOf(get(key));
 		} catch (NumberFormatException e) {
-			Util.log("getDouble(): " + e.getMessage(), this);
+			return value;
 		}
 		
 		return value;
@@ -336,34 +335,5 @@ public class State {
 		return getDouble(key.name());
 	}
 
-	
-	/*
-	public String dumpFile(){	
-		return dumpFile(" no message ");
-	}
-	
-	
-	public String dumpFile(final String msg) {
-		if (!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return null;
 
-		File dump = new File(Settings.logfolder + Util.sep + "state_" +  System.currentTimeMillis() + ".log");
-		Util.log("State.dumpFile() file created: "+dump.getAbsolutePath(), this);
-		
-		try {
-			FileWriter fw = new FileWriter(dump);	
-			fw.append("# "+ new Date().toString() + " " + msg +"\r\n");
-			final Set<String> keys = props.keySet();
-			for(final Iterator<String> i = keys.iterator(); i.hasNext(); ){
-				final String key = i.next();
-				fw.append(key + " " + props.get(key) + "\r\n"); 
-			}
-			fw.append("# state history \r\n");
-			Vector<String> snap = Util.history;
-			for(int i = 0; i < snap.size() ; i++) fw.append(snap.get(i)+"\r\n");
-			fw.close();
-
-		} catch (Exception e) { Util.printError(e); }
-	
-		return dump.getAbsolutePath();
-	}*/
 }

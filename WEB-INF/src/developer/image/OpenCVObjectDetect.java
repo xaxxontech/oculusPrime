@@ -221,7 +221,6 @@ public class OpenCVObjectDetect {
 
                         if (trigger >= 2) {
 
-                            Util.debug("human detected");
                             Core.rectangle(detect, new Point(rects[i].x, rects[i].y),
                                     new Point(rects[i].x + rects[i].width, rects[i].y + rects[i].height),
                                     new Scalar(255, 0, 0, 255), 2);
@@ -233,7 +232,6 @@ public class OpenCVObjectDetect {
 
                 imageupdated = true;
 
-                Util.debug("human detect frame: "+f);
                 Util.delay(50);
 
             }

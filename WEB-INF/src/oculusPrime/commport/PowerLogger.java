@@ -15,7 +15,7 @@ public class PowerLogger {
 		try {
 			logger = new RandomAccessFile(powerlog, "rw");
 		} catch (Exception e) {
-			Util.debug("PowerLogger(): " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -29,7 +29,7 @@ public class PowerLogger {
 			logger.seek(logger.length());
 			logger.writeBytes(new Date().toString() + ", " + data + "\r\n");
 		} catch (Exception e) {
-			Util.debug("PowerLogger.append(): " + e.getMessage() + " " + data);
+			e.printStackTrace();
 		}
 	}
 	
@@ -38,7 +38,7 @@ public class PowerLogger {
 			logger.close();
 			logger = null;
 		} catch (Exception e) {
-			Util.debug("PowerLogger.close(): " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 }

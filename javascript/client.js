@@ -536,64 +536,74 @@ function keyBoardPressed(event) {
 		if (keycode == 32 || keycode == 83) { // space bar or S
 			move("stop");
 		}
-		if (keycode == 38 || keycode == 87) { // up arrow or W
+		else if (keycode == 38 || keycode == 87) { // up arrow or W
 			event.preventDefault(); // supress scrolling
 			move("forward");
 		}
-		if (keycode == 40 || keycode == 88) { // down arrow or X
+		else if (keycode == 40 || keycode == 88) { // down arrow or X
 			event.preventDefault(); // supress scrolling
 			move("backward");
 		}
-		if (keycode == 37 || keycode == 81) { // left arrow or Q
+		else if (keycode == 37 || keycode == 81) { // left arrow or Q
 			event.preventDefault(); // supress scrolling
 			move("left");
 		}
-		if (keycode == 39 || keycode == 69) { // right arrow or E
+		else if (keycode == 39 || keycode == 69) { // right arrow or E
 			event.preventDefault(); // supress scrolling
 			move("right");
 		}
-		if (keycode == 65) { // A
+		else if (keycode == 65) { // A
 			nudge("left");
 		}
-		if (keycode == 68) { // D
+		else if (keycode == 68) { // D
 			nudge("right");
 		}
-		if (keycode == 84) { nudge("forward"); } // T
-		if (keycode == 66) { nudge("backward") } // B
-		if (keycode == 49) { speedset('slow'); } // 1
-		if (keycode == 50) { speedset('med'); } // 2
-		if (keycode == 51) { speedset('fast'); } // 3
-		if (keycode == 82) { camera('upabit'); } // R
-		if (keycode == 70) { camera('horiz'); } // F
-		if (keycode == 86) { camera('downabit'); } // V
-		if (keycode == 77) { // M
+		else if (keycode == 84) { nudge("forward"); } // T
+		else if (keycode == 66) { nudge("backward") } // B
+		else if (keycode == 49) { speedset('slow'); } // 1
+		else if (keycode == 50) { speedset('med'); } // 2
+		else if (keycode == 51) { speedset('fast'); } // 3
+		else if (keycode == 82) { camera('upabit'); } // R
+		else if (keycode == 70) { camera('horiz'); } // F
+		else if (keycode == 86) { camera('downabit'); } // V
+		else if (keycode == 77) { // M
 			if (document.getElementById("menu_menu_over").style.display == "none") {
 				mainmenu('mainmenulink'); 
 			} else { javascript: popupmenu('menu', 'close'); }
 		}
-		if (keycode == 73) { // I
+		else if (keycode == 73) { // I
 			if (streammode == "stop") {
 				publish("camera");
 			} else {
 				publish("stop");
 			}
 		}
-		if (keycode == 67) { // C - command window
+		else if (keycode == 67) { // C - command window
 			mainmenu('mainmenulink'); 
 			popupmenu('menu', 'show', null, null, document.getElementById("advanced_menu").innerHTML);
 			oculuscommanddivShow();
 		}
-		if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
+		// if (steeringmode == "forward") { document.getElementById("forward").style.backgroundImage = "none"; }
 		
-		if (keycode == 89 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // Y
+		else if (keycode == 89 && broadcastmicon==false && pushtotalk==true && (broadcasting=="mic" || broadcasting=="camandmic")) { // Y
 			oculusPrimeplayerSWF.unmutePlayerMic();
 			broadcastmicon = true;
 			setstatus("selfstream","mic ON");
 			//message("unmute player mic", "orange");
 		}
-		if (keycode == 80 && streammode != "stop") { // P
+		else if (keycode == 80 && streammode != "stop") { // P
 			autodock('start');
 			autodock('go');
+		}
+		else if (keycode == 76) { 
+			if (spotlightlevel == 0) {
+				callServer("spotlight", "50"); 
+				spolightlevel = 50;
+			}
+			else {
+				callServer("spotlight", "0");
+				spolightlevel = 0;
+			}
 		}
 	}
 }
@@ -686,7 +696,7 @@ function docklinetoggle(str) {
 		str += "&nbsp; <a href='javascript: docklinetoggle(&quot;off&quot;); move(&quot;stop&quot;);'><span "; 
 		str += "class='cancelbox'><b>X</b></span> CANCEL</a>";
 		str += "<table><tr><td style='height: 20px'></td></tr></table>";
-		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
+		str += "<a href='javascript: camera(&quot;reverse&quot;)'>reverse camera</a>";
 		
 	    var link = document.getElementById("docklink");
 	    var xy = findpos(link);
@@ -859,7 +869,7 @@ function lightclick(level) {
 	a.style.backgroundColor = "#aaaaaa";
 	
 	message("sending spotlight brightness: "+ parseInt(level*10)+"%", sentcmdcolor);
-	callServer("spotlightsetbrightness", parseInt(level*10));
+	callServer("spotlight", parseInt(level*10));
 	lagtimer = new Date().getTime();
 }
 
@@ -1121,7 +1131,7 @@ function autodock(str) {
 	    var str = "Auto-Dock Calibration: <table><tr><td style='height: 7px'></td></tr></table>";
 	    str+="Align robot with charging dock, reverse camera, then click within white area of target"
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";
-		str += "<a href='javascript: camera(&quot;rearstop&quot;)'>reverse camera</a>";
+		str += "<a href='javascript: camera(&quot;reverse&quot;)'>reverse camera</a>";
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";
     	str+="<a href='javascript: autodock(&quot;cancel&quot;);'>"
 	    str+= "<span class='cancelbox'><b>X</b></span> CANCEL</a><br>"

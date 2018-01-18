@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 
+import oculusPrime.commport.PowerLogger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -226,7 +227,6 @@ public class Navigation implements Observer {
 			return;
 		}
 		else if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())) {
-//			app.driverCallServer(PlayerCommands.messageclients, "navigation not running");
 			return;
 		}
 
@@ -277,11 +277,13 @@ public class Navigation implements Observer {
 
 			SystemWatchdog.waitForCpu();
 			app.comport.checkisConnectedBlocking(); // just in case
-			app.driverCallServer(PlayerCommands.odometrystop, null); // just in case, odo messes up docking if ros not killed
 
-			// camera, lights
+			//start gyro again
+			state.set(values.odometrybroadcast, ArduinoPrime.ODOMBROADCASTDEFAULT);
+			state.set(values.rotatetolerance, ArduinoPrime.ROTATETOLERANCE);
+			app.driverCallServer(PlayerCommands.odometrystart, null);
 
-			// highres
+			// highres camera on
 			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			// only switch mode if camera not running, to avoid interruption of feed
 			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString()) ||
@@ -289,23 +291,28 @@ public class Navigation implements Observer {
 				app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			}
+
 			app.driverCallServer(PlayerCommands.spotlight, "0");
+
+			// reverse cam
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
+			state.set(State.values.controlsinverted, true); // preempt so doesn't reverse in the middle of doing 180
+															// must be set after cameracommand to work
+
 			// do 180 deg turn
-			app.driverCallServer(PlayerCommands.left, "180");
-			Util.delay(app.comport.fullrotationdelay / 2);  
+			app.driverCallServer(PlayerCommands.rotate, "180"); // odom controlled
+			long timeout = System.currentTimeMillis() + 5000;
+			while(!state.get(values.odomrotating).equals(Settings.FALSE) && System.currentTimeMillis() < timeout)
+				Util.delay(1);
+
+			Util.debug("navdock: onwards", this);
+			app.driverCallServer(PlayerCommands.odometrystop, null);
+
 			app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
-			Util.delay(4000);
+
+			Util.delay(4000); // wait for video to stabilize
 
 			if (!navdockactive) return;
-
-			// TODO: debugging potential intermittent camera problem .. conincides with flash error 1009? checked, no 1009
-//			state.delete(State.values.lightlevel);
-//			app.driverCallServer(PlayerCommands.getlightlevel, null);
-//			long timeout = System.currentTimeMillis() + 5000;
-//			while (!state.exists(State.values.lightlevel) && System.currentTimeMillis() < timeout)  Util.delay(10);
-//			if (state.exists(State.values.lightlevel)) Util.log("lightlevel: "+state.get(State.values.lightlevel), this);
-//			else Util.log("error, lightlevel null", this);
 
 			SystemWatchdog.waitForCpu(30, 20000); // stricter 30% check, lots of missed dock grabs here
 
@@ -440,44 +447,23 @@ public class Navigation implements Observer {
 	}
 	
 	/** only used before starting a route, ignored if un-docked */
-	public static boolean batteryTooLow(){	
-		if(state.equals(values.dockstatus, AutoDock.UNDOCKED)) return false;
-		final int toolow = settings.getInteger(ManualSettings.batterytoolow);
-		if( toolow == 0) return false; // disabled
-		long start = System.currentTimeMillis();
-		String current;
-		int value = 0;
-		while(true){	
-			current = state.get(values.batterylife); 
-			if(current!=null) if(current.contains("%")) break;
-			Util.delay(100);
-			if(System.currentTimeMillis()-start > 10000){ 
-				Util.debug("batteryTooLow(): timeout, assume too low");
-				return true;
+	public static boolean batteryTooLow() {
+
+		if (state.get(values.batterylife).matches(".*\\d+.*")) {  // make sure batterylife != 'TIMEOUT', throws error
+			if ( Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", ""))
+							< settings.getInteger(ManualSettings.lowbattery) &&
+					state.get(State.values.dockstatus).equals(AutoDock.DOCKED))
+			{
+                app.driverCallServer(PlayerCommands.messageclients, "skipping route, battery too low");
+                return true;
 			}
 		}
-	
-		try {
-			value = Integer.parseInt(current.split("%")[0]);
-		} catch (NumberFormatException e) {
-			Util.log("Navigation.batteryTooLow(): can't read battery info from state", null);
-			return true;
-		}
 
-		// app.driverCallServer(PlayerCommands.messageclients, "battery: " + value);
-
-		if(value < toolow){
-			app.driverCallServer(PlayerCommands.messageclients, "skipping route, battery too low");
-			return true; 
-		}
-		
-		return false;
-	}
+        return false;
+    }
 	
 	public void runRoute(final String name) {
-		
-	
-		
+
 		// build error checking into this (ignore duplicate waypoints, etc)
 		// assume goto dock at the end, whether or not dock is a waypoint
 
@@ -908,6 +894,10 @@ public class Navigation implements Observer {
 		boolean camera = false;
 		boolean mic = false;
 		String notdetectedaction = "";
+
+		boolean camAlreadyOn = false;
+		if (!state.get(values.stream).equals(Application.streamstate.stop.toString()))
+			camAlreadyOn = true;
 		
     	for (int i=0; i< actions.getLength(); i++) {
     		String action = ((Element) actions.item(i)).getTextContent();
@@ -958,33 +948,36 @@ public class Navigation implements Observer {
 
 		// setup camera mode and position
 		if (camera) {
-			if (human)
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
-			else if (motion)
-    			app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-			else if (photo)
-				app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
-			else // record
-				app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			if (!camAlreadyOn) {
+				if (human)
+					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+				else if (motion)
+					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+				else if (photo)
+					app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
+				else // record
+					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
+			}
 
 			if (photo)
 				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
 			else
 				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
-
 		}
 
 		// turn on cam and or mic, allow delay for normalize
-		if (camera && mic) {
-			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
-			Util.delay(5000);
-			if (!settings.getBoolean(ManualSettings.useflash)) Util.delay(5000); // takes a while for 2 streams
-		} else if (camera && !mic) {
-			app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
-			Util.delay(5000);
-		} else if (!camera && mic) {
-			app.driverCallServer(PlayerCommands.publish, Application.streamstate.mic.toString());
-			Util.delay(5000);
+		if (!camAlreadyOn) {
+			if (camera && mic) {
+				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
+				Util.delay(5000);
+				if (!settings.getBoolean(ManualSettings.useflash)) Util.delay(5000); // takes a while for 2 streams
+			} else if (camera && !mic) {
+				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
+				Util.delay(5000);
+			} else if (!camera && mic) {
+				app.driverCallServer(PlayerCommands.publish, Application.streamstate.mic.toString());
+				Util.delay(5000);
+			}
 		}
 
 		String recordlink = null;
@@ -1218,8 +1211,8 @@ public class Navigation implements Observer {
 			app.video.record(Settings.FALSE); // stop recording
 		}
 
-
-		app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+		if (!camAlreadyOn)
+			app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 		if (camera) {
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());

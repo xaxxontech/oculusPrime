@@ -6,11 +6,12 @@ public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm, checkaddresses,
-	soundthreshold, motionthreshold,
+	soundthreshold, motionthreshold, useflash, redockifweakconnection,
+	arcmovecomp, usearcmoves, arcpwmthreshold,
+	soundthresholdalt, undockdistance,
 
 	// undocumented
-	redockifweakconnection,
-	useflash, arcmovecomp, usearcmoves, arcpwmthreshold, soundthresholdalt, undockdistance, batterytoolow,
+	lowbattery, timedshutdown,
 	
 	;
 	
@@ -36,7 +37,8 @@ public enum ManualSettings {
 		config.setProperty(arcpwmthreshold.name(), "150");
 		config.setProperty(soundthresholdalt.name(), "-8");
 		config.setProperty(undockdistance.name(), "0.75");
-		config.setProperty(batterytoolow.name(), "0");
+		config.setProperty(lowbattery.name(), "30");
+        config.setProperty(timedshutdown.name(), Settings.TRUE);
 		return config;
 	}
 	

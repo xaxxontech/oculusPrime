@@ -205,11 +205,7 @@ public class DashboardServlet extends HttpServlet implements Observer {
 					// Util.debug("size: " + tt.size());
 					*/
 
-					Util.debug("---------------------tail------------------");
 					Vector<PowerHistory> tt = PowerHistory.getTail(9);
-					Util.debug("size: " + tt.size());
-					for( int i = 0 ; i < tt.size() ; i++ ) Util.debug(i + " " + tt.get(0));
-					Util.debug("size: " + tt.size());
 
 					// Util.debug("---------------------undocked---------------------");
 					// Vector<String> t = BatteryStatus.getUnDockedString(5);
@@ -312,7 +308,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				}
 
 				if(action.equalsIgnoreCase("kill")){
-					Util.debug("kill pid = " + pid);
 					if(pid.equals("pkill"))	Util.systemCall("pkill python");
 					else Util.systemCall("kill -SIGINT " + pid);
 				}

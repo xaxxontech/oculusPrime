@@ -8,6 +8,9 @@ import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
 
+import java.io.File;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -19,7 +22,7 @@ public class SystemWatchdog {
 	static final String AP = "oculusprime";
 
 	private static final long DELAY = 10000; // 10 sec 
-	public static final long AUTODOCKTIMEOUT= 360000; // 6 min
+	public static final long AUTODOCKTIMEOUT= 5*Util.ONE_MINUTE;
 	private static final long ABANDONDEDLOGIN= 30*Util.ONE_MINUTE; 
 	public static final String NOFORWARD = "noforward";
 
@@ -33,8 +36,8 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private long lowbattredockstart = 0;
-	// private String ssid = null; nuke? 
-	
+    private static final File TIMEDSHUTDOWNFILE = new File(Settings.redhome + Util.sep + "timedshutdown");
+
 	SystemWatchdog(Application a){ 
 		application = a;
 		new Timer().scheduleAtFixedRate(new Task(), DELAY, DELAY);
@@ -97,7 +100,7 @@ public class SystemWatchdog {
 						System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN &&
 						redocking == false &&
 						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", ""))
-								< ArduinoPower.LOWBATTPERCENTAGE &&
+								< settings.getInteger(ManualSettings.lowbattery) &&
 						state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						settings.getBoolean(GUISettings.redock)
 						) {
@@ -110,17 +113,38 @@ public class SystemWatchdog {
 					} else { // power down if redock failed, helps with battery death by parasitics
 						if (System.currentTimeMillis() - lowbattredockstart > AUTODOCKTIMEOUT) {
 							Util.log("abandonded, undocked, low battery, redock failed", this);
-							application.driverCallServer(PlayerCommands.powershutdown, null);
+                            if (settings.getBoolean(ManualSettings.timedshutdown) &&
+									application.powerport.boardid.equals(ArduinoPower.FIRMWARE_IDV2))
+								timedShutdown();
+							else
+								application.driverCallServer(PlayerCommands.powershutdown, null);
 						}
 					}
-				} else if (state.get(values.dockstatus).equals(AutoDock.DOCKED)) lowbattredock = false;
+				} else if (state.get(values.dockstatus).equals(AutoDock.DOCKED))
+					lowbattredock = false;
 			}
+
+			// if waking up after above check forced timed shutdown
+            if (TIMEDSHUTDOWNFILE.exists() && !lowbattredock) {
+                TIMEDSHUTDOWNFILE.delete();
+                Util.log("wake up after timed shutdown", this);
+
+                // force check: abandonded, undocked, low battery, not redocking, not already attempted redock
+                // assume not to bother trying redock again
+                // should shutdown again after AUTODOCKTIMEOUT ms
+                if ( !state.exists(State.values.driver.toString()) ) {
+//                    state.set(values.lastusercommand, String.valueOf(state.getLong(values.lastusercommand) - ABANDONDEDLOGIN));
+					state.set(values.lastusercommand, 0);
+					lowbattredock = true;
+                    lowbattredockstart = System.currentTimeMillis();
+                }
+            }
 
 			// navigation running, route running, undocked, low battery, next waypoint != dock, no driver, drive to dock
 			if (state.get(values.batterylife).matches(".*\\d+.*")) {  // make sure batterylife != 'TIMEOUT', throws error
 				if (!state.exists(State.values.driver) &&
 						Integer.parseInt(state.get(State.values.batterylife).replaceAll("[^0-9]", ""))
-								< ArduinoPower.LOWBATTPERCENTAGE &&
+								< settings.getInteger(ManualSettings.lowbattery) &&
 						state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) &&
 						settings.getBoolean(GUISettings.redock) &&
 						state.equals(State.values.navsystemstatus, Ros.navsystemstate.running) &&
@@ -228,6 +252,9 @@ public class SystemWatchdog {
 				}
 			}
 		}
+
+		Util.log("SystemWatchdog.redock()", this);
+        PowerLogger.append("SystemWatchdog.redock()", this);
 		
 		final String option = str;
 		new Thread(new Runnable() { public void run() {
@@ -280,7 +307,8 @@ public class SystemWatchdog {
 
 				if (rot == 32) { // failure give up
 					callForHelp(subject, body);
-					application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+                    if (state.exists(values.navigationroute)) application.driverCallServer(PlayerCommands.cancelroute, null);
+                    application.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 					application.driverCallServer(PlayerCommands.floodlight, "0");
 					redocking = false;
 					return;
@@ -336,11 +364,12 @@ public class SystemWatchdog {
 	}
 	
 	private void callForHelp(String subject, String body) {
-		application.driverCallServer(PlayerCommands.messageclients, body);
+        application.driverCallServer(PlayerCommands.messageclients, body);
+
+        if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
+
 		Util.log("callForHelp() " + subject + " " + body, this);
 		PowerLogger.append("callForHelp() " + subject + " " + body, this);
-
-		if (!settings.getBoolean(ManualSettings.alertsenabled)) return;
 
 		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
 				settings.readRed5Setting("http.port")+"/oculusPrime/";
@@ -396,5 +425,22 @@ public class SystemWatchdog {
 		}
 		state.set(values.waitingforcpu, false);
 		Util.log("SystemWatchdog.waitForCpu() warning, timed out " + cpu + "% after " + timeout + "ms", null);
+	}
+
+	private void timedShutdown() {
+
+		Calendar calendarnow = Calendar.getInstance();
+		calendarnow.setTime(new Date());
+		int minutestohour = 60-calendarnow.get(Calendar.MINUTE);
+		if (minutestohour <2) minutestohour += 60;
+
+		// write file to know this happenend on next wakeup
+		if (!TIMEDSHUTDOWNFILE.exists())
+		    try { TIMEDSHUTDOWNFILE.createNewFile(); } catch (Exception e) {e.printStackTrace();}
+
+		// TODO: send email? (only once?)
+		application.driverCallServer(PlayerCommands.powershutdown, Integer.toString(minutestohour*60)); // seconds
+
+		Util.log(TIMEDSHUTDOWNFILE.toString(), this); // TODO: testing
 	}
 }

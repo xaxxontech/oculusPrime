@@ -137,6 +137,7 @@ public class TelnetServer implements Observer {
 	}
 		
 	private void doPlayer(final String str, PrintWriter out){
+//		Util.debug(str, this);
 		
 		if(str == null || out == null) return;
 		
@@ -288,8 +289,7 @@ public class TelnetServer implements Observer {
 			return;
 		} 
 		
-		Util.debug("listening with socket: " + serverSocket.toString());
-		
+
 		// serve new connections until killed
 		while (true) {
 			try {

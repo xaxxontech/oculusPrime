@@ -66,7 +66,6 @@ public class Ros {
     		if (!lockfile.exists())  break;
        		long now = System.currentTimeMillis();
     		if (now - start > 5000) {
-    			Util.debug("lockfile timeout");
     			return null; // 5 sec timeout
     		}
 			Util.delay(1);
@@ -84,7 +83,6 @@ public class Ros {
 				lockfile.delete();
 			}
 			else { 
-				Util.debug("frame size not matching");
 				ch.close();
 				file.close();
 				lockfile.delete();
@@ -222,7 +220,6 @@ public class Ros {
 			reader.close();
 
 		} catch (FileNotFoundException e) {
-			Util.debug("no waypoints file found");
 			return;
 		} catch (IOException e) {
 			e.printStackTrace();

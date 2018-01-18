@@ -65,7 +65,7 @@ public class BanList {
 		try {
 			logfile = new RandomAccessFile(banlog, "rw");
 		} catch (Exception e) {
-			Util.debug("BanList(): " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		timer.scheduleAtFixedRate(new ClearTimer(), 0, Util.ONE_MINUTE);
@@ -89,7 +89,7 @@ public class BanList {
 			logfile.seek(logfile.length());
 			logfile.writeBytes(new Date().toString() + ", " + str + "\r\n");
 		} catch (Exception e) {
-			Util.debug("BanList.appendLog(): " + e.getMessage() + " " + str);
+			e.printStackTrace();
 		}
 	}
 

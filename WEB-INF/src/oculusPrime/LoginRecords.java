@@ -19,7 +19,6 @@ public class LoginRecords {
 	public void beDriver() { 
 		list.add(new Record(state.get(State.values.driver), DRIVER)); 
 		state.set(State.values.logintime, System.currentTimeMillis());
-		Util.debug("beDriver(): " + state.get(State.values.driver));
 	}
 	
 	public void bePassenger(String user) {			

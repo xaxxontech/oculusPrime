@@ -4,10 +4,18 @@ package developer;
 import oculusPrime.Util;
 
 import java.io.File;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import oculusPrime.State;
+
+
 
 public class Scratch {
+
+    protected static State state = State.getReference();
+
 
     public void regexp() {
         Pattern quality = Pattern.compile("^\\s*asdf asdf");
@@ -36,13 +44,11 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        long r = 0;
-        long n= 1;
-        r = n = System.currentTimeMillis();
+        Calendar calendarnow = Calendar.getInstance();
+        calendarnow.setTime(new Date());
+        int minutesnow = calendarnow.get(Calendar.MINUTE); // 1-7 (friday is 6)
 
-//        new Scratch().zork(null);
-
-        System.out.println("r: "+r+", n: "+n);
+        System.out.println(String.valueOf(minutesnow));
 
     }
 }
