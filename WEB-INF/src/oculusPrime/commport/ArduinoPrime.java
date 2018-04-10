@@ -23,7 +23,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	public static final double FIRMWARE_VERSION_REQUIRED = 0.129; // trailing zeros ignored!
 	public static final String FIRMWARE_ID = "malg";
-	public static final double MALGDB_FIRMWARE_VERSION_REQUIRED = 1.05; // trailing zeros ignored!
+	public static final double MALGDB_FIRMWARE_VERSION_REQUIRED = 1.08; // trailing zeros ignored!
 	public static final String MALGDB_FIRMWARE_ID = "malgdb";
 	public static String boardid = "unknown";
 	public static final long DEAD_TIME_OUT = 20000;
@@ -238,7 +238,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	private void checkFirmWareVersion() {
 		if (!isconnected) return;
 
-		Double version_required = FIRMWARE_VERSION_REQUIRED;
+		double version_required = FIRMWARE_VERSION_REQUIRED;
 
 		if (boardid.equals(MALGDB_FIRMWARE_ID)) {
 			version_required = MALGDB_FIRMWARE_VERSION_REQUIRED;

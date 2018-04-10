@@ -33,6 +33,8 @@ public class Calibrate implements Observer{
         final int REVOLUTIONS = 0; // >0 allows extra time for trackturnrate() to dial in for floor time
                                     // TODO: full rev should be done before odometry turned on, in case turn rate too fast
         new Thread(new Runnable() { public void run() {
+            PlayerCommands dir = PlayerCommands.left;
+
             if (state.getBoolean(values.calibratingrotation)) return;
             state.set(values.calibratingrotation, true);
 
@@ -60,7 +62,7 @@ public class Calibrate implements Observer{
 
                 if (state.getBoolean(values.dockfound)) break; // great, onwards
                 else { // rotate a bit (non odometry)
-                    app.driverCallServer(PlayerCommands.left, "25");
+                    app.driverCallServer(dir, "25");
                     Util.delay(100);
                     start = System.currentTimeMillis();
                     while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
@@ -94,7 +96,7 @@ public class Calibrate implements Observer{
             Util.delay(1000); // getting incomplete turns?
             SystemWatchdog.waitForCpu();
 
-            app.driverCallServer(PlayerCommands.left, Integer.toString(360*REVOLUTIONS+180)); // assume default settings are pretty good, to speed things up..?
+            app.driverCallServer(dir, Integer.toString(360*REVOLUTIONS+180)); // assume default settings are pretty good, to speed things up..?
             Util.delay((long) ((360*REVOLUTIONS+180) / state.getDouble(values.odomturndpms.toString())));
             long start = System.currentTimeMillis();
             while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
@@ -110,7 +112,7 @@ public class Calibrate implements Observer{
 
                 if (state.getBoolean(values.dockfound)) break; // great, onwards
                 else { // rotate a bit
-                    app.driverCallServer(PlayerCommands.left, "25");
+                    app.driverCallServer(dir, "25");
                     Util.delay((long) (180 / state.getDouble(values.odomturndpms.toString()))); // TODO: why 180?
                     start = System.currentTimeMillis();
                     while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())

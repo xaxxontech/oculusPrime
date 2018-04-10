@@ -158,8 +158,8 @@ public class Navigation implements Observer {
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
 
 			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)){
-				if (settings.getBoolean(ManualSettings.useflash))
-					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString()); // reduce cpu
+//				if (settings.getBoolean(ManualSettings.useflash))
+//					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString()); // reduce cpu
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
 					state.set(State.values.rosinitialpose, "0_0_0");
 				Util.log("navigation running", this);
@@ -896,8 +896,8 @@ public class Navigation implements Observer {
 		String notdetectedaction = "";
 
 		boolean camAlreadyOn = false;
-		if (!state.get(values.stream).equals(Application.streamstate.stop.toString()))
-			camAlreadyOn = true;
+//		if (!state.get(values.stream).equals(Application.streamstate.stop.toString()))
+//			camAlreadyOn = true;
 		
     	for (int i=0; i< actions.getLength(); i++) {
     		String action = ((Element) actions.item(i)).getTextContent();
@@ -1071,7 +1071,16 @@ public class Navigation implements Observer {
 						Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
 				Util.log(msg + " " + streamactivity, this);
 
-				String navlogmsg = "Detected: "+streamactivity;
+				String navlogmsg = "Detected: ";
+
+				if (streamactivity.contains("video")) {
+					navlogmsg += "motion";
+				}
+				else if (streamactivity.contains("audio")) {
+					navlogmsg += "sound";
+				}
+				else navlogmsg += streamactivity;
+
 
 				String link = "";
 				if (streamactivity.contains("video") || streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
@@ -1081,8 +1090,13 @@ public class Navigation implements Observer {
 
 				if (email || rss) {
 
-					if (streamactivity.contains("video") || streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
+					if (streamactivity.contains(OpenCVObjectDetect.HUMAN)) {
 						msg = "[Oculus Prime Detected "+streamactivity+"] " + msg;
+						msg += "\nimage link: " + link + "\n";
+						Util.delay(3000); // allow time for download thread to capture image before turning off camera
+					}
+					if (streamactivity.contains("video")) {
+						msg = "[Oculus Prime Detected Motion] " + msg;
 						msg += "\nimage link: " + link + "\n";
 						Util.delay(3000); // allow time for download thread to capture image before turning off camera
 					}

@@ -73,7 +73,8 @@ public class Downloader {
 			// Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
 
 		} catch (Exception e) {
-			Util.log(e.getMessage(), this);
+			Util.log("ERROR downloading file "+e.getMessage(), this);
+			e.printStackTrace();
 			return false;
 		} finally {
 			try {
