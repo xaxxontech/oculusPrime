@@ -4,8 +4,10 @@ package developer;
 import oculusPrime.Util;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import oculusPrime.State;
@@ -44,11 +46,20 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        Calendar calendarnow = Calendar.getInstance();
-        calendarnow.setTime(new Date());
-        int minutesnow = calendarnow.get(Calendar.MINUTE); // 1-7 (friday is 6)
+        List<String> blob = new ArrayList<>();
+        blob.add("one");
+        blob.add("two");
+        blob.add("three");
 
-        System.out.println(String.valueOf(minutesnow));
+        System.out.println(blob.size());
+
+        blob.remove(0);
+
+        System.out.println(blob.size());
+        System.out.println(blob.get(0));
+
+        blob.clear();
+        System.out.println(blob.size());
 
     }
 }

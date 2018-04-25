@@ -10,20 +10,20 @@
 		<param-name>webAppRootKey</param-name>
 		<param-value>/oculusPrime</param-value>
 	</context-param>
-	
+
+
+	<!-- rtmpPortRequest -->
 	<servlet>
 		<servlet-name>rtmpPortRequest</servlet-name>
-		<servlet-class>
-			oculusPrime.RtmpPortRequest
-		</servlet-class>
+		<servlet-class>oculusPrime.RtmpPortRequest</servlet-class>
 		<load-on-startup>3</load-on-startup>
 	</servlet>
-	
 	<servlet-mapping>
 		<servlet-name>rtmpPortRequest</servlet-name>
 		<url-pattern>/rtmpPortRequest</url-pattern>
 	</servlet-mapping>
-	 
+
+	<!-- frameGrabHTTP -->
 	<servlet>
 		<servlet-name>frameGrabHTTP</servlet-name>
 		<servlet-class>
@@ -36,8 +36,8 @@
 		<servlet-name>frameGrabHTTP</servlet-name>
 		<url-pattern>/frameGrabHTTP</url-pattern>
 	</servlet-mapping>
-	
-	
+
+	<!-- DashboardServlet -->
 	<servlet>
 		<servlet-name>DashboardServlet</servlet-name>
 		<servlet-class>oculusPrime.DashboardServlet</servlet-class>
@@ -46,7 +46,8 @@
 		<servlet-name>DashboardServlet</servlet-name>
 		<url-pattern>/dashboard</url-pattern>
 	</servlet-mapping>
-	
+
+	<!-- StaticContentServlet -->
 	<servlet>
 		<servlet-name>StaticContentServlet</servlet-name>
 		<servlet-class>oculusPrime.StaticContentServlet</servlet-class>
@@ -72,6 +73,7 @@
 		<url-pattern>/streams/*</url-pattern>
 	</servlet-mapping>
 
+	<!-- NetworkServlet -->
 	<servlet>
 		<servlet-name>NetworkServlet</servlet-name>
 		<servlet-class>oculusPrime.NetworkServlet</servlet-class>
@@ -81,6 +83,7 @@
 		<url-pattern>/network</url-pattern>
 	</servlet-mapping>
 
+	<!-- MediaServlet -->
 	<servlet>
 		<servlet-name>MediaServlet</servlet-name>
 		<servlet-class>oculusPrime.MediaServlet</servlet-class>
@@ -89,6 +92,18 @@
 		<servlet-name>MediaServlet</servlet-name>
 		<url-pattern>/media</url-pattern>
 	</servlet-mapping>
+
+	<!-- WebRTCServlet -->
+	<servlet>
+		<servlet-name>WebRTCServlet</servlet-name>
+		<servlet-class>oculusPrime.servlet.WebRTCServlet</servlet-class>
+		<load-on-startup>3</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>WebRTCServlet</servlet-name>
+		<url-pattern>/webRTCServlet</url-pattern>
+	</servlet-mapping>
+
 
 	<security-constraint>
 		<web-resource-collection>
