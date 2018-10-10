@@ -73,18 +73,20 @@ public class Downloader {
 			// Util.debug("downloaded " + ByteWritten + " bytes to: " + path, this);
 
 		} catch (Exception e) {
-			Util.log("ERROR downloading file "+e.getMessage(), this);
-			e.printStackTrace();
+			Util.log("ERROR downloading file", this);
+//			e.printStackTrace();
 			return false;
-		} finally {
-			try {
-				is.close();
-				os.close();
-			} catch (IOException e) {
-				Util.log(e.getMessage(), this);
-				return false;
-			}
 		}
+		// ** commented all below out because it hangs
+//		finally {
+//			try {
+//				is.close();
+//				os.close();
+//			} catch (IOException e) {
+////				Util.log(e.getMessage(), this);
+//				return false;
+//			}
+//		}
 
 		// all good
 		return true;

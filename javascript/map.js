@@ -47,6 +47,7 @@ var navrouteactiondescriptions = ["rotate in place 45 degrees at a time, at leas
 var activeroute = null;
 var navsystemstatustext;
 var goalreachalert = false;
+var lidar = false;
 
 function navigationmenu() {
 	if (navmenuinit) {
@@ -246,6 +247,9 @@ function rosinfo() {
 					case "nextroutetime":
 						secondstonextroute = ss[1];
 						break;
+						
+					case "lidar":
+						lidar = (ss[1] == 'true');
 				
 				}
 			}
@@ -436,7 +440,8 @@ function drawmapinfo(str) {
 	if (laserscan) { 
 
 		context.fillStyle = "#ff00ff";
-		if (laserscan.length < 100) { // depth cam 80-90 points
+		// if (laserscan.length < 100) { // depth cam 80-90 points
+		if (!lidar) {	
 			var anglemax = 0.51; // radians
 			var anglestep = (anglemax*2)/(laserscan.length-1);
 			var angle = anglemax;

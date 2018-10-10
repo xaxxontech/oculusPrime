@@ -243,7 +243,7 @@ public class Util {
 			return response.toString();
 
 		} catch (Exception e) {
-			Util.debug("Util.readUrlToString() parse error", "Util.readUrlToString()");
+//			Util.debug("Util.readUrlToString() parse error: "+urlString, "Util.readUrlToString()");
 			return null;
 		}
 	}
@@ -618,7 +618,7 @@ public class Util {
 	}
 	*/
 
-	public static void updateLocalIPAddress(){
+	public static boolean updateLocalIPAddress(){
 		State state = State.getReference();
 		String wdev = lookupWIFIDevice();
 
@@ -637,14 +637,17 @@ public class Util {
 					if(validIP(addr)) {
 						if (!addr.equals(state.get(values.localaddress)))
 							state.set(values.localaddress, addr);
+						return true;
 					} else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
 				}
 			}
 		} catch (Exception e) {
-			Util.debug("updateLocalIPAddress(): failed to lookup wifi device: " + wdev, null);
+//			Util.debug("updateLocalIPAddress(): failed to lookup wifi device: " + wdev, null);
 			state.delete(values.localaddress);
 //			updateEthernetAddress();
 		}
+
+		return false;
 	}
 
 	public static void updateEthernetAddress(){

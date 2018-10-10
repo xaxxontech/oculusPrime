@@ -13,12 +13,12 @@ public class Calibrate implements Observer{
     private Settings settings = Settings.getReference();;
     private Application app = null;
     static State state = null;
-    private static final int camwidth = Video.lowreswidth;
     private double cumulativeangle = 0;
 
     /** Constructor */
     public Calibrate(Application a) {
         app = a;
+
         state = State.getReference();
         state.addObserver(this);
     }
@@ -29,28 +29,32 @@ public class Calibrate implements Observer{
      * keep rotating until dock found again
      * use nominal camera FOV angle and dockmetrics to calculate gyro comp
      */
-    public void calibrateRotation() {
+    public void calibrateRotation(final String d) {
+
         final int REVOLUTIONS = 0; // >0 allows extra time for trackturnrate() to dial in for floor time
                                     // TODO: full rev should be done before odometry turned on, in case turn rate too fast
         new Thread(new Runnable() { public void run() {
             PlayerCommands dir = PlayerCommands.left;
+            if (PlayerCommands.right.toString().equals(d)) dir = PlayerCommands.right;
 
             if (state.getBoolean(values.calibratingrotation)) return;
             state.set(values.calibratingrotation, true);
+
+            app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 
             if (state.get(values.stream).equals(Application.streamstate.stop.toString()) ||
                     state.get(values.stream).equals(Application.streamstate.mic.toString())) {
                 app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
             }
+
             app.driverCallServer(PlayerCommands.spotlight, "0");
             app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
             app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 
-
             Util.delay(5000);
             if (!state.getBoolean(values.calibratingrotation)) return;
 
-            // initial dock target seek
+            // initial dock target seek, 320x240
             int rot = 0;
             while (state.getBoolean(values.calibratingrotation)) {
                 SystemWatchdog.waitForCpu();
@@ -80,12 +84,36 @@ public class Calibrate implements Observer{
 
             if (!state.getBoolean(values.calibratingrotation)) return;
 
+            // center dock target if necessary, reduce distortion error
+//            int xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
+//            if (Math.abs(xdock - Video.lowreswidth/2) > (int) (Video.lowreswidth*0.07) )  { // clicksteer
+//                comport.clickNudge(xdock - Video.lowreswidth / 2, true); // true=firmware timed
+//                Util.delay(1000);
+//            }
+
+            // center dock target if necessary, reduce distortion error
+            int xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
+            double compangledegrees = (double) (Video.lowreswidth/2 - xdock)/Video.lowreswidth* Stereo.camFOVx43; // negative because cam reversed
+            if (Math.abs(compangledegrees) > 3) {
+                app.driverCallServer(PlayerCommands.rotate, Double.toString(compangledegrees));
+                Util.delay(1000);
+            }
+
+            // get dock metrics again, highres this time
+            app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
+            long start = System.currentTimeMillis();
+            while (!state.exists(values.dockfound.toString()) && System.currentTimeMillis() - start < Util.ONE_MINUTE)
+                Util.delay(10);  // wait
+            if (!state.getBoolean(values.dockfound)) {
+                Util.log("error, dock target lost", this);
+                return;
+            }
+
             //assumed target found, calculate target ctr angle from bot center, turn on gyro
             // 92 104 52 31 0.020408163 -- 1st value is x pixels from left
-            // assumed 320x24
-            int xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
-            double firstangledegrees = (double) (camwidth/2 - xdock)/camwidth * Stereo.camFOVx43;
-//            app.driverCallServer(PlayerCommands.messageclients, "found target off-center: "+firstangledegrees); // TODO: debug
+            // assumed 640x480
+            xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
+            double firstangledegrees = (double) (Video.defaultwidth/2 - xdock)/Video.defaultwidth * Stereo.camFOVx43;
 
             // start gyro recording
             state.set(values.odometrybroadcast, ArduinoPrime.ODOMBROADCASTDEFAULT);
@@ -98,7 +126,7 @@ public class Calibrate implements Observer{
 
             app.driverCallServer(dir, Integer.toString(360*REVOLUTIONS+180)); // assume default settings are pretty good, to speed things up..?
             Util.delay((long) ((360*REVOLUTIONS+180) / state.getDouble(values.odomturndpms.toString())));
-            long start = System.currentTimeMillis();
+            start = System.currentTimeMillis();
             while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
                     && System.currentTimeMillis() - start < 15000) { Util.delay(10); } // wait
             Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
@@ -134,16 +162,40 @@ public class Calibrate implements Observer{
                 return;
             }
 
+            // center dock target if necessary, reduce distortion error
+            xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
+            compangledegrees = (double) (Video.lowreswidth/2 - xdock)/Video.lowreswidth* Stereo.camFOVx43; // negative because cam reversed
+            if (Math.abs(compangledegrees) > 5) {
+                app.driverCallServer(PlayerCommands.rotate, Double.toString(compangledegrees));
+                Util.delay(1000);
+            }
+
+            // get dock metrics again, highres this time
+            app.driverCallServer(PlayerCommands.dockgrab, AutoDock.HIGHRES);
+            start = System.currentTimeMillis();
+            while (!state.exists(values.dockfound.toString()) && System.currentTimeMillis() - start < Util.ONE_MINUTE)
+                Util.delay(10);  // wait
+            if (!state.getBoolean(values.dockfound)) {
+                Util.log("error, dock target lost", this);
+                return;
+            }
+
             // done
             xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
-            double finalangledegrees = (double) (camwidth/2 - xdock)/camwidth * Stereo.camFOVx43; // negative because cam reversed
+            double finalangledegrees = (double) (Video.defaultwidth/2 - xdock)/Video.defaultwidth * Stereo.camFOVx43; // negative because cam reversed
+
             double cameraoffset = firstangledegrees - finalangledegrees;
+            if (dir.equals(PlayerCommands.right)) cameraoffset *= -1;
+
             String msg = "1st cam angle: "+String.format("%.3f",firstangledegrees);
             msg += "<br>2nd cam angle: "+String.format("%.3f", finalangledegrees);
             msg += "<br>cumulative angle reported by gyro: "+String.format("%.3f",cumulativeangle);
             msg += "<br>actual angle moved: "+String.format("%.3f", (360*REVOLUTIONS+360+cameraoffset));
             msg += "<br>original gyrocomp setting: "+Double.toString(settings.getDouble(ManualSettings.gyrocomp));
+
             double newgyrocomp = (360*REVOLUTIONS+360+cameraoffset)/(cumulativeangle/settings.getDouble(ManualSettings.gyrocomp));
+            newgyrocomp = Math.abs(newgyrocomp); // in case of dir = right
+
             settings.writeSettings(ManualSettings.gyrocomp, String.format("%.4f", newgyrocomp));
             msg += "<br>new gyrocomp setting: "+settings.getDouble(ManualSettings.gyrocomp);
             app.driverCallServer(PlayerCommands.messageclients, msg); // TODO: debug

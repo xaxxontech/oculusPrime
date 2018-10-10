@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.Set;
 
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
-import org.opencv.core.Core;
 import org.red5.server.adapter.MultiThreadedApplicationAdapter;
 import org.red5.server.api.IConnection;
 import org.red5.server.api.Red5;
@@ -29,6 +28,7 @@ import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
 import oculusPrime.commport.ArduinoPrime;
 import oculusPrime.commport.PowerLogger;
+
 
 /** red5 application */
 public class Application extends MultiThreadedApplicationAdapter {
@@ -78,28 +78,26 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public IConnection relayclient = null;
 	public Network network = null;
 
-	
+
+
 	public Application() {
 		super();
 
-		// moved to state.java 
-		// state.set(values.osarch, System.getProperty("os.arch"));
-		
 		PowerLogger.append("==============Oculus Prime Java Start===============\n", this); // extra newline on end
-		Util.log          ("==============Oculus Prime Java Start===============\n", this); // extra newline on end
-		Util.log("====Oculus Prime Linux Version:"+Util.getUbuntuVersion(), this);
-		Util.log("====Oculus Prime Java Model:"+System.getProperty("sun.arch.data.model"), this);
-		Util.log("====Oculus Prime Java Arch:"+state.get(values.osarch), this);
-//		Util.log("====Oculus Java Home:"+Settings.redhome, this);
-	
+		Util.log ("==============Oculus Prime Java Start===============\n", this); // extra newline on end
+		Util.log("Linux Version:"+Util.getUbuntuVersion()
+				+", Java Model:"+System.getProperty("sun.arch.data.model")
+				+", Java Arch:"+state.get(values.osarch), this);
+
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = LoginRecords.getReference();
 		DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
-	
+
 	}
+
 
 	@Override
 	public boolean appConnect(IConnection connection, Object[] params) {
@@ -1039,7 +1037,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 
 		case calibraterotation:
-			new Calibrate(this).calibrateRotation();
+			new Calibrate(this).calibrateRotation(str);
 			break;
 
 		case relayconnect:
@@ -1819,6 +1817,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void messageGrabber(String str, String status) {
+		if (!settings.getBoolean(ManualSettings.useflash)) return;
+		
 		Util.debug("TO grabber flash: " + str + ", " + status, this);
 
 		if (grabber instanceof IServiceCapableConnection) {

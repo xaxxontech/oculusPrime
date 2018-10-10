@@ -23,7 +23,7 @@ public class Video {
     private int adevicenum = 1; // should match lifecam mic
     private static final int defaultquality = 5;
     private static final int quality720p = 7;
-    private static final int defaultwidth=640;
+    public static final int defaultwidth=640;
     private static final int defaultheight=480;
     public static final int lowreswidth=320;
     private static final int lowresheight=240;
@@ -54,12 +54,12 @@ public class Video {
         app = a;
         port = Settings.getReference().readRed5Setting("rtmp.port");
         ubuntuVersion = Util.getUbuntuVersion();
+        setAudioDevice();
+        setVideoDevice();
     }
 
     public void initAvconv() {
         state.set(State.values.stream, Application.streamstate.stop.toString());
-        setAudioDevice();
-        setVideoDevice();
         if (state.get(State.values.osarch).equals(Application.ARM)) {
 //            avprog = FFMPEG;
 //            dumpfps = 8;
@@ -100,6 +100,17 @@ public class Video {
                     line = procReader.readLine().trim();
                     devicenum = Integer.parseInt(line.substring(line.length() - 1));
                     Util.debug(line, this);
+
+//                    v4l2-ctl --set-ctrl=focus_auto=0
+//                    v4l2-ctl --set-ctrl=focus_absolute=0
+                    cmd = new String[]{"v4l2-ctl", "-d "+devicenum, "--set-ctrl=focus_auto=0"};
+                    proc = Runtime.getRuntime().exec(cmd);
+                    proc.waitFor();
+
+                    cmd = new String[]{"v4l2-ctl", "-d "+devicenum, "--set-ctrl=focus_absolute=0"};
+                    proc = Runtime.getRuntime().exec(cmd);
+                    proc.waitFor();
+
                 }
             }
 

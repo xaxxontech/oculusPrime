@@ -813,13 +813,13 @@ public class Navigation implements Observer {
 		while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
 				&& System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
 
-		if (state.getBoolean(values.lidar)) return; // rotate not needed
+		if (state.getBoolean(values.lidar)) return; // rotate not needed with 360 horiz lidar
 
 		Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
 		/* rotate to localize */
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
-		app.driverCallServer(PlayerCommands.left, "360");
+		app.driverCallServer(PlayerCommands.rotate, "360");
 		Util.delay((long) (360 / state.getDouble(State.values.odomturndpms.toString())) + 1000);
 	}
 

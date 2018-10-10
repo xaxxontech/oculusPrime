@@ -11,7 +11,7 @@ public enum ManualSettings {
 	soundthresholdalt, undockdistance,
 
 	// undocumented
-	lowbattery, timedshutdown,
+	lowbattery, timedshutdown, camhold,
 	
 	;
 	
@@ -39,6 +39,7 @@ public enum ManualSettings {
 		config.setProperty(undockdistance.name(), "0.75");
 		config.setProperty(lowbattery.name(), "30");
         config.setProperty(timedshutdown.name(), Settings.TRUE);
+		config.setProperty(camhold.name(), Settings.FALSE);
 		return config;
 	}
 	

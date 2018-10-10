@@ -156,6 +156,9 @@ public class Ros {
 			else state.delete(State.values.nextroutetime);
 		}
 
+		if (state.exists(State.values.lidar))
+			str += " "+State.values.lidar.toString()+"_"+state.get(State.values.lidar);
+
 		return str;
 	}
 

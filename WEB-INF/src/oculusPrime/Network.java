@@ -37,6 +37,7 @@ public class Network {
 
                         if (!state.exists(State.values.localaddress)) Util.updateLocalIPAddress();
                         else if (state.equals(State.values.localaddress, "127.0.0.1")) Util.updateLocalIPAddress();
+
                         if (!state.exists(State.values.externaladdress)) updateExternalIPAddress();
 
                         if (System.currentTimeMillis() > wait && networkInfoToStateFailCount < 10) {
