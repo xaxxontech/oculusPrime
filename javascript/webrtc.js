@@ -4,7 +4,8 @@ var configuration = null; // { iceServers: [{ urls: "stuns:stun.example.org" }] 
 var pc;
 var isClient;
 var stream = null;
-
+var pendingIceCanditateMessages = [];
+var setRemoteDescriptionComplete = false; // used by server only 
 
 function createPeerConnection() {
 	pc = new RTCPeerConnection(configuration);
@@ -44,9 +45,9 @@ function processMessage(message) {
     if (message.desc) {
         var desc = message.desc;
 
-        // if we get an offer, we need to reply with an answer
-        if (desc.type == "offer") {
+        if (desc.type == "offer") { // should be received by client only 
             pc.setRemoteDescription(desc).then(function () {
+				setRemoteDescriptionComplete = true;
                 return pc.createAnswer();
             })
             .then(function (answer) {
@@ -56,31 +57,44 @@ function processMessage(message) {
 				trace("sending: answer");
                 var str = JSON.stringify({ desc: pc.localDescription });
                 send(str);
+				processPendingIceCanditateMessages(); 
             })
             .catch(logError);
-        } else if (desc.type == "answer") {
-            pc.setRemoteDescription(desc).catch(logError);
+            
+        } else if (desc.type == "answer") { // should be received by server only 
+            pc.setRemoteDescription(desc).then(function() {
+				setRemoteDescriptionComplete = true;
+				processPendingIceCanditateMessages();
+			}).catch(logError);
+			
         } else {
             trace("Unsupported SDP type. Your code may differ here.");
         }
         
     } else if (message.start) {
-		// trace("sending offer");
-		
-		// pc.createOffer().then(function (offer) {
-			// return pc.setLocalDescription(offer);
-		// })
-		// .then(function () {
-			// send(JSON.stringify({ desc: pc.localDescription }));
-		// })
-		// .catch(logError);  
-		
 		pc.addTrack(stream.getVideoTracks()[0], stream);  
 		
-    } else {
-        pc.addIceCandidate(message.candidate).then(function() {
-			trace("candidate added.");
-			}).catch(logError);
+    } else { // if get to here, should be ice candidates only 
+
+		// firefox 62 throws error here on server only if setRemoteDescription not called first
+		// doing for both client and server seems to be 100% connect (firefox-firefox)
+		if (!setRemoteDescriptionComplete) {
+			trace("*** delaying icecandidate ***");
+			pendingIceCanditateMessages.push(message); // save for processing later
+		}
+		
+		else {
+			pc.addIceCandidate(message.candidate).then(function() {
+				trace("candidate added.");
+				}).catch(logError);
+		}
+	}
+}
+
+function processPendingIceCanditateMessages() {
+	for (var i=0; i<pendingIceCanditateMessages.length; i++) {
+		trace("*** processing delayed icecandidate: "+i+" ***");
+		processMessage(pendingIceCanditateMessages[i]);
 	}
 }
 
