@@ -28,16 +28,33 @@ function createPeerConnection() {
 		trace("negotiation needed");
 		trace("sending offer");
 		
+		/*
 		pc.createOffer().then(function (offer) {
+			trace("offer");
+			trace(JSON.stringify(offer));
+			
 			return pc.setLocalDescription(offer);
 		})
 		.then(function () {
+			trace("pc.localDescription");
+			trace(JSON.stringify({ desc: pc.localDescription }));
+			
+			// asdf = setMediaBitrates({ desc: pc.localDescription });
+			// send(JSON.stringify(asdf));
+			
 			// send the offer to the other peer
 			send(JSON.stringify({ desc: pc.localDescription }));
 		})
 		.catch(logError);  
+		*/
+		
+		pc.createOffer().then(function (offer) {
+			pc.setLocalDescription(offer);
+			// offer.sdp = setMediaBitrates(offer.sdp);
+			offer.sdp = forceCodec(offer.sdp);
+			send(JSON.stringify({ desc: offer}));
+		}).catch(logError);  
 	}
-
 }
 
 function processMessage(message) {
@@ -50,31 +67,44 @@ function processMessage(message) {
 				setRemoteDescriptionComplete = true;
                 return pc.createAnswer();
             })
-            .then(function (answer) {
-                return pc.setLocalDescription(answer);
-            })
-            .then(function () {
-				trace("sending: answer");
-                var str = JSON.stringify({ desc: pc.localDescription });
-                send(str);
-				processPendingIceCanditateMessages(); 
-            })
-            .catch(logError);
+            // .then(function (answer) {
+                // return pc.setLocalDescription(answer);
+            // })
+            // .then(function () {
+				// trace("sending: answer");
+                // var str = JSON.stringify({ desc: pc.localDescription });
+                // send(str);
+				// processPendingIceCanditateMessages(); 
+            // })
+            // .catch(logError);
             
-        } else if (desc.type == "answer") { // should be received by server only 
+            .then(function(answer) {
+				pc.setLocalDescription(answer);
+				trace("sending: answer");
+				// answer.sdp = setMediaBitrates(answer.sdp);
+				answer.sdp = forceCodec(answer.sdp);
+				send(JSON.stringify({ desc: answer}));
+				processPendingIceCanditateMessages(); 
+			}).catch(logError);
+			
+        } 
+        else if (desc.type == "answer") { // should be received by server only 
             pc.setRemoteDescription(desc).then(function() {
 				setRemoteDescriptionComplete = true;
 				processPendingIceCanditateMessages();
 			}).catch(logError);
-			
-        } else {
+        } 
+        else {
             trace("Unsupported SDP type. Your code may differ here.");
         }
-        
-    } else if (message.start) {
-		pc.addTrack(stream.getVideoTracks()[0], stream);  
-		
-    } else { // if get to here, should be ice candidates only 
+    }
+
+    else if (message.start) { // should be received by server only 
+		getCamera();
+		// pc.addTrack(stream.getVideoTracks()[0], stream);  
+    } 
+    
+    else { // if get to here, should be ice candidates only 
 
 		// firefox 62 throws error here on server only if setRemoteDescription not called first
 		// doing for both client and server seems to be 100% connect (firefox-firefox)
@@ -103,17 +133,27 @@ function setServer() {
 	
 	createPeerConnection();
 	
-	// get a local stream, show it in a self-view and add it to be sent
-	navigator.mediaDevices.getUserMedia({ video: true })
-		.then(function (s) {
-			localVideo.srcObject = s;
-			stream = s;
-			// pc.addTrack(stream.getVideoTracks()[0], stream);
-		})
-		.catch(logError);
+	// getCamera();
 			
 	getxmlhttp("/oculusPrime/webRTCServlet?clearvars");
 	msgPollTimeout = setTimeout("checkForMsg();", MSGPOLLINTERVAL);
+}
+
+function getCamera() {
+	// get a local stream, show it in a self-view and add it to be sent
+	// causes onnegotiationneeded event
+	// navigator.mediaDevices.getUserMedia({ video: true })
+	var constraints = { video: {
+		frameRate: {max: 15 },
+		width: 640,
+		height: 480
+	 } };
+	navigator.mediaDevices.getUserMedia(constraints)
+		.then(function (s) {
+			localVideo.srcObject = s;
+			stream = s;
+			pc.addTrack(stream.getVideoTracks()[0], stream);
+	}).catch(logError);
 }
 
 function setClient() {
@@ -237,4 +277,57 @@ function trace(text) {
 	else text = "SERVER: "+text;
 	const now = (window.performance.now() / 1000).toFixed(3);
 	console.log(now, text);
+}
+
+/* from https://webrtchacks.com/limit-webrtc-bandwidth-sdp/ */
+function setMediaBitrates(sdp) {
+  return setMediaBitrate(setMediaBitrate(sdp, "video", 500), "audio", 50);
+}
+function setMediaBitrate(sdp, media, bitrate) {
+  var lines = sdp.split("\n");
+  var line = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].indexOf("m="+media) === 0) {
+      line = i;
+      break;
+    }
+  }
+  if (line === -1) {
+    console.debug("Could not find the m line for", media);
+    return sdp;
+  }
+  console.debug("Found the m line for", media, "at line", line);
+ 
+  // Pass the m line
+  line++;
+ 
+  // Skip i and c lines
+  while(lines[line].indexOf("i=") === 0 || lines[line].indexOf("c=") === 0) {
+    line++;
+  }
+ 
+  /* If we're on a b line, replace it */
+  if (lines[line].indexOf("b") === 0) {
+    console.debug("Replaced b line at line", line);
+    lines[line] = "b=TIAS:"+bitrate;
+    return lines.join("\n");
+  }
+  
+  /* Add a new b line */
+  console.debug("Adding new b line before line", line);
+  var newLines = lines.slice(0, line)
+  newLines.push("b=TIAS:"+bitrate)
+  newLines = newLines.concat(lines.slice(line, lines.length))
+  return newLines.join("\n")
+}
+
+function forceCodec(sdp) {
+	var lines = sdp.split("\n");
+	var newlines = [];
+
+	for (var i = 0; i < lines.length; i++) {
+		if (lines[i].includes("VP9") || lines[i].includes("VP8")) continue; // VP8 VP9 H264
+		newlines.push(lines[i]);
+	}
+	return newlines.join("\n");
 }

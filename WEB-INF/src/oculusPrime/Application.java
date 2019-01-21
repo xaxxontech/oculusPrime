@@ -369,7 +369,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			navigation.runAnyActiveRoute();
 		}
 
-		if(settings.getBoolean(ManualSettings.developer)) PyScripts.autostartPyScripts();
+//		if(settings.getBoolean(ManualSettings.developer)) PyScripts.autostartPyScripts();
 
 		Util.debug("application initialize done", this);
 	}
@@ -1644,7 +1644,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	// state.set(shuttingdown, true); 
 	public void restart() { 
 
-		if(settings.getBoolean(ManualSettings.developer)) PyScripts.runShutdownPyScripts();	
+//		if(settings.getBoolean(ManualSettings.developer)) PyScripts.runShutdownPyScripts();
 				
 		Util.debug("Restart uptime was: "+ state.getUpTime(), this);	
 

@@ -84,7 +84,7 @@ public class Video {
                 }
             }
 
-        } catch (Exception e) { Util.printError(e);}
+        } catch (Exception e) { Util.printError(e); }
     }
 
     private void setVideoDevice() {
@@ -153,28 +153,40 @@ public class Video {
 
             switch (mode) {
                 case camera:
-                    Util.systemCall(avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
+                    try {
+                        new ProcessBuilder("sh", "-c",
+                            avprog + " -f video4linux2 -s " + w + "x" + h + " -r " + fps +
                             " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM1);
-                    // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1
+                            port + "/oculusPrime/" + STREAM1 + " >/dev/null 2>&1").start();
+                    } catch (Exception e){ Util.printError(e);}
+                    // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1 >/dev/null 2>&1
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case mic:
-                    Util.systemCall(avprog+" -re -f alsa -ac 1 -ar 22050 " +
+                    try {
+                        Process p = new ProcessBuilder("sh", "-c",
+                            avprog+" -re -f alsa -ac 1 -ar 22050 " +
                             "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM1);
+                            port + "/oculusPrime/"+STREAM1+ " >/dev/null 2>&1").start();
+                    } catch (Exception e){ Util.printError(e);}
                     // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream1
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
                     break;
                 case camandmic:
-                    Util.systemCall(avprog+" -re -f alsa -ac 1 -ar 22050 " +
+                    try {
+                        new ProcessBuilder("sh", "-c",
+                            avprog+" -re -f alsa -ac 1 -ar 22050 " +
                             "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM2);
+                            port + "/oculusPrime/"+STREAM2+ " >/dev/null 2>&1").start();
+
+                        new ProcessBuilder("sh", "-c",
+                            avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
+                            " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
+                            port + "/oculusPrime/"+STREAM1+ " >/dev/null 2>&1").start();
+
+                    } catch (Exception e){ Util.printError(e);}
                     // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream2
 
-                    Util.systemCall(avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
-                            " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM1);
 
                     app.driverCallServer(PlayerCommands.streammode, mode.toString());
 
@@ -192,23 +204,23 @@ public class Video {
         if (mode.equals(Application.streamstate.stop) ) return;
 
         // stream restart timer
-        new Thread(new Runnable() { public void run() {
-            long start = System.currentTimeMillis();
-            while ( id == publishid && (System.currentTimeMillis() < start + STREAM_RESTART) ||
-                    state.exists(State.values.writingframegrabs) ||
-                    state.getBoolean(State.values.autodocking) )
-                Util.delay(50);
-
-            if (id == publishid) { // restart stream
-                forceShutdownFrameGrabs();
-                Util.systemCall("pkill -9 "+avprog);
-                lastmode = Application.streamstate.stop;
-                Util.delay(STREAM_CONNECT_DELAY);
-                publish(mode, w,h,fps);
-                app.driverCallServer(PlayerCommands.messageclients, "video stream restarting");
-            }
-
-        } }).start();
+//        new Thread(new Runnable() { public void run() {
+//            long start = System.currentTimeMillis();
+//            while ( id == publishid && (System.currentTimeMillis() < start + STREAM_RESTART) ||
+//                    state.exists(State.values.writingframegrabs) ||
+//                    state.getBoolean(State.values.autodocking) )
+//                Util.delay(50);
+//
+//            if (id == publishid) { // restart stream
+//                forceShutdownFrameGrabs();
+//                Util.systemCall("pkill -9 "+avprog);
+//                lastmode = Application.streamstate.stop;
+//                Util.delay(STREAM_CONNECT_DELAY);
+//                publish(mode, w,h,fps);
+//                app.driverCallServer(PlayerCommands.messageclients, "video stream restarting");
+//            }
+//
+//        } }).start();
 
     }
 

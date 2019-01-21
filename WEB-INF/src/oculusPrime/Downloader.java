@@ -78,15 +78,15 @@ public class Downloader {
 			return false;
 		}
 		// ** commented all below out because it hangs
-//		finally {
-//			try {
-//				is.close();
-//				os.close();
-//			} catch (IOException e) {
-////				Util.log(e.getMessage(), this);
-//				return false;
-//			}
-//		}
+		finally {
+			try {
+				if (is != null) is.close();
+				if (os != null) os.close();
+			} catch (IOException e) {
+//				Util.log(e.getMessage(), this);
+				return false;
+			}
+		}
 
 		// all good
 		return true;

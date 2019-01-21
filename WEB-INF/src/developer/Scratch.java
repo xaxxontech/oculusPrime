@@ -46,20 +46,8 @@ public class Scratch {
     public static void main(String[] args) {
 //        new Scratch().regexp();
 
-        List<String> blob = new ArrayList<>();
-        blob.add("one");
-        blob.add("two");
-        blob.add("three");
-
-        System.out.println(blob.size());
-
-        blob.remove(0);
-
-        System.out.println(blob.size());
-        System.out.println(blob.get(0));
-
-        blob.clear();
-        System.out.println(blob.size());
+        try { Runtime.getRuntime().exec("sh -c xcalc >/dev/null 2>&1");
+        } catch (Exception e) { e.printStackTrace(); }
 
     }
 }

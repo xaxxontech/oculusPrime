@@ -125,7 +125,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
-	public static final Double METERSPERSEC = 0.33;
+	public static final Double METERSPERSEC = 0.4;
 	public static final Double DEGPERMS = 0.0857; // max that gyro can keep up with
 	public static final int MAXDOCKEDPWM = 120;
 
@@ -286,7 +286,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			sendCommand(GET_VERSION);
 			start = System.currentTimeMillis();
 			while(firmwareversion == 0 && System.currentTimeMillis() - start < 10000)  { Util.delay(100); }
-			if (firmwareversion != version_required) {
+			if (firmwareversion != version_required && !settings.getBoolean(ManualSettings.debugenabled)) {
 				String msg = "unable to update " + boardid + " firmware to version "+version_required;
 				Util.log("error, "+msg, this);
 				state.set(State.values.guinotify, msg);
@@ -1406,7 +1406,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			long start = linearstart;
 			final double tolerance = state.getDouble(State.values.odomlinearmpms.toString()) * 0.05; //0.000015625; //  meters per ms --- 5% of target speed 0.32m/s (0.00032
 			final int pwmincr = 10;
-			final int accel = 480; // TODO: try lowering this, kind of useless for small linear moves during rosnav
+			final int accel = 480; // TODO: try lowering this (from 480), kind of useless for small linear moves during rosnav
 			final double targetrate = state.getDouble(State.values.odomlinearmpms.toString());
 			
 			while (currentMoveID == moveID)  {
