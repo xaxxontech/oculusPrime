@@ -284,7 +284,7 @@ public class AutoDock {
 				Util.delay((long) comport.voltsComp(300));
 				comport.stopGoing();
 				int inchforward = 0;
-				while (inchforward < 12 && !state.getBoolean(State.values.wallpower) &&
+				while (inchforward < 9 && !state.getBoolean(State.values.wallpower) && // was inchforward < 12
 						state.getBoolean(State.values.docking)) {
 
 					// pause in case of pcb reset while docking(fairly common)

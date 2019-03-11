@@ -99,15 +99,15 @@ public class Video {
                 if(line.contains("LifeCam")) {
                     line = procReader.readLine().trim();
                     devicenum = Integer.parseInt(line.substring(line.length() - 1));
-                    Util.debug(line, this);
+                    Util.debug(line+ " devicenum="+devicenum, this);
 
 //                    v4l2-ctl --set-ctrl=focus_auto=0
 //                    v4l2-ctl --set-ctrl=focus_absolute=0
-                    cmd = new String[]{"v4l2-ctl", "-d "+devicenum, "--set-ctrl=focus_auto=0"};
+                    cmd = new String[]{"v4l2-ctl", "--device="+devicenum, "--set-ctrl=focus_auto=0"};
                     proc = Runtime.getRuntime().exec(cmd);
                     proc.waitFor();
 
-                    cmd = new String[]{"v4l2-ctl", "-d "+devicenum, "--set-ctrl=focus_absolute=0"};
+                    cmd = new String[]{"v4l2-ctl", "--device="+devicenum, "--set-ctrl=focus_absolute=0"};
                     proc = Runtime.getRuntime().exec(cmd);
                     proc.waitFor();
 

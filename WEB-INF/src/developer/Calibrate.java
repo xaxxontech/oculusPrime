@@ -29,13 +29,13 @@ public class Calibrate implements Observer{
      * keep rotating until dock found again
      * use nominal camera FOV angle and dockmetrics to calculate gyro comp
      */
-    public void calibrateRotation(final String d) {
+    public void calibrateRotation(final String turndirection) {
 
         final int REVOLUTIONS = 0; // >0 allows extra time for trackturnrate() to dial in for floor time
                                     // TODO: full rev should be done before odometry turned on, in case turn rate too fast
         new Thread(new Runnable() { public void run() {
             PlayerCommands dir = PlayerCommands.left;
-            if (PlayerCommands.right.toString().equals(d)) dir = PlayerCommands.right;
+            if (PlayerCommands.right.toString().equals(turndirection)) dir = PlayerCommands.right;
 
             if (state.getBoolean(values.calibratingrotation)) return;
             state.set(values.calibratingrotation, true);
