@@ -11,9 +11,11 @@ import java.nio.file.StandardCopyOption;
 
 import oculusPrime.*;
 
+
 public class Ros {
 	
 	private static State state = State.getReference();
+    private static Settings settings = Settings.getReference();
 	
 	// State keys
 	public enum navsystemstate { stopped, starting, running, mapping, stopping };
@@ -23,6 +25,8 @@ public class Ros {
 	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
 	public static final String MAKE_MAP = "make_map"; // mapping launch file
+    public static final String REMOTE_NAV_LIDAR = "remote_nav_lidar"; // nav launch file with lidar
+    public static final String MAKE_MAP_LIDAR = "make_map_lidar"; // mapping launch file with lidar
 
 	private static File lockfile = new File("/run/shm/map.raw.lock");
 	private static BufferedImage map = null;
@@ -156,8 +160,7 @@ public class Ros {
 			else state.delete(State.values.nextroutetime);
 		}
 
-		if (state.exists(State.values.lidar))
-			str += " "+State.values.lidar.toString()+"_"+state.get(State.values.lidar);
+		str += " lidar_"+settings.getBoolean(ManualSettings.lidar);
 
 		return str;
 	}

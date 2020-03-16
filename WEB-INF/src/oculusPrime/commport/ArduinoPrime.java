@@ -2199,6 +2199,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 							state.getLong(State.values.odometrybroadcast) > 0 ) {
 						Util.delay(state.getLong(State.values.odometrybroadcast));
 						odometryReport();
+						Util.delay(1);
 					}
 					else  break;
 				}

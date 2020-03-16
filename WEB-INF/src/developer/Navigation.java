@@ -31,8 +31,10 @@ import oculusPrime.Util;
 import oculusPrime.commport.ArduinoPrime;
 
 public class Navigation implements Observer {
-	
-	protected static Application app = null;
+
+    public enum lidarstate { enabled, disabled }
+
+    protected static Application app = null;
 	private static State state = State.getReference();
 	public static final String DOCK = "dock"; // waypoint name
 	private static final String redhome = System.getenv("RED5_HOME");
@@ -57,6 +59,8 @@ public class Navigation implements Observer {
 		navlog = new NavigationLog();
 		state.addObserver(this);
 		app = a;
+        if (settings.getBoolean(ManualSettings.lidar))
+            state.set(values.lidar, true);
 	}	
 	
 	@Override
@@ -130,7 +134,10 @@ public class Navigation implements Observer {
 			return;
 		}
 
-		if (!Ros.launch(Ros.MAKE_MAP)) {
+		String launchfile = Ros.MAKE_MAP;
+        if (settings.getBoolean(ManualSettings.lidar)) launchfile = Ros.MAKE_MAP_LIDAR;
+
+        if (!Ros.launch(launchfile)) {
 			app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, aborting mapping start");
 			return;
 		}
@@ -145,8 +152,12 @@ public class Navigation implements Observer {
 		if (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) return;
 
 		new Thread(new Runnable() { public void run() {
-			app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
-			if (!Ros.launch(Ros.REMOTE_NAV)) {
+
+            String launchfile = Ros.REMOTE_NAV;
+            if (settings.getBoolean(ManualSettings.lidar)) launchfile = Ros.REMOTE_NAV_LIDAR;
+
+            app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
+			if (!Ros.launch(launchfile)) {
 				app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, abort");
 				return;
 			}
@@ -176,7 +187,7 @@ public class Navigation implements Observer {
 			stopNavigation();
 			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) Util.delay(10);
 
-			if (!Ros.launch(Ros.REMOTE_NAV)) {
+			if (!Ros.launch(launchfile)) {
 				app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, abort");
 				return;
 			}
@@ -813,7 +824,7 @@ public class Navigation implements Observer {
 		while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
 				&& System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
 
-		if (state.getBoolean(values.lidar)) return; // rotate not needed with 360 horiz lidar
+        if (settings.getBoolean(ManualSettings.lidar))  return;
 
 		Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
 
@@ -964,6 +975,12 @@ public class Navigation implements Observer {
 			else
 				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
 		}
+
+        if (mic) {
+            if (state.exists(values.lidar)) {
+                state.set(values.lidar, lidarstate.disabled.toString());
+            }
+        }
 
 		// turn on cam and or mic, allow delay for normalize
 		if (!camAlreadyOn) {
@@ -1231,9 +1248,16 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
 		}
-		if (mic) app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
+		
+		if (mic) {
+		    app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
+            if (state.exists(values.lidar)) {
+                state.set(values.lidar, lidarstate.enabled.toString());
+                Util.delay(5000);
+            }
+        }
 
-		state.set(values.waypointbusy, "false");
+        state.set(values.waypointbusy, "false");
 
 	}
 

@@ -11,7 +11,7 @@ public enum ManualSettings {
 	soundthresholdalt, undockdistance,
 
 	// undocumented
-	lowbattery, timedshutdown, camhold,
+	lowbattery, timedshutdown, camhold, lidar,
 	
 	;
 	
@@ -40,6 +40,7 @@ public enum ManualSettings {
 		config.setProperty(lowbattery.name(), "30");
         config.setProperty(timedshutdown.name(), Settings.TRUE);
 		config.setProperty(camhold.name(), Settings.FALSE);
+		config.setProperty(lidar.name(), Settings.FALSE);
 		return config;
 	}
 	

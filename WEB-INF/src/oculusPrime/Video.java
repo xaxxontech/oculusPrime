@@ -332,7 +332,7 @@ public class Video {
             host = state.get(State.values.relayserver);
 
         try {
-            if ( ! Application.UBUNTU1604.equals(ubuntuVersion) ) { // 14.04 and lower
+            if ( Application.UBUNTU1404.equals(ubuntuVersion) ) { // 14.04 only
                 Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
                         "rtmp://" + host + ":" + port + "/oculusPrime/" + STREAM1 + " live=1", "-s", width + "x" + height,
                         "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH + "%d" + EXT});
@@ -559,7 +559,7 @@ public class Video {
                         return;
                     }
 
-                    Process proc = Runtime.getRuntime().exec("ffmpeg -i "+fullpath+" -af volumedetect -f null -");
+                    Process proc = Runtime.getRuntime().exec(FFMPEG +" -i "+fullpath+" -af volumedetect -f null -");
                     // ffmpeg -i webapps/oculusPrime/temp_audio.flv -af volumedetect -f null -
 
                     String line;

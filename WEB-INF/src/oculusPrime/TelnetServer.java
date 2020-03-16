@@ -308,6 +308,7 @@ public class TelnetServer implements Observer {
 				
 				return;
 			}
+			Util.delay(100);
 		}
 	}
 

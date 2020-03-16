@@ -43,6 +43,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public static final int GRABBERRESPAWN = 8000;
 	public static final String ARM = "arm";
 	public static final String UBUNTU1604 = "16.04";
+	public static final String UBUNTU1404 = "14.04";
 	public static final String LOCALHOST = "127.0.0.1";
 
 	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();

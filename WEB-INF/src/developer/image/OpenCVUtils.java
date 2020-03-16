@@ -31,10 +31,10 @@ public class OpenCVUtils {
 	}
 
 	public void loadOpenCVnativeLib() {
-		if ( State.getReference().get(State.values.osarch).equals(Application.ARM)) {
-			Util.log("ARM system detected, openCV skipped", this);
-			return;
-		}
+//		if ( State.getReference().get(State.values.osarch).equals(Application.ARM)) {
+//			Util.log("ARM system detected, openCV skipped", this);
+//			return;
+//		}
 
 		String deleteopencvjar = UBUNTU1604OPENCV;
 		// need to nuke newer opencv jar if older linux only, otherwise won't load native lib
