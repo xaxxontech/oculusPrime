@@ -304,8 +304,7 @@ public class AutoDock {
 					Util.delay((long) 200); // comport.voltsComp(150)); // voltscomp not needed, on wallpower
 					comport.stopGoing();
 					
-					comport.strobeflash("on", 120, 20);
-					// allow time for charger to get up to voltage 
+					// allow time for charger to get up to voltage
 				     // and wait to see if came-undocked immediately (fairly commmon)
 					Util.delay(5000);
 				}

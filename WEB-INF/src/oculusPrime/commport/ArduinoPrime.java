@@ -125,7 +125,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 	
     private static final int TURNBOOST = 25; 
 	public static final int speedfast = 255;
-	public static final Double METERSPERSEC = 0.4;
+	public static final Double METERSPERSEC = 0.32;
 	public static final Double DEGPERMS = 0.0857; // max that gyro can keep up with
 	public static final int MAXDOCKEDPWM = 120;
 

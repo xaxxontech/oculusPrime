@@ -15,7 +15,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final double FIRMWARE_VERSION_REQUIREDV1 = 0.957; // trailing zeros ignored!
 	public static final String FIRMWARE_IDV1 = "oculusPower";
-	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.22; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.24; // trailing zeros ignored!
 	public static final String FIRMWARE_IDV2 = "xaxxonpowerv2";
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
@@ -458,6 +458,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			if (!state.get(State.values.dockstatus).equals(AutoDock.DOCKED)) {
 				application.message(null, "multiple", "dock " + AutoDock.DOCKED + " motion disabled");
 				state.set(State.values.dockstatus, AutoDock.DOCKED);
+                application.comport.strobeflash("on", 120, 20);
 
 				if (state.getBoolean(State.values.autodocking) && !state.getBoolean(State.values.docking))
 					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
