@@ -11,18 +11,10 @@
 		<param-value>/oculusPrime</param-value>
 	</context-param>
 
-
-	<!-- rtmpPortRequest -->
-	<servlet>
-		<servlet-name>rtmpPortRequest</servlet-name>
-		<servlet-class>oculusPrime.RtmpPortRequest</servlet-class>
-		<load-on-startup>3</load-on-startup>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>rtmpPortRequest</servlet-name>
-		<url-pattern>/rtmpPortRequest</url-pattern>
-	</servlet-mapping>
-
+    <listener>
+        <listener-class>oculusPrime.Application</listener-class>
+    </listener>
+    
 	<!-- frameGrabHTTP -->
 	<servlet>
 		<servlet-name>frameGrabHTTP</servlet-name>
@@ -93,15 +85,15 @@
 		<url-pattern>/media</url-pattern>
 	</servlet-mapping>
 
-	<!-- WebRTCServlet -->
+	<!-- CommServlet -->
 	<servlet>
-		<servlet-name>WebRTCServlet</servlet-name>
-		<servlet-class>oculusPrime.servlet.WebRTCServlet</servlet-class>
+		<servlet-name>CommServlet</servlet-name>
+		<servlet-class>oculusPrime.servlet.CommServlet</servlet-class>
 		<load-on-startup>3</load-on-startup>
 	</servlet>
 	<servlet-mapping>
-		<servlet-name>WebRTCServlet</servlet-name>
-		<url-pattern>/webRTCServlet</url-pattern>
+		<servlet-name>CommServlet</servlet-name>
+		<url-pattern>/comm</url-pattern>
 	</servlet-mapping>
 
 

@@ -3,12 +3,12 @@ package oculusPrime.commport;
 import java.io.RandomAccessFile;
 import java.util.Date;
 
+import oculusPrime.Settings;
 import oculusPrime.Util;
 
 public class PowerLogger {
 
-	public final static String redhome = System.getenv("RED5_HOME");
-	public final static String powerlog = redhome + "/log/power.log";
+	public final static String powerlog = Settings.tomcathome + "/logs/power.log";
 	private static RandomAccessFile logger = null;
 	
 	private static void init() {		

@@ -19,7 +19,7 @@ import oculusPrime.Util;
  */
 public class NavigationLog {
 
-    public static final String navigationlogpath =  Settings.redhome+Util.sep + "webapps" + Util.sep +
+    public static final String navigationlogpath =  Settings.tomcathome +Util.sep + "webapps" + Util.sep +
             "oculusPrime"+ Util.sep + "navigationlog" + Util.sep + "index.html";
 
     // testing:

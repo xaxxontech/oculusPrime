@@ -37,7 +37,7 @@ public class LoginRecords {
 	}
 	
 	public  void signoutDriver() {
-		for (int i = 0; i < list.size(); i++){
+		for (int i = 0; i < list.size(); i++) {
 			Record rec = list.get(i);
 			if (rec.isActive() && rec.getRole().equals(DRIVER)){
 				list.get(i).logout();

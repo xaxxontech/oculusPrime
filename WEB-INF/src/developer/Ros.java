@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 
 import oculusPrime.*;
 
@@ -22,22 +24,30 @@ public class Ros {
 
 	public static final long ROSSHUTDOWNDELAY = 15000;
 
-	public static final String REMOTE_NAV = "remote_nav"; // nav launch file 
 	public static final String ROSGOALSTATUS_SUCCEEDED = "succeeded";
-	public static final String MAKE_MAP = "make_map"; // mapping launch file
-    public static final String REMOTE_NAV_LIDAR = "remote_nav_lidar"; // nav launch file with lidar
-    public static final String MAKE_MAP_LIDAR = "make_map_lidar"; // mapping launch file with lidar
 
 	private static File lockfile = new File("/run/shm/map.raw.lock");
 	private static BufferedImage map = null;
 	private static double lastmapupdate = 0f;
 	
-	public static File waypointsfile = new File( Settings.redhome+"/conf/waypoints.txt");
+	public static File waypointsfile = new File( Settings.tomcathome +"/conf/waypoints.txt");
 	public static String mapfilename = "map.pgm";
 	public static String mapyamlname = "map.yaml";
 
 	public static String rospackagedir;
 	public static final String ROSPACKAGE = "oculusprime";
+
+	// launch file name constants:
+	public static final String REMOTE_NAV = "remote_nav"; // nav
+	public static final String MAKE_MAP = "make_map"; // mapping
+	public static final String REMOTE_NAV_LIDAR = "remote_nav_lidar"; // nav launch file with lidar
+	public static final String MAKE_MAP_LIDAR = "make_map_lidar"; // mapping launch file with lidar
+	public static final String CAMERA = "camera"; // usb cam
+	public static final String WEBRTC = "webrtc"; // gstreamer webrtc
+
+	public static final String ROS1CMD = Settings.tomcathome +Util.sep+"ros1.sh";
+	public static final String ROS2CMD = Settings.tomcathome +Util.sep+"ros2.sh";
+
 
 	public static BufferedImage rosmapImg() {	
 		if (!state.exists(State.values.rosmapinfo)) return null;
@@ -165,40 +175,87 @@ public class Ros {
 		return str;
 	}
 
-	/**
-	 *
-	 * @param launch
-	 * @return false if roslauch already running
-	 */
-	public static boolean launch(String launch) {
-		if (checkIfRoslaunchRunning())	 return false;
 
-		String cmd =  Settings.redhome+Util.sep+"ros.sh"; // setup ros environment
-		cmd += " roslaunch oculusprime "+launch+".launch";
-		Util.systemCall(cmd);
-		return true;
+	public static String launch(String arg) {
+		ArrayList <String> str = new ArrayList<>();
+		str.add(arg);
+		return launch(str);
 	}
 
-	private static boolean checkIfRoslaunchRunning() {
-		try {
-			Process proc = Runtime.getRuntime().exec("ps xa");
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String line;
-			while ((line = procReader.readLine()) != null) {
-//				Util.log("Ros.checkIfRoslaunchRunning(): "+line, null);
-				if (line.contains("roslaunch")) {
-//					Util.log("Ros.checkIfRoslaunchRunning(): found roslaunch!", null);
-					procReader.close();
-					return true;
-				}
-			}
-			procReader.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+
+	public static String launch(List <String> strarray) {
+
+		List<String> args = new ArrayList<>(strarray); // to prevent modifying original
+
+		ProcessBuilder processBuilder = new ProcessBuilder();
+
+		if (settings.getBoolean(ManualSettings.ros2)) {
+			args.set(0, args.get(0) + ".launch.py");
+			args.add(0, ROSPACKAGE); // 4th
+			args.add(0, "launch"); // 3rd
+			args.add(0, "ros2"); // 2nd
 		}
-		return false;
+		else{
+			args.set(0, args.get(0) + ".launch");
+			args.add(0, ROSPACKAGE); // 3rd
+			args.add(0, "roslaunch"); // 2nd
+		}
+
+		// return string should be file.launch + args
+		String pstring = "";
+		int i = 0;
+		while (i < args.size()) {
+			pstring += args.get(i)+" ";
+			i++;
+		}
+		pstring = pstring.trim();
+
+		if (settings.getBoolean(ManualSettings.ros2))
+			args.add(0, ROS2CMD); // 1st
+		else
+			args.add(0, ROS1CMD); // 1st
+
+		processBuilder.command(args);
+
+		try {
+			Process proc = processBuilder.start();
+		} catch (Exception e) { e.printStackTrace(); }
+
+		Util.debug("Ros.launch PString: "+pstring, "Ros.launch()");
+		return pstring;
 	}
-	
+
+
+	public static void killlaunch(String str) {
+
+		List<String> items = new ArrayList<>();
+
+		items.add("pkill");
+		items.add("-2");  // signal 2=SIGINT instead of default 15=SIGTERM
+		items.add("-f");
+		items.add(str);
+		Util.debug(items.get(3), "Ros.killlaunch()");
+
+		ProcessBuilder processBuilder = new ProcessBuilder();
+		processBuilder.command(items);
+		try { processBuilder.start(); }
+		catch (Exception e) { e.printStackTrace(); }
+
+	}
+
+
+	public static void roscommand(String str) {
+		Util.debug("Ros.java roscommand: "+str, null);
+
+		String cmd = ROS1CMD;
+		if (settings.getBoolean(ManualSettings.ros2))
+			cmd = ROS2CMD;
+
+		cmd += " " + str;
+		Util.systemCall(cmd);
+	}
+
+
 	public static void savewaypoints(String str) {
 		if (str.trim().equals(""))
 			state.delete(State.values.rosmapwaypoints);
@@ -264,22 +321,6 @@ public class Ros {
 		return result;
 	}
 
-	public static String getRosPackageDir() {
-		try {
-
-			String[] cmd = { "bash", "-ic", "roscd "+ROSPACKAGE+" ; pwd" };
-			Process proc = Runtime.getRuntime().exec(cmd);
-			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			String str = procReader.readLine();
-//			proc.destroy();
-			return str;
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
 	public static String getMapFilePath() {
 		return Ros.rospackagedir + Util.sep + "maps" + Util.sep ;
 	}
@@ -305,13 +346,13 @@ public class Ros {
 	public static boolean saveMap() {
 		try {
 			// nuke any existing files in root dir
-			Path sourcepath = Paths.get( Settings.redhome+Util.sep+mapfilename);
+			Path sourcepath = Paths.get( Settings.tomcathome +Util.sep+mapfilename);
 			if (Files.exists(sourcepath)) Files.delete(sourcepath);
-			sourcepath = Paths.get( Settings.redhome+Util.sep+mapyamlname);
+			sourcepath = Paths.get( Settings.tomcathome +Util.sep+mapyamlname);
 			if (Files.exists(sourcepath)) Files.delete(sourcepath);
 
 			// call ros map_saver
-			String cmd =  Settings.redhome+Util.sep+"ros.sh"; // setup ros environment
+			String cmd =  ROS1CMD; // setup ros environment
 			cmd += " rosrun map_server map_saver";
 			Util.systemCall(cmd);
 
@@ -320,7 +361,7 @@ public class Ros {
 			backUpYaml();
 
 			// move files from root to ros map dir
-			sourcepath = Paths.get( Settings.redhome+Util.sep+mapfilename);
+			sourcepath = Paths.get( Settings.tomcathome +Util.sep+mapfilename);
 			Path destinationpath = Paths.get(getMapFilePath()+mapfilename);
 
 			long timeout = System.currentTimeMillis() + 10000;
@@ -332,7 +373,7 @@ public class Ros {
 			Files.move(sourcepath, destinationpath, StandardCopyOption.REPLACE_EXISTING);
 //			Files.delete(sourcepath);
 
-			sourcepath = Paths.get( Settings.redhome+Util.sep+mapyamlname);
+			sourcepath = Paths.get( Settings.tomcathome +Util.sep+mapyamlname);
 			destinationpath = Paths.get(getMapFilePath()+mapyamlname);
 			timeout = System.currentTimeMillis() + 10000;
 			while (!Files.exists(sourcepath) && System.currentTimeMillis()< timeout) Util.delay(10);

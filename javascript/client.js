@@ -38,6 +38,8 @@ var clicksteeron = true;
 var maxmessagecontents = 50000; // was 150000
 var maxmessageboxsize = 4000;
 var relay = false;
+var webrtcinit = false;
+
 
 var tempimage = new Image();
 tempimage.src = 'images/eye.gif';
@@ -74,28 +76,52 @@ var lastcommand;
 var maintopbarTimer = null;
 var subwindows = ["aux", "context", "menu", "main", "rosmap", "radar"];  // purposely skipped "error" window
 var windowpos = [null, null, null, null]; // needs same length as above
-var oculusPrimeplayerSWF;
+var oculusPrimeplayerSWF = null;
 var recordmode = streammode;
+var firstresize = true;
+
 
 function loaded() {
-	oculusPrimeplayerSWF = document.getElementById("oculusPrime_player");
-	
+
 	loadwindowpositions();
 	loadrosmapwindowpos();
 	
-	// main window init:
+	
+	if (clicksteeron) { clicksteer("on"); }
+    overlay("on");
+    browserwindowresized();
+	
+	commClientLoaded(); 
+	if (/auth=/.test(document.cookie)) { 
+		commLoginFromCookie(); 
+		logintimer = setTimeout("eraseCookie('auth'); window.location.reload()", logintimeout);
+	}
+	else login(); // user input goes out thru commLogin() below
+	videologo("on");
+}
+
+function main_window_resize() {
 	var mm = document.getElementById("main_menu_over");
 	var mt = document.getElementById("maintable");
 	var x = mt.offsetLeft;
 	var y = mt.offsetTop - mm.style.paddingTop;
-	mm.style.position = "absolute";
-	var i = subwindows.indexOf("main");
-	if (windowpos[i] != null) {
-		x = windowpos[i][0];
-		y = windowpos[i][1]+22;
+
+	if (firstresize) {
+		firstresize = false;
+		var i = subwindows.indexOf("main");
+		if (windowpos[i] != null) {
+			x = windowpos[i][0];
+			y = windowpos[i][1]+22;
+		}
+		else { // centered default
+			x += document.body.clientWidth/2 - mm.offsetWidth/2; 
+			if (x<4) x=4;
+		}
+
+		mm.style.left = x + "px";
+		mm.style.top = y -22 + "px"; 
 	}
-	mm.style.left = x + "px";
-	mm.style.top = y -22 + "px"; 
+
 	var under = document.getElementById("main_menu_under");
 	under.style.display = "";
 	under.style.width = null; //ie fix
@@ -106,19 +132,6 @@ function loaded() {
 	under.style.width = (mm.offsetWidth + margin*2) + "px";
 	under.style.height = (mm.offsetHeight + margin*2) + "px";
 	under.style.display = "none";
-	
-	
-	if (clicksteeron) { clicksteer("on"); }
-    overlay("on");
-    browserwindowresized();
-	bworig= document.body.clientWidth;
-}
-
-function flashloaded() {
-	videologo("on");
-	openxmlhttp("rtmpPortRequest",rtmpPortReturned);
-	
-
 }
 
 function openxmlhttp(theurl, functionname) {
@@ -161,11 +174,6 @@ function resized() {
 }
 
 function browserwindowresized() {
-//	if (document.body.clientHeight < document.getElementById("visiblepagediv").offsetHeight + 40) {
-//		document.getElementById("topgap").style.height = "5px";
-//	}
-//	else { document.getElementById("topgap").style.height = "30px"; }
-	
 	docklineposition();
 	videooverlayposition();
 	overlay("");
@@ -237,30 +245,14 @@ function connectionlost() {
 	setstatusunknown();
 	videologo("on");
 	message("reload page", "green");
+	clearTimeout(pinginterval);
+	clearTimeout(pingcountdown);
 }
 
 function callServer(fn, str) {
-	if (pingcountdownaftercheck != null) {
-		message("command delayed 10ms", sentcmdcolor);
-		setTimeout("callServer('"+fn+"','"+str+"');",10);
-	}
-	else {
-		if (pingcountdown != null) {
-			clearTimeout(pingcountdown);
-			countdowntostatuscheck();
-		}
-		//var sendcommandtimelast = 0;
-		//var lastcommandsent;
-
-		
-		var nowtime = new Date().getTime();
-		if (!(lastcommandsent == fn+str && nowtime - sendcommandtimelast < 200)) {
-			oculusPrimeplayerSWF.flashCallServer(fn,str);
-		}
-		else message("rapid succession command dropped",sentcmdcolor);
-		sendcommandtimelast = nowtime;
-		lastcommandsent = fn+str;
-	}
+	callServerComm(fn, str);
+	sendcommandtimelast = new Date().getTime();
+	lastcommandsent = fn+str;
 }
 
 function play(str) { // called by javascript only?
@@ -268,8 +260,6 @@ function play(str) { // called by javascript only?
 	var num = 1;
 	var s = str.split("_");
 	if (s[1]=="2") { num = 2; streammode = s[0] } // separate audio stream with avconv
-	if (streammode == "stop") { num =0 ; } 
-	oculusPrimeplayerSWF.flashplay(num, videoscale);
 }
 
 function getFlashMovie(movieName) {
@@ -304,7 +294,7 @@ function message(message, colour, status, value) {
 		var tempmessage = message;
 		var d = new Date();
 		
-		if (message == "status check received") { 
+		if (message == "serverok") { 
 			statuscheckreceived=true;
 			if (officiallagtimer != 0) {
 				var i = d.getTime() - officiallagtimer;
@@ -350,13 +340,20 @@ function message(message, colour, status, value) {
 			datetime +="</span>";
 			b.innerHTML = message + hiddenmessageboxping + " &nbsp; " + datetime + "<br>" + str + " ";
 		}
-		if (tempmessage == "playing stream") { videologo("off"); } 
-		if (tempmessage == "stream stopped") { videologo("on"); docklinetoggle("off"); }
+		// if (tempmessage == "playing stream") { videologo("off"); } 
+		// if (tempmessage == "stream stopped") { videologo("on"); docklinetoggle("off"); }
 		lagtimer = 0;
 	}
 	if (status != null) {  //(!/\S/.test(d.value))
 		if (status == "multiple") { setstatusmultiple(value); }
 		else { setstatus(status, value); }
+	}
+	
+	if (typeof ws_server !== 'undefined') {
+		if (!webrtcinit && ws_server && ws_port && turnserver_login && turnserver_port) {
+			webrtcinit = true;
+			websocketServerConnect(); // webrtc.js
+		}
 	}
 }
 
@@ -371,6 +368,9 @@ function setstatus(status, value) {
 			var s = value.split("_");
 			if (s[0] != streammode) { play(value); }
 			value = s[0];
+			
+			if (value == "stop" || value == "mic") { videologo("on"); } // docklinetoggle("off"); }
+			else if (value == "camera" || value == "camandmic") videologo("off");
 		}
 
 		a.innerHTML = value;
@@ -401,14 +401,13 @@ function setstatus(status, value) {
 		}
 	}
 	if (status=="vidctroffset") { ctroffset = parseInt(value); }
-	else if (status=="connection" && (value == "connected" || value == "relay") && !connected) { // initialize
+	else if ((status=="connection" && value == "connected") && !connected) { // initialize
 		overlay("off");
 		countdowntostatuscheck(); 
 		connected = true;
 		keyboard("enable");
 		setTimeout("videomouseaction = true;",30); // firefox screen glitch fix
 		clearTimeout(logintimer);
-		callServer("videosoundmode", "high");
 		if (value == "relay") { relay = true; }
 	}
 	else if (status == "storecookie") {
@@ -488,6 +487,18 @@ function setstatus(status, value) {
 			b.href="javascript: callServer('record','true');";
 		}
 	}
+	else if (status=="videowidth" && oculusPrimeplayerSWF == null) {
+		document.getElementById("video").style.width = value+"px";
+	}
+	else if (status=="videoheight" && oculusPrimeplayerSWF == null) {
+		document.getElementById("video").style.height = value+"px";
+		browserwindowresized();
+		main_window_resize();
+	}
+	else if (status=="webrtcserver") { ws_server = value; } // webrtc.js
+	else if (status=="webrtcport") { ws_port = value; } // webrtc.js
+	else if (status=="turnserverlogin") {turnserver_login = value; } // webrtc.js
+	else if (status=="turnserverport") {turnserver_port = value; } // webrtc.js
  
 }
 
@@ -824,7 +835,7 @@ function lightpopulate() {
 	str += "</tr></table>";
 	a.style.display = "";
 	a.innerHTML = str;
-	var b=document.getElementById("lighttd"+parseInt(spotlightlevel/10));
+	var b=document.getElementById("lighttd"+(spotlightlevel/10).toString());
 	b.style.backgroundColor = "#aaaaaa";
 	b.style.color = "#111111";
 	
@@ -842,7 +853,7 @@ function lightpopulate() {
 	str += "</tr></table>";
 	c.style.display = "";
 	c.innerHTML = str;
-	var d=document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
+	var d=document.getElementById("floodlighttd"+(floodlightlevel/10).toString());
 	d.style.backgroundColor = "#aaaaaa";
 	d.style.color = "#111111";
 }
@@ -859,7 +870,7 @@ function lightout(i) {
 
 function lightclick(level) {
 	// unset old
-	var b = document.getElementById("lighttd"+parseInt(spotlightlevel/10));
+	var b = document.getElementById("lighttd"+(spotlightlevel/10).toString());
 	b.style.color = "#cccccc";
 	b.style.backgroundColor = "#111111";
 	
@@ -868,8 +879,8 @@ function lightclick(level) {
 	a.style.color = "#111111";
 	a.style.backgroundColor = "#aaaaaa";
 	
-	message("sending spotlight brightness: "+ parseInt(level*10)+"%", sentcmdcolor);
-	callServer("spotlight", parseInt(level*10));
+	message("sending spotlight brightness: "+ (level*10).toString()+"%", sentcmdcolor);
+	callServer("spotlight", (level*10).toString());
 	lagtimer = new Date().getTime();
 }
 
@@ -885,7 +896,7 @@ function floodlightout(i) {
 
 function floodlightclick(level) {
 	// unset old
-	var b = document.getElementById("floodlighttd"+parseInt(floodlightlevel/10));
+	var b = document.getElementById("floodlighttd"+(floodlightlevel/10).toString());
 	b.style.color = "#cccccc";
 	b.style.backgroundColor = "#111111";
 	
@@ -894,8 +905,8 @@ function floodlightclick(level) {
 	a.style.color = "#111111";
 	a.style.backgroundColor = "#aaaaaa";
 	
-	message("sending floodlight: "+ parseInt(level*10)+"%", sentcmdcolor);
-	callServer("floodlight", parseInt(level*10));
+	message("sending floodlight: "+ (level*10).toString()+"%", sentcmdcolor);
+	callServer("floodlight", (level*10).toString());
 	lagtimer = new Date().getTime();
 }
 
@@ -913,9 +924,6 @@ function streamdetailspopulate() {
 		a= document.getElementById("high_specs");
 		a.innerHTML = "size:"+s[i]+"x"+s[i+1]+" fps:"+s[i+2]+" quality:"+s[i+3];
 		i = 13;
-		a= document.getElementById("full_specs");
-		a.innerHTML = "size:"+s[i]+"x"+s[i+1]+" fps:"+s[i+2]+" quality:"+s[i+3];
-		i = 17;
 		a= document.getElementById("custom_specs");
 		a.innerHTML = "size:"+s[i]+"x"+s[i+1]+" fps:"+s[i+2]+" quality:"+s[i+3];
 //		a = document.getElementById(streamdetails[0].slice(1)+"_bull");
@@ -937,7 +945,7 @@ function streamdetailspopulate() {
 }
 
 function streamSettingsBullSet(str) {
-	var settings = ["low", "med", "high", "full", "custom"];
+	var settings = ["low", "med", "high", "custom"];
 	for (var i = 0; i < settings.length; i++) {
 //		debug(setting);
 		document.getElementById(settings[i]+"_bull").style.visibility = "hidden";
@@ -1818,18 +1826,7 @@ function overlay(str) {
 	var c=document.getElementById("overlaycontents");
 	if (str=="on") { a.style.display = ""; c.style.display = ""; resized(); }
 	if (str=="off") { a.style.display = "none"; c.style.display = "none"; resized(); }
-	
-	/*
-	var b = document.body;
-	if (b.scrollHeight > b.offsetHeight) {
-		a.style.height = b.scrollHeight + "px";
-		c.style.height = b.scrollHeight + "px";
-	}
-	else { 
-		a.style.height = b.offsetHeight + "px";
-		c.style.height = b.offsetHeight + "px";
-	}
-	*/
+
 }
 
 function createCookie(name,value,days) {
@@ -1878,7 +1875,8 @@ function loginsend() {
 	var str3= document.getElementById("user_remember").checked;
 	if (str3 == true) { str3="remember"; }
 	else { eraseCookie("auth"); }
-	oculusPrimeplayerSWF.connect(str1+" "+str2+" "+str3+" ");
+	
+	commLogin(str1, str2, str3);
 	logintimer = setTimeout("window.location.reload()", logintimeout);
 }
 
@@ -2023,12 +2021,28 @@ function steeringmouseup(id) {
 }
 
 function videologo(state) {
-	// pass "" as state to reposition only
+	    
 	var i = document.getElementById("videologo");
+
+	if (state != "on" && state != "off") {
+		state = (i.style.display == "none") ? "off" : "on";
+	}
+	
     var video = document.getElementById("video");
     var xy = findpos(video);
-	if (state=="on") { i.style.display = ""; }
-	if (state=="off") { i.style.display = "none"; }
+    var s = document.getElementById("stream");
+	if (state=="on") { 
+		i.style.display = ""; 
+		s.style.display="none"; 
+	}
+	if (state=="off") { 
+		i.style.display = "none"; 
+		s.style.display="";
+	}
+	
+	i.width = video.offsetWidth;
+	i.height = video.offsetHeight;
+	
     var x = xy[0] + (video.offsetWidth/2) - (i.width/2);
     var y = xy[1] + (video.offsetHeight/2) - (i.height/2);
     i.style.left = x + "px";
@@ -2444,27 +2458,28 @@ function streamset(str) {
 	if (str=="setcustom") {
 		var str = document.getElementById("customstreamsettings").innerHTML;		
 		popupmenu("menu", "show", null, null, str, null);
-		document.getElementById('vwidth').value = streamdetails[17];
-		document.getElementById('vheight').value = streamdetails[18];
-		document.getElementById('vfps').value = streamdetails[19];
-		document.getElementById('vquality').value = streamdetails[20];
+		var i=13;
+		document.getElementById('vwidth').value = streamdetails[i];
+		document.getElementById('vheight').value = streamdetails[i+1];
+		document.getElementById('vfps').value = streamdetails[i+2];
+		document.getElementById('vquality').value = streamdetails[i+3];
 	}
 	else if (str=="customupdate") {
 		streamdetails[0] = "vcustom";
-		streamdetails[17] = document.getElementById('vwidth').value;
-		streamdetails[18] = document.getElementById('vheight').value;
-		streamdetails[19] = document.getElementById('vfps').value;
-		streamdetails[20] = document.getElementById('vquality').value;
-		if (parseInt(streamdetails[20]) > 100) { streamdetails[20] = "100"; }
-		if (parseInt(streamdetails[20]) < 0) { streamdetails[20] = "0"; }
-		if (parseInt(streamdetails[19]) < 1) { streamdetails[19] = "1"; }
-		if (parseInt(streamdetails[18]) < 1) { streamdetails[18] = "1"; }
-		if (parseInt(streamdetails[17]) < 1) { streamdetails[17] = "1"; }
-		var s = streamdetails[17] +"_"+ streamdetails[18] +"_"+ streamdetails[19] +"_"+ streamdetails[20];
+		var i=13;
+		streamdetails[i] = document.getElementById('vwidth').value;
+		streamdetails[i+1] = document.getElementById('vheight').value;
+		streamdetails[i+2] = document.getElementById('vfps').value;
+		streamdetails[i+3] = document.getElementById('vquality').value;
+		if (parseInt(streamdetails[i+3]) < 0) { streamdetails[i+3] = "0"; }
+		if (parseInt(streamdetails[i+2]) < 1) { streamdetails[i+2] = "1"; }
+		if (parseInt(streamdetails[i+1]) < 1) { streamdetails[i+1] = "1"; }
+		if (parseInt(streamdetails[i]) < 1) { streamdetails[i] = "1"; }
+		var s = streamdetails[i] +"_"+ streamdetails[i+1] +"_"+ streamdetails[i+2] +"_"+ streamdetails[i+3];
 		callServer("streamsettingscustom", s);
 		message("sending custom stream values: " + s, sentcmdcolor);
 		lagtimer = new Date().getTime(); // has to be *after* message()
-		document.getElementById("extendedsettingsbox").style.display = "none";
+		// document.getElementById("extendedsettingsbox").style.display = "none";
 		overlay("off");
 	}
 	else {
@@ -2737,8 +2752,7 @@ function depthViewImgReload(mode) {
 function imgOverVideo(mode) {
 	var img = document.getElementById("videologo");
 	if (mode == "on") {
-		play("stop"); // will stop playing stream, and turn videologo on
-		// <img id="videologo" src="images/eye.gif" width="640" height="480"
+		videologo("on");
 		img.src = "frameGrabHTTP?mode=videoOverlayImg&date=" + new Date().getTime();
 		img.onload = function() { imgOverVideoRepeat(); }
 	}

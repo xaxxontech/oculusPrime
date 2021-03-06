@@ -18,47 +18,27 @@ import org.opencv.objdetect.CascadeClassifier;
 public class OpenCVUtils {
 	State state;
 	Application app;
-	public boolean jarfiledeleted = false;
-	private static final String UBUNTU1604OPENCV = "opencv-2413.jar";
-	private static final String UBUNTU1404OPENCV = "opencv-2410.jar";
 
-//	VideoCapture capture;
 
 	public OpenCVUtils(Application a) {    // constructor
-//		System.loadLibrary( Core.NATIVE_LIBRARY_NAME ); // moved to Application so only loaded once
 		state = State.getReference();
 		app = a;
 	}
 
-	public void loadOpenCVnativeLib() {
-//		if ( State.getReference().get(State.values.osarch).equals(Application.ARM)) {
-//			Util.log("ARM system detected, openCV skipped", this);
-//			return;
-//		}
+    public void loadOpenCVnativeLib() {
+        if ( State.getReference().get(State.values.osarch).equals(Application.ARM)) {
+            Util.log("ARM system detected, openCV skipped", this);
+            return;
+        }
 
-		String deleteopencvjar = UBUNTU1604OPENCV;
-		// need to nuke newer opencv jar if older linux only, otherwise won't load native lib
-		if (Application.UBUNTU1604.equals(Util.getUbuntuVersion())) deleteopencvjar = UBUNTU1404OPENCV;
+        try {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+            Util.log("opencv native lib "+Core.NATIVE_LIBRARY_NAME+" loaded OK", this);
+        } catch (UnsatisfiedLinkError e) {
+            Util.log("opencv native lib "+Core.NATIVE_LIBRARY_NAME+" not available", this);
+        }
 
-		String jarfile = Settings.redhome+ Util.sep+"webapps"+Util.sep+"oculusPrime"+Util.sep+"WEB-INF"+Util.sep+"lib"+
-				Util.sep+deleteopencvjar;
-
-		File file = new File(jarfile);
-		if (file.exists()) {
-			file.delete();
-			Util.log("deleted file " + file.getAbsolutePath(), this);
-			jarfiledeleted = true;
-		}
-
-
-		try {
-			System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-			Util.log("opencv native lib "+Core.NATIVE_LIBRARY_NAME+" loaded OK", this);
-		} catch (UnsatisfiedLinkError e) {
-			Util.log("opencv native lib "+Core.NATIVE_LIBRARY_NAME+" not available", this);
-		}
-
-	}
+    }
 
 	public static BufferedImage matToBufferedImage(Mat matrix) { // type_intRGB
 		int cols = matrix.cols();
@@ -121,7 +101,7 @@ public class OpenCVUtils {
 
 				if (! state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
 					app.publish(Application.streamstate.stop);
-					Util.delay(Application.STREAM_CONNECT_DELAY*2);
+					Util.delay(Video.STREAM_CONNECT_DELAY*2);
 				}
 
 				VideoCapture capture = new VideoCapture(0);

@@ -8,15 +8,15 @@ import oculusPrime.State.values;
 
 public class Settings {
 
-	public final static String redhome = System.getenv("RED5_HOME");
-	public final static String settingsfile = redhome+Util.sep+"conf"+Util.sep+"oculus_settings.txt";
-	public final static String telnetscripts = redhome+"/telnet_scripts"; // this folder needs to be moved or protected from update operation! 
+	public final static String tomcathome = System.getenv("CATALINA_HOME");
+	public final static String settingsfile = tomcathome +Util.sep+"conf"+Util.sep+"oculus_settings.txt";
+	public final static String telnetscripts = tomcathome +"/telnet_scripts"; // this folder needs to be moved or protected from update operation!
 	public final static String appsubdir = "webapps/oculusPrime";
-	public final static String streamfolder = redhome + "/webapps/oculusPrime/streams/";
-	public final static String framefolder = redhome+Util.sep+appsubdir+"/framegrabs";
-	public final static String streamsfolder = redhome+Util.sep+appsubdir+"/streams";
-	public final static String stdout = redhome+Util.sep+"log/jvm.stdout";
-	public final static String logfolder = redhome+Util.sep+"log";
+	public final static String streamfolder = tomcathome + "/webapps/oculusPrime/streams/";
+	public final static String framefolder = tomcathome +Util.sep+appsubdir+"/framegrabs";
+	public final static String streamsfolder = tomcathome +Util.sep+appsubdir+"/streams";
+	public final static String stdout = tomcathome +Util.sep+"log/jvm.stdout";
+	public final static String logfolder = tomcathome +Util.sep+"log";
 	
 	public final static String DISABLED= "disabled";
 	public final static String ENABLED = "enabled";
@@ -208,7 +208,7 @@ public class Settings {
 	public synchronized void writeFile(){
 		try {
 			
-			final String temp = redhome + Util.sep+"conf"+Util.sep+"oculus_created.txt";
+			final String temp = tomcathome + Util.sep+"conf"+Util.sep+"oculus_created.txt";
 			FileWriter fw = new FileWriter(new File(temp));
 			
 			fw.append("# gui settings \r\n");
@@ -420,61 +420,29 @@ public class Settings {
 		}
 	}
 
-	public String readRed5Setting(String str) {
-		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
-		FileInputStream filein;
-		String result = null;
-		try {
-			filein = new FileInputStream(filenm);
-			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					filein));
-			String line = "";
-			while ((line = reader.readLine()) != null) {
-				String s[] = line.split("=");
-				if (s[0].equals(str)) {
-					result = s[1];
-				}
-			}
-			filein.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
+    public String readHTTPport() {
 
-	public void writeRed5Setting(String setting, String value) { 
-		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
-		value = value.replaceAll("\\s+$", ""); 
-		FileInputStream filein;
-		String[] lines = new String[999];
-		try {
-			filein = new FileInputStream(filenm);
-			BufferedReader reader = new BufferedReader(new InputStreamReader(filein));
-			int i = 0;
-			while ((lines[i] = reader.readLine()) != null) {
-				String items[] = lines[i].split("=");
-				if ((items[0].toUpperCase()).equals(setting.toUpperCase())) {
-					lines[i] = setting + "=" + value;
-				}
-				i++;
-			}
-			filein.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        return "5080"; // TODO:
 
-		FileOutputStream fileout;
-		try {
-			fileout = new FileOutputStream(filenm);
-			for (int n = 0; n < lines.length; n++) {
-				if (lines[n] != null) {
-					new PrintStream(fileout).println(lines[n]);
-				}
-			}
-			fileout.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+// 		String filenm = System.getenv("RED5_HOME") + Util.sep+"conf"+Util.sep+"red5.properties";
+//		FileInputStream filein;
+//		String result = null;
+//		try {
+//			filein = new FileInputStream(filenm);
+//			BufferedReader reader = new BufferedReader(new InputStreamReader(
+//					filein));
+//			String line = "";
+//			while ((line = reader.readLine()) != null) {
+//				String s[] = line.split("=");
+//				if (s[0].equals(str)) {
+//					result = s[1];
+//				}
+//			}
+//			filein.close();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		return result;
 	}
 
 	public boolean getBoolean(GUISettings setting) {

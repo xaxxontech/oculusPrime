@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 
-import oculusPrime.commport.PowerLogger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -28,7 +27,7 @@ import oculusPrime.Settings;
 import oculusPrime.State;
 import oculusPrime.SystemWatchdog;
 import oculusPrime.Util;
-import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.Malg;
 
 public class Navigation implements Observer {
 
@@ -37,8 +36,7 @@ public class Navigation implements Observer {
     protected static Application app = null;
 	private static State state = State.getReference();
 	public static final String DOCK = "dock"; // waypoint name
-	private static final String redhome = System.getenv("RED5_HOME");
-	public static final File navroutesfile = new File(redhome+"/conf/navigationroutes.xml");
+	public static final File navroutesfile = new File(Settings.tomcathome+"/conf/navigationroutes.xml");
 	public static final long WAYPOINTTIMEOUT = Util.TEN_MINUTES;
 	public static final long NAVSTARTTIMEOUT = Util.TWO_MINUTES;
 	public static final int RESTARTAFTERCONSECUTIVEROUTES = 15;
@@ -49,13 +47,14 @@ public class Navigation implements Observer {
 	public static long routestarttime = 0;
 	public NavigationLog navlog;
 	int batteryskips = 0;
-	
-	
+	private String navpstring = null;
+
+
 	/** Constructor */
 	public Navigation(Application a) {
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		Ros.loadwaypoints();
-		Ros.rospackagedir = Ros.getRosPackageDir(); // required for map saving
+		Ros.rospackagedir = settings.readSetting(ManualSettings.rospackagefolder);
 		navlog = new NavigationLog();
 		state.addObserver(this);
 		app = a;
@@ -134,18 +133,17 @@ public class Navigation implements Observer {
 			return;
 		}
 
-		String launchfile = Ros.MAKE_MAP;
-        if (settings.getBoolean(ManualSettings.lidar)) launchfile = Ros.MAKE_MAP_LIDAR;
+		new Thread(new Runnable() { public void run() {
 
-        if (!Ros.launch(launchfile)) {
-			app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, aborting mapping start");
-			return;
-		}
+			String launchfile = Ros.MAKE_MAP;
+			if (settings.getBoolean(ManualSettings.lidar)) launchfile = Ros.MAKE_MAP_LIDAR;
 
-		app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
-		state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
-//		app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
+			navpstring = Ros.launch(launchfile);
 
+			app.driverCallServer(PlayerCommands.messageclients, "starting mapping, please wait");
+			state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
+
+		}  }).start();
 	}
 
 	public void startNavigation() {
@@ -157,10 +155,8 @@ public class Navigation implements Observer {
             if (settings.getBoolean(ManualSettings.lidar)) launchfile = Ros.REMOTE_NAV_LIDAR;
 
             app.driverCallServer(PlayerCommands.messageclients, "starting navigation, please wait");
-			if (!Ros.launch(launchfile)) {
-				app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, abort");
-				return;
-			}
+			navpstring = Ros.launch(launchfile);
+
 			state.set(State.values.navsystemstatus, Ros.navsystemstate.starting.toString()); // set running by ROS node when ready
 
 			// wait
@@ -169,63 +165,36 @@ public class Navigation implements Observer {
 					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) { Util.delay(50);  } // wait
 
 			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)){
-//				if (settings.getBoolean(ManualSettings.useflash))
-//					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString()); // reduce cpu
 				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
 					state.set(State.values.rosinitialpose, "0_0_0");
 				Util.log("navigation running", this);
 				return; // success
 			}
 
-			// ========try again if needed, just once======
-
-			if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) ||
-					state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-				return; // in case cancelled
-
-			Util.log("navigation start attempt #2", this);
-			stopNavigation();
-			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.stopped)) Util.delay(10);
-
-			if (!Ros.launch(launchfile)) {
-				app.driverCallServer(PlayerCommands.messageclients, "roslaunch already running, abort");
-				return;
-			}
-
-			start = System.currentTimeMillis(); // wait
-			while (!state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)
-					&& System.currentTimeMillis() - start < NAVSTARTTIMEOUT) Util.delay(50);
-
-			// check if running
-			if (state.equals(State.values.navsystemstatus, Ros.navsystemstate.running)) {
-				if (settings.getBoolean(ManualSettings.useflash))
-					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString()); // reduce cpu
-				if (!state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED))
-					state.set(State.values.rosinitialpose, "0_0_0");
-				Util.log("navigation running", this);
-				return; // success
-			}
 			else  {
-				stopNavigation(); // give up
-//				Util.delay(5000);
-//				Util.systemCall("pkill roscore");  // full reset
+				stopNavigation(); // failure
 			}
+
 
 		}  }).start();
 	}
 
 	public void stopNavigation() {
-		Util.log("stopping navigation", this);
-		Util.systemCall("pkill roslaunch");
 
-		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+		if (state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()) ||
+				state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopping.toString()) )
 			return;
 
-		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopping.toString());
-		new Thread(new Runnable() { public void run() {
-			Util.delay(Ros.ROSSHUTDOWNDELAY);
-			state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
-		}  }).start();
+		// mapping often requires ros restart after
+		if (state.get(values.navsystemstatus).equals(Ros.navsystemstate.mapping.toString()))
+			Util.systemCall("pkill roscore");
+
+		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
+		Util.log("stopping autocrawler.navigation", this);
+		app.driverCallServer(PlayerCommands.messageclients, "navigation stopped");
+
+		if (navpstring !=null) Ros.killlaunch(navpstring);
+		navpstring = null;
 	}
 
 	public void dock() {
@@ -290,8 +259,8 @@ public class Navigation implements Observer {
 			app.comport.checkisConnectedBlocking(); // just in case
 
 			//start gyro again
-			state.set(values.odometrybroadcast, ArduinoPrime.ODOMBROADCASTDEFAULT);
-			state.set(values.rotatetolerance, ArduinoPrime.ROTATETOLERANCE);
+			state.set(values.odometrybroadcast, Malg.ODOMBROADCASTDEFAULT);
+			state.set(values.rotatetolerance, Malg.ROTATETOLERANCE);
 			app.driverCallServer(PlayerCommands.odometrystart, null);
 
 			// highres camera on
@@ -299,14 +268,13 @@ public class Navigation implements Observer {
 			// only switch mode if camera not running, to avoid interruption of feed
 			if (state.get(State.values.stream).equals(Application.streamstate.stop.toString()) ||
 					state.get(State.values.stream).equals(Application.streamstate.mic.toString())) {
-				app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW); // saves CPU
 				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			}
 
 			app.driverCallServer(PlayerCommands.spotlight, "0");
 
 			// reverse cam
-			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
+			app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.reverse.toString());
 			state.set(State.values.controlsinverted, true); // preempt so doesn't reverse in the middle of doing 180
 															// must be set after cameracommand to work
 
@@ -332,11 +300,9 @@ public class Navigation implements Observer {
 				if (!finddock(AutoDock.LOWRES, true)) { // lowres dock search with rotate (lowres much faster)
 					Util.log("error, finddock() needs to try 2nd time", this);
 					Util.delay(20000); // allow cam shutdown, system settle
-					app.killGrabber(); // force chrome restart
-					Util.delay(Application.GRABBERRESPAWN + 4000); // allow time for grabber respawn
 					// camera, lights (in case malg had dropped commands)
 					app.driverCallServer(PlayerCommands.spotlight, "0");
-					app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
+					app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.reverse.toString());
 					app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 					app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 					Util.delay(4000); // wait for cam startup, light adjust
@@ -389,9 +355,9 @@ public class Navigation implements Observer {
 				Util.delay(10); // thread safe
 
 				start = System.currentTimeMillis();
-				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
+				while(!state.get(State.values.direction).equals(Malg.direction.stop.toString())
 						&& System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
-				Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
+				Util.delay(Malg.TURNING_STOP_DELAY);
 			}
 			rot ++;
 
@@ -684,7 +650,7 @@ public class Navigation implements Observer {
 					SystemWatchdog.waitForCpu();
 					undockandlocalize();
 				}
-				app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+				app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.horiz.toString());
 
 		    	// go to each waypoint
 		    	NodeList waypoints = navroute.getElementsByTagName("waypoint");	    	
@@ -821,12 +787,12 @@ public class Navigation implements Observer {
 		app.driverCallServer(PlayerCommands.forward, String.valueOf(distance));
 		Util.delay((long) (distance / state.getDouble(values.odomlinearmpms.toString()))); // required for fast systems?!
 		long start = System.currentTimeMillis();
-		while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
+		while(!state.get(values.direction).equals(Malg.direction.stop.toString())
 				&& System.currentTimeMillis() - start < 10000) { Util.delay(10); } // wait
 
         if (settings.getBoolean(ManualSettings.lidar))  return;
 
-		Util.delay(ArduinoPrime.LINEAR_STOP_DELAY);
+		Util.delay(Malg.LINEAR_STOP_DELAY);
 
 		/* rotate to localize */
 		app.comport.checkisConnectedBlocking(); // pcb could reset changing from wall to battery
@@ -906,10 +872,6 @@ public class Navigation implements Observer {
 		boolean mic = false;
 		String notdetectedaction = "";
 
-		boolean camAlreadyOn = false;
-//		if (!state.get(values.stream).equals(Application.streamstate.stop.toString()))
-//			camAlreadyOn = true;
-		
     	for (int i=0; i< actions.getLength(); i++) {
     		String action = ((Element) actions.item(i)).getTextContent();
     		switch (action) {
@@ -953,27 +915,12 @@ public class Navigation implements Observer {
 			app.driverCallServer(PlayerCommands.messageclients, "rotate action ignored, camera unused");
 		}
 
-    	// VIDEOSOUNDMODELOW required for flash stream activity function to work, saves cpu for camera
-    	String previousvideosoundmode = state.get(State.values.videosoundmode);
-    	if (mic || camera) app.driverCallServer(PlayerCommands.videosoundmode, Application.VIDEOSOUNDMODELOW);
-
-		// setup camera mode and position
+		// setup camera position
 		if (camera) {
-			if (!camAlreadyOn) {
-				if (human)
-					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.med.toString());
-				else if (motion)
-					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-				else if (photo)
-					app.driverCallServer(PlayerCommands.streamsettingscustom, "1280_720_8_85");
-				else // record
-					app.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
-			}
-
 			if (photo)
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ - ArduinoPrime.CAM_NUDGE * 2));
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(Malg.CAM_HORIZ - Malg.CAM_NUDGE * 2));
 			else
-				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(ArduinoPrime.CAM_HORIZ-ArduinoPrime.CAM_NUDGE*3));
+				app.driverCallServer(PlayerCommands.camtilt, String.valueOf(Malg.CAM_HORIZ- Malg.CAM_NUDGE*3));
 		}
 
         if (mic) {
@@ -983,19 +930,16 @@ public class Navigation implements Observer {
         }
 
 		// turn on cam and or mic, allow delay for normalize
-		if (!camAlreadyOn) {
-			if (camera && mic) {
-				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
-				Util.delay(5000);
-				if (!settings.getBoolean(ManualSettings.useflash)) Util.delay(5000); // takes a while for 2 streams
-			} else if (camera && !mic) {
-				app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
-				Util.delay(5000);
-			} else if (!camera && mic) {
-				app.driverCallServer(PlayerCommands.publish, Application.streamstate.mic.toString());
-				Util.delay(5000);
-			}
-		}
+        if (camera && mic) {
+            app.driverCallServer(PlayerCommands.publish, Application.streamstate.camandmic.toString());
+            Util.delay(5000);
+        } else if (camera && !mic) {
+            app.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
+            Util.delay(5000);
+        } else if (!camera && mic) {
+            app.driverCallServer(PlayerCommands.publish, Application.streamstate.mic.toString());
+            Util.delay(5000);
+        }
 
 		String recordlink = null;
 		if (record)  recordlink = app.video.record(Settings.TRUE); // start recording
@@ -1020,9 +964,7 @@ public class Navigation implements Observer {
 
 			// enable sound detection
 			if (sound) {
-				if (!settings.getBoolean(ManualSettings.useflash))   app.video.sounddetect(Settings.TRUE);
-				else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold,
-						"0 " + settings.readSetting(ManualSettings.soundthreshold));
+                app.driverCallServer(PlayerCommands.sounddetect, Settings.TRUE);
 			}
 
 			// lights on if needed
@@ -1050,7 +992,7 @@ public class Navigation implements Observer {
 
 			// PHOTO
 			if (photo) {
-				if (!settings.getBoolean(ManualSettings.useflash))  SystemWatchdog.waitForCpu();
+				SystemWatchdog.waitForCpu();
 
 				String link = FrameGrabHTTP.saveToFile(null);
 
@@ -1143,9 +1085,7 @@ public class Navigation implements Observer {
 				if (state.exists(State.values.objectdetect))
 					app.driverCallServer(PlayerCommands.objectdetectcancel, null);
 				if (sound) {
-					if (!settings.getBoolean(ManualSettings.useflash))   // app.video.sounddetect(Settings.FALSE);
-						app.driverCallServer(PlayerCommands.sounddetect, Settings.FALSE);
-					else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
+                    state.set(values.sounddetect, false);
 				}
 
 				break; // go to next waypoint, stop if rotating
@@ -1156,13 +1096,10 @@ public class Navigation implements Observer {
 				app.driverCallServer(PlayerCommands.motiondetectcancel, null);
 			if (state.exists(State.values.objectdetect))
 				app.driverCallServer(PlayerCommands.objectdetectcancel, null);
-			if (sound) {
-				if (!settings.getBoolean(ManualSettings.useflash))   // app.video.sounddetect(Settings.FALSE);
-					app.driverCallServer(PlayerCommands.sounddetect, Settings.FALSE);
-				else   app.driverCallServer(PlayerCommands.setstreamactivitythreshold, "0 0");
-			}
+			if (sound)
+                state.set(values.sounddetect, false);
 
-			// ALERT if not detect
+            // ALERT if not detect
 			if (notdetect) {
 				String navlogmsg = "NOT Detected: "+notdetectedaction;
 				String msg = "";
@@ -1195,14 +1132,14 @@ public class Navigation implements Observer {
 				SystemWatchdog.waitForCpu(8000); // lots of missed stop commands, cpu timeouts here
 
 				double degperms = state.getDouble(State.values.odomturndpms.toString());   // typically 0.0857;
-				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.left.toString());
+				app.driverCallServer(PlayerCommands.move, Malg.direction.left.toString());
 				Util.delay((long) (50.0 / degperms));
-				app.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+				app.driverCallServer(PlayerCommands.move, Malg.direction.stop.toString());
 
 				long stopwaiting = System.currentTimeMillis()+750; // timeout if error
-				while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()) &&
+				while(!state.get(State.values.direction).equals(Malg.direction.stop.toString()) &&
 						System.currentTimeMillis() < stopwaiting) { Util.delay(1); } // wait for stop
-				if (!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString()))
+				if (!state.get(State.values.direction).equals(Malg.direction.stop.toString()))
 					Util.log("error, missed turnstop within 750ms", this);
 
 				Util.delay(4000); // 2000 if condition below enabled
@@ -1220,8 +1157,7 @@ public class Navigation implements Observer {
 		if (record && recordlink != null) {
 
 			String navlogmsg = "<a href='" + recordlink + "_video.flv' target='_blank'>Video</a>";
-			if (!settings.getBoolean(ManualSettings.useflash))
-				navlogmsg += "<br><a href='" + recordlink + "_audio.flv' target='_blank'>Audio</a>";
+            navlogmsg += "<br><a href='" + recordlink + "_audio.flv' target='_blank'>Audio</a>";
 			String msg = "[Oculus Prime Video] ";
 			msg += navlogmsg+", time: "+
 					Util.getTime()+", at waypoint: " + wpname + ", route: " + name;
@@ -1242,21 +1178,21 @@ public class Navigation implements Observer {
 			app.video.record(Settings.FALSE); // stop recording
 		}
 
-		if (!camAlreadyOn)
-			app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
-		if (camera) {
-			app.driverCallServer(PlayerCommands.spotlight, "0");
-			app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
-		}
-		
-		if (mic) {
-		    app.driverCallServer(PlayerCommands.videosoundmode, previousvideosoundmode);
-            if (state.exists(values.lidar)) {
+        // turn lidar back on if necessary
+        if (state.exists(values.lidar)) {
+            if (state.get(values.lidar).equals(lidarstate.disabled.toString())) {
                 state.set(values.lidar, lidarstate.enabled.toString());
-                Util.delay(5000);
+                Util.delay(3000);
+                if (!camera) Util.delay(2000);
             }
         }
 
+        app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
+		if (camera) {
+			app.driverCallServer(PlayerCommands.spotlight, "0");
+			app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.horiz.toString());
+		}
+		
         state.set(values.waypointbusy, "false");
 
 	}

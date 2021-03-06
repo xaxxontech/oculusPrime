@@ -24,8 +24,6 @@ import javax.servlet.http.Part;
 
 import developer.Navigation;
 import developer.Ros;
-import developer.depth.Mapper;
-import developer.depth.ScanUtils;
 import oculusPrime.State.values;
 
 @SuppressWarnings("serial")
@@ -65,29 +63,7 @@ public class FrameGrabHTTP extends HttpServlet {
             else if (mode.equals("processedImg"))  processedImg(req,res);
 			else if (mode.equals("processedImgJPG"))  processedImgJPG(req,res);
 			else if (mode.equals("videoOverlayImg")) videoOverlayImg(req, res);
-            else if (mode.equals("depthFrame") &&  Application.openNIRead.depthCamGenerating) { 	
-            	Application.processedImage = Application.openNIRead.generateDepthFrameImg();
-            	processedImg(req,res);
-            }
-            else if (mode.equals("floorPlane") && Application.openNIRead.depthCamGenerating) {
-//            	short[] depthFrame = Application.openNIRead.readFullFrame();
-//            	Application.processedImage = Application.scanMatch.floorPlaneImg(depthFrame);
-            	Application.processedImage = Application.scanUtils.floorPlaneImg();
-            	processedImg(req,res);
-            }
-            else if (mode.equals("floorPlaneTop") && Application.openNIRead.depthCamGenerating) {
-            	Application.processedImage = ScanUtils.floorPlaneTopViewImg();
-            	processedImg(req,res);
-            }
-            else if (mode.equals("map")) {
-            	Application.processedImage = ScanUtils.cellsToImage(Mapper.map);         		
-//            	if (req.getParameter("scale") != null) {
-//            		double scale = Double.parseDouble(req.getParameter("scale"));
-//                	Application.processedImage = ScanUtils.byteCellsToImage(Mapper.map, scale);         		
-//            	}
-            	processedImg(req,res);
-            }
-         
+
             else if (mode.equals("rosmap")) {
             	Application.processedImage = Ros.rosmapImg();
 				if (!state.exists(State.values.rosmapinfo))
@@ -139,7 +115,7 @@ public class FrameGrabHTTP extends HttpServlet {
 		res.setContentType("image/jpeg");
 		OutputStream out = res.getOutputStream();
 
-		Application.framegrabimg = null;
+//		Application.framegrabimg = null;
 		Application.processedImage = null;
 		if (app.frameGrab()) {
 			
@@ -153,16 +129,9 @@ public class FrameGrabHTTP extends HttpServlet {
 				}
 			}
 
-			if (Application.framegrabimg != null) { // TODO: unused?
-				for (int i=0; i<Application.framegrabimg.length; i++) {
-					out.write(Application.framegrabimg[i]);
-				}
-			}
 
-			else {
-				if (Application.processedImage != null) {
+            if (Application.processedImage != null) {
 					ImageIO.write(Application.processedImage, "JPG", out);
-				}
 			}
 			
 		    out.close();
@@ -246,38 +215,13 @@ public class FrameGrabHTTP extends HttpServlet {
 			
 			// retrieve & render pixel data and shadows
 			int maxDepthInMM = 3500;
-			if (Application.openNIRead.depthCamGenerating == true) { 	
-				WritableRaster raster = image.getRaster();
-				int[] xdepth = Application.openNIRead.readHorizDepth(120); 
-				/* TODO: need to figure out some way to drop request if taking too long
-				 * above line hangs whole servlet?
-				 */
-				int[] dataRGB = {0,255,0}; // sensor data pixel colour
-				g2d.setColor(new Color(0,70,0)); // shadow colour
-				int xdctr = xdepth.length/2;
-				for (int xd=0; xd < xdepth.length; xd++) {
-//				for (int xd=xdepth.length-1; xd>=0; xd--) {
-					int y = (int) ((float)xdepth[xd]/(float)maxDepthInMM*(float)h);
-					// x(opposite) = tan(angle)*y(adjacent)
-					double xdratio = (double)(xd - xdctr)/ (double) xdctr;
-		//			Util.log(Double.toString(xdratio),this);
-					int x = (w/2) - ((int) (Math.tan(angle)*(double) y * xdratio));
-					int xend = (w/2) - ((int) (Math.tan(angle)*(double) (h-1) * xdratio)); // for shadow fill past point
-					if (y<h-voff && y>0+voff && x>=0 && x<w) {
-						y = h-y-1+voff; //flip vertically
-						g2d.drawLine(x, y, xend, 0);  //fill area behind with line
-						raster.setPixel(x,y,dataRGB);
-						raster.setPixel(x,y+1,dataRGB);
-					}
-				}
-			}
-			else {
-				// pulsator
-				g2d.setColor(new Color(0,0,155));
-				var += 11;
-				if (var > h + 50) { var = 0; }
-				g2d.draw(new Ellipse2D.Double( w/2-var, h-1-var*0.95+voff, var*2, var*2*0.95));		
-			}
+
+            // pulsator
+            g2d.setColor(new Color(0,0,155));
+            var += 11;
+            if (var > h + 50) { var = 0; }
+            g2d.draw(new Ellipse2D.Double( w/2-var, h-1-var*0.95+voff, var*2, var*2*0.95));
+
 			
 			
 			// dist scale arcs

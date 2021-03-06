@@ -4,9 +4,10 @@ public enum PlayerCommands {
 	    
     // server
     uptime, restart, quitserver, showlog, writesetting, readsetting, settings, log,
-	relayconnect, relaydisable,
     // not typically used by scripts, undocumented:
-    softwareupdate, relaydisconnect,
+    softwareupdate,
+    // undocumented
+    clientjs,
 
 	// operating system
     reboot, systemshutdown, memory, systemcall, setsystemvolume, cpu, waitforcpu, 
@@ -15,7 +16,7 @@ public enum PlayerCommands {
 	networksettings,
 
 	//user, accounts
-    who, chat, disconnectotherconnections, driverexit, messageclients,
+    who, chat, driverexit, messageclients,
 	logout, // undocumented
     
     //undocumented (not typically used by scripts):
@@ -36,7 +37,7 @@ public enum PlayerCommands {
 	powershutdown, // added timed interval option
     
     // video/audio
-    streamsettingscustom, playerbroadcast, videosoundmode, publish,
+    streamsettingscustom, publish,
     streamsettingsset, framegrabtofile,	record,
 	// experimental (undocumented):
 	jpgstream, streammode,
@@ -57,17 +58,17 @@ public enum PlayerCommands {
 	gotodock, saveroute, runroute, cancelroute, startmapping, savemap,
 
 	// sensing
-	getlightlevel, setstreamactivitythreshold,
+	getlightlevel,
 	objectdetect, objectdetectcancel,
 	motiondetect, motiondetectcancel, sounddetect,
 	// not typically used by scripts, undocumented:
 	objectdetectstream, motiondetectstream,
 
 	// un-categorized
-	speech, serverbrowser, email, state, rssadd,
+	speech, email, state, rssadd,
 
     // experimental (undocumented)
-    opennisensor, clearmap, test,
+    test,
 
     // deprecated (kept for mobile client compatibility, undocumented)
     spotlightsetbrightness,
@@ -88,7 +89,7 @@ public enum PlayerCommands {
 		new_user_add, user_list, delete_user, extrauser_password_update, username_update, 
 		disconnectotherconnections, showlog, softwareupdate,
 		arduinoreset, muterovmiconmovetoggle, 
-	    writesetting, holdservo, opennisensor, videosoundmode, restart, shutdown,
+	    writesetting, holdservo, opennisensor, restart, shutdown,
 	    setstreamactivitythreshold, email, state, uptime, help, memory, who, 
 	    loginrecords, settings, messageclients, dockgrabtest, rssaddb, block, 
 	    unblock, powershutdown, reboot, systemshutdown, clearmap, erroracknowledged,

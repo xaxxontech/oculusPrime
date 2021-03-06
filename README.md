@@ -4,6 +4,7 @@
 
 About the robot: [ xaxxon.com/oculusprime ](http://www.xaxxon.com/oculusprime)
 
-Linux Ubuntu 14.04-16.04 x64/ARM Java 8 64-bit
+Linux Ubuntu 18.04 x64/ARM Java 11 64-bit
+Requires ROS Melodic
 
 [ Creating project in Eclipse ](http://www.xaxxon.com/documentation/view/oculus-prime-extending-the-java-application)

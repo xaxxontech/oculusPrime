@@ -5,7 +5,7 @@ import developer.Ros;
 import oculusPrime.AutoDock.autodockmodes;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
-import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.Malg;
 import oculusPrime.commport.PowerLogger;
 
 import java.io.File;
@@ -36,7 +36,7 @@ public class SystemWatchdog {
 	public boolean redocking = false;
 	private boolean lowbattredock = false;
 	private long lowbattredockstart = 0;
-    private static final File TIMEDSHUTDOWNFILE = new File(Settings.redhome + Util.sep + "timedshutdown");
+    private static final File TIMEDSHUTDOWNFILE = new File(Settings.tomcathome + Util.sep + "timedshutdown");
 
 	SystemWatchdog(Application a){ 
 		application = a;
@@ -84,7 +84,6 @@ public class SystemWatchdog {
 			if (state.exists(State.values.driver.toString()) && 
 					System.currentTimeMillis() - state.getLong(State.values.lastusercommand) > ABANDONDEDLOGIN ) {
 
-				application.driverCallServer(PlayerCommands.disconnectotherconnections, null);
 				application.driverCallServer(PlayerCommands.driverexit, null);
 				if (state.get(State.values.dockstatus).equals(AutoDock.UNDOCKED) && 
 						settings.getBoolean(GUISettings.redock)) {
@@ -278,21 +277,21 @@ public class SystemWatchdog {
 			application.driverCallServer(PlayerCommands.streamsettingsset, Application.camquality.high.toString());
 			application.driverCallServer(PlayerCommands.publish, Application.streamstate.camera.toString());
 			// go forward momentarily
-			application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
+			application.driverCallServer(PlayerCommands.speed, Malg.speeds.med.toString());
 			state.set(State.values.motionenabled, true);
 //			state.set(State.values.controlsinverted, false);
-			ArduinoPrime.checkIfInverted();
+			Malg.checkIfInverted();
 
 			if (!option.equals(NOFORWARD)) {
-				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
+				application.driverCallServer(PlayerCommands.move, Malg.direction.forward.toString());
 				Util.delay(800); 
-				application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+				application.driverCallServer(PlayerCommands.move, Malg.direction.stop.toString());
 			}
 
 			if (!redocking) return;
 
 			// reverse tilt
-			application.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
+			application.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.reverse.toString());
 			// docklight on, spotlight off
 			application.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLLOW));
 			application.driverCallServer(PlayerCommands.spotlight, "0");
@@ -331,9 +330,9 @@ public class SystemWatchdog {
 					application.driverCallServer(PlayerCommands.left, "25");
 					Util.delay(10); // thread safe
 					start = System.currentTimeMillis();
-					while(!state.get(State.values.direction).equals(ArduinoPrime.direction.stop.toString())
+					while(!state.get(State.values.direction).equals(Malg.direction.stop.toString())
 							&& System.currentTimeMillis() - start < 5000) {  Util.delay(10); } // wait
-					Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
+					Util.delay(Malg.TURNING_STOP_DELAY);
 				}
 				rot ++;
 			}
@@ -372,7 +371,7 @@ public class SystemWatchdog {
 		PowerLogger.append("callForHelp() " + subject + " " + body, this);
 
 		body += "\nhttp://"+state.get(State.values.externaladdress)+":"+
-				settings.readRed5Setting("http.port")+"/oculusPrime/";
+				settings.readHTTPport()+"/oculusPrime/";
 		String emailto = settings.readSetting(GUISettings.email_to_address);
 		if (!emailto.equals(Settings.DISABLED))
 			application.driverCallServer(PlayerCommands.email, emailto+" ["+subject+"] "+body);
@@ -382,13 +381,13 @@ public class SystemWatchdog {
 	private void forceundock() {
 		application.driverCallServer(PlayerCommands.messageclients, "Power ERROR, Forced Un-Dock");
 		// go forward momentarily
-		application.driverCallServer(PlayerCommands.speed, ArduinoPrime.speeds.med.toString());
+		application.driverCallServer(PlayerCommands.speed, Malg.speeds.med.toString());
 		state.set(State.values.motionenabled, true);
 //		state.set(State.values.controlsinverted, false);
-		ArduinoPrime.checkIfInverted();
-		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.forward.toString());
+		Malg.checkIfInverted();
+		application.driverCallServer(PlayerCommands.move, Malg.direction.forward.toString());
 		Util.delay(800);
-		application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+		application.driverCallServer(PlayerCommands.move, Malg.direction.stop.toString());
 		 
 //		String subject = "Oculus Prime Power ERROR, Forced Un-Dock";
 //		String body = "Oculus Prime Power ERROR, Forced Un-Dock";

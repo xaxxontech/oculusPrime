@@ -15,9 +15,11 @@ public class TelnetServer implements Observer {
 	public static final String MSGPLAYERTAG = "<messageclient>";
 	public static final String MSGGRABBERTAG = "<messageserverhtml>";
 	public static final String TELNETTAG = "<telnet>";
-	public static final String STATETAG = "<state>";		
-	
-	private Vector<PrintWriter> printers = new Vector<PrintWriter>();
+	public static final String STATETAG = "<state>";
+    public static final String DEFAULTPORT ="4444";
+
+
+    private Vector<PrintWriter> printers = new Vector<PrintWriter>();
 	private Vector<Socket> socks = new Vector<Socket>();
 	
 	private oculusPrime.State state = oculusPrime.State.getReference();

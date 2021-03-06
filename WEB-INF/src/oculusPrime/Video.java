@@ -2,16 +2,16 @@ package oculusPrime;
 
 
 import developer.Ros;
-import org.red5.server.api.IConnection;
-import org.red5.server.stream.ClientBroadcastStream;
 
 import oculusPrime.State.values;
 
 import javax.imageio.ImageIO;
-import java.io.File;
-import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import javax.sql.rowset.WebRowSet;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 public class Video {
@@ -27,46 +27,45 @@ public class Video {
     private static final int defaultheight=480;
     public static final int lowreswidth=320;
     private static final int lowresheight=240;
-    private static final String PATH="/dev/shm/avconvframes/";
+    private static final String PATH="/dev/shm/rosimgframes/";
     private static final String EXT=".bmp";
     private volatile long lastframegrab = 0;
-    private int lastwidth=0;
-    private int lastheight=0;
+    public int lastwidth=0;
+    public int lastheight=0;
     private int lastfps=0;
-    private int lastquality = 0;
-    private Application.streamstate lastmode = Application.streamstate.stop;
-    private long publishid = 0;
-    static final long STREAM_RESTART = Util.ONE_MINUTE*6;
-    static final String FFMPEG = "ffmpeg";
-    static final String AVCONV = "avconv";
-    private String avprog = AVCONV;
-    private static long STREAM_CONNECT_DELAY = Application.STREAM_CONNECT_DELAY;
-    private static int dumpfps = 15;
-    private static final String STREAMSPATH="/oculusPrime/streams/";
-    public static final String FMTEXT = ".flv";
-    public static final String AUDIO = "_audio";
-    private static final String VIDEO = "_video";
-    private static final String STREAM1 = "stream1";
-    private static final String STREAM2 = "stream2";
-    private static String ubuntuVersion;
+    public long lastbitrate = 0;
+    public static long STREAM_CONNECT_DELAY = 2000;
+    private Settings settings = Settings.getReference();
+
+    private String signallingserverpstring = "python3 ./simple-server.py";
+    private volatile long lastvideocommand = 0;
+    public String camerapstring = null;
+    private String webrtcpstring = null;
+    public final static String MICWEBRTCPSTRING = "micwebrtc";
+    public static final String MICWEBRTC = Settings.tomcathome +"/"+Settings.appsubdir+"/"+MICWEBRTCPSTRING; // gstreamer webrtc microphone c binary
+    public static final String SOUNDDETECT = Settings.tomcathome +"/"+Settings.appsubdir+"/sounddetect";
+
+    // lifecam cinema measured angles (may not reflect average)
+    public final static double camFOVx169 = 68.46;
+    public static final double camFOVy169 = 41.71;
+    public static final double camFOVx43 = 58.90;
+    public static final double camFOVy43 = 45.90;
 
     public Video(Application a) {
         app = a;
-        port = Settings.getReference().readRed5Setting("rtmp.port");
-        ubuntuVersion = Util.getUbuntuVersion();
         setAudioDevice();
         setVideoDevice();
-    }
 
-    public void initAvconv() {
+        launchTURNserver();
+        launchSignallingServer();
+
+        String vals[] = settings.readSetting(settings.readSetting(GUISettings.vset)).split("_");
+        lastwidth = Integer.parseInt(vals[0]);
+        lastheight = Integer.parseInt(vals[1]);
+        lastfps = Integer.parseInt(vals[2]);
+        lastbitrate = Long.parseLong(vals[3]);
+
         state.set(State.values.stream, Application.streamstate.stop.toString());
-        if (state.get(State.values.osarch).equals(Application.ARM)) {
-//            avprog = FFMPEG;
-//            dumpfps = 8;
-//            STREAM_CONNECT_DELAY=3000;
-        }
-        File dir=new File(PATH);
-        dir.mkdirs(); // setup shared mem folder
     }
 
     private void setAudioDevice() {
@@ -74,7 +73,6 @@ public class Video {
             String cmd[] = new String[]{"arecord", "--list-devices"};
             Process proc = Runtime.getRuntime().exec(cmd);
             proc.waitFor();
-//            proc.waitFor();
 
             String line = null;
             BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -117,160 +115,261 @@ public class Video {
         } catch (Exception e) { Util.printError(e);}
     }
 
-    public void publish (final Application.streamstate mode, final int w, final int h, final int fps) {
-        // todo: determine video device (in constructor)
-        // todo: disallow unsafe custom values (device can be corrupted?)
+    private void launchTURNserver() {
+        killTURNserver();
 
-        if (w==lastwidth && h==lastheight && fps==lastfps && mode.equals(lastmode)) {
-            Util.log("identical stream already running, dropped", this);
+        // turnserver --user=auto:robot  --realm=xaxxon.com --no-stun --listening-port=3478
+        String cmd = "turnserver --user="+settings.readSetting(ManualSettings.turnserverlogin) +
+                " --realm=xaxxon.com --no-stun --listening-port=" +
+                settings.readSetting(ManualSettings.turnserverport);
+
+        Util.systemCall(cmd);
+    }
+
+    protected static void killTURNserver() {
+        // kill running instances
+        String cmd = "pkill turnserver";
+        Util.systemCallBlocking(cmd);
+    }
+
+    private void launchSignallingServer() {
+//        killSignallingServer();
+
+        String cmd = Settings.tomcathome+Util.sep+"signalling"+Util.sep+"run";
+        String portarg = " --port "+settings.readSetting(ManualSettings.webrtcport);
+        signallingserverpstring += portarg;
+        Util.systemCall(cmd+portarg);
+    }
+
+    protected void killSignallingServer() {
+
+        ProcessBuilder processBuilder = new ProcessBuilder("pkill", "-f", signallingserverpstring);
+
+        try {
+            Process proc = processBuilder.start();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    public void publish (final Application.streamstate mode, final int w, final int h, final int fps, final long bitrate) {
+
+        if (System.currentTimeMillis() < lastvideocommand + STREAM_CONNECT_DELAY) {
+            app.driverCallServer(PlayerCommands.messageclients, "video command received too soon after last, dropped");
+            return;
+        }
+
+        lastvideocommand = System.currentTimeMillis();
+
+        if ( (mode.equals(Application.streamstate.camera) || mode.equals(Application.streamstate.camandmic)) &&
+                (state.get(values.stream).equals(Application.streamstate.camera.toString()) ||
+                        state.get(values.stream).equals(Application.streamstate.camandmic.toString()))
+        ) {
+            app.driverCallServer(PlayerCommands.messageclients, "camera already running, stream: "+mode.toString()+" command dropped");
             return;
         }
 
         lastwidth = w;
         lastheight = h;
         lastfps = fps;
-        lastmode = mode;
+        lastbitrate = bitrate;
         final long id = System.currentTimeMillis();
-        publishid = id;
 
-        lastquality = defaultquality;
-        if (w > defaultwidth) lastquality = quality720p;
-        final int q = lastquality;
+        app.driverCallServer(PlayerCommands.streammode, mode.toString());
 
         new Thread(new Runnable() { public void run() {
 
-            String host = "127.0.0.1";
-            if (state.exists(State.values.relayserver))
-                host = state.get(State.values.relayserver);
-
-            // nuke currently running avconv if any
-            if (!state.get(State.values.stream).equals(Application.streamstate.stop.toString()) &&
-                    !mode.equals(Application.streamstate.stop.toString())) {
-                forceShutdownFrameGrabs();
-                Util.systemCallBlocking("pkill "+avprog);
-                Util.delay(STREAM_CONNECT_DELAY);
-            }
-
             switch (mode) {
                 case camera:
-                    try {
-                        new ProcessBuilder("sh", "-c",
-                            avprog + " -f video4linux2 -s " + w + "x" + h + " -r " + fps +
-                            " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
-                            port + "/oculusPrime/" + STREAM1 + " >/dev/null 2>&1").start();
-                    } catch (Exception e){ Util.printError(e);}
-                    // avconv -f video4linux2 -s 640x480 -r 8 -i /dev/video0 -f flv -q 5 rtmp://127.0.0.1:1935/oculusPrime/stream1 >/dev/null 2>&1
-                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
-                    break;
-                case mic:
-                    try {
-                        Process p = new ProcessBuilder("sh", "-c",
-                            avprog+" -re -f alsa -ac 1 -ar 22050 " +
-                            "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM1+ " >/dev/null 2>&1").start();
-                    } catch (Exception e){ Util.printError(e);}
-                    // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream1
-                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
+
+                    if (camerapstring == null) {
+                        camerapstring = Ros.launch(new ArrayList<String>(Arrays.asList(Ros.CAMERA,
+                                "width:="+lastwidth, "height:="+lastheight, "device:=/dev/video"+devicenum)));
+                    }
+
+                    if (state.exists(values.driverclientid) && webrtcpstring == null) {
+
+                        final ArrayList<String> strarray = new ArrayList<String>(Arrays.asList(Ros.WEBRTC,
+                                "peerid:=--peer-id=" + state.get(values.driverclientid),
+                                "webrtcserver:=--server=wss://"+settings.readSetting(ManualSettings.webrtcserver)+":"
+                                        +settings.readSetting(ManualSettings.webrtcport),
+                                "videowidth:=--video-width=" + lastwidth, "videoheight:=--video-height=" + lastheight,
+                                "videobitrate:=--video-bitrate=" + lastbitrate,
+                                "turnserverport:=--turnserver-port="+settings.readSetting(ManualSettings.turnserverport),
+                                "turnserverlogin:=--turnserver-login="+settings.readSetting(ManualSettings.turnserverlogin)
+                        ));
+
+                        webrtcStatusListener(strarray, mode.toString());
+                        webrtcpstring = Ros.launch(strarray);
+                    }
+
                     break;
                 case camandmic:
-                    try {
-                        new ProcessBuilder("sh", "-c",
-                            avprog+" -re -f alsa -ac 1 -ar 22050 " +
-                            "-i hw:" + adevicenum + " -f flv rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM2+ " >/dev/null 2>&1").start();
 
-                        new ProcessBuilder("sh", "-c",
-                            avprog+" -f video4linux2 -s " + w + "x" + h + " -r " + fps +
-                            " -i /dev/video" + devicenum + " -f flv -q " + q + " rtmp://" + host + ":" +
-                            port + "/oculusPrime/"+STREAM1+ " >/dev/null 2>&1").start();
+                    if (camerapstring == null) {
+                        camerapstring = Ros.launch(new ArrayList<String>(Arrays.asList(Ros.CAMERA,
+                                "width:="+lastwidth, "height:="+lastheight, "device:=/dev/video"+devicenum)));
+                    }
 
-                    } catch (Exception e){ Util.printError(e);}
-                    // avconv -re -f alsa -ac 1 -ar 22050 -i hw:1 -f flv rtmp://127.0.0.1:1935/oculusPrime/stream2
+                    if (state.exists(values.driverclientid) && webrtcpstring == null) {
 
+                        final ArrayList<String> strarray = new ArrayList<String>(Arrays.asList(Ros.WEBRTC,
+                                "peerid:=--peer-id=" + state.get(values.driverclientid),
+                                "webrtcserver:=--server=wss://"+settings.readSetting(ManualSettings.webrtcserver)+":"
+                                        +settings.readSetting(ManualSettings.webrtcport),
+                                "audiodevice:=--audio-device=" + adevicenum,
+                                "videowidth:=--video-width=" + lastwidth, "videoheight:=--video-height=" + lastheight,
+                                "videobitrate:=--video-bitrate=" + lastbitrate,
+                                "turnserverport:=--turnserver-port="+settings.readSetting(ManualSettings.turnserverport),
+                                "turnserverlogin:=--turnserver-login="+settings.readSetting(ManualSettings.turnserverlogin)
+                        ));
 
-                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
+                        webrtcStatusListener(strarray, mode.toString());
+                        webrtcpstring = Ros.launch(strarray);
+                    }
 
                     break;
+
+                case mic:
+                    if (state.exists(values.driverclientid)) {
+
+                        ProcessBuilder processBuilder = new ProcessBuilder();
+
+                        String cmd = MICWEBRTC+
+                                " --peer-id=" + state.get(values.driverclientid)+
+                                " --audio-device=" + adevicenum+
+                                " --server=wss://"+settings.readSetting(ManualSettings.webrtcserver)+":"
+                                +settings.readSetting(ManualSettings.webrtcport)+
+                                " --turnserver-port="+settings.readSetting(ManualSettings.turnserverport)+
+                                " --turnserver-login="+settings.readSetting(ManualSettings.turnserverlogin)
+                        ;
+
+                        List<String> args = new ArrayList<>();
+                        String[] array = cmd.split(" ");
+                        for (String t : array) args.add(t);
+                        processBuilder.command(args);
+                        Process proc = null;
+
+                        try{
+                            int attempts = 0;
+                            while (attempts<10) {
+                                Util.debug("mic webrtc signalling server attempt #"+attempts, this);
+                                proc = processBuilder.start();
+                                int exitcode = (proc.waitFor());
+                                if (exitcode == 0) break;
+                                else {
+                                    Util.debug("micwebrtc exit code: "+exitcode, this);
+                                    if (!state.get(values.stream).equals(Application.streamstate.mic.toString()))
+                                        break;
+                                }
+                                attempts ++;
+                            }
+                            if (attempts == 10)
+                                app.driverCallServer(PlayerCommands.messageclients, "mic webrtc failed to start");
+
+                        } catch (Exception e) { e.printStackTrace(); }
+
+                    }
+                    break;
+
                 case stop:
                     forceShutdownFrameGrabs();
-                    Util.systemCall("pkill "+avprog);
-                    app.driverCallServer(PlayerCommands.streammode, mode.toString());
+                    killwebrtc();
+                    killcamera();
+                    Util.systemCall("pkill "+MICWEBRTCPSTRING);
                     break;
 
             }
 
         } }).start();
 
-        if (mode.equals(Application.streamstate.stop) ) return;
+    }
 
-        // stream restart timer
-//        new Thread(new Runnable() { public void run() {
-//            long start = System.currentTimeMillis();
-//            while ( id == publishid && (System.currentTimeMillis() < start + STREAM_RESTART) ||
-//                    state.exists(State.values.writingframegrabs) ||
-//                    state.getBoolean(State.values.autodocking) )
-//                Util.delay(50);
-//
-//            if (id == publishid) { // restart stream
-//                forceShutdownFrameGrabs();
-//                Util.systemCall("pkill -9 "+avprog);
-//                lastmode = Application.streamstate.stop;
-//                Util.delay(STREAM_CONNECT_DELAY);
-//                publish(mode, w,h,fps);
-//                app.driverCallServer(PlayerCommands.messageclients, "video stream restarting");
-//            }
-//
-//        } }).start();
+    // checks if webrtcstatus == 'connected' after short time (successful connect to singnalling server)
+    // if not, kill roslaunch, relaunch
+    // ros2 only
+    private void webrtcStatusListener(final ArrayList<String> strarray, final String mode) {
+
+        if (!settings.getBoolean(ManualSettings.ros2)) return;
+
+        state.delete(values.webrtcstatus); // required because ros2 launch files don't send SIGINT to processes on shutdown
+
+        new Thread(new Runnable() { public void run() {
+
+            int attempts = 0;
+            while (mode.equals(state.get(values.stream)) && attempts < 5) {
+                if (state.block(values.webrtcstatus, "connected", 5000)) return;
+
+                if (!mode.equals(state.get(values.stream))) return;
+
+                Util.log("!connected, relaunching webrtcpstring", this);
+                killwebrtc();
+                Util.delay(5500);
+                state.delete(values.webrtcstatus);
+                Ros.launch(strarray); // this only works once! because launch modifies it in mem
+
+                attempts ++;
+            }
+
+            if (attempts >= 5) Util.log("webrtc signalling server connection attempt max reached, giving up", this);
+
+        } }).start();
 
     }
 
     private void forceShutdownFrameGrabs() {
-        if (state.exists(State.values.writingframegrabs)) {
+        if (state.exists(State.values.writingframegrabs))
             state.delete(State.values.writingframegrabs);
-//            Util.delay(STREAM_CONNECT_DELAY);
+    }
+
+    private void killwebrtc() {
+        if (webrtcpstring != null) {
+            Ros.killlaunch(webrtcpstring);
+            webrtcpstring = null;
         }
     }
 
-    public void framegrab(final String res) {
+    public void killcamera() {
+        if (camerapstring != null) {
+            Ros.killlaunch(camerapstring);
+            camerapstring = null;
+        }
+    }
 
-        state.set(State.values.framegrabbusy.name(), true);
+    public void framegrab() {
+
+        state.set(State.values.framegrabbusy, true);
 
         lastframegrab = System.currentTimeMillis();
 
         new Thread(new Runnable() { public void run() {
 
-            // resolution check: set to same as main stream params as default
-            int width = lastwidth;
-            // set lower resolution if required
-            if (res.equals(AutoDock.LOWRES)) {
-                width=lowreswidth;
+            if (!state.exists(values.writingframegrabs))
+                dumpframegrabs();
+
+            File dir = new File(PATH);
+            long start = System.currentTimeMillis();
+            while (System.currentTimeMillis() - start < 5000) {
+                if (dir.isDirectory()) break;
+                Util.delay(100);
             }
 
-            if (!state.exists(values.writingframegrabs)) {
-                dumpframegrabs(res);
-                Util.delay(STREAM_CONNECT_DELAY);
-            }
-            else if (state.getInteger(values.writingframegrabs) != width) {
-//                Util.log("dumpframegrabs() not using width: "+width, this);
-                forceShutdownFrameGrabs();
-                Util.delay(STREAM_CONNECT_DELAY);
-                dumpframegrabs(res);
-                Util.delay(STREAM_CONNECT_DELAY);
+            if (!dir.isDirectory()) {
+                Util.log(PATH+" unavailable", this);
+                state.set(values.framegrabbusy, false);
+                return;
             }
 
             // determine latest image file -- use second latest to resolve incomplete file issues
             int attempts = 0;
             while (attempts < 15) {
-                File dir = new File(PATH);
+
                 File imgfile = null;
-                long start = System.currentTimeMillis();
+                start = System.currentTimeMillis();
                 while (imgfile == null && System.currentTimeMillis() - start < 10000) {
                     int highest = 0;
                     int secondhighest = 0;
                     for (File file : dir.listFiles()) {
-                        int i = Integer.parseInt(file.getName().split("\\.")[0]);
+                        int i = Integer.parseInt(file.getName());
                         if (i > highest) {
-//                            imgfile = file;
                             highest = i;
                         }
                         if (i > secondhighest && i < highest) {
@@ -281,24 +380,34 @@ public class Video {
                     Util.delay(1);
                 }
                 if (imgfile == null) {
-                    Util.log(avprog + " frame unavailable", this);
+                    Util.log("framegrab frame unavailable", this);
                     break;
                 } else {
                     try {
-                        // 640x480 = 921654 bytes (640*480*3 + 54)
-                        // 320x240 = 230454  bytes (320*240*3 + 54)
-//                        long size = imgfile.length();
-//                        if (size != 230454 && size != 921654) {  // doesn't allow for max res, or any other res
-//                       if (size <= 54) { // image must be bigger than bitmap header size!
-//                       if (size != imgsizebytes) { // image must be correct size
-//                            Util.log("wrong size ("+size+" bytes) image file, trying again, attempt "+(attempts+1), this);
-//                            attempts++;
-//                            continue;
-//                        }
-                        app.processedImage = ImageIO.read(imgfile);
+
+                        FileInputStream fis = null;
+                        byte[] bArray = new byte[(int) imgfile.length()];
+                        fis = new FileInputStream(imgfile);
+                        fis.read(bArray);
+                        fis.close();
+
+                        app.processedImage = new BufferedImage(lastwidth, lastheight, BufferedImage.TYPE_INT_RGB);
+
+                        int i=0;
+                        for (int y=0; y< lastheight; y++) {
+                            for (int x=0; x<lastwidth; x++) {
+                                int argb;
+                                argb = (bArray[i]<<16) + (bArray[i+1]<<8) + bArray[i+2];
+
+                                app.processedImage.setRGB(x, y, argb);
+                                i += 3;
+                            }
+                        }
+
                         break;
-                    } catch (IOException e) {
-                        Util.printError(e);
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
                         attempts++;
                     }
                 }
@@ -309,183 +418,43 @@ public class Video {
         } }).start();
     }
 
-    private void dumpframegrabs(final String res) {
+    public void dumpframegrabs() {
 
-        File dir=new File(PATH);
-        for(File file: dir.listFiles()) file.delete(); // nuke any existing files
+        Util.debug("dumpframegrabs()", this);
 
-        // set to same as main stream params as default
-        int width = lastwidth;
-        int height = lastheight;
-        int q = lastquality;
-
-        // set lower resolution if required
-        if (res.equals(AutoDock.LOWRES)) {
-            width=lowreswidth;
-            height=lowresheight;
-        }
-
-        state.set(State.values.writingframegrabs, width);
-
-        String host = "127.0.0.1";
-        if (state.exists(State.values.relayserver))
-            host = state.get(State.values.relayserver);
-
-        try {
-            if ( Application.UBUNTU1404.equals(ubuntuVersion) ) { // 14.04 only
-                Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-i",
-                        "rtmp://" + host + ":" + port + "/oculusPrime/" + STREAM1 + " live=1", "-s", width + "x" + height,
-                        "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH + "%d" + EXT});
-                // avconv -analyzeduration 0 -i "rtmp://127.0.0.1:1935/oculusPrime/stream1 live=1" -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
-            } else {
-                Runtime.getRuntime().exec(new String[]{avprog, "-analyzeduration", "0", "-rtmp_live", "live", "-i",
-                        "rtmp://" + host + ":" + port + "/oculusPrime/" + STREAM1, "-s", width + "x" + height,
-                        "-r", Integer.toString(dumpfps), "-q", Integer.toString(q), PATH + "%d" + EXT});
-                // avconv -analyzeduration 0 -rtmp_live live -i rtmp://127.0.0.1:1935/oculusPrime/stream1 -s 640x480 -r 15 -q 5 /dev/shm/avconvframes/%d.bmp
-            }
-        }catch (Exception e) { Util.printError(e); }
-
-        
         new Thread(new Runnable() { public void run() {
 
-            Util.delay(500); // required?
+            if (state.exists(values.writingframegrabs)) {
+                forceShutdownFrameGrabs();
+                Util.delay(STREAM_CONNECT_DELAY); // allow ros node time to exit
+            }
 
-            // continually clean all but the latest few files, prevent mem overload
-            int i=1;
+            if (state.exists(values.writingframegrabs)) return; // just in case
+
+            state.set(State.values.writingframegrabs, true);
+
+            // run ros node
+            String topic = "/usb_cam/image_raw";
+            Ros.roscommand("rosrun "+Ros.ROSPACKAGE+" image_to_shm.py _camera_topic:="+topic);
+
             while(state.exists(State.values.writingframegrabs)
                     && System.currentTimeMillis() - lastframegrab < Util.ONE_MINUTE) {
-                File file = new File(PATH+i+EXT);
-                if (file.exists() && new File(PATH+(i+32)+EXT).exists()) {
-                    file.delete();
-                    i++;
-                }
-                Util.delay(50);
+                Util.delay(10);
             }
 
             state.delete(State.values.writingframegrabs);
-            Util.systemCall("pkill -n " + avprog); // kills newest only
-            File dir=new File(PATH);
-            for(File file: dir.listFiles()) file.delete(); // clean up (gets most files)
+            // kill ros node
+            Ros.roscommand("rosnode kill /image_to_shm");
 
         } }).start();
 
     }
 
-    public String record(String mode) { return record(mode, null); }
 
-    // record to flv in webapps/oculusPrime/streams/
-    @SuppressWarnings("incomplete-switch")
-	public String record(String mode, String optionalfilename) {
-       
-		Util.debug("record("+mode+", " + optionalfilename +"): called.. ", this);
+    public void sounddetectgst(String mode) {
 
-    	IConnection conn = app.grabber;
-    	if (conn == null) return null;
-        
-    	if (state.get(State.values.stream) == null) return null;
-        if (state.get(State.values.record) == null) state.set(State.values.record, Application.streamstate.stop.toString());
-        if (state.exists(State.values.sounddetect)) if (state.getBoolean(State.values.sounddetect)) return null;
-
-        if (mode.toLowerCase().equals(Settings.TRUE)) {  // TRUE, start recording
-
-            if (state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
-                app.driverCallServer(PlayerCommands.messageclients, "no stream running, unable to record");
-                return null;
-            }
-
-            if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
-                app.driverCallServer(PlayerCommands.messageclients, "already recording, command dropped");
-                return null;
-            }
-
-            // Get a reference to the current broadcast stream.
-            ClientBroadcastStream stream = (ClientBroadcastStream) app.getBroadcastStream(conn.getScope(), STREAM1);
-
-            // Save the stream to disk.
-            try {
-
-                String streamName = Util.getDateStamp(); 
-                if(optionalfilename != null) streamName += "_" + optionalfilename; 	
-                if(state.exists(values.roswaypoint) &&
-                        state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.running.toString())
-                            ) streamName += "_" + state.get(values.roswaypoint);
-                streamName = streamName.replaceAll(" ", "_"); // no spaces in filenames 
-                
-                final String urlString = STREAMSPATH;
-
-                state.set(State.values.record, state.get(State.values.stream));
-
-                switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
-                    case mic:
-                        app.messageplayer("recording to: " + urlString+streamName + AUDIO + FMTEXT,
-                                State.values.record.toString(), state.get(State.values.record));
-                        stream.saveAs(streamName + AUDIO, false);
-                        break;
-
-                    case camandmic:
-                        if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
-                            ClientBroadcastStream audiostream = (ClientBroadcastStream) app.getBroadcastStream(conn.getScope(), STREAM2);
-                            app.messageplayer("recording to: " + urlString+streamName + AUDIO + FMTEXT,
-                                    State.values.record.toString(), state.get(State.values.record));
-                            audiostream.saveAs(streamName+AUDIO, false);
-                        }
-                        // BREAK OMITTED ON PURPOSE
-
-                    case camera:
-                        app.messageplayer("recording to: " + urlString+streamName + VIDEO + FMTEXT,
-                                State.values.record.toString(), state.get(State.values.record));
-                        stream.saveAs(streamName + VIDEO, false);
-                        break;
-                }
-
-                Util.log("recording: "+streamName,this);
-                return urlString + streamName;
-
-            } catch (Exception e) {
-                Util.printError(e);
-            }
-        }
-
-        else { // FALSE, stop recording
-
-            if (state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
-                app.driverCallServer(PlayerCommands.messageclients, "not recording, command dropped");
-                return null;
-            }
-
-            ClientBroadcastStream stream = (ClientBroadcastStream) app.getBroadcastStream(conn.getScope(), STREAM1);
-            if (stream == null) return null; // if page reload
-
-            state.set(State.values.record, Application.streamstate.stop.toString());
-
-            switch((Application.streamstate.valueOf(state.get(State.values.stream)))) {
-
-                case camandmic:
-                    if (!Settings.getReference().getBoolean(ManualSettings.useflash)) {
-                        ClientBroadcastStream audiostream = (ClientBroadcastStream) app.getBroadcastStream(conn.getScope(), STREAM2);
-//                        app.driverCallServer(PlayerCommands.messageclients, "2nd audio recording stopped");
-                        audiostream.stopRecording();
-                    }
-                    // BREAK OMITTED ON PURPOSE
-
-                case mic:
-                    // BREAK OMITTED ON PURPOSE
-
-                case camera:
-                    stream.stopRecording();
-                    Util.log("recording stopped", this);
-                    app.messageplayer("recording stopped", State.values.record.toString(), state.get(State.values.record));
-                    break;
-            }
-
-
-        }
-        return null;
-    }
-
-
-    public void sounddetect(String mode) {
         if (!state.exists(State.values.sounddetect)) state.set(State.values.sounddetect, false);
+
 
         // mode = false
         if (mode.toLowerCase().equals(Settings.FALSE)) {
@@ -498,105 +467,65 @@ public class Video {
             return;
         }
 
+
         // mode = true
 
-        if (!state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()) &&
-                !state.get(State.values.stream).equals(Application.streamstate.mic.toString())  ) {
-            app.driverCallServer(PlayerCommands.messageclients, "no mic stream, unable to detect sound");
+        if (state.get(values.stream).equals(Application.streamstate.camandmic.toString())  ||
+                state.get(values.stream).equals(Application.streamstate.mic.toString()) ) {
+            app.driverCallServer(PlayerCommands.messageclients, "mic already running, command dropped");
             return;
         }
 
-        if (state.getBoolean(State.values.sounddetect)) {
-            app.driverCallServer(PlayerCommands.messageclients, "sound detection already running, command dropped");
-            return;
-        }
+        app.driverCallServer(PlayerCommands.messageclients, "sound detection enabled");
 
-        if (state.get(State.values.record) == null)
-            state.set(State.values.record, Application.streamstate.stop.toString());
-        if (!state.get(State.values.record).equals(Application.streamstate.stop.toString())) {
-            app.driverCallServer(PlayerCommands.messageclients, "record already running, sound detection command dropped");
-            return;
-        }
-
-        final String filename = "temp";
-        final String fullpath = Settings.streamsfolder+Util.sep+filename+AUDIO+FMTEXT;
+        state.set(State.values.sounddetect, true);
+        state.delete(State.values.streamactivity);
 
         new Thread(new Runnable() { public void run() {
 
-            // wait for grabber just in case video just started
-            if (app.grabber == null)  {
-                long grabbertimeout = System.currentTimeMillis() + 2000;
-                while (System.currentTimeMillis() < grabbertimeout) Util.delay(1);
-            }
-            if (app.grabber == null) { Util.log("error, grabber null", this); return; }
-
-            String streamname = STREAM1;
-            if (state.get(State.values.stream).equals(Application.streamstate.camandmic.toString())) streamname = STREAM2;
-            ClientBroadcastStream stream = (ClientBroadcastStream) app.getBroadcastStream(app.grabber.getScope(), streamname);
-
-            state.set(State.values.sounddetect, true);
-            state.delete(State.values.streamactivity);
-
             long timeout = System.currentTimeMillis() + Util.ONE_HOUR;
-            while (state.getBoolean(State.values.sounddetect) && System.currentTimeMillis() < timeout) {
 
-                double voldB = -99;
-                try {
+            ProcessBuilder processBuilder = new ProcessBuilder();
 
-                    // start recording
-                    stream.saveAs(filename + AUDIO, false);
+            String cmd = SOUNDDETECT+" "+ adevicenum;
 
-                    // wait
-                    long cliplength = System.currentTimeMillis() + 5000;
-                    while (System.currentTimeMillis() < cliplength && state.getBoolean(State.values.sounddetect))
-                        Util.delay(1);
+            List <String> args = new ArrayList<>();;
+            String[] array = cmd.split(" ");
+            for (String t : array) args.add(t);
+            processBuilder.command(args);
 
-                    // stop recording
-                    stream.stopRecording();
+            try {
+                Process proc = processBuilder.start();
 
-                    if (!state.getBoolean(State.values.sounddetect)) { // cancelled during clip
-                        new File(fullpath).delete();
-                        return;
+                BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+                String line = reader.readLine(); // skip 1st line
+                while ((line = reader.readLine()) != null && state.getBoolean(State.values.sounddetect)) {
+                    double voldB = Double.parseDouble(line);
+                    Util.debug("soundlevel: "+voldB, this);
+                    if (Double.parseDouble(line) > settings.getDouble(ManualSettings.soundthreshold)) {
+                        state.set(State.values.streamactivity, "audio " + voldB+"dB");
+                        app.driverCallServer(PlayerCommands.messageclients, "sound detected: "+ voldB+" dB");
+                        break;
                     }
-
-                    Process proc = Runtime.getRuntime().exec(FFMPEG +" -i "+fullpath+" -af volumedetect -f null -");
-                    // ffmpeg -i webapps/oculusPrime/temp_audio.flv -af volumedetect -f null -
-
-                    String line;
-                    BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
-                    while ((line = procReader.readLine()) != null) {
-
-                        if (line.contains("max_volume:")) {
-                            String[] s = line.split(" ");
-                            voldB = Double.parseDouble(s[s.length - 2]);
-                            break;
-                        }
-                    }
-
-                } catch (Exception e) {
-                    Util.printError(e);
-                    state.set(State.values.sounddetect, false);
-                    new File(fullpath).delete();
-                    return;
                 }
 
-                if (voldB > Settings.getReference().getDouble(ManualSettings.soundthresholdalt) && state.getBoolean(State.values.sounddetect)) {
-                    state.set(State.values.streamactivity, "audio " + voldB+"dB");
-                    state.set(State.values.sounddetect, false);
-                    app.driverCallServer(PlayerCommands.messageclients, "sound detected: "+ voldB+"dB");
-                }
-
-                new File(fullpath).delete();
-            }
-
-            if (state.getBoolean(State.values.sounddetect)) {
-                Util.log("sound detect timed out", this);
                 state.set(State.values.sounddetect, false);
-            }
+                proc.destroy();
+                app.driverCallServer(PlayerCommands.messageclients, "sound detection disabled");
+
+            } catch (Exception e) { e.printStackTrace(); }
 
         } }).start();
 
+    }
 
+
+    public String record(String mode) { return record(mode, null); }
+
+    public String record(String mode, String optionalfilename) {
+        // TODO: everything
+        return null;
     }
 
 }

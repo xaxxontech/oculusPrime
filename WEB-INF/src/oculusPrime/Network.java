@@ -254,22 +254,22 @@ public class Network {
         if (!state.exists(State.values.relayserver))
             str += "<br><a class=\"blackbg\" href=\"network\" target=\"_blank\">more network controls</a><br>\n";
 
-        String server = settings.readSetting(GUISettings.relayserver);
-        str += "<br>relay server: "+server;
-        if (state.exists(State.values.relayserver)) {
-            str += "<br> &nbsp; status: connected to server";
-            str += "<br> &nbsp; <a class=\"blackbg\" href=\"javascript: relayserver('disable')\">\n" +
-                    "disable</a>";
-        }
-        else if (state.exists(State.values.relayclient)) {
-            str += "<br> &nbsp; status: client connected from: " + state.get(State.values.relayclient);
-            str += "<br> &nbsp; <a class=\"blackbg\" href=\"javascript: relayserver('disable')\">\n" +
-                    "disable</a>";
-        }
-        else {
-            str += "<br> &nbsp; status: not connected";
-            str += "<br> &nbsp; <a class=\"blackbg\" href=\"javascript: relayserver();\">connect</a> &gt;<br>";
-        }
+//        String server = settings.readSetting(GUISettings.relayserver);
+//        str += "<br>relay server: "+server;
+//        if (state.exists(State.values.relayserver)) {
+//            str += "<br> &nbsp; status: connected to server";
+//            str += "<br> &nbsp; <a class=\"blackbg\" href=\"javascript: relayserver('disable')\">\n" +
+//                    "disable</a>";
+//        }
+//        else if (state.exists(State.values.relayclient)) {
+//            str += "<br> &nbsp; status: client connected from: " + state.get(State.values.relayclient);
+//            str += "<br> &nbsp; <a class=\"blackbg\" href=\"javascript: relayserver('disable')\">\n" +
+//                    "disable</a>";
+//        }
+//        else {
+//            str += "<br> &nbsp; status: not connected";
+//            str += "<br> &nbsp; <a class=\"blackbg\" href=\"javascript: relayserver();\">connect</a> &gt;<br>";
+//        }
 
         app.sendplayerfunction("networksettings", str);
     }

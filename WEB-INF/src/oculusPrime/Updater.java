@@ -6,16 +6,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Updater {
-		
-	public static final String path = "https://www.xaxxon.com/downloads/";
-	
+
+	private String updatelocation;
+
+	public Updater() {
+		updatelocation = Settings.getReference().readSetting(ManualSettings.updatelocation);
+	}
+
+
 	/** @return number of current version, or -1 if unknown */
 	public double getCurrentVersion() {
 		// log.info("reading current version");
 		double currentVersion = -1;
 
 		// get current version info from txt file in root folder
-		String filename =  Settings.redhome+Util.sep+"version.nfo";
+		String filename =  Settings.tomcathome +Util.sep+"version.nfo";
 		
 		FileInputStream filein;
 		try {
@@ -46,7 +51,7 @@ public class Updater {
 		//pull download list into string
 		String downloadListPage = "";
 		try {
-			URLConnection con = new URL(path).openConnection();
+			URLConnection con = new URL(updatelocation).openConnection();
 			String charset = "ISO-8859-1";
 			Reader r = new InputStreamReader(con.getInputStream(), charset);
 			StringBuilder buf = new StringBuilder();
@@ -67,13 +72,13 @@ public class Updater {
 		if (!downloadListPage.equals(null)) {
 			BufferedReader reader = new BufferedReader(new StringReader(downloadListPage));
 		    String str;
-		    Pattern pat = Pattern.compile("updatepackage_oculusprime_server_v.{0,12}\\.zip");
+		    Pattern pat = Pattern.compile("updatepackage_oculusprime_java_v.{0,12}\\.zip");
 		    Matcher mat = null;
 			try {
 				while ((str = reader.readLine()) != null) {
 					mat = pat.matcher(str);
 					while (mat.find()) {
-						filename = path+mat.group();
+						filename = updatelocation+mat.group();
 						break;
 					}
 				}
@@ -111,11 +116,11 @@ public class Updater {
 	 * @param version firmware version no.
 	 * @param port  current USB port
 	 */
-	public static void updateFirmware(final String id, final Double version, final String port) {
+	public void updateFirmware(final String id, final Double version, final String port) {
 
 		// download file
 		String filename = id+"_"+version+".hex";
-		String fileurl = path+filename;
+		String fileurl = updatelocation+filename;
 		String folder = "avrdude";
 		Util.log("Updater.updateFirmware() downloading url: " + fileurl, null);
 		Downloader dl = new Downloader();
@@ -132,11 +137,11 @@ public class Updater {
 
 		try {
 
-			Process proc = Runtime.getRuntime().exec( Settings.redhome+Util.sep+folder+Util.sep+"run "+cmd+" "+args);
+			Process proc = Runtime.getRuntime().exec( Settings.tomcathome +Util.sep+folder+Util.sep+"run "+cmd+" "+args);
 			proc.waitFor();
 
 			// cleanup
-			File file = new File( Settings.redhome+Util.sep+folder+Util.sep+filename);
+			File file = new File( Settings.tomcathome +Util.sep+folder+Util.sep+filename);
 			Util.log("Updater.updateFirmware(): deleting file "+file.getAbsolutePath(), null);
 			file.delete();
 

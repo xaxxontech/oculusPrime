@@ -4,15 +4,11 @@ import java.awt.image.BufferedImage;
 import java.awt.image.BufferedImageOp;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 
-import javax.imageio.ImageIO;
-
-import developer.Navigation;
 import developer.Ros;
+import developer.image.ImageUtils;
 import oculusPrime.commport.ArduinoPower;
-import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.Malg;
 import oculusPrime.commport.PowerLogger;
 
 public class AutoDock { 
@@ -31,12 +27,12 @@ public class AutoDock {
 	private State state = State.getReference();
 	private boolean autodockingcamctr = false;
 	private int lastcamctr = 0;
-	private ArduinoPrime comport = null;
+	private Malg comport = null;
 	private int autodockctrattempts = 0;
 	private Application app = null;
 	private OculusImage oculusImage = new OculusImage();
 	private int rescomp; // (multiplier - javascript sends clicksteer based on 640x480, autodock uses 320x240 images)
-	private int allowforClickSteer = 500;
+	private int allowforClickSteer = 1000;
 	private int dockattempts = 0;
 	private static final int maxdockattempts = 5;
 	private int imgwidth;
@@ -47,13 +43,11 @@ public class AutoDock {
 	private final int FLCALIBRATE = 2;
 	private volatile boolean autodocknavrunning = false;
 	
-	public AutoDock(Application theapp, ArduinoPrime com, ArduinoPower powercom) {
+	public AutoDock(Application theapp, Malg com, ArduinoPower powercom) {
 		this.app = theapp;
 		this.comport = com;
 		oculusImage.dockSettings(docktarget);
 		state.set(State.values.autodocking, false);
-		if (!settings.getBoolean(ManualSettings.useflash)) allowforClickSteer = 1000; // may need to be higher for rpi... about 1000
-//		if (state.get(State.values.osarch).equals(Application.ARM)) allowforClickSteer = 1000; // raspberry pi, other low power boards
 	}
 
 	public void autoDock(String str){
@@ -168,10 +162,10 @@ public class AutoDock {
 //									Util.delay(50);
 									comport.setSpotLightBrightness(0);
 									comport.delayWithVoltsComp(allowforClickSteer); 
-									comport.camCommand(ArduinoPrime.cameramove.reverse);
-									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + ArduinoPrime.FIRMWARE_TIMED_OFFSET);
+									comport.camCommand(Malg.cameramove.reverse);
+									int d = (int) (comport.voltsComp(comport.fullrotationdelay/2) + Malg.FIRMWARE_TIMED_OFFSET);
 									String tmpspeed = state.get(State.values.motorspeed);
-									comport.speedset(ArduinoPrime.speeds.fast.toString());
+									comport.speedset(Malg.speeds.fast.toString());
 									comport.turnLeft((int) d);
 									Util.delay((long) d);
 									comport.stopGoing();
@@ -195,7 +189,7 @@ public class AutoDock {
 					lowres = true;
 					
 					app.message(null, "autodocklock", s);
-					autoDockNav(x, y, Integer.parseInt(cmd[4]), Integer.parseInt(cmd[5]), new Float(cmd[6]));
+					autoDockNav(x, y, Integer.parseInt(cmd[4]), Integer.parseInt(cmd[5]), Float.parseFloat(cmd[6]));
 				}
 			}
 			
@@ -248,7 +242,7 @@ public class AutoDock {
 		state.set(State.values.docking, false);
 		lowres = true;
 		app.driverCallServer(PlayerCommands.floodlight, "0");
-		app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+		app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.horiz.toString());
 		if (!state.exists(State.values.driver))
 			app.driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString());
 
@@ -312,7 +306,7 @@ public class AutoDock {
 				if(state.get(State.values.dockstatus).equals(DOCKED)) { // dock successful
 					
 					state.set(State.values.docking, false);
-					comport.speedset(ArduinoPrime.speeds.fast.toString());
+					comport.speedset(Malg.speeds.fast.toString());
 
 					String str = "";
 					
@@ -328,7 +322,7 @@ public class AutoDock {
 //						comport.camCommand(ArduinoPrime.cameramove.horiz);
 //						app.driverCallServer(PlayerCommands.camtiltslow, Integer.toString(ArduinoPrime.CAM_HORIZ));
 						app.driverCallServer(PlayerCommands.floodlight, "0");
-						app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.horiz.toString());
+						app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.horiz.toString());
 //						state.set(State.values.redockifweakconnection, true); // TODO: testing, moved to ArduinoPower.execute()
 					}
 					
@@ -355,10 +349,10 @@ public class AutoDock {
 							comport.goBackward();
 							comport.delayWithVoltsComp(400);
 							comport.stopGoing();
-							Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+							Util.delay(Malg.LINEAR_STOP_DELAY); // let deaccelerate
 
 							// turn slightly! // TODO: direction should be determined by last slope
-							comport.speedset(ArduinoPrime.speeds.fast.toString());
+							comport.speedset(Malg.speeds.fast.toString());
 							comport.clickNudge((imgwidth / 4) * rescomp, true); // true=firmware timed
 							comport.delayWithVoltsComp(allowforClickSteer);
 
@@ -366,7 +360,7 @@ public class AutoDock {
 							comport.goBackward();
 							comport.delayWithVoltsComp(500);
 							comport.stopGoing();
-							Util.delay(ArduinoPrime.LINEAR_STOP_DELAY); // let deaccelerate
+							Util.delay(Malg.LINEAR_STOP_DELAY); // let deaccelerate
 
 							dockGrab(dockgrabmodes.start, 0, 0);
 							state.set(State.values.autodocking, true);
@@ -381,7 +375,7 @@ public class AutoDock {
 							
 							// back away from dock to avoid sketchy contact
 							Util.log("autodock failure, disengaging from dock", this);
-							comport.speedset(ArduinoPrime.speeds.med.toString());
+							comport.speedset(Malg.speeds.med.toString());
 							comport.goBackward();
 							Util.delay(400);
 							comport.stopGoing();
@@ -441,7 +435,7 @@ public class AutoDock {
 			int dockw = (int) (Integer.parseInt(s[6])/(rescomp/2f));
 			int dockh = (int) (Integer.parseInt(s[7])/(rescomp/2f));
 			int dockx = (int) (Integer.parseInt(s[4])/(rescomp/2f)) + dockw / 2;
-			float dockslope = new Float(s[8]);
+			float dockslope = Float.parseFloat(s[8]);
 			float slopedeg = (float) ((180 / Math.PI) * Math.atan(slope));
 			float dockslopedeg = (float) ((180 / Math.PI) * Math.atan(dockslope));
 
@@ -457,7 +451,7 @@ public class AutoDock {
 			final int hardStopPreDelay = 400;
 			final int hardStopPostDelay = 500;
 
-			comport.speedset(ArduinoPrime.speeds.fast.toString());
+			comport.speedset(Malg.speeds.fast.toString());
 
 			SystemWatchdog.waitForCpu();
 
@@ -642,23 +636,7 @@ public class AutoDock {
 
 	public void getLightLevel() {
 
-//		if (state.getBoolean(State.values.framegrabbusy.name())
-//				|| !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) || state
-//						.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-//			app.message("framegrab busy or stream unavailable", null, null);
-//			return;
-//		}
-//
-//		if (app.grabber instanceof IServiceCapableConnection) {
-//			Application.framegrabimg = null;
-//			Application.processedImage = null;
-//			state.set(State.values.framegrabbusy.name(), true);
-//			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
-//			sc.invoke("framegrabMedium", new Object[] {});
-//			app.message("getlightlevel command received", null, null);
-//		}
-
-		if (!app.frameGrab(LOWRES)) return;
+		if (!app.frameGrab()) return;
 
 		new Thread(new Runnable() {
 			public void run() {
@@ -674,16 +652,15 @@ public class AutoDock {
 					}
 					
 					BufferedImage img = null;
-					if (Application.framegrabimg != null) {
 
-						// convert bytes to image
-						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
-						img = ImageIO.read(in);
-						in.close();
-						
-					}
-						
-					else if (Application.processedImage != null) {
+//					if (Application.framegrabimg != null) {
+//						ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
+//						img = ImageIO.read(in);
+//						in.close();
+//					}
+//					else
+
+                    if (Application.processedImage != null) {
 						img = Application.processedImage;
 					}
 					
@@ -725,13 +702,6 @@ public class AutoDock {
 		state.delete(oculusPrime.State.values.dockfound);
 		state.delete(oculusPrime.State.values.dockmetrics);
 
-//		if (  ! (state.get(State.values.stream).equals(Application.streamstate.camera.toString())
-//				|| state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-//			app.message("stream unavailable", null, null);
-//			Util.log("error, stream unavailable", this);
-//			return;
-//		}
-
 		if (state.getBoolean(State.values.framegrabbusy)) {
 			app.message("framegrab busy", null, null);
 			Util.log("error, framegrab busy", this);
@@ -741,63 +711,67 @@ public class AutoDock {
 
 		state.set(oculusPrime.State.values.dockgrabbusy, true);
 
-		String res=HIGHRES;
-		if (lowres) res=LOWRES;
-
-		if (!app.frameGrab(res)) {
+		if (!app.frameGrab()) {
 			state.set(oculusPrime.State.values.dockgrabbusy, false);
 			return; // performs stream availability check
 		}
 
-//		if (app.grabber instanceof IServiceCapableConnection) {
-//			state.set(State.values.framegrabbusy.name(), true);
-//			Application.framegrabimg = null;
-//			Application.processedImage = null;
-//			IServiceCapableConnection sc = (IServiceCapableConnection) app.grabber;
-//			String resolution;
-//			if (lowres) { resolution = "framegrabMedium"; }
-//			else { resolution = "framegrab"; }
-//
-//			sc.invoke(resolution, new Object[] {});
-//		}
-
 		new Thread(new Runnable() {
 			public void run() {
-				int n = 0;
-				while (state.getBoolean(State.values.framegrabbusy)) {
-					Util.delay(5);
-					n++;
-					if (n > 2000) { // give up after 10 seconds
-						Util.log("error, frame grab timed out", this);
-						state.set(State.values.framegrabbusy, false);
-						break;
-					}
-				}
+                int n = 0;
+                while (state.getBoolean(State.values.framegrabbusy)) {
+                    Util.delay(5);
+                    n++;
+                    if (n > 2000) { // give up after 10 seconds
+                        Util.log("error, frame grab timed out", this);
+                        state.set(State.values.framegrabbusy, false);
+                        break;
+                    }
+                }
 
-				BufferedImage img = null;
-				if (Application.framegrabimg != null) { // TODO: unused?
+                BufferedImage img = null;
 
-					// convert bytes to image
-					ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
 
-					try {
-						img = ImageIO.read(in);
-						in.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+//				if (Application.framegrabimg != null) { // TODO: unused?
+//
+//					ByteArrayInputStream in = new ByteArrayInputStream(Application.framegrabimg);
+//
+//					try {
+//						img = ImageIO.read(in);
+//						in.close();
+//					} catch (IOException e) {
+//						e.printStackTrace();
+//					}
+//
+//				}
 
-				}
+//				else
+                if (Application.processedImage == null) {
+                    Util.log("dockgrab() framegrab failure", this);
+                   return;
+                }
 
-				else if (Application.processedImage != null) {
-					img = Application.processedImage;
-				}
+                imgwidth= Application.processedImage.getWidth();
+                imgheight= Application.processedImage.getHeight();
 
-				else { Util.log("dockgrab() framegrab failure", this); return; }
+                if ((float) imgwidth/imgheight > 4.01/3.0) { // crop to 4:3 ratio required
+                    imgwidth = imgheight * 4/3;
+                    Application.processedImage = ImageUtils.cropCentered(Application.processedImage, imgwidth, imgheight);
+                }
 
-				imgwidth= img.getWidth();
-				imgheight= img.getHeight();
-				rescomp = 640/imgwidth; // for clicksteer gui 640 window
+                int reswidth = 640;
+                if (lowres) reswidth = 320;
+
+                if (imgwidth > reswidth) { // resize required
+                    Application.processedImage = ImageUtils.resize(Application.processedImage, reswidth, reswidth*3/4);
+                }
+
+				imgwidth= Application.processedImage.getWidth();
+				imgheight= Application.processedImage.getHeight();
+
+                img = Application.processedImage;
+
+                rescomp = 640/imgwidth; // for clicksteer gui 640 window
 
 				float[] matrix = { 0.111f, 0.111f, 0.111f, 0.111f,
 						0.111f, 0.111f, 0.111f, 0.111f, 0.111f, };
@@ -822,7 +796,7 @@ public class AutoDock {
 
 					case start:
 						oculusImage.lastThreshhold = -1;
-						// break; purposefully omitted
+						//  break; purposefully omitted
 
 					case find:
 						results = oculusImage.findBlobs(argb, imgwidth, imgheight);

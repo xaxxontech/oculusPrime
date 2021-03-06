@@ -2,55 +2,40 @@ package oculusPrime;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
-import java.util.Collection;
-import java.util.Set;
 
+import oculusPrime.servlet.CommServlet;
 import org.jasypt.util.password.ConfigurablePasswordEncryptor;
-import org.red5.server.adapter.MultiThreadedApplicationAdapter;
-import org.red5.server.api.IConnection;
-import org.red5.server.api.Red5;
-import org.red5.server.api.service.IServiceCapableConnection;
 
 import developer.Calibrate;
 import developer.Navigation;
 import developer.NavigationLog;
 import developer.Ros;
-import developer.depth.Mapper;
 import developer.image.OpenCVMotionDetect;
 import developer.image.OpenCVObjectDetect;
 import developer.image.OpenCVUtils;
 import oculusPrime.State.values;
 import oculusPrime.commport.ArduinoPower;
-import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.Malg;
 import oculusPrime.commport.PowerLogger;
+
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 
 
 /** red5 application */
-public class Application extends MultiThreadedApplicationAdapter {
+public class Application implements ServletContextListener {
 
 	public enum streamstate { stop, camera, camandmic, mic }
 	public enum camquality { low, med, high, custom }
 	public enum driverstreamstate { stop, mic, pending, disabled }
-	public static final String VIDEOSOUNDMODELOW = "low";
-	public static final String VIDEOSOUNDMODEHIGH = "high";
-	public static final int STREAM_CONNECT_DELAY = 2000;
-	private static final int GRABBERRELOADTIMEOUT = 5000;
-	public static final int GRABBERRESPAWN = 8000;
-	public static final String ARM = "arm";
-	public static final String UBUNTU1604 = "16.04";
-	public static final String UBUNTU1404 = "14.04";
-	public static final String LOCALHOST = "127.0.0.1";
+    private static final String SERVEROK = "serverok";
+    public static final String ARM = "arm";
+    private static final String RESTARTFILE = "oculusrestart"; // must match oculusprime.sh
+    private static final String HALTFILE = "oculushalt";       // must match oculusprime.sh
 
-	private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
+    private ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
 	protected boolean initialstatuscalled = false;
-	private boolean pendingplayerisnull = true;
-	public IConnection grabber = null;   // flash client on robot, camera capture (optional)
-	private IConnection player = null;   // client, typically remote flash plugin or air app
 	private String authtoken = null;
 	private String salt = null;
 	
@@ -58,34 +43,28 @@ public class Application extends MultiThreadedApplicationAdapter {
 	private BanList banlist = BanList.getRefrence();
 	private State state = State.getReference();
 	protected LoginRecords loginRecords = null;
-	private IConnection pendingplayer = null;
 	protected SystemWatchdog watchdog = null;
 	private AutoDock docker = null;
 	public Video video = null;
 
-	public ArduinoPrime comport = null;
+	public Malg comport = null;
 	public ArduinoPower powerport = null;
 	public TelnetServer commandServer = null;
-	
-	public static developer.depth.OpenNIRead openNIRead = null;
-	public static developer.depth.ScanUtils scanUtils = null;
 	private developer.Navigation navigation = null;
 
-	public static byte[] framegrabimg  = null;
+//	public static byte[] framegrabimg  = null;
 	public static BufferedImage processedImage = null;
 	public static BufferedImage videoOverlayImage = null;
 
-	private Red5Client red5client = null;
-	public IConnection relayclient = null;
 	public Network network = null;
 
+    public volatile boolean running = true;
 
 
-	public Application() {
-		super();
+    public Application() {
 
 		PowerLogger.append("==============Oculus Prime Java Start===============\n", this); // extra newline on end
-		Util.log ("==============Oculus Prime Java Start1===============\n", this); // extra newline on end
+		Util.log ("==============Oculus Prime Java Start===============\n", this); // extra newline on end
 		Util.log("Linux Version:"+Util.getUbuntuVersion()
 				+", Java Model:"+System.getProperty("sun.arch.data.model")
 				+", Java Arch:"+state.get(values.osarch), this);
@@ -93,274 +72,53 @@ public class Application extends MultiThreadedApplicationAdapter {
 		passwordEncryptor.setAlgorithm("SHA-1");
 		passwordEncryptor.setPlainDigest(true);
 		loginRecords = LoginRecords.getReference();
-		DashboardServlet.setApp(this);
+        CommServlet.setApp(this);
+        DashboardServlet.setApp(this);
 		FrameGrabHTTP.setApp(this);
 		initialize();
 
 	}
 
 
-	@Override
-	public boolean appConnect(IConnection connection, Object[] params) {
+    @Override
+    public void contextDestroyed(ServletContextEvent arg0) {
+        shutdownApplication();
+    }
 
-		authtoken = null;
-
-// TODO: testing avconv/ffmpeg stream accept all non-auth LAN connections
-//		if (banlist.knownAddress(connection.getRemoteAddress()) && params.length==0) {
-//			Util.log("localhost/LAN/known netstream connect, no params", this);
-//			return true;
-//		}
-
-		// always accept local avconv/ffmpeg
-		if (params.length==0 && connection.getRemoteAddress().equals("127.0.0.1") ) {
-			grabber = Red5.getConnectionLocal(); // TODO: cause of unknown bug? dumpframegrabs sometimes connects after initial video source
-			return true;
-		}
-
-		// always accept relayclient avconv/ffmpeg
-		if (params.length==0 && state.exists(values.relayclient)) {
-			if (connection.getRemoteAddress().equals(state.get(values.relayclient)) ) {
-				grabber = Red5.getConnectionLocal();
-
-				if (settings.getBoolean(ManualSettings.useflash)) {
-					driverCallServer(PlayerCommands.messageclients, "relay server in use, setting &quot;useflash&quot; to false");
-					Util.log("setting useflash false", this);
-					settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-				}
-
-				return true;
-			}
-		}
-
-		if (params.length==0) return false;
-
-		String logininfo[] = ((String) params[0]).split(" ");
-
-		// always accept local grabber (flash)
-		if ((connection.getRemoteAddress()).equals("127.0.0.1") && logininfo[0].equals("")) return true;
-
-		// disallow normal connection if relay server active
-		if (state.exists(values.relayserver)) return false;
-
-		// TODO: if banned, but cookie exists?? 
-		if(banlist.isBanned(connection.getRemoteAddress())) return false;
-		
-		// test for cookie auth
-		if (logininfo.length == 1) { 
-			String username = logintest("", logininfo[0]);
-			if (username != null) {
-				state.set(State.values.pendinguserconnected, username);
-				banlist.clearAddress(connection.getRemoteAddress());
-				return true;
-			}
-		}
-	
-		// test for user/pass/remember
-		if (logininfo.length > 1) {
-			String encryptedPassword = (passwordEncryptor.encryptPassword(logininfo[0] + salt + logininfo[1])).trim();
-			if (logintest(logininfo[0], encryptedPassword) != null) {
-				if (logininfo[2].equals("remember")) {
-					authtoken = encryptedPassword;
-				}
-				state.set(State.values.pendinguserconnected, logininfo[0]);
-				banlist.clearAddress(connection.getRemoteAddress());
-				return true;
-			}
-		}
-		
-		banlist.loginFailed(connection.getRemoteAddress(), logininfo[0]);
-		return false;
-	}
-
-	@Override
-	public void appDisconnect(IConnection connection) {
-		if(connection==null) { return; }
-
-		if (connection.equals(player)) {
-			String str = state.get(State.values.driver) + " disconnected";
-			
-			Util.log("appDisconnect(): " + str,this); 
-
-			messageGrabber(str, "connection awaiting&nbsp;connection");
-			loginRecords.signoutDriver();
-
-			//if autodocking, keep autodocking
-			if (!state.getBoolean(State.values.autodocking) &&
-					!(state.exists(values.navigationroute) && !state.exists(values.nextroutetime)) ) {
-				
-				if (!state.get(State.values.driverstream).equals(driverstreamstate.pending.toString())) {
-				
-					if (state.get(State.values.stream) != null) {
-						if (!state.get(State.values.stream).equals(streamstate.stop.toString())) {
-							publish(streamstate.stop);
-						}
-					}
-	
-					if (comport.isConnected()) { 
-						comport.setSpotLightBrightness(0);
-						comport.floodLight(0);
-						comport.stopGoing();
-					}
-	
-					if (!state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())
-							&& !state.get(values.driverstream).equals(driverstreamstate.disabled.toString())) {
-						state.set(State.values.driverstream, driverstreamstate.stop.toString());
-						grabberPlayPlayer(0);
-						messageGrabber("playerbroadcast", "0");
-					}
-					
-				}
-				
-				// this needs to be before player = null
-				if (state.get(State.values.pendinguserconnected) != null) {
-					assumeControl(state.get(State.values.pendinguserconnected));
-					state.delete(State.values.pendinguserconnected);
-					return;
-				}
-			}
-			
-			player = null;
-			connection.close();
-
-			if (state.exists(values.relayclient)) {
-				IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
-				t.invoke("playerDisconnect");
-			}
-		}
-		
-		if (connection.equals(grabber)) {
-			grabber = null;
-
-			if (!settings.getBoolean(ManualSettings.useflash))  return;
-
-			// flash only
-			// wait a bit, see if still no grabber, THEN reload
-			new Thread(new Runnable() {
-				public void run() {
-					try {
-						Thread.sleep(GRABBERRESPAWN);
-						if (grabber == null) {
-							grabberInitialize();
-						}
-					} catch (Exception e) {
-						Util.printError(e);
-					}
-				}
-			}).start();
-			return;
-		}
-
-		if (connection.equals(relayclient)) {
-			relayclient = null;
-			state.delete(values.relayclient);
-			Util.log("relay client disconnected", this);
-			if (state.exists(values.driver)) //messageplayer("relay client disconnected", "connection", "connected");
-				driverCallServer(PlayerCommands.driverexit, null);
-			if (!state.get(values.stream).equals(streamstate.stop.toString()))
-				driverCallServer(PlayerCommands.streammode, streamstate.stop.toString());
-			return;
-		}
-		
-		state.delete(State.values.pendinguserconnected);
-		//TODO: extend IConnection class, associate loginRecord  (to get passenger info)
-		// currently no username info when passenger disconnects
-	}
-
-	// called by flash
-	public void grabbersignin(String mode) {
-		if (mode.equals("init")) {
-			state.delete(State.values.stream);
-		} else {
-//			state.set(State.values.stream, Application.streamstate.stop.toString());
-			driverCallServer(PlayerCommands.state, State.values.stream.toString() + " " +
-					Application.streamstate.stop.toString());
-		}
-		grabber = Red5.getConnectionLocal();
-		String str = "awaiting&nbsp;connection";
-		if (state.get(State.values.driver) != null) {
-			str = state.get(State.values.driver) + "&nbsp;connected";
-		}
-		str += " stream " + state.get(State.values.stream);
-		messageGrabber("connected to subsystem", "connection " + str);
-		Util.log("grabber signed in from " + grabber.getRemoteAddress(), this);
-		
-		if (state.get(State.values.driverstream).equals(driverstreamstate.mic.toString())) {
-			grabberPlayPlayer(1);
-			messageGrabber("playerbroadcast", "1");
-		}
-
-		// eliminate any other grabbers
-		Collection<Set<IConnection>> concollection = getConnections();
-		for (Set<IConnection> cc : concollection) {
-			for (IConnection con : cc) {
-				if (con instanceof IServiceCapableConnection && con != grabber && con != player
-						&& (con.getRemoteAddress()).equals("127.0.0.1")) { 
-					con.close();
-				}
-			}
-		}
-		
-		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode=state.get(State.values.videosoundmode);
-		if (videosoundmode == null)	videosoundmode=VIDEOSOUNDMODEHIGH;  
-		
-		setGrabberVideoSoundMode(videosoundmode);
-		Util.systemCall(System.getenv("RED5_HOME")+"/flashsymlink.sh");		
-	}
-
-	public void killGrabber() {
-		if (settings.getBoolean(ManualSettings.useflash)) Util.systemCall("pkill chrome");    // TODO: use PID
-	}
- 
-	/** */
+    /** */
 	public void initialize() {
 		settings.writeFile();
 		salt = settings.readSetting("salt");
 		Util.getLinuxUptime();
 
-		if (settings.readSetting("user0") == null) {
+		if (settings.readSetting("user0") == null)
 			driverCallServer(PlayerCommands.new_user_add, "oculus robot");
-//			String p = "oculus" + salt + "robot"; // default
-//			String encryptedPassword = passwordEncryptor.encryptPassword(p);
-//			settings.newSetting("user0", "oculus");
-//			settings.newSetting("pass0", encryptedPassword);
-		}
 
-		comport = new ArduinoPrime(this);   // note: blocking
+		// video now requires ROS+telnet, telnet can != disabled
+		if (settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED))
+		    settings.writeSettings(GUISettings.telnetport, TelnetServer.DEFAULTPORT);
+
+		comport = new Malg(this);   // note: blocking
 		powerport = new ArduinoPower(this); // note: blocking
 
-		state.set(State.values.httpport, settings.readRed5Setting("http.port"));
+		state.set(State.values.httpport, settings.readHTTPport());
 		initialstatuscalled = false;
-		pendingplayerisnull = true;
 
 		if (!settings.readSetting(GUISettings.telnetport).equals(Settings.DISABLED.toString()))
 			commandServer = new TelnetServer(this);
 
-		if (settings.getBoolean(ManualSettings.developer.name())) {
-			openNIRead = new developer.depth.OpenNIRead();
-			scanUtils = new developer.depth.ScanUtils();
-		}
-
 		// OpenCV, requires restart if ubuntu 14.04 running, with jar file targeted at 16.04 was present
 		OpenCVUtils ocv = new OpenCVUtils(this);
 		ocv.loadOpenCVnativeLib();
-		if (ocv.jarfiledeleted) restart();
 
 		Util.setSystemVolume(settings.getInteger(GUISettings.volume));
 		state.set(State.values.volume, settings.getInteger(GUISettings.volume));
 
-		// use relay server if set
-		if (!settings.readSetting(GUISettings.relayserver).equals(Settings.DISABLED)) {
-			red5client = new Red5Client(this); // connects to remote server
-			red5client.connectToRelay();
-		}
+		state.set(State.values.driverstream, driverstreamstate.disabled.toString());
 
-		if(state.get(values.osarch).equals(ARM)) settings.writeSettings(ManualSettings.useflash, Settings.FALSE);
-		if( ! settings.getBoolean(ManualSettings.useflash)) state.set(values.driverstream, driverstreamstate.disabled.toString());
-		else state.set(State.values.driverstream, driverstreamstate.stop.toString());
+        video = new Video(this);
 
-		grabberInitialize();
-		state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
+        state.set(State.values.lastusercommand, System.currentTimeMillis()); // must be before watchdog
 		docker = new AutoDock(this, comport, powerport);
 		network = new Network(this);	
 		watchdog = new SystemWatchdog(this);
@@ -370,167 +128,85 @@ public class Application extends MultiThreadedApplicationAdapter {
 			navigation.runAnyActiveRoute();
 		}
 
-//		if(settings.getBoolean(ManualSettings.developer)) PyScripts.autostartPyScripts();
-
 		Util.debug("application initialize done", this);
 	}
 
-	// called by remote relay client
-	public void setRelayClient() {
-		IConnection c = Red5.getConnectionLocal();
-		if (c instanceof IServiceCapableConnection) {
-			relayclient = c;
-			state.set(values.relayclient, c.getRemoteAddress());
-			Util.log("relayclient connected from: " + state.get(values.relayclient), this);
+    // nonflash xmlhttp clients only TODO: multiple clients + relay omitted, set xmlhttpclient flag here
+    public void driverSignIn(String username, long clientID) {
+        Util.log("driver sign in: "+username, this);
+        state.set(State.values.driver, username);
 
-			if (authtoken != null) {
-				IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
-				sc.invoke("relayCallClient", new Object[] { "writesetting",
-						GUISettings.relayserverauth.toString()+" "+authtoken });
-			}
+        String str = "connection connected user " + username;
+        str += " streamsettings " + streamSettings();
 
-			if (state.exists(values.driver)) {
-				player.close();
-				player = null;
-				loginRecords.signoutDriver();
-				driverCallServer(PlayerCommands.publish, streamstate.stop.toString());
-			}
-		}
-	}
+        String vals[] = settings.readSetting(settings.readSetting(GUISettings.vset)).split("_");
+        str += " videowidth "+vals[0]+ " videoheight "+vals[1];
 
-	// called by remote relayclient
-	public void relayPing() {
-		Util.debug("ping from relayclient", this); // TODO: testing
-		if (relayclient == null) {
-			Util.log("error,relayclient null", this); // TODO: testing
-			return;
-		}
-		IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
-		sc.invoke("relayPong", new Object[] { });
-	}
+        str += " webrtcserver " + settings.readSetting(ManualSettings.webrtcserver);
+        str += " webrtcport " + settings.readSetting(ManualSettings.webrtcport);
+        str += " turnserverlogin " + settings.readSetting(ManualSettings.turnserverlogin);
+        str += " turnserverport " + settings.readSetting(ManualSettings.turnserverport);
 
-	// called by remote Red5Client.sendToRelay()
-	public void fromRelayClient(Object[] params) {
-		if ( !Red5.getConnectionLocal().equals(relayclient)) return;
-		String[] s= new String[params.length-1];
+        if (authtoken != null) {
+            str += " storecookie " + authtoken;
+            authtoken = null;
+        }
+        messageplayer(username + " connected to Oculus Prime", "multiple", str);
+        initialstatuscalled = false;
 
-		switch (params[0].toString()) {
-			case "messageplayer":
-				for (int i=1; i<params.length; i++) if (params[i]!=null) s[i-1]=params[i].toString();
-				messageplayer(s[0],s[1],s[2]);
-				break;
-			case "sendplayerfunction":
-				for (int i=1; i<params.length; i++) if (params[i]!=null) s[i-1]=params[i].toString();
-				sendplayerfunction(s[0], s[1]);
-				break;
-			case "grabberSetStream":
-				grabberSetStream(params[1].toString());
-		}
-	}
+        loginRecords.beDriver();
 
-	private void grabberInitialize() {
+        if (settings.getBoolean(GUISettings.loginnotify)) {
+            saySpeech("lawg inn " + state.get(State.values.driver));
+        }
 
-//		String host = LOCALHOST;
-//		if (!settings.readSetting(ManualSettings.relayserver).equals(Settings.DISABLED))
-//			host = settings.readSetting(ManualSettings.relayserver);
+        watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
+        state.set(values.driverclientid, clientID);
+        state.set(State.values.lastusercommand, System.currentTimeMillis());
+    }
 
-		video = new Video(this);
+    // xmlhttp clients only
+    public void driverSignOut() {
 
-		// non flash, no gui
-		if (!settings.getBoolean(ManualSettings.useflash))   video.initAvconv();
-		else {
-//			if (host.equals(LOCALHOST)) grabber_launch("");
-//			else grabber_launch("?host="+host);
+        if (!state.exists(values.driver)) return;
 
-			grabber_launch("");
-		}
 
-	}
+        String str = state.get(State.values.driver) + " disconnected";
 
-	public void grabber_launch(final String str) {
-		new Thread(new Runnable() {
-			public void run() {
-				try {
+        Util.log("driverSignOut(): " + str,this);
 
-					// stream = "stop";
-					String address = "127.0.0.1:" + state.get(State.values.httpport);
-					Runtime.getRuntime().exec("google-chrome " + address + "/oculusPrime/server.html"+str);
+        sendplayerfunction("commclientclose", null); // calls javascript: commclientclose()
+        Util.delay(100);
 
-				} catch (Exception e) {
-					Util.printError(e);
-				}
-			}
-		}).start();
-	}
+        loginRecords.signoutDriver();
 
-	/**
-	 * called by remote flash
-	 * */
-	public void playersignin() {		
-		// set video, audio quality mode in grabber flash, depending on server/client OS
-		String videosoundmode=VIDEOSOUNDMODELOW;
+        if (CommServlet.clientaddress != null) banlist.removeAddress(CommServlet.clientaddress);
 
-		if (player != null) { // pending connection
-			pendingplayer = Red5.getConnectionLocal();
-			pendingplayerisnull = false;
+        //if autodocking, keep autodocking, otherwise do this
+        if (!state.getBoolean(State.values.autodocking) &&
+                !(state.exists(values.navigationroute) && !state.exists(values.nextroutetime)) ) {
 
-			if (pendingplayer instanceof IServiceCapableConnection) {
-				IServiceCapableConnection sc = (IServiceCapableConnection) pendingplayer;
-				String str = "connection PENDING user " + state.get(State.values.pendinguserconnected);
-				if (authtoken != null) {
-					// System.out.println("sending store cookie");
-					str += " storecookie " + authtoken;
-					authtoken =  null;
-				}
-				str += " someonealreadydriving " + state.get(State.values.driver);
+            if (!state.get(State.values.driverstream).equals(driverstreamstate.pending.toString())) {
 
-				// this has to be last to above variables are already set in java script
-				sc.invoke("message", new Object[] { null, "green", "multiple", str });
-				str = state.get(State.values.pendinguserconnected) + " pending connection from: "
-						+ pendingplayer.getRemoteAddress();
-				
-				Util.log("playersignin(): " + str,this);
-				messageGrabber(str, null);
-				sc.invoke("videoSoundMode", new Object[] { videosoundmode });
-			}
-		} else { // driver connected
-			player = Red5.getConnectionLocal();
-			state.set(State.values.driver, state.get(State.values.pendinguserconnected));
-			state.delete(State.values.pendinguserconnected);
-			String conn = "connected";
-			if (state.exists(values.relayclient)) conn="relay";
-			String str = "connection "+conn+" user " + state.get(values.driver);
-			if (authtoken != null) {
-				str += " storecookie " + authtoken;
-				authtoken = null;
-			}
-			str += " streamsettings " + streamSettings();
-			messageplayer(state.get(State.values.driver) + " connected to OCULUS PRIME", "multiple", str);
-			initialstatuscalled = false;
-			
-			str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
-			messageGrabber(str, "connection " + state.get(State.values.driver) + "&nbsp;connected");
-			Util.log("playersignin(), " + str, this);
-			loginRecords.beDriver();
-			
-			if (settings.getBoolean(GUISettings.loginnotify)) {
-				saySpeech("lawg inn " + state.get(State.values.driver));
-			}
-			
-			IServiceCapableConnection sc = (IServiceCapableConnection) player;
-			sc.invoke("videoSoundMode", new Object[] { videosoundmode });
-			Util.log("player video sound mode = "+videosoundmode, this);
-			
-//			state.delete(State.values.controlsinverted);
-			watchdog.lastpowererrornotify = null; // new driver not notified of any errors yet
+                if (state.get(State.values.stream) != null) {
+                    if (!state.get(State.values.stream).equals(streamstate.stop.toString())) {
+                        publish(streamstate.stop);
+                    }
+                }
 
-			if (state.exists(values.relayclient)) {
-				IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
-				t.invoke("playerSignIn", new Object[] { state.get(values.driver)});
-			}
+                if (comport.isConnected()) {
+                    comport.setSpotLightBrightness(0);
+                    comport.floodLight(0);
+                    comport.stopGoing();
+                }
 
-		}
-	}
+            }
+        }
+
+        state.delete(values.driverclientid);
+
+    }
+
 
 	public void driverCallServer(PlayerCommands fn, String str) {
 		playerCallServer(fn, str, true);
@@ -569,29 +245,15 @@ public class Application extends MultiThreadedApplicationAdapter {
 		if(fn != PlayerCommands.statuscheck && !passengerOverride)
 			state.set(State.values.lastusercommand, System.currentTimeMillis());
 
-		// if acting as relay server, forward commands
-		if (state.exists(values.relayclient) && !PlayerCommands.nonRelayCommands(fn)) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) relayclient;
-			sc.invoke("relayCallClient", new Object[] { fn, str });
-			return;
-		}
 
 		String[] cmd = null;
 		if(str!=null) cmd = str.split(" ");
 
 		switch (fn) {
 			case chat: chat(str) ;return;
-			case beapassenger: beAPassenger(str);return;
-			case assumecontrol: assumeControl(str); return;
 		}
-		
-		// must be driver/non-passenger for all commands below 
 
-		if (Red5.getConnectionLocal() != player && player != null && !passengerOverride) {
-			Util.log("passenger, command dropped: " + fn.toString(), this);
-			return;
-		}
-		
+
 		switch (fn) {
 	
 		case move: {
@@ -599,14 +261,14 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (settings.getBoolean(GUISettings.navigation)) navigation.navdockactive = false;
 
 			if (state.exists(State.values.navigationroute) && !passengerOverride && 
-					str.equals(ArduinoPrime.direction.stop.toString())) {
+					str.equals(Malg.direction.stop.toString())) {
 				messageplayer("navigation route "+state.get(State.values.navigationroute)+" cancelled by stop", null, null);
 				navigation.navlog.newItem(NavigationLog.INFOSTATUS, "Route cancelled by user",
 						Navigation.routestarttime, null, state.get(values.navigationroute),
 						Navigation.consecutiveroute, 0);
 				navigation.cancelAllRoutes();
 			}
-			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(ArduinoPrime.direction.stop.toString())) {
+			else if (state.exists(State.values.roscurrentgoal) && !passengerOverride && str.equals(Malg.direction.stop.toString())) {
 				Navigation.goalCancel();
 				messageplayer("navigation goal cancelled by stop", null, null);
 			}
@@ -623,7 +285,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 				messageplayer("command dropped, autodocking", null, null);
 				return;
 			}
-			comport.camCommand(ArduinoPrime.cameramove.valueOf(str));
+			comport.camCommand(Malg.cameramove.valueOf(str));
 			break;
 //		case camtiltfast: comport.cameraToPosition(Integer.parseInt(str)); break;
 		case camtilt: comport.camtilt(Integer.parseInt(str)); break;
@@ -635,15 +297,11 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case clicksteer:clickSteer(str);break;
 		case streamsettingscustom: streamSettingsCustom(str);break;
 		case streamsettingsset:streamSettingsSet(str);break;
-		case driverexit: appDisconnect(player); break;
+		case driverexit: driverSignOut(); break;
 		case logout:
 			Util.log("browser user logout", this);
-			if (player != null) {
-				banlist.removeAddress(player.getRemoteAddress());
-			}
-			appDisconnect(player);
+            driverSignOut();
 			break;
-		case playerbroadcast: playerBroadCast(str); break;
 		case password_update: account("password_update", str); break;
 		case new_user_add: account("new_user_add", str); break;
 		case user_list: account("user_list", ""); break;
@@ -651,7 +309,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case statuscheck: statusCheck(str); break;
 		case extrauser_password_update: account("extrauser_password_update", str); break;
 		case username_update: account("username_update", str); break;
-		case disconnectotherconnections: disconnectOtherConnections(); break;
 		case showlog: showlog(str); break;
 		case publish: publish(streamstate.valueOf(str)); break;
 		case record: // record [true | false] optionalfilename
@@ -670,7 +327,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case softwareupdate: softwareUpdate(str); break;
 //		case muterovmiconmovetoggle: muteROVMicOnMoveToggle(); break;
 		case quitserver: shutdownApplication(); break;
-		case setstreamactivitythreshold: setStreamActivityThreshold(str); break;
 		case email: new SendMail(str, this); break;
 		case uptime:
 			// messageplayer("uptime: " + state.getUpTime() + " ms", null, null); 
@@ -744,8 +400,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			moveMacroCancel();
-			comport.rotate(ArduinoPrime.direction.valueOf(fn.toString()), Double.parseDouble(str));
-			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"&deg;", "motion", "moving");
+			comport.rotate(Malg.direction.valueOf(fn.toString()), Double.parseDouble(str));
+			messageplayer(Malg.direction.valueOf(fn.toString())+" " + str+"&deg;", "motion", "moving");
 			break;
 
 		case rotate:
@@ -773,8 +429,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 				break;
 			}
 			moveMacroCancel();
-			comport.movedistance(ArduinoPrime.direction.valueOf(fn.toString()),Double.parseDouble(str));
-			messageplayer(ArduinoPrime.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
+			comport.movedistance(Malg.direction.valueOf(fn.toString()),Double.parseDouble(str));
+			messageplayer(Malg.direction.valueOf(fn.toString())+" " + str+"m", "motion", "moving");
 			break;
 
 		case arcmove:
@@ -802,10 +458,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 			}
 			break;
 
-		case serverbrowser:
-			grabber_launch(str);
-			break;
-
 		case docklineposupdate:
 			settings.writeSettings(GUISettings.vidctroffset, str);
 			messageplayer("vidctroffset set to : " + str, null, null);
@@ -818,7 +470,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		case speech:
 			messageplayer("synth voice: " + str, null, null);
-			messageGrabber("synth voice: " + str, null);
 			saySpeech(str);
 			break;
 		
@@ -827,26 +478,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			messageplayer("ROV volume set to "+str+"%", null, null); 
 			state.set(State.values.volume, str);
 			break;		
-			
-		case opennisensor:
-			if(str.equals("on")) { 
-				if (openNIRead.startDepthCam()) {
-//					if (!state.getBoolean(State.values.odometry)) comport.odometryStart();
-				 }
-				else
-						messageplayer("roslaunch already running, abort", null, null);
-			}
-			else { 
-				openNIRead.stopDepthCam(); 
-//				if (state.getBoolean(State.values.odometry)) comport.odometryStop();
-			}			
-			messageplayer("openNI camera "+str, null, null);
-			break;
 
-		case videosoundmode:
-			setGrabberVideoSoundMode(str);
-			break;
-		
 		case spotlightsetbrightness: // deprecated, maintained for mobile client compatibility
 		case spotlight: 
 			comport.setSpotLightBrightness(Integer.parseInt(str));
@@ -915,8 +547,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 		
 		case roslaunch:
-			if (Ros.launch(str)) messageplayer("roslaunch "+str+".launch", null, null);
-			else messageplayer("roslaunch already running", null, null);
+			Ros.launch(str);
+			messageplayer("roslaunch "+str+".launch", null, null);
+
 			break;
 		
 		case savewaypoints:
@@ -966,9 +599,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 		case unblock: banlist.removeblockedFile(str); break;
 		case block:	banlist.addBlockedFile(str); break;
 		case log: Util.log("log: "+str, this); break;
-		case sounddetect: video.sounddetect(str); break;
-		case clearmap: Mapper.clearMap(); break; // TODO: old dev only maybe nuke
-		
+		case sounddetect: video.sounddetectgst(str); break;
+
 		case cpu:
 			String cpu = String.valueOf(Util.getCPU());
 			if(cpu != null) state.set(values.cpu, cpu);
@@ -1034,191 +666,51 @@ public class Application extends MultiThreadedApplicationAdapter {
 			break;
 			
 		case streammode: // TODO: testing ffmpeg/avconv streaming
-			grabberSetStream(str);
+            setStreamMode(str);
 			break;
 
 		case calibraterotation:
 			new Calibrate(this).calibrateRotation(str);
 			break;
 
-		case relayconnect:
-			if (red5client == null) red5client = new Red5Client(this);
-			if (!str.equals("")) { red5client.connectToRelay(str); break; }
-			red5client.connectToRelay();
-			// TODO: stop any running streams
-			break;
-
-		case relaydisable:
-			driverCallServer(PlayerCommands.writesetting, GUISettings.relayserver.toString()+" "+Settings.DISABLED);
-			driverCallServer(PlayerCommands.writesetting, GUISettings.relayserverauth.toString()+" "+Settings.DISABLED);
-			// break omitted on purpose
-
-		case relaydisconnect:
-			driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString()); // TODO: server doesn't get stream stop
-			if (state.exists(values.relayserver))
-				red5client.relayDisconnect();
-			else if (state.exists(values.relayclient)) {
-				IServiceCapableConnection rc = (IServiceCapableConnection) relayclient;
-				rc.invoke("disconnect");
-				state.delete(values.relayclient);
-				driverCallServer(PlayerCommands.publish, Application.streamstate.stop.toString()); // TODO: server doesn't get stream stop
-			}
-			break;
 
 		case networksettings:
 			network.getNetworkSettings();
 			break;
 
 		case networkconnect:
-//			if (state.exists(values.relayserver) || state.exists(values.relayclient))
-//				driverCallServer(PlayerCommands.relaydisconnect, null);
 			network.connectNetwork(str);
 			break;
 
+        case clientjs:
+            String arr[] = str.split(" ",2);
+            if (arr.length == 1)
+                sendplayerfunction(arr[0], "");
+            else if (arr.length >= 2)
+                sendplayerfunction(arr[0], arr[1]);
+            break;
+
 		}
+
 
 
 	}
 
-	/** put all commands here */
-	public enum grabberCommands {
-		streammode, saveandlaunch, populatesettings, systemcall, chat, dockgrabbed, autodock, 
-		restart, checkforbattery, factoryreset, shutdown, streamactivitydetected;
-		@Override
-		public String toString() {
-			return super.toString();
-		}
-	}
+    private void setStreamMode(String str) {
+        state.set(State.values.stream, str);
+        if ( str.equals(streamstate.camandmic.toString()) )
+            str = str+"_2";
+        final String stream = str;
 
-	/**
-	 * turn string input to command id
-	 * 
-	 * @param fn
-	 *            is the funct ion to call
-	 * @param str
-	 *            is the parameters to pass on to the function.
-	 */
-	public void grabberCallServer(String fn, String str) {
-		grabberCommands cmd = null;
-		try {
-			cmd = grabberCommands.valueOf(fn);
-		} catch (Exception e) {
-			return;
-		}
+        Util.log("streaming " + stream, this);
 
-		if (cmd == null) return;
-		else grabberCallServer(cmd, str);
-	}
+        // message driver
+        if (stream.equals(streamstate.camera.toString()) || stream.equals(streamstate.camandmic.toString()))
+            messageplayer("streaming " + stream, "multiple",
+                    "stream "+stream+" videowidth "+video.lastwidth+" videoheight "+video.lastheight);
+        else  messageplayer("streaming " + stream, "stream", stream);
+    }
 
-	/**
-	 * distribute commands from grabber
-	 * 
-	 * @param cmd
-	 *            is the function to call in xxxxxx.swf ???
-	 * @param str
-	 *            is the parameters to pass on to the function.
-	 */
-	@SuppressWarnings("incomplete-switch")
-	public void grabberCallServer(final grabberCommands cmd, final String str) {
-
-		switch (cmd) {
-			case streammode:
-				grabberSetStream(str);
-				break;
-			case systemcall:
-				Util.systemCall(str);
-				break;
-			case chat:
-				chat(str);
-				break;
-			case dockgrabbed:
-				docker.autoDock("dockgrabbed " + str);
-				state.set(State.values.dockgrabbusy.name(), false);
-				break;
-//			case autodock:
-//				docker.autoDock(str);
-//				break;
-			case restart:
-				restart();
-				break;
-			case shutdown:
-				shutdownApplication();
-				break;
-			case streamactivitydetected:
-				streamActivityDetected(str);
-				break;
-		}
-	}
-
-	/**
-	 * set state and message all connected clients with stream status
-	 * @param str
-	 */
-	private void grabberSetStream(String str) {
-		state.set(State.values.stream, str);
-		if (!settings.getBoolean(ManualSettings.useflash) && str.equals(streamstate.camandmic.toString()))
-			str = str+"_2";
-		final String stream = str;
-
-		messageGrabber("streaming " + stream, "stream " + stream);
-		Util.log("streaming " + stream, this);
-		new Thread(new Runnable() {
-			public void run() {
-				try {
-					// notify all passengers and driver
-					Thread.sleep(STREAM_CONNECT_DELAY);
-//					if (stream.equals(streamstate.camandmic)); Thread.sleep(STREAM_CONNECT_DELAY*2); // longer delay required doesn't help
-					Collection<Set<IConnection>> concollection = getConnections();
-					for (Set<IConnection> cc : concollection) {
-						for (IConnection con : cc) {
-							if (con instanceof IServiceCapableConnection
-									&& con != grabber
-									&& !(con == pendingplayer && !pendingplayerisnull)) {
-								IServiceCapableConnection n = (IServiceCapableConnection) con; // all CLIENTS
-								n.invoke("message", new Object[] { "streaming " + stream, "green", "stream", stream });
-								Util.debug("message all players: streaming " + stream +" stream " +stream,this);
-							}
-						}
-					}
-
-					// set stream on relayserver if necessary
-					if (state.exists(values.relayserver)) {
-						Util.delay(1000); // allow extra time for avconv to connect to remote server
-						red5client.sendToRelay("grabberSetStream", new Object[]{state.get(values.stream)});
-					}
-
-				} catch (Exception e) {
-					Util.printError(e);
-				}
-			}
-		}).start();
-	}
-
-	private void setGrabberVideoSoundMode(String str) {
-
-		if (!settings.getBoolean(ManualSettings.useflash)) return;
-		
-		if (state.getBoolean(State.values.autodocking.name())) {
-			messageplayer("command dropped, autodocking", null, null);
-			return;
-		}
-
-		if (state.get(State.values.stream) == null) {
-			messageplayer("stream control unavailable, server may be in setup mode", null, null);
-			return;
-		}
-
-		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
-		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
-		if (!(grabber instanceof IServiceCapableConnection))
-			Util.log("setGrabberVideoSoundMode() error grabber reload timeout", this);
-
-		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-		sc.invoke("videoSoundMode", new Object[]{str});
-		state.set(State.values.videosoundmode, str);
-		Util.log("grabber video sound mode = " + str, this);
-	}
-	
 	public void publish(streamstate mode) {
 		
 		if (state.getBoolean(State.values.autodocking.name())) {
@@ -1226,21 +718,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 
-		if (state.get(State.values.stream)  == null) {
-			messageplayer("stream control unavailable, server may be in setup mode", null, null);
-			return;
-		}
-
-		if (state.get(State.values.record) == null)
-			state.set(State.values.record, Application.streamstate.stop.toString());
-
-		// if recording and mode changing, kill recording
-		if (state.exists(values.stream)) {
-			if (!mode.equals(streamstate.valueOf(state.get(values.stream))) && !state.get(values.record).equals(streamstate.stop.toString()))
-				video.record(Settings.FALSE);
-		}
-
-		ArduinoPrime.checkIfInverted();
+		Malg.checkIfInverted();
 
 		String current = settings.readSetting(GUISettings.vset);
 		String vals[] = (settings.readSetting(current)).split("_");
@@ -1249,189 +727,37 @@ public class Application extends MultiThreadedApplicationAdapter {
 		int fps = Integer.parseInt(vals[2]);
 		int quality = Integer.parseInt(vals[3]);
 
-		if (!settings.getBoolean(ManualSettings.useflash)) {
-			video.publish(mode, width, height, fps);
-			return;
-		}
-
-		// flash
-		try {
-			// commands: camandmic camera mic stop
-
-			long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
-			while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
-			if (!(grabber instanceof IServiceCapableConnection))
-				Util.log("publish() error grabber reload timeout", this);
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("publish", new Object[] { mode.toString(), width, height, fps, quality });
-			messageplayer("command received: publish " + mode.toString(), null, null);
-			Util.log("publish: " + mode.toString(), this);
-
-		} catch (NumberFormatException e) {
-			Util.log("publish() error " + e.getMessage(),this);
-			Util.printError(e);
-		}
-
+        video.publish(mode, width, height, fps, quality);
+        return;
 
 	}
 
-//	private void muteROVMicOnMoveToggle() {
-//		if (settings.getBoolean(GUISettings.muteonrovmove)) {
-////			state.set(State.values.muteOnROVmove, false);
-//			settings.writeSettings(GUISettings.muteonrovmove.toString(), "false");
-//			messageplayer("mute ROV onmove off", null, null);
-//		} else {
-////			state.set(State.values.muteOnROVmove, true);
-//			settings.writeSettings(GUISettings.muteonrovmove.toString(), "true");
-//			messageplayer("mute ROV onmove on", null, null);
-//		}
-//	}
 
-	public boolean frameGrab() {
-		return frameGrab("");
-	}
+    public boolean frameGrab() {
 
-	/**  */
-	public boolean frameGrab(String res) {
+        if (!(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
+                state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
+            Util.log("stream unavailable", this);
+            return false;
+        }
 
-		 if(state.getBoolean(State.values.framegrabbusy.name()) || 
-				 !(state.get(State.values.stream).equals(Application.streamstate.camera.toString()) ||
-						 state.get(State.values.stream).equals(Application.streamstate.camandmic.toString()))) {
-			 messageplayer("stream unavailable or framegrab busy", null, null);
-			 return false;
-		 }
+        if(state.getBoolean(State.values.framegrabbusy)) {
+            Util.log("state framegrab busy", this);
+            return false;
+        }
 
-		if (settings.getBoolean(ManualSettings.useflash)) {
-			if (grabber instanceof IServiceCapableConnection) {
-				IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-				if (res.equals(AutoDock.LOWRES)) sc.invoke("framegrabMedium", new Object[]{});
-				else sc.invoke("framegrab", new Object[]{});
-				state.set(State.values.framegrabbusy.name(), true);
-			}
-		}
-		else video.framegrab(res);
+        video.framegrab();
 
-//		Util.debug("framegrab start at: "+System.currentTimeMillis(), this);
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * for compatibility with legacy grabber swfs
-	 */
-//	public void frameGrabbed() {
-//		String current = settings.readSetting(GUISettings.vset);
-//		String vals[] = (settings.readSetting(current)).split("_");
-//		int width = Integer.parseInt(vals[0]);
-//		int height = Integer.parseInt(vals[1]);
-//		frameGrabbed(width, height);
-//	}
-
-	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file
-	 * linux only for now
-	 **/
-	public void frameGrabbed(int width, int height) {
-	
-		try {
-			
-			// read file into bytebuffer
-			FileInputStream file = new FileInputStream("/run/shm/oculusPrimeFlashSO/framegrab.sol");
-			FileChannel ch = file.getChannel();
-			int size = (int) ch.size();
-			ByteBuffer frameData = ByteBuffer.allocate( size );
-			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
-			ch.close();
-			file.close();
-			
-//			int width=640;
-//			int height=480;
-			
-			if (settings.readSetting(GUISettings.vset).equals("vmed") || 
-					settings.readSetting(GUISettings.vset).equals("vlow")) {  // failed, switch to highres if avail and try again 
-				width=320;
-				height=240;
-			}
-			
-//			int headersize = 1228843 - (640*480*4);
-			int headersize = size - (width*height*4)-1;
-
-			frameData.position(headersize); // skip past header
-
-			boolean invalid = true;
-			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-			for(int y=0; y<height; y++) {
-				for (int x=0; x<width; x++) {
-					int rgb = frameData.getInt();    // argb ok for png only
-					if (rgb != 0) invalid = false;
-					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
-					processedImage.setRGB(x, y, rgb);
-				}
-			}
-
-			if (invalid) Util.log("error, framegrab invalid", this);
-			
-			state.set(State.values.framegrabbusy.name(), false);
-
-			
-		} catch (Exception e) {  Util.printError(e);  }
-
-//		Util.debug("framegrab finished at: "+System.currentTimeMillis(), this);
-
-	}
-	
-	/** called by Flash oculusPrime_grabber.swf after writing data to shared object file 
-	 * linux only for now
-	 **/
-	public void mediumFrameGrabbed() {
-		try {
-			
-			// read file into bytebuffer
-			FileInputStream file = new FileInputStream("/run/shm/oculusPrimeFlashSO/framegrabMedium.sol");
-			FileChannel ch = file.getChannel();
-			int size = (int) ch.size();
-			ByteBuffer frameData = ByteBuffer.allocate( size );
-			ch.read(frameData.order(ByteOrder.BIG_ENDIAN));
-			ch.close();
-			file.close();
-
-			int width = 320;
-			int height = 240;
-//			int headersize = 307248 - (width*height*4);
-			int headersize = size - (width*height*4) -1;
-			frameData.position(headersize); // skip past header
-
-			boolean invalid = true;
-			processedImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-			for(int y=0; y<height; y++) {
-				for (int x=0; x<width; x++) {
-					int rgb = frameData.getInt();    // argb ok for png only
-					if (rgb != 0) invalid = false;
-					rgb = rgb & 0x00ffffff;  // can't have alpha channel if want to jpeg out
-					processedImage.setRGB(x, y, rgb);
-				}
-			}
-			if (invalid) Util.log("error, framegrab empty", this);
-
-			state.set(State.values.framegrabbusy.name(), false);
-			
-		} catch (Exception e) { Util.printError(e); }
-
-//		Util.debug("mediumframegrab finished at: "+System.currentTimeMillis(), this);
-	}
-	
 	public void messageplayer(String str, String status, String value) {
 
-		if (state.exists(values.relayserver)) {
-			red5client.sendToRelay("messageplayer", new Object[] {str, status, value});
-		}
-		
-		if (player instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) player;
-			sc.invoke("message", new Object[] { str, "green", status, value });
-		}
-		
+        CommServlet.sendToClient(str, "green", status, value );
+
 		if(commandServer!=null) {
 			if(str!=null){
-				if(! str.equals("status check received")) // basic ping from client, ignore
+				if(! str.equals(SERVEROK)) // basic ping from client, ignore
 				commandServer.sendToGroup(TelnetServer.MSGPLAYERTAG + " " + str);
 			}
 			if (status !=null) {
@@ -1442,15 +768,9 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	public void sendplayerfunction(String fn, String params) {
-		if (player instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) player;
-			sc.invoke("playerfunction", new Object[] { fn, params });
-		}
 
-		if (state.exists(values.relayserver)) {
-			red5client.sendToRelay("sendplayerfunction", new Object[]{fn, params});
-		}
-	}
+        CommServlet.sendToClientFunction(fn, params);
+    }
 
 	public void saySpeech(String str) {
 
@@ -1492,7 +812,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					+ " " + comport.maxclickcam
 					+ " " + comport.fullrotationdelay + " " + comport.onemeterdelay + " " 
 					+ settings.readSetting(GUISettings.steeringcomp.name()) + " "
-					+ ArduinoPrime.CAM_HORIZ + " " + ArduinoPrime.CAM_REVERSE;
+					+ Malg.CAM_HORIZ + " " + Malg.CAM_REVERSE;
 			sendplayerfunction("drivingsettingsdisplay", str);
 		}
 	}
@@ -1531,7 +851,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 					+ " " + comport.maxclickcam
 					+ " " + comport.fullrotationdelay 
 					+ " " + comport.onemeterdelay +  " "  + comport.steeringcomp + " "
-					+ ArduinoPrime.CAM_HORIZ + " " + ArduinoPrime.CAM_REVERSE;
+					+ Malg.CAM_HORIZ + " " + Malg.CAM_REVERSE;
 			
 			messageplayer("driving settings set to: " + s, null, null);
 		}
@@ -1555,6 +875,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	}
 
 	private void statusCheck(String s) {
+
 		if (initialstatuscalled == false || s.equals("intial")) {
 			initialstatuscalled = true; 
 			
@@ -1577,11 +898,8 @@ public class Application extends MultiThreadedApplicationAdapter {
 			str += " vidctroffset " + settings.readSetting(GUISettings.vidctroffset);
 			str += " rovvolume " + settings.readSetting(GUISettings.volume);
 			str += " stream " + state.get(State.values.stream);
-			if (!state.get(values.driverstream).equals(driverstreamstate.disabled.toString()))
-				str += " selfstream " + state.get(State.values.driverstream);
-//			str += " pushtotalk " + settings.readSetting("pushtotalk");
-			
-			if (loginRecords.isAdmin()) str += " admin true";
+
+			if (loginRecords.isAdmin())    str += " admin true";
 			
 			if (state.get(State.values.dockstatus) != null) str += " dock "+ state.get(State.values.dockstatus);
 			
@@ -1589,20 +907,17 @@ public class Application extends MultiThreadedApplicationAdapter {
 			if (settings.getBoolean(ManualSettings.developer)) str += " developer true";
 			if (settings.getBoolean(GUISettings.navigation)) str += " navigation "+state.get(values.navsystemstatus);
 
-			String videoScale = settings.readSetting("videoscale");
-			if (videoScale != null) str += " videoscale " + videoScale;
-
 			str += " battery " + state.get(State.values.batterylife);
 
 			if (state.exists(values.record)) str += " record " + state.get(values.record);
 			
-			messageplayer("status check received", "multiple", str.trim());
+			messageplayer(SERVEROK, "multiple", str.trim());
 
 		} else { 
 			if (s.equals("battcheck")) { 
-				messageplayer("status check received", "battery", state.get(State.values.batterylife));
+				messageplayer(SERVEROK, "battery", state.get(State.values.batterylife));
 			} else { // ping only
-				messageplayer("status check received",null, null); 
+				messageplayer(SERVEROK,null, null);
 			}
 		}
 	}
@@ -1636,23 +951,51 @@ public class Application extends MultiThreadedApplicationAdapter {
 		String result = "";
 		result += settings.readSetting("vset") + "_";
 		result += settings.readSetting("vlow") + "_" + settings.readSetting("vmed") + "_";
-		result += settings.readSetting("vhigh") + "_" + settings.readSetting("vfull") + "_";
+		result += settings.readSetting("vhigh") + "_";
 		result += settings.readSetting("vcustom");
 		return result;
 	}
+
+    private void shutdownCommonTasks() {
+
+        if(commandServer!=null) {
+            commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
+            commandServer.close();
+        }
+
+        if (powerport.isConnected()) powerport.writeStatusToEeprom();
+        PowerLogger.close();
+
+        if (navigation != null) {
+            if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
+                navigation.stopNavigation();
+        }
+
+
+        if (state.exists(values.odomlinearpwm)) {
+            settings.writeSettings(ManualSettings.odomlinearpwm,
+                    String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
+        }
+        if (state.exists(values.odomturnpwm)) {
+            settings.writeSettings(ManualSettings.odomturnpwm,
+                    String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
+        }
+
+        if (state.exists(values.driver))  driverCallServer(PlayerCommands.driverexit, null);
+
+        running = false;
+
+    }
 
 	// TODO: ALLOW TO ONLY BE CALLED ONCE?
 	// state.set(shuttingdown, true); 
 	public void restart() { 
 
-//		if(settings.getBoolean(ManualSettings.developer)) PyScripts.runShutdownPyScripts();
-				
 		Util.debug("Restart uptime was: "+ state.getUpTime(), this);	
-
-		messageplayer("restarting server application", null, null);	
+		messageplayer("restarting server application", null, null);
 		
 		// write file as restart flag for script
-		File f = new File(Settings.redhome + Util.sep + "restart");
+        File f = new File(Settings.tomcathome + Util.sep + RESTARTFILE);
 		if (!f.exists()) try { f.createNewFile(); } catch (Exception e) {}
 		
 		shutdownApplication();
@@ -1662,74 +1005,48 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		Util.log("rebooting system", this);
 		PowerLogger.append("rebooting system", this);
-		powerport.writeStatusToEeprom();
-		killGrabber(); // prevents error dialog on chrome startup
 
-		if (navigation != null) { // TODO: << condition required?
-			if (state.exists(values.odomlinearpwm)) {
-				settings.writeSettings(ManualSettings.odomlinearpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
-			}
-			if (state.exists(values.odomturnpwm)) {
-				settings.writeSettings(ManualSettings.odomturnpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
-			}
-		}
+        shutdownCommonTasks();
 
-	
 		Util.delay(1000);
-		
-		Util.systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
 
+        Util.systemCall(Settings.tomcathome + Util.sep + "systemreboot.sh");
 	}
 
 	private void powerdown() { // typically called with powershutdown so has to happen quick, skip usual shutdown stuff
 		Util.log("powering down system", this);
 		PowerLogger.append("powering down system", this);
 		powerport.writeStatusToEeprom();
-		killGrabber(); // prevents error dialog on chrome startup
 		Util.delay(1000);
-//		if (!state.get(values.osarch).equals(ARM)) {
-//			Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
-//		}
-//		else Util.systemCall("/usr/bin/sudo /sbin/shutdown -h now");
-		Util.systemCall(Settings.redhome + Util.sep + "systemshutdown.sh");
+
+		Util.systemCall(Settings.tomcathome + Util.sep + "systemshutdown.sh");
 	}
 
 	private void shutdownApplication() {
-		
-		Util.log("shutting down application", this);
+
+        if (!running) return;
+
+        Util.log("shutting down application", this);
 		PowerLogger.append("shutting down application", this);
 
 		if(commandServer!=null) {
 			commandServer.sendToGroup(TelnetServer.TELNETTAG + " shutdown");
 			commandServer.close();
 		}
-		
-		if (powerport.isConnected()) powerport.writeStatusToEeprom();
-		PowerLogger.close();
-		
-		if (navigation != null) {
-			if (!state.get(State.values.navsystemstatus).equals(Ros.navsystemstate.stopped.toString()))
-				navigation.stopNavigation();
 
-			if (state.exists(values.odomlinearpwm)) {
-				settings.writeSettings(ManualSettings.odomlinearpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomlinearpwm))));
-			}
-			if (state.exists(values.odomturnpwm)) {
-				settings.writeSettings(ManualSettings.odomturnpwm,
-						String.valueOf((int) comport.unVoltsComp(state.getDouble(values.odomturnpwm))));
-			}
-		}
+        shutdownCommonTasks();
 
-		if(! settings.getBoolean(ManualSettings.debugenabled)) killGrabber();
-		Util.systemCall(Settings.redhome + Util.sep + "red5-shutdown.sh");
+        Video.killTURNserver();
+        video.killSignallingServer();
+
+        File f = new File(Settings.tomcathome + Util.sep + HALTFILE);
+        if (!f.exists()) try { f.createNewFile(); } catch (Exception e) {}
+
 	}
 
 	private void move(final String str) {
 
-		if (str.equals(ArduinoPrime.direction.stop.name())) {
+		if (str.equals(Malg.direction.stop.name())) {
 			if (state.getBoolean(State.values.autodocking))
 				docker.autoDockCancel();
 			state.set(values.calibratingrotation, false);
@@ -1747,7 +1064,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 		
-		if (str.equals(ArduinoPrime.direction.forward.toString())) {
+		if (str.equals(Malg.direction.forward.toString())) {
 			if (!state.getBoolean(State.values.motionenabled)) state.set(State.values.motionenabled, true);
 			comport.goForward();
 		}
@@ -1759,7 +1076,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 		
 		moveMacroCancel();
 		
-		ArduinoPrime.direction dir = ArduinoPrime.direction.valueOf(str);
+		Malg.direction dir = Malg.direction.valueOf(str);
 		switch (dir) {
 			case backward: comport.goBackward(); break;
 			case right: comport.turnRight(); break;
@@ -1783,7 +1100,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 			return;
 		}
 
-		comport.nudge(ArduinoPrime.direction.valueOf(str));
+		comport.nudge(Malg.direction.valueOf(str));
 		messageplayer("command received: nudge " + str, null, null);
 		if (state.getBoolean(State.values.docking)	|| state.getBoolean(State.values.autodocking)) moveMacroCancel();
 	}
@@ -1817,23 +1134,16 @@ public class Application extends MultiThreadedApplicationAdapter {
 		comport.clickSteer(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]));
 	}
 
-	public void messageGrabber(String str, String status) {
-		if (!settings.getBoolean(ManualSettings.useflash)) return;
-		
-		Util.debug("TO grabber flash: " + str + ", " + status, this);
+    public String logintest(String user, String pass, String remember) {
+        String encryptedPassword = (passwordEncryptor.encryptPassword(user + salt + pass)).trim();
 
-		if (grabber instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("message", new Object[] { str, status });
-		}
-		
-		if(commandServer != null) {
-			if(str!=null) commandServer.sendToGroup(TelnetServer.MSGGRABBERTAG + " " + str);
-			if (status != null) commandServer.sendToGroup(TelnetServer.MSGGRABBERTAG + " <status> " + status );
-		}
-	}
+        if(logintest(user, encryptedPassword) == null) return null;
 
-	private String logintest(String user, String pass) {
+        if (remember.equals("remember")) authtoken = encryptedPassword;
+        return user;
+    }
+
+	public String logintest(String user, String pass) {
 		int i;
 		String value = "";
 		String returnvalue = null;
@@ -1871,169 +1181,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 		return returnvalue;
 	}
 
-	/** */
-	private void assumeControl(String user) { 
-		messageplayer("controls hijacked", "hijacked", user);
-		if(player==null) return;
-		if(pendingplayer==null) { pendingplayerisnull = true; return; }
-
-		String con = "connected";
-
-		if (state.exists(values.relayclient)) {
-			IServiceCapableConnection t = (IServiceCapableConnection) relayclient;
-			t.invoke("playerSignIn", new Object[]{state.get(values.driver)});
-			con = "relay";
-		}
-
-		IConnection tmp = player;
-		player = pendingplayer;
-		pendingplayer = tmp;
-		state.set(State.values.driver, user);
-		String str = "connection "+con+" streamsettings " + streamSettings();
-		messageplayer(state.get(State.values.driver) + " connected to OCULUS", "multiple", str);
-		str = state.get(State.values.driver) + " connected from: " + player.getRemoteAddress();
-		Util.log("assumeControl(), " + str,this);
-		messageGrabber(str, null);
-		initialstatuscalled = false;
-		pendingplayerisnull = true;
-		loginRecords.beDriver();
-		
-		if (settings.getBoolean(GUISettings.loginnotify)) {
-			saySpeech("lawg inn " + state.get(State.values.driver));
-		}
-
-
-	}
-
-	/** */
-	private void beAPassenger(String user) {
-		String stream = state.get(State.values.stream);
-		pendingplayerisnull = true;
-		String str = user + " added as passenger";
-		messageplayer(str, null, null);
-		Util.log(str,this);
-		messageGrabber(str, null);
-		if (!stream.equals("stop")) {
-			Collection<Set<IConnection>> concollection = getConnections();
-			for (Set<IConnection> cc : concollection) {
-				for (IConnection con : cc) {
-					if (con instanceof IServiceCapableConnection
-							&& con != grabber && con != player) {
-						IServiceCapableConnection sc = (IServiceCapableConnection) con;
-						sc.invoke("message", new Object[] { "streaming " + stream, "green", "stream", stream }); }
-				}
-			}
-		}
-		loginRecords.bePassenger(user);
-		
-		if (settings.getBoolean(GUISettings.loginnotify)) {
-			saySpeech("passenger lawg inn f" + user);
-		}
-	}
-
-	/**
-	 * Broadcast remote web client microphone through robot speaker
-	 * @param str mode (stop, mic, pending)
-	 * 
-	 * need to reload webcam capture webpage on robot, and remote web page to enable 
-	 * enhanced mic, then reload both again when turning off mic
-	 * 
-	 * reload grabber, restart video stream if necessary
-	 * wait
-	 * reload remote client
-	 * 
-	 */
-	private void playerBroadCast(final String str) {
-		if (player instanceof IServiceCapableConnection) {
-			if (str.equals(driverstreamstate.mic.toString())) { // player mic
-				
-				if (state.get(State.values.driverstream).equals(driverstreamstate.mic.toString())) return;
-				
-				String vals[] = "320_240_8_85".split("_"); // TODO: nuke this, for audio only 
-				final int width = Integer.parseInt(vals[0]);
-				final int height = Integer.parseInt(vals[1]);
-				final int fps = Integer.parseInt(vals[2]);
-				final int quality = Integer.parseInt(vals[3]);
-
-				final streamstate mode = streamstate.valueOf(state.get(State.values.stream));
-				state.set(State.values.driverstream,  driverstreamstate.pending.toString());
-				
-				new Thread(new Runnable() {
-					public void run() {
-						try {
-							messageplayer("starting self mic, reloading page", null, null);
-
-							// reload grabber page with enhanced mic
-							messageGrabber("loadpage", "server.html?broadcast"); // reload page
-							Thread.sleep(STREAM_CONNECT_DELAY);
-							// restart stream if necessary
-							if (!mode.equals(streamstate.stop)) { 
-								publish(mode); 
-								Thread.sleep(STREAM_CONNECT_DELAY);
-							}
-														
-							// reload driver page with enhanced mic
-							messageplayer(null, "loadpage","?broadcast");
-							Thread.sleep(STREAM_CONNECT_DELAY*3);
-							
-							// start driver mic
-							IServiceCapableConnection sc = (IServiceCapableConnection) player;
-							sc.invoke("publish", new Object[] { str, width, height, fps, quality, false });
-							state.set(State.values.driverstream, driverstreamstate.mic.toString());
-							Thread.sleep(50);
-							messageplayer("self mic on", "selfstream",state.get(State.values.driverstream));
-							Thread.sleep(STREAM_CONNECT_DELAY);
-							grabberPlayPlayer(1);
-							
-							
-						} catch (Exception e) {
-							Util.printError(e);
-						}
-					}
-				}).start();
-				
-			} else { // player broadcast stop/off
-				
-				if (state.get(State.values.driverstream).equals(driverstreamstate.stop.toString())) return;
-
-				final streamstate mode = streamstate.valueOf(state.get(State.values.stream));
-				state.set(State.values.driverstream,  driverstreamstate.pending.toString());
-				
-				new Thread(new Runnable() {
-					public void run() {
-						try {
-
-							messageplayer("stopping self mic, reloading page", null, null);
-							
-							messageGrabber("loadpage", "server.html"); // reload page normal mic
-							Thread.sleep(STREAM_CONNECT_DELAY);
-							// restart stream if necessary
-							if (!mode.equals(streamstate.stop)) { 
-								publish(mode); 
-								Thread.sleep(STREAM_CONNECT_DELAY);
-							}
-							
-							messageplayer(null, "loadpage","?");
-							Thread.sleep(STREAM_CONNECT_DELAY);
-							state.set(State.values.driverstream, driverstreamstate.stop.toString());
-							messageplayer("self mic off", "selfstream",state.get(State.values.driverstream));
-
-				
-						} catch (Exception e) {
-							Util.printError(e);
-						}
-					}
-				}).start();
-			}
-		}
-	}
-
-	private void grabberPlayPlayer(int nostreams) {
-		if (grabber instanceof IServiceCapableConnection) {
-			IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-			sc.invoke("play", new Object[] { nostreams });
-		}
-	}
 
 	private void account(String fn, String str) {
 		if (fn.equals("password_update")) passwordChange(state.get(State.values.driver), str);
@@ -2194,37 +1341,10 @@ public class Application extends MultiThreadedApplicationAdapter {
 		messageplayer(message, null, null);
 	}
 
-	private void disconnectOtherConnections() {
-		if (loginRecords.isAdmin()) {
-			int i = 0;
-			Collection<Set<IConnection>> concollection = getConnections();
-			for (Set<IConnection> cc : concollection) {
-				for (IConnection con : cc) {
-					if (con instanceof IServiceCapableConnection
-							&& con != grabber && con != player) {
-						con.close();
-						i++;
-					}
-				}
-			}
-			messageplayer(i + " passengers eliminated", null, null);
-		}
-	}
-
 	private void chat(String str) {
-		Collection<Set<IConnection>> concollection = getConnections();
-		for (Set<IConnection> cc : concollection) {
-			for (IConnection con : cc) {
-				if (con instanceof IServiceCapableConnection && con != grabber
-						&& !(con == pendingplayer && !pendingplayerisnull)) {
-					IServiceCapableConnection n = (IServiceCapableConnection) con;
-					n.invoke("message", new Object[] { str, "yellow", null, null });
-				}
-			}
-		}
+
 		Util.log("chat: " + str,this);
-		messageGrabber("<CHAT>" + str, null);
-		if(str!=null) if (commandServer != null) { 
+		if(str!=null) if (commandServer != null) {
 			str = str.replaceAll("</?i>", "");
 			commandServer.sendToGroup(TelnetServer.TELNETTAG+" chat from "+ str);
 		}
@@ -2277,7 +1397,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 									"downloadcomplete");
 
 						// not needed now is unpacked
-						dl.deleteDir(new File(Settings.redhome+Util.sep+"download"));
+						dl.deleteDir(new File(Settings.tomcathome +Util.sep+"download"));
 
 					} else {
 						messageplayer("update download failed", null, null);
@@ -2308,74 +1428,6 @@ public class Application extends MultiThreadedApplicationAdapter {
 
 		restart();
 	}
-	
-	private void setStreamActivityThreshold(String str) {
-
-		String val[] = str.split("\\D+");
-		if (val.length != 2) { return; } 
-		Integer videoThreshold = Integer.parseInt(val[0]);
-		Integer audioThreshold = Integer.parseInt(val[1]);
-
-		String stream = state.get(State.values.stream);
-		state.delete(State.values.streamactivity);
-		state.set(State.values.streamactivitythreshold, str);
-		
-		if (videoThreshold != 0 || audioThreshold != 0) {
-			if (state.get(State.values.videosoundmode).equals(VIDEOSOUNDMODEHIGH)) {
-				setGrabberVideoSoundMode(VIDEOSOUNDMODELOW); // videosoundmode needs to be low to for activity threshold to work
-				if (stream != null) {
-					if (!stream.equals(streamstate.stop.toString())) { // if stream already running,
-						publish(streamstate.valueOf(stream)); // restart, in low mode
-					}
-				}
-			}
-			
-			if (stream != null) { 
-				if (stream.equals(streamstate.stop.toString())) {
-					if (audioThreshold == 0 && videoThreshold != 0) { publish(streamstate.camera); }
-					else if (audioThreshold != 0 && videoThreshold == 0) { publish(streamstate.mic); }
-					else { publish(streamstate.camandmic); }
-				}
-			}
-			state.set(State.values.streamactivityenabled.name(), System.currentTimeMillis());
-		}
-		else { // 0 0, disable streamActivityDetected()
-			state.delete(State.values.streamactivityenabled);
-			state.delete(State.values.streamactivitythreshold);
-		}
-
-		long timeout = System.currentTimeMillis() + GRABBERRELOADTIMEOUT;
-		while (!(grabber instanceof IServiceCapableConnection) && System.currentTimeMillis() < timeout ) { Util.delay(10); }
-		if (!(grabber instanceof IServiceCapableConnection))
-			Util.log("setStreamActivityThreshold() error grabber reload timeout", this);
-
-		IServiceCapableConnection sc = (IServiceCapableConnection) grabber;
-		sc.invoke("setActivityThreshold", new Object[]{videoThreshold, audioThreshold});
-		messageplayer("stream activity set to: " + str, null, null);
-
-	}
-	
-	private void streamActivityDetected(String str) {
-		if (! state.exists(State.values.streamactivityenabled)) return;
-
-		// to catch false audio detect on driver login... TODO: find root cause, not just this patch
-		if (str.split(" ")[0].equals("audio")) { // note: video deprecated
-			int audiodetected = Integer.valueOf(str.split(" ")[1]);
-			int audiothreshold = Integer.valueOf(state.get(values.streamactivitythreshold).split(" ")[1]);
-//			Util.log(audiodetected+ " "+audiothreshold, this);
-			if (audiodetected < audiothreshold) {
-				setStreamActivityThreshold(state.get(values.streamactivitythreshold)); // restarts stream
-				return;
-			}
-		}
-
-		if (System.currentTimeMillis() > state.getLong(State.values.streamactivityenabled) + 5000.0) {
-			messageplayer("streamactivity: "+str, "streamactivity", str);
-			setStreamActivityThreshold("0 0"); // disable
-			state.set(State.values.streamactivity, str); // needs to be after disable, method deletes state val
-		}
-	}
-
 
 
 }

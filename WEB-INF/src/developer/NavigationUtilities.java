@@ -16,6 +16,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import oculusPrime.Settings;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -28,7 +29,7 @@ import oculusPrime.Util;
 /** manage XML file for navigation */
 public class NavigationUtilities {
 
-	public static File navroutesfile = new File(System.getenv("RED5_HOME")+"/conf/navigationroutes.xml");
+	public static File navroutesfile = new File(Settings.tomcathome+"/conf/navigationroutes.xml");
 	
 	public static final String ESTIMATED_DISTANCE_TAG = "estimateddistance";
 	public static final String ESTIMATED_TIME_TAG = "estimatedtime";

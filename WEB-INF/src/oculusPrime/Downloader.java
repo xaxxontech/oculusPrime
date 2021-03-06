@@ -32,10 +32,10 @@ public class Downloader {
 		URLConnection URLConn = null;
 
 		// create path to local file
-		final String path = System.getenv("RED5_HOME")+ sep + destinationDir + sep + localFileName;
+		final String path = Settings.tomcathome + sep + destinationDir + sep + localFileName;
 
 		// create target directory
-		new File(System.getenv("RED5_HOME")+ sep + destinationDir).mkdirs();
+		new File(Settings.tomcathome + sep + destinationDir).mkdirs();
 
 		// delete target first
 		new File(path).delete();
@@ -99,9 +99,8 @@ public class Downloader {
 	 */
 	public boolean unzipFolder( String zipFile, String destFolder ) {
 		
-		String sep = System.getProperty("file.separator");
-		final String zip = (System.getenv("RED5_HOME") + sep + zipFile).trim();
-		final String des = (System.getenv("RED5_HOME") + sep + destFolder).trim(); 
+		final String zip = (Settings.tomcathome + Util.sep + zipFile).trim();
+		final String des = (Settings.tomcathome + Util.sep + destFolder).trim();
 
 		if( ! new File(zip).exists()){	
 			Util.log("no zip file found: " + zip, this);
@@ -113,8 +112,8 @@ public class Downloader {
 		// test if folders 
 		if(new File(des).exists())
 			if(new File(des).isDirectory())
-				if(new File(des+sep+"update").exists())
-					if(new File(des+sep+"update").isDirectory()) 
+				if(new File(des+Util.sep+"update").exists())
+					if(new File(des+Util.sep+"update").isDirectory())
 						return true;
 		
 		// error state
@@ -127,9 +126,8 @@ public class Downloader {
 	 * @param filename
 	 */
 	public void deleteFile(String filename) {
-		String sep = System.getProperty("file.separator");
 
-		File f = new File(System.getenv("RED5_HOME")+sep+filename);
+		File f = new File(Settings.tomcathome+Util.sep+filename);
 		try {
 			f.delete();
 		} catch (Exception e) {

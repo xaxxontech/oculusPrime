@@ -1,10 +1,8 @@
 package developer;
 
-import developer.depth.Stereo;
 import oculusPrime.*;
 import oculusPrime.State.values;
-import oculusPrime.commport.ArduinoPower;
-import oculusPrime.commport.ArduinoPrime;
+import oculusPrime.commport.Malg;
 
 /**
  * Created by colin on 8/3/2016.
@@ -48,7 +46,7 @@ public class Calibrate implements Observer{
             }
 
             app.driverCallServer(PlayerCommands.spotlight, "0");
-            app.driverCallServer(PlayerCommands.cameracommand, ArduinoPrime.cameramove.reverse.toString());
+            app.driverCallServer(PlayerCommands.cameracommand, Malg.cameramove.reverse.toString());
             app.driverCallServer(PlayerCommands.floodlight, Integer.toString(AutoDock.FLHIGH));
 
             Util.delay(5000);
@@ -69,9 +67,9 @@ public class Calibrate implements Observer{
                     app.driverCallServer(dir, "25");
                     Util.delay(100);
                     start = System.currentTimeMillis();
-                    while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
+                    while(!state.get(values.direction).equals(Malg.direction.stop.toString())
                             && System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
-                    Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
+                    Util.delay(Malg.TURNING_STOP_DELAY);
                 }
                 rot ++;
 
@@ -93,7 +91,7 @@ public class Calibrate implements Observer{
 
             // center dock target if necessary, reduce distortion error
             int xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
-            double compangledegrees = (double) (Video.lowreswidth/2 - xdock)/Video.lowreswidth* Stereo.camFOVx43; // negative because cam reversed
+            double compangledegrees = (double) (Video.lowreswidth/2 - xdock)/Video.lowreswidth* Video.camFOVx43; // negative because cam reversed
             if (Math.abs(compangledegrees) > 3) {
                 app.driverCallServer(PlayerCommands.rotate, Double.toString(compangledegrees));
                 Util.delay(1000);
@@ -113,10 +111,10 @@ public class Calibrate implements Observer{
             // 92 104 52 31 0.020408163 -- 1st value is x pixels from left
             // assumed 640x480
             xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
-            double firstangledegrees = (double) (Video.defaultwidth/2 - xdock)/Video.defaultwidth * Stereo.camFOVx43;
+            double firstangledegrees = (double) (Video.defaultwidth/2 - xdock)/Video.defaultwidth * Video.camFOVx43;
 
             // start gyro recording
-            state.set(values.odometrybroadcast, ArduinoPrime.ODOMBROADCASTDEFAULT);
+            state.set(values.odometrybroadcast, Malg.ODOMBROADCASTDEFAULT);
             app.driverCallServer(PlayerCommands.odometrystart, null);
             cumulativeangle = 0; // negative because cam reversed
 
@@ -127,9 +125,9 @@ public class Calibrate implements Observer{
             app.driverCallServer(dir, Integer.toString(360*REVOLUTIONS+180)); // assume default settings are pretty good, to speed things up..?
             Util.delay((long) ((360*REVOLUTIONS+180) / state.getDouble(values.odomturndpms.toString())));
             start = System.currentTimeMillis();
-            while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
+            while(!state.get(values.direction).equals(Malg.direction.stop.toString())
                     && System.currentTimeMillis() - start < 15000) { Util.delay(10); } // wait
-            Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
+            Util.delay(Malg.TURNING_STOP_DELAY);
             rot = 0;
             while (state.getBoolean(values.calibratingrotation)) {
                 SystemWatchdog.waitForCpu();
@@ -143,9 +141,9 @@ public class Calibrate implements Observer{
                     app.driverCallServer(dir, "25");
                     Util.delay((long) (180 / state.getDouble(values.odomturndpms.toString()))); // TODO: why 180?
                     start = System.currentTimeMillis();
-                    while(!state.get(values.direction).equals(ArduinoPrime.direction.stop.toString())
+                    while(!state.get(values.direction).equals(Malg.direction.stop.toString())
                             && System.currentTimeMillis() - start < 5000) { Util.delay(10); } // wait
-                    Util.delay(ArduinoPrime.TURNING_STOP_DELAY);
+                    Util.delay(Malg.TURNING_STOP_DELAY);
                 }
                 rot ++;
 
@@ -164,7 +162,7 @@ public class Calibrate implements Observer{
 
             // center dock target if necessary, reduce distortion error
             xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
-            compangledegrees = (double) (Video.lowreswidth/2 - xdock)/Video.lowreswidth* Stereo.camFOVx43; // negative because cam reversed
+            compangledegrees = (double) (Video.lowreswidth/2 - xdock)/Video.lowreswidth* Video.camFOVx43; // negative because cam reversed
             if (Math.abs(compangledegrees) > 5) {
                 app.driverCallServer(PlayerCommands.rotate, Double.toString(compangledegrees));
                 Util.delay(1000);
@@ -182,7 +180,7 @@ public class Calibrate implements Observer{
 
             // done
             xdock = Integer.parseInt(state.get(values.dockmetrics).split(" ")[0]);
-            double finalangledegrees = (double) (Video.defaultwidth/2 - xdock)/Video.defaultwidth * Stereo.camFOVx43; // negative because cam reversed
+            double finalangledegrees = (double) (Video.defaultwidth/2 - xdock)/Video.defaultwidth * Video.camFOVx43; // negative because cam reversed
 
             double cameraoffset = firstangledegrees - finalangledegrees;
             if (dir.equals(PlayerCommands.right)) cameraoffset *= -1;

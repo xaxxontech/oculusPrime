@@ -22,15 +22,17 @@ public class State {
 
 		// users
 		driver, logintime, pendinguserconnected, telnetusers,
+        // not typically used by scripts, undocumented:
+        driverclientid,
 
 		// audio video
-		videosoundmode, stream, driverstream, volume,
+		stream, driverstream, volume,
 		framegrabbusy, controlsinverted, lightlevel,
 		streamactivitythreshold, streamactivity,
 		motiondetect, objectdetect, streamactivityenabled, jpgstream,
 		record, sounddetect,
 		// not typically used by scripts, undocumented:
-		writingframegrabs,
+		writingframegrabs, webrtcstatus,
 
 		// power
 		wallpower, batterylife, powerport, batteryinfo, batteryvolts,

@@ -9,12 +9,11 @@ import jssc.SerialPortEvent;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
 import oculusPrime.*;
-import developer.depth.Mapper;
 
 /**
  *  Communicate with the MALG board 
  */
-public class ArduinoPrime  implements jssc.SerialPortEventListener {
+public class Malg implements jssc.SerialPortEventListener {
 
 	public enum direction { stop, right, left, forward, backward, unknown, arcright, arcleft };
 	public enum cameramove { stop, up, down, horiz, upabit, downabit, rearstop, reverse };
@@ -135,7 +134,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 	private int timeddelay;
 
-	public ArduinoPrime(Application app) {	
+	public Malg(Application app) {
 		
 		application = app;	
 		state.set(State.values.motorspeed, speedfast);
@@ -161,7 +160,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			checkFirmWareVersion();
 		}
 		initialize();
-		camCommand(ArduinoPrime.cameramove.horiz); // in case board hasn't reset
+		camCommand(Malg.cameramove.horiz); // in case board hasn't reset
 		new WatchDog().start();
 	}
 	
@@ -172,7 +171,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		new Thread(new Runnable() {
 			public void run() {
 				Util.delay(10000);  // arduino takes 10 sec to reach full power?
-				if(isconnected) strobeflash(ArduinoPrime.mode.on.toString(), 200, 30);
+				if(isconnected) strobeflash(Malg.mode.on.toString(), 200, 30);
 			}
 		}).start();
 	}
@@ -274,7 +273,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 			disconnect();
 
 			// TODO: do update here, blocking
-			Updater.updateFirmware(boardid, version_required, port);
+			new Updater().updateFirmware(boardid, version_required, port);
 
 			connect();
 			if (cs.isAlive())  Util.log("error, CommmandSender still alive", this);
@@ -321,7 +320,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 		final long duration = d;
 		if (i==0) i=100;
 		final int intensity = i * 255 / 100;
-		if (mode.equalsIgnoreCase(ArduinoPrime.mode.on.toString()) && !state.getBoolean(State.values.strobeflashon)) {
+		if (mode.equalsIgnoreCase(Malg.mode.on.toString()) && !state.getBoolean(State.values.strobeflashon)) {
 			state.set(State.values.strobeflashon, true);
 			final long strobestarted = System.currentTimeMillis();
 			new Thread(new Runnable() {
@@ -346,7 +345,7 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 					} catch (Exception e) { } }
 			}).start();
 		}
-		if (mode.equalsIgnoreCase(ArduinoPrime.mode.off.toString())) {
+		if (mode.equalsIgnoreCase(Malg.mode.off.toString())) {
 			state.set(State.values.strobeflashon, false);
 		}
 	}
@@ -553,14 +552,14 @@ public class ArduinoPrime  implements jssc.SerialPortEventListener {
 
 		if (state.getBoolean(State.values.controlsinverted)) {
 			switch (cmd[0]) {
-				case ArduinoPrime.FORWARD: cmd[0]=ArduinoPrime.BACKWARD; break;
-				case ArduinoPrime.BACKWARD: cmd[0]=ArduinoPrime.FORWARD; break;
-				case ArduinoPrime.LEFT: cmd[0]=ArduinoPrime.RIGHT; break;
-				case ArduinoPrime.RIGHT: cmd[0]=ArduinoPrime.LEFT; break;
-				case ArduinoPrime.RIGHTTIMED: cmd[0]=ArduinoPrime.LEFTTIMED; break;
-				case ArduinoPrime.LEFTTIMED: cmd[0]=ArduinoPrime.RIGHTTIMED; break;
-				case ArduinoPrime.FORWARDTIMED: cmd[0]=ArduinoPrime.BACKWARDTIMED; break;
-				case ArduinoPrime.BACKWARDTIMED: cmd[0]=ArduinoPrime.FORWARDTIMED;
+				case Malg.FORWARD: cmd[0]= Malg.BACKWARD; break;
+				case Malg.BACKWARD: cmd[0]= Malg.FORWARD; break;
+				case Malg.LEFT: cmd[0]= Malg.RIGHT; break;
+				case Malg.RIGHT: cmd[0]= Malg.LEFT; break;
+				case Malg.RIGHTTIMED: cmd[0]= Malg.LEFTTIMED; break;
+				case Malg.LEFTTIMED: cmd[0]= Malg.RIGHTTIMED; break;
+				case Malg.FORWARDTIMED: cmd[0]= Malg.BACKWARDTIMED; break;
+				case Malg.BACKWARDTIMED: cmd[0]= Malg.FORWARDTIMED;
 			}
 		}
 		

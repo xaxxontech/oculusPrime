@@ -231,7 +231,6 @@ public class ArduinoPower implements SerialPortEventListener  {
 				if (state.exists(oculusPrime.State.values.powererror)) {
 					final String msg = "power PCB code: " + state.get(oculusPrime.State.values.powererror);
 					application.message(msg, null, null);
-					application.messageGrabber(msg, "");	
 					Util.log(msg, this);
 					PowerLogger.append(msg, this);
 				}
@@ -350,7 +349,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 			disconnect();
 
 			// note: blocking
-			Updater.updateFirmware(boardid, versionrequired, port);
+			new Updater().updateFirmware(boardid, versionrequired, port);
 
 			connect();
 
@@ -461,7 +460,7 @@ public class ArduinoPower implements SerialPortEventListener  {
                 application.comport.strobeflash("on", 120, 20);
 
 				if (state.getBoolean(State.values.autodocking) && !state.getBoolean(State.values.docking))
-					application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.name()); // calls autodockcancel
+					application.driverCallServer(PlayerCommands.move, Malg.direction.stop.name()); // calls autodockcancel
 			}
 
 			if (!state.equals(State.values.redockifweakconnection, Settings.TRUE))
@@ -529,7 +528,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 //		}
 
 		else if (s[0].equals("high_current")) {
-			application.driverCallServer(PlayerCommands.move, ArduinoPrime.direction.stop.toString());
+			application.driverCallServer(PlayerCommands.move, Malg.direction.stop.toString());
 			if (state.getBoolean(State.values.motionenabled))
 				application.driverCallServer(PlayerCommands.motionenabletoggle, null);
 			application.message("high current detected", null, null);

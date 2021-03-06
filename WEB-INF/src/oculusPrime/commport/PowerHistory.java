@@ -15,8 +15,8 @@ import oculusPrime.AutoDock;
 import oculusPrime.Util;
 
 public class PowerHistory {
-	//public final static String redhome = System.getenv("RED5_HOME");
-	//public final static String powerlogTemp = redhome + "/log/power.copy";
+	//public final static String tomcathome = System.getenv("RED5_HOME");
+	//public final static String powerlogTemp = tomcathome + "/log/power.copy";
 
 	static final String SERIAL_IN = "serial in:";
 	

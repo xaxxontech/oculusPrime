@@ -143,33 +143,24 @@ public class Util {
 		else return text;
 	}
 
-	/**
-	 * Run the given text string as a command on the host computer. 
-	 *
-	 * @param args is the command to run, like: "restart
-	 *
-	 */
-	public static void systemCallBlocking(final String args) {
-		try {
+    public static void systemCallBlocking(final String cmd) { //, final int timeoutseconds) {
+        debug("systemCallBlocking: " + cmd, "Util.systemCallBlocking");
 
-			Process proc = Runtime.getRuntime().exec(args);
+        try {
+            Process proc = Runtime.getRuntime().exec(cmd);
 
-//			long start = System.currentTimeMillis();
-//			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-//			String line = null;
-//			System.out.println(proc.hashCode() + "OCULUS: exec():  " + args);
-//			while ((line = procReader.readLine()) != null)
-//				System.out.println(proc.hashCode() + " systemCallBlocking() : " + line);
+            // need to read the output or buffer might overflow and process won't exit
+            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            while ((reader.readLine()) != null) {}
 
-			proc.waitFor(); // required for linux else throws process hasn't terminated error
+//			proc.waitFor(timeoutseconds, TimeUnit.SECONDS);  // << TODO: timeout should be in while{} above
+            proc.waitFor();
 
-//			System.out.println("OCULUS: process exit value = " + proc.exitValue());
-//			System.out.println("OCULUS: blocking run time = " + (System.currentTimeMillis()-start) + " ms");
-
-		} catch (Exception e) {
-			printError(e);
-		}
-	}
+        } catch (Exception e) {
+            printError(e);
+        }
+        debug("systemCallBlocking, done", "Util.systemCallBlocking");
+    }
 
 	public static boolean isInteger(String s) {
 		try { Integer.parseInt(s); } catch(Exception e) {
@@ -261,13 +252,12 @@ public class Util {
 	}
 
 	public static void debug(String str, Object c) {
-		if(!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return;
-		if(str == null) return;
-		String filter = "static";
-		if(c!=null) filter = c.getClass().getName();
-
-			System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
-//			history.add(System.currentTimeMillis() + ", " +str);
+        if(!Settings.getReference().getBoolean(ManualSettings.debugenabled)) return;
+        if(str == null) return;
+        String filter = "static";
+        if(c!=null) filter = c.getClass().getName();
+        if (filter.equals("java.lang.String")) filter = (String) c;
+        System.out.println("DEBUG: " + getTime() + ", " + filter +  ", " +str);
 	}
 
 	public static String memory() {
@@ -618,6 +608,7 @@ public class Util {
 	}
 	*/
 
+	// TODO: doesn't work with >= ubuntu 18.04
 	public static boolean updateLocalIPAddress(){
 		State state = State.getReference();
 		String wdev = lookupWIFIDevice();
@@ -638,7 +629,8 @@ public class Util {
 						if (!addr.equals(state.get(values.localaddress)))
 							state.set(values.localaddress, addr);
 						return true;
-					} else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
+					}
+//					else Util.debug("Util.updateLocalIPAddress(): bad address ["+ addr + "]", null);
 				}
 			}
 		} catch (Exception e) {
@@ -842,7 +834,7 @@ public class Util {
 				+ NavigationLog.navigationlogpath + " "
 				+ Navigation.navroutesfile };
 
-		new File(Settings.redhome + sep + "./log/archive").mkdir(); // make sure its there
+		new File(Settings.tomcathome + sep + "./log/archive").mkdir(); // make sure its there
 		new Thread(new Runnable() { public void run() {
 			try {
 				Runtime.getRuntime().exec(cmd);
@@ -867,7 +859,7 @@ public class Util {
 
 		// log("[tar -jcf " + path + list+"]");
 
-		new File(Settings.redhome + sep + "./log/archive").mkdir(); // make sure its there
+		new File(Settings.tomcathome + sep + "./log/archive").mkdir(); // make sure its there
 		new Thread(new Runnable() { public void run() {
 			try {
 				Runtime.getRuntime().exec(cmd);
@@ -880,7 +872,7 @@ public class Util {
 	public static String archiveImages(){
 		final String path = "./log/archive/frames_" + System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.framefolder};
-		new File(Settings.redhome + sep + "./log/archive").mkdir();
+		new File(Settings.tomcathome + sep + "./log/archive").mkdir();
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
@@ -890,7 +882,7 @@ public class Util {
 	public static String archiveStreams(){
 		final String path = "./log/archive/streams_" + System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -cf " + path + " " + Settings.streamfolder};
-		new File(Settings.redhome + sep + "./log/archive").mkdir();
+		new File(Settings.tomcathome + sep + "./log/archive").mkdir();
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
@@ -901,7 +893,7 @@ public class Util {
 	public static String archiveROS(){
 		final String path = "./archive" + sep + "ros_"+System.currentTimeMillis() + ".tar";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + "  " + Settings.roslogfolder};
-		new File(Settings.redhome + sep + "archive").mkdir();
+		new File(Settings.tomcathome + sep + "archive").mkdir();
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch (Exception e){printError(e);}
 		}}).start();
@@ -913,7 +905,7 @@ public class Util {
 		String args = "  " + NavigationLog.navigationlogpath + " ";
 		for(int i = 0 ; i < files.length ; i++) args += files[i] + " ";
 		final String[] cmd = new String[]{"/bin/sh", "-c", "tar -jcf " + path + args};
-		new File(Settings.redhome + sep + "archive").mkdir();
+		new File(Settings.tomcathome + sep + "archive").mkdir();
 		new Thread(new Runnable() { public void run() {
 			try { Runtime.getRuntime().exec(cmd); } catch(Exception e){printError(e);}
 		}}).start();
@@ -1107,7 +1099,7 @@ public class Util {
 				oculusPrime.commport.PowerLogger.append("shutting down application", this);
 				oculusPrime.commport.PowerLogger.close();
 				delay(5000);
-				systemCall(Settings.redhome + Util.sep + "systemreboot.sh");
+				systemCall(Settings.tomcathome + Util.sep + "systemreboot.sh");
 			} catch (Exception e){printError(e);}
 		} }).start();
 

@@ -1,6 +1,8 @@
 package developer.image;
 
+import oculusPrime.Application;
 import oculusPrime.Settings;
+import oculusPrime.Util;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -233,8 +235,7 @@ public class ImageUtils {
 		return restultxy;
 	}
 
-//	/*
-	public static BufferedImage toBufferedImageOfType(BufferedImage original, int type) {
+ 	public static BufferedImage toBufferedImageOfType(BufferedImage original, int type) {
 		if (original == null) {
 			throw new IllegalArgumentException("original == null");
 		}
@@ -259,5 +260,32 @@ public class ImageUtils {
 
 		return image;
 	}
-//	*/
+
+    public static BufferedImage resize(BufferedImage img, int newW, int newH) {
+
+        Image tmp = img.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
+        BufferedImage dimg = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = dimg.createGraphics();
+        g2d.drawImage(tmp, 0, 0, null);
+        g2d.dispose();
+
+//        Util.debug("RESIZE", "ImageUtils.java");
+        return dimg;
+    }
+
+    public static BufferedImage cropCentered(BufferedImage src, int newwidth, int newheight)
+    {
+        int width = src.getWidth();
+        int height = src.getHeight();
+        BufferedImage img = src.getSubimage(0+(width-newwidth)/2, 0+(height-newheight)/2,
+                newwidth, newheight);
+
+        BufferedImage copyOfImage = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics g = copyOfImage.createGraphics();
+        g.drawImage(img, 0, 0, null);
+        g.dispose();
+
+//        Util.debug("CROPCENTERED", "ImageUtils.java");
+        return copyOfImage;
+    }
 }

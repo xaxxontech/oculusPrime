@@ -18,8 +18,8 @@ import oculusPrime.State.values;
 
 public class BanList {
 	
-	public static final String banfile = Settings.redhome+Util.sep+"conf"+Util.sep+"banlist.txt";
-	public static final String banlog =  Settings.redhome+Util.sep + "log" + Util.sep + "banlist.log";
+	public static final String banfile = Settings.tomcathome +Util.sep+"conf"+Util.sep+"banlist.txt";
+	public static final String banlog =  Settings.tomcathome +Util.sep + "logs" + Util.sep + "banlist.log";
 	
 	public static final long BAN_TIME_OUT = Util.FIVE_MINUTES;
 	public static final int BAN_ATTEMPTS = 10;

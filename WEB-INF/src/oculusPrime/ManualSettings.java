@@ -6,12 +6,13 @@ public enum ManualSettings {
 	
 	motorport, powerport, developer, debugenabled, wheeldiameter,
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm, checkaddresses,
-	soundthreshold, motionthreshold, useflash, redockifweakconnection,
+	soundthreshold, motionthreshold, redockifweakconnection,
 	arcmovecomp, usearcmoves, arcpwmthreshold,
 	soundthresholdalt, undockdistance,
 
 	// undocumented
-	lowbattery, timedshutdown, camhold, lidar,
+	lowbattery, timedshutdown, camhold, lidar, rospackagefolder, updatelocation,
+    webrtcserver, webrtcport, turnserverlogin, turnserverport, ros2
 	
 	;
 	
@@ -31,7 +32,6 @@ public enum ManualSettings {
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "110");
 		config.setProperty(redockifweakconnection.name(), Settings.TRUE);   
-		config.setProperty(useflash.name(), Settings.FALSE);
 		config.setProperty(arcmovecomp.name(), "0.8");
 		config.setProperty(usearcmoves.name(), Settings.TRUE);
 		config.setProperty(arcpwmthreshold.name(), "150");
@@ -41,6 +41,15 @@ public enum ManualSettings {
         config.setProperty(timedshutdown.name(), Settings.TRUE);
 		config.setProperty(camhold.name(), Settings.FALSE);
 		config.setProperty(lidar.name(), Settings.FALSE);
+        config.setProperty(webrtcserver.name(), "xaxxon.com");
+        config.setProperty(webrtcport.name(), "8443");
+        config.setProperty(turnserverlogin.name(), "oculus:robot");
+        config.setProperty(turnserverport.name(), "3478");
+		config.setProperty(ros2.name(), Settings.FALSE);
+		config.setProperty(rospackagefolder.name(), "/home/oculus/catkin_ws/src/oculusprime_ros");
+		config.setProperty(updatelocation.name(), "https://www.xaxxon.com/downloads/"); // trailing slash required
+
+
 		return config;
 	}
 	

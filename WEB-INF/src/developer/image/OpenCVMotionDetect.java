@@ -157,7 +157,7 @@ public class OpenCVMotionDetect  {
 
             String port = "5080";
             if (settings != null) {
-                port = settings.readRed5Setting("http.port");
+                port = settings.readHTTPport();
             }
 
             while (true) {
