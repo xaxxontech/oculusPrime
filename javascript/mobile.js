@@ -5,7 +5,7 @@ var webrtcinit = false;
 var mobile;
 var lastcommand="";
 var menus = [ "main_menu", "advanced_menu", "command_log_menu", "navigation_menu", "waypoints_menu",
-	"routes_menu" ];
+	"routes_menu", "developer_menu" ];
 
 // statuses
 // var UNKNOWN = "<span style='color: #999999'>unknown</span>";
@@ -146,9 +146,10 @@ function setstatus(status, value) {
 	else if (status=="turnserverport") {turnserver_port = value; } // webrtc.js
 
 	else if (status == "storecookie") createCookie("auth",value,30); 
-	if (status == "stream") {
+	else if (status == "stream") {
 		if (value == "stop" || value == "mic")  videologo("on"); 
 	}
+	else if (status == "developer") document.getElementById("developermenu").style.display = "";
 
 }
 

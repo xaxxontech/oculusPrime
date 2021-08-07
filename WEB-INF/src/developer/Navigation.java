@@ -54,7 +54,10 @@ public class Navigation implements Observer {
 	public Navigation(Application a) {
 		state.set(State.values.navsystemstatus, Ros.navsystemstate.stopped.toString());
 		Ros.loadwaypoints();
-		Ros.rospackagedir = settings.readSetting(ManualSettings.rospackagefolder);
+
+		Ros.rospackagedir = Ros.getRosPackageDir();
+		Util.debug(Ros.rospackagedir, this);
+
 		navlog = new NavigationLog();
 		state.addObserver(this);
 		app = a;

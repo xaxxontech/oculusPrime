@@ -15,7 +15,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final double FIRMWARE_VERSION_REQUIREDV1 = 0.957; // trailing zeros ignored!
 	public static final String FIRMWARE_IDV1 = "oculusPower";
-	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.24; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.25; // trailing zeros ignored!
 	public static final String FIRMWARE_IDV2 = "xaxxonpowerv2";
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;
@@ -38,6 +38,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 	public static final byte READ_SAFECURRENT = 'G';
 	public static final byte READ_DOCKVOLTAGE = 'E';
 	public static final byte TEMPORARY_SHUTDOWN = 'K';
+	public static final byte READ_FLOAT_VOLTAGE = 'T';
 	public static final int COMM_LOST = -99;
 //	public static final int LOWBATTPERCENTAGE = 90; // same or less than firmware var: gettingLowCell to enable capacity recalc
 
@@ -135,6 +136,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 		sendCommand(READCAPACITY);
 		sendCommand(READ_SAFECURRENT);
 		sendCommand(READ_DOCKVOLTAGE);
+		sendCommand(READ_FLOAT_VOLTAGE);
 	}
 	
 	private void connect() {

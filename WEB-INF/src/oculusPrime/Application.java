@@ -682,6 +682,15 @@ public class Application implements ServletContextListener {
 			network.connectNetwork(str);
 			break;
 
+        case launchsignalling:
+            video.killSignallingServer();
+            video.launchSignallingServer();
+            break;
+
+        case webrtcrestart:
+            video.webrtcRestart();
+            break;
+
         case clientjs:
             String arr[] = str.split(" ",2);
             if (arr.length == 1)

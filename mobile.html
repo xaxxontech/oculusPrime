@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Oculus Prime</title>
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Cache-Control" Content="no-cache">
+<meta http-equiv="Expires" content="-1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<style type="text/css">
+html, body {height: 100%; width: 100%;}
+body { background-color: #151515;   touch-action: manipulation;  }
+body, p, ol, ul, td, tr {
+font-family: verdana, arial, helvetica, sans-serif;
+font-size: 3vh;
+color: #aaaaaa;
+padding: 0px; margin: 0px;}
+input, select { font-size: 100% }
+.adsfTABLE { border: 0px; border-collapse: collapse; padding: 0px }
+TABLE { border: none; padding: 0px; }
+TR { border: 0px; }
+TD  { border: 1px solid black; border-style: hidden; }
+a { color: #ffffff; background-color: transparent; text-decoration: none; }
+a:link { color: #ffffff; background-color: transparent; text-decoration: none; }
+a:visited { color: #ffffff; background-color: transparent; text-decoration: none; }
+a:active { color: #000000; background-color: #ffffff; text-decoration: none; }
+.status_title { text-transform: uppercase; color: #f5b219;   }
+.status { color: yellow; text-transform: lowercase; } /* 28872f 45F239 */
+.status_info { color: #28872f; } /* 28872f 45F239 */
+.overlay { background-color: #000000; filter:alpha(opacity=75); opacity: 0.75; -moz-opacity:0.75; }
+.steering_button { cursor: pointer; -webkit-user-select: none; -webkit-touch-callout: none;
+      -moz-user-select: none; -ms-user-select: none; user-select: none;   }
+.boxcolor { background-color: #1b1b1b; }
+.boxbg { color: #cccccc; background-color: transparent; text-decoration: none; }
+.boxbg:link { color: #cccccc; background-color: transparent; text-decoration: none; }
+.boxbg:visited { color: #cccccc; background-color: transparent; text-decoration: none; }
+.boxbg:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
+.dkbluelink:link { color: #484fcd; background-color: transparent; text-decoration: none; }
+.dkbluelink:visited { color: #484fcd; background-color: transparent; text-decoration: none; }
+.dkbluelink:hover { color: #ffffff; background-color: transparent; text-decoration: none; } /* #0711AF */
+.inputbox { background-color: #151515; color: #ffffff; border: 1px solid #666666;  }
+.cancelbox { color: #000000; background-color: #cccccc; padding-left: 2%; padding-right: 2%;  }
+.zoombutton { color: #cccccc; background-color: transparent; text-decoration: none; }
+.zoombutton:hover { color: #ffffff; background-color: #666666; text-decoration: none; } /* #0711AF */
+.menu { background-color: #151515; padding-left: 5%; padding-right: 5%; padding-top: 5%; padding-bottom: 0%; font-size: 3.5vh; line-height: 150%; z-index: 5; }
+#messagebox {  word-wrap: break-word; z-index: -1; overflow: hidden; }
+#statusbox {  z-index: -1; }
+#mousecontrolshighlitebox { background-color: #666666; z-index: -2; }
+#forwardhighlitebox { background-color: #666666; z-index: -2; }
+.grey { color: #666666; }
+</style>
+
+<script src="javascript/mobile.js" type="text/javascript"></script>
+<script src="javascript/map.js" type="text/javascript"></script>
+<script src="javascript/comm_client.js" type="text/javascript"></script>
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+<script src="javascript/webrtc.js" type="text/javascript"></script>
+
+</head>
+<body id="thebody" onload="mobileloaded();" onunload="driverexit();">
+
+<div id="pagediv" style="width: 100%; height: 100%;">
+
+<!-- VIDEO -->
+<video id="stream" style="width: 100%; height: auto;" autoplay playsinline controls>Your browser doesn't support video</video>
+
+<!-- STEERING CONTROLS -->
+<table id="steeringcontrols" style="background-image: url('images/steering_icons_nospeed.png');
+width: 100%; background-position: center center;
+background-repeat: no-repeat; background-size: 100% 100%; background-color: transparent;
+filter:alpha(opacity=60); opacity: 0.60; -moz-opacity:0.60;">
+<tr>
+<td class="steering_button" id="camera up"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button"> </td>
+<td class="steering_button" id="camera horizontal"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button"> </td>
+<td class="steering_button" id="camera down"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+</tr><tr>
+<td class="steering_button"> </td>
+<td class="steering_button"> </td>
+<td class="steering_button" id="forward"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button" id="nudge forward"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button"> </td>
+</tr><tr>
+<td class="steering_button" id="nudge left"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button" id="rotate left"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button" id="stop"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button" id="rotate right"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button" id="nudge right"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+</tr><tr>
+<td class="steering_button"> </td>
+<td class="steering_button"> </td>
+<td class="steering_button" id="backward"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button" id="nudge backward"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td> </td>
+</tr>
+</table><!-- end of mainvideoandcontrols table -->
+
+<div id="controlsdivider" style="height: 2%"> </div>
+
+<!-- MORE CONTROLS -->
+<table id="morecontrols" style="width: 80%; margin-left: 10%; margin-right: 10%; margin-bottom: 5%; height: 6%;">
+<tr>
+<td id="menu button" class="steering_button"
+style="background-image: url('images/menu_hamburger.png'); background-position: center center;
+background-repeat: no-repeat; background-size: 100% 100%; background-color: transparent"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button"> </td>
+<td id="publish camera" class="steering_button"
+style="background-image: url('images/cam_icon.png'); background-position: center center;
+background-repeat: no-repeat; background-size: 100% 100%; background-color: transparent"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button"> </td>
+<td id="publish stop" class="steering_button"
+style="background-image: url('images/cammicoff.png'); background-position: center center;
+background-repeat: no-repeat; background-size: 100% 100%; background-color: transparent"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+<td class="steering_button"> </td>
+<td id="autodock go" class="steering_button"
+style="background-image: url('images/charge.png'); background-position: center center;
+background-repeat: no-repeat; background-size: 100% 100%; background-color: transparent"
+ontouchstart="steeringmousedown(this.id);" ontouchend="steeringmouseup(this.id);"
+onmousedown="steeringmousedown(this.id);" onmouseup="steeringmouseup(this.id);"> </td>
+</tr></table>
+
+</div> <!-- end of pagediv>
+
+<!--status box-->
+<div id="statusbox" style="position: absolute;">
+<span class="status_title">uplink:</span>
+<span class="status" id="connection_status"> </span>
+<br>
+<span class="status_title">video:</span>
+<span class="status" id="stream_status"> </span>
+<br>
+<span class="status_title">motion:</span>
+<span class="status" id="motion_status"> </span>
+<br>
+<span class="status_title">camera tilt:</span>
+<span class="status" id="cameratilt_status"> </span>
+<br>
+<span class="status_title">battery:</span>
+<span class="status" id="battery_status"> </span>
+<br>
+<span class="status_title">dock:</span>
+<span class="status" id="dock_status"> </span>
+<br><br>
+</div>
+
+
+<!-- MAIN MENU -->
+<div id="main_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div style="height: 2%"> </div>
+spotlight: &nbsp;
+<a href="javascript: callServer('spotlight','0');">off</a> &nbsp;
+<a href="javascript: callServer('spotlight','50');">med</a> &nbsp;
+<a href="javascript: callServer('spotlight','100');">high</a> &nbsp;
+<br>
+video: &nbsp;
+<a href="javascript: callServer('streamsettingsset','low');">low</a> &nbsp;
+<a href="javascript: callServer('streamsettingsset','med');">med</a> &nbsp;
+<a href="javascript: callServer('streamsettingsset','high');">high</a> &nbsp;
+<br>
+&nbsp; <a href="javascript: callServer('publish','camera');">camera</a>
+&nbsp; <a href="javascript: callServer('publish','camandmic');">camandmic</a><br>
+&nbsp; <a href="javascript: callServer('publish','mic');">mic</a>
+&nbsp; <a href="javascript: callServer('publish','stop');">all off</a><br>
+speed: &nbsp;
+<a href="javascript: callServer('speed','slow');">slow</a> &nbsp;
+<a href="javascript: callServer('speed','med');">med</a> &nbsp;
+<a href="javascript: callServer('speed','fast');">fast</a> &nbsp;
+<br>
+text commmand:<br>
+&nbsp; <input id="telnetcommand" type="text" size="6" class="inputbox"
+onKeyPress="if (keypress(event)==13) { telnetsend(); }" >
+<a href="javascript: telnetclear();">
+<span class="cancelbox"><b>X</b></span></a>&thinsp;
+<a href="javascript: telnetsend();">
+<span class="cancelbox">&#x2714;</span></a>
+<br>
+<a href="javascript: navigationmenu();">navigation &gt;</a>
+<br>
+<a href="javascript: menu('advanced_menu')">more &gt;</a>
+<div style="height: 2%"> </div>
+<div style="text-align: right">
+<a href="javascript: logout();">logout</a> &nbsp; &nbsp;
+</div>
+</div>
+
+<!-- ADVANCED/MORE MENU -->
+<div id="advanced_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: menu('main_menu');" >
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+&nbsp; <a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div style="height: 2%"> </div>
+<a href="network" target="_blank">network &nearr;</a>
+<br>
+<a href="javascript: showcommandlog();">command log &gt;</a>
+<br>
+<a href="javascript: if (confirm(&quot;restart server app\nare you sure?&quot;)) {
+	callServer('reboot',''); }">restart server app</a>
+<br>
+<a href="javascript: if (confirm(&quot;reboot OS\nare you sure?&quot;)) {
+	callServer('reboot',''); }">reboot</a>
+<br>
+<a href="javascript: if (confirm(&quot;power down\nare you sure?&quot;)) {
+	callServer('powershutdown',''); }">power down</a>
+<br>
+<a href="/oculusPrime">desktop controls</a>
+<div id="developermenu" style="display: none">
+<a href="javascript: menu('developer_menu');">developer &gt;</a> 
+</div>
+</div>
+
+<!-- COMMAND LOG MENU -->
+<div id="command_log_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: menu('advanced_menu');" >
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+&nbsp; <a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<br>
+<a href="javascript: showcommandlog();">refresh &#x21bb;</a>
+<br>
+<div id="command_log_box" style="word-wrap: break-word;"> </div>
+</div>
+
+<!-- NAVIGATION MENU -->
+<div id="navigation_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: menu('main_menu');" >
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+&nbsp; <a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div style="height: 2%"> </div>
+Nav System <span id="navsystemstatus" class="status_info">STOPPED</span><br>
+<div id="activeroutediv" class="status_info" style="display: none"> </div>
+<div style="height: 2%"> </div>
+<a href="javascript: callServer('startnav','');">start navigation</a><br>
+<a href="javascript: callServer('stopnav','');">stop navigation</a><br>
+<a href="javascript: waypointsmenu();">waypoints</a> &gt;<br>
+<a href="javascript: routesmenu();">routes</a> &gt;<br>
+<a href="navigationlog/index.html" target="_blank">navigation log &nearr;</a><br>
+</div>
+
+<!-- WAYPOINTS MENU -->
+<div id="waypoints_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: menu('navigation_menu');" >
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+&nbsp; <a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div style="height: 2%"> </div>
+<div id="waypointslist">loading...</div>
+</div>
+
+<!-- ROUTES MENU -->
+<div id="routes_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: menu('navigation_menu');" >
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+&nbsp; <a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div style="height: 2%"> </div>
+<div id="routeslist">loading...</div>
+</div>
+
+<!-- DEVELOPER MENU -->
+<div id="developer_menu" class="menu" style="position: absolute; display: none;" >
+<a href="javascript: menu('advanced_menu');" >
+<span class="cancelbox"><b>&lt;</b></span> BACK</a>
+&nbsp; <a href="javascript: closemenus();" >
+<span class="cancelbox"><b>X</b></span> CLOSE</a>
+<div style="height: 2%"> </div>
+<!-- developer stuff here -->
+</div>
+
+<!-- LOGIN -->
+<div id="login" style="display: none; background-color: #151515;
+padding-left: 5%; padding-right: 5%; padding-top: 5%; padding-bottom: 0%;
+font-size: 4vh; line-height: 150%; "
+Login:<br>
+username:
+<input id="user" type="text" size="6" onKeyPress="if (keypress(event)==13) { loginsend(); }"
+class="inputbox" onfocus="this.style.backgroundColor='#000000';" >
+<br>
+password:
+<input id="pass" type="password" name="password" size="6" onKeyPress="if (keypress(event)==13) { loginsend(); }"
+class="inputbox" onfocus="this.style.backgroundColor='#000000';">
+<br>
+<input type="checkbox" id="user_remember" name="user_remember" value="remember" checked="checked"> remember me
+<br><br>
+<a href="javascript: loginsend();">LOGIN</a>
+</div>
+
+<!--message box-->
+<div id="messagebox" style="position: absolute;"> </div>
+
+<!-- button highlight boxes-->
+<div id="mousecontrolshighlitebox" style="display: none;
+position: absolute; "> </div>
+<div id="forwardhighlitebox" style="display: none; position: absolute;"> </div>
+
+<!-- video overlay logo -->
+<img id="videologo" src="images/eye.gif"
+style="position: absolute; display: none; z-index: 4" alt="">
+
+<!--  debugbox -->
+<div id="debugbox" style="position: absolute; z-index: 100; left: 10px; top: 10px; display: none; "></div>
+
+</body>
+</html>

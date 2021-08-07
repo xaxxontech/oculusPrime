@@ -11,7 +11,7 @@ public enum ManualSettings {
 	soundthresholdalt, undockdistance,
 
 	// undocumented
-	lowbattery, timedshutdown, camhold, lidar, rospackagefolder, updatelocation,
+	lowbattery, timedshutdown, camhold, lidar, updatelocation,
     webrtcserver, webrtcport, turnserverlogin, turnserverport, ros2
 	
 	;
@@ -43,10 +43,9 @@ public enum ManualSettings {
 		config.setProperty(lidar.name(), Settings.FALSE);
         config.setProperty(webrtcserver.name(), "xaxxon.com");
         config.setProperty(webrtcport.name(), "8443");
-        config.setProperty(turnserverlogin.name(), "oculus:robot");
+        config.setProperty(turnserverlogin.name(), "turn:server");
         config.setProperty(turnserverport.name(), "3478");
 		config.setProperty(ros2.name(), Settings.FALSE);
-		config.setProperty(rospackagefolder.name(), "/home/oculus/catkin_ws/src/oculusprime_ros");
 		config.setProperty(updatelocation.name(), "https://www.xaxxon.com/downloads/"); // trailing slash required
 
 

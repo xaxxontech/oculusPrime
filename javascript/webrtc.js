@@ -28,6 +28,9 @@ var ws_conn;
 // Promise for local stream after constraints are approved by the user
 var local_stream_promise;
 var ws_conn_close_forever = false;
+var webrtcreconnectattempt = 0;
+var webrtcdebug = true;
+
 
 function getOurId() {
 	if (commclientid) return commclientid;
@@ -112,7 +115,7 @@ function onIncomingICE(ice) {
 }
 
 function onServerMessage(event) {
-    webrtc_logdebug("Received " + event.data);
+    // webrtc_logdebug("Received " + event.data);
     switch (event.data) {
         case "HELLO":
             webrtcStatus("Registered with server, waiting for call");
@@ -225,7 +228,7 @@ function websocketServerConnect() {
     } else {
         throw new Error ("Don't know how to connect to the signalling server with uri" + window.location);
     }
-    var ws_url = 'wss://' + ws_server + ':' + ws_port
+    var ws_url = 'wss://' + ws_server + ':' + ws_port;
     webrtcStatus("Connecting to server " + ws_url);
     ws_conn = new WebSocket(ws_url);
     /* When connected, immediately register with the server */
@@ -244,12 +247,49 @@ function websocketServerDisconnect() {
 	ws_conn_close_forever = true;
 }
 
+var trackevent;
+
 function onRemoteTrack(event) {
-    if (getVideoElement().srcObject !== event.streams[0]) {
+	if (getVideoElement().srcObject !== event.streams[0]) {
         webrtc_logdebug('Incoming stream');
         getVideoElement().srcObject = event.streams[0];
         videologo("off");
+        
+        setTimeout(function() { checkvideoState(event); }, 1000);
     }
+}
+
+function checkvideoState(event) {
+	var state = getVideoElement().readyState;
+	webrtc_logdebug("getVideoElement().readyState="+state);
+	if (state == 0) {
+		if (webrtcreconnectattempt < 10) {
+			webrtcreconnectattempt ++;
+			message("webkit error, restart webrtc #"+webrtcreconnectattempt,"orange");
+
+			webrtc_logdebug("error, resetting video");
+			resetVideo();
+			callServer("webrtcrestart", "");
+		}
+		else {
+			webrtcreconnectattempt = 0;
+			message("webkit webrtc error, giving up","orange");
+			callServer("publish", "stop");
+			resetVideo();
+		}
+	}
+	else { webrtcreconnectattempt = 0; }
+}
+
+function reloadvideo() {
+	webrtc_logdebug("reloadvideo");
+
+	var videoElement = getVideoElement();
+    videoElement.pause();
+    videoElement.src = "";
+    videoElement.load();
+    
+    videoElement.srcObject = trackevent.streams[0];
 }
 
 function errorUserMediaHandler() {
@@ -260,37 +300,6 @@ const handleDataChannelOpen = (event) =>{
     webrtc_logdebug("dataChannel.OnOpen", event);
 };
 
-// const handleDataChannelMessageReceived = (event) =>{
-    // webrtc_logdebug("dataChannel.OnMessage:", event, event.data.type);
-
-    // webrtcStatus("Received data channel message");
-    // if (typeof event.data === 'string' || event.data instanceof String) {
-        // webrtc_logdebug('Incoming string message: ' + event.data);
-        // textarea = document.getElementById("text")
-        // textarea.value = textarea.value + '\n' + event.data
-    // } else {
-        // webrtc_logdebug('Incoming data message');
-    // }
-    // send_channel.send("Hi! (from browser)");
-// };
-
-// const handleDataChannelError = (error) =>{
-    // console.log("dataChannel.OnError:", error);
-// };
-
-// const handleDataChannelClose = (event) =>{
-    // webrtc_logdebug("dataChannel.OnClose", event);
-// };
-
-// function onDataChannel(event) {
-    // webrtcStatus("Data channel created");
-    // let receiveChannel = event.channel;
-    // receiveChannel.onopen = handleDataChannelOpen;
-    // receiveChannel.onmessage = handleDataChannelMessageReceived;
-    // receiveChannel.onerror = handleDataChannelError;
-    // receiveChannel.onclose = handleDataChannelClose;
-// }
-
 function createCall(msg) {
     // Reset connection attempts because we connected successfully
     connect_attempts = 0;
@@ -298,32 +307,20 @@ function createCall(msg) {
     webrtc_logdebug('Creating RTCPeerConnection');
 
     peer_connection = new RTCPeerConnection(rtc_configuration);
-    // send_channel = peer_connection.createDataChannel('label', null);
-    // send_channel.onopen = handleDataChannelOpen;
-    // send_channel.onmessage = handleDataChannelMessageReceived;
-    // send_channel.onerror = handleDataChannelError;
-    // send_channel.onclose = handleDataChannelClose;
-    // peer_connection.ondatachannel = onDataChannel;
     peer_connection.ontrack = onRemoteTrack;
-    /* Send our video/audio to the other peer */
-    // local_stream_promise = getLocalStream().then((stream) => {
-        // webrtc_logdebug('Adding local stream');
-        // peer_connection.addStream(stream);
-        // return stream;
-    // }).catch(setError);
 
     if (!msg.sdp) {
         console.log("WARNING: First message wasn't an SDP message!?");
     }
 
     peer_connection.onicecandidate = (event) => {
-	// We have a candidate, send it to the remote party with the
-	// same uuid
-	if (event.candidate == null) {
-            webrtc_logdebug("ICE Candidate was null, done");
-            return;
-	}
-	ws_conn.send(JSON.stringify({'ice': event.candidate}));
+		// We have a candidate, send it to the remote party with the
+		// same uuid
+		if (event.candidate == null) {
+				webrtc_logdebug("ICE Candidate was null, done");
+				return;
+		}
+		ws_conn.send(JSON.stringify({'ice': event.candidate}));
     };
 
     webrtcStatus("Created peer connection for call, waiting for SDP");
@@ -336,7 +333,10 @@ function setwebrtcServerConfig() {
 										  credential: turnserver_login.split(":")[1]
 										  }]};
 }										  
+										 
+// var rtc_configuration = {iceServers: [{urls: "stun:stun.services.mozilla.com"},
+                                      // {urls: "stun:stun.l.google.com:19302"}]};										 
 										  
 function webrtc_logdebug(str) {
-	// console.log(str);
+	if (webrtcdebug) console.log(str);
 }

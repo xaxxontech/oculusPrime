@@ -369,8 +369,8 @@ function setstatus(status, value) {
 			if (s[0] != streammode) { play(value); }
 			value = s[0];
 			
-			if (value == "stop" || value == "mic") { videologo("on"); } // docklinetoggle("off"); }
-			else if (value == "camera" || value == "camandmic") videologo("off");
+			if (value == "stop" || value == "mic") { videologo("on"); } 
+			// else if (value == "camera" || value == "camandmic") videologo("off");
 		}
 
 		a.innerHTML = value;

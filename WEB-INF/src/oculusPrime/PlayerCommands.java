@@ -40,7 +40,7 @@ public enum PlayerCommands {
     streamsettingscustom, publish,
     streamsettingsset, framegrabtofile,	record,
 	// experimental (undocumented):
-	jpgstream, streammode,
+	jpgstream, streammode, launchsignalling, webrtcrestart,
     
     // malg board 
     motorsreset, getdrivingsettings, drivingsettingsupdate, malgcommand,

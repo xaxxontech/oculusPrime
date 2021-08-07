@@ -37,10 +37,12 @@ public class Video {
     public static long STREAM_CONNECT_DELAY = 2000;
     private Settings settings = Settings.getReference();
 
-    private String signallingserverpstring = "python3 ./simple-server.py";
+    private String SIGNALLINGSERVERCMD = "python3 ./simple-server.py";
+    private String signallingserverpstring;
     private volatile long lastvideocommand = 0;
     public String camerapstring = null;
     private String webrtcpstring = null;
+    private ArrayList<String> webrtccmdarray = new ArrayList<>();;
     public final static String MICWEBRTCPSTRING = "micwebrtc";
     public static final String MICWEBRTC = Settings.tomcathome +"/"+Settings.appsubdir+"/"+MICWEBRTCPSTRING; // gstreamer webrtc microphone c binary
     public static final String SOUNDDETECT = Settings.tomcathome +"/"+Settings.appsubdir+"/sounddetect";
@@ -132,12 +134,13 @@ public class Video {
         Util.systemCallBlocking(cmd);
     }
 
-    private void launchSignallingServer() {
-//        killSignallingServer();
+    protected void launchSignallingServer() {
+        if (signallingserverpstring != null)
+            killSignallingServer();
 
         String cmd = Settings.tomcathome+Util.sep+"signalling"+Util.sep+"run";
         String portarg = " --port "+settings.readSetting(ManualSettings.webrtcport);
-        signallingserverpstring += portarg;
+        signallingserverpstring = SIGNALLINGSERVERCMD + portarg;
         Util.systemCall(cmd+portarg);
     }
 
@@ -148,6 +151,19 @@ public class Video {
         try {
             Process proc = processBuilder.start();
         } catch (Exception e) { e.printStackTrace(); }
+
+        signallingserverpstring = null;
+    }
+
+    // restart webrtc connection, called by javascript for periodic webkit connect failure
+    public void webrtcRestart() {
+        new Thread(new Runnable() { public void run() {
+            String w = webrtcpstring;
+            killwebrtc();
+            webrtcpstring = w;
+            Util.delay(1000);
+            Ros.launch(webrtccmdarray);
+        } }).start();
     }
 
     public void publish (final Application.streamstate mode, final int w, final int h, final int fps, final long bitrate) {
@@ -187,7 +203,7 @@ public class Video {
 
                     if (state.exists(values.driverclientid) && webrtcpstring == null) {
 
-                        final ArrayList<String> strarray = new ArrayList<String>(Arrays.asList(Ros.WEBRTC,
+                        webrtccmdarray = new ArrayList<String>(Arrays.asList(Ros.WEBRTC,
                                 "peerid:=--peer-id=" + state.get(values.driverclientid),
                                 "webrtcserver:=--server=wss://"+settings.readSetting(ManualSettings.webrtcserver)+":"
                                         +settings.readSetting(ManualSettings.webrtcport),
@@ -197,8 +213,8 @@ public class Video {
                                 "turnserverlogin:=--turnserver-login="+settings.readSetting(ManualSettings.turnserverlogin)
                         ));
 
-                        webrtcStatusListener(strarray, mode.toString());
-                        webrtcpstring = Ros.launch(strarray);
+                        webrtcStatusListener(webrtccmdarray, mode.toString());
+                        webrtcpstring = Ros.launch(webrtccmdarray);
                     }
 
                     break;
@@ -211,7 +227,7 @@ public class Video {
 
                     if (state.exists(values.driverclientid) && webrtcpstring == null) {
 
-                        final ArrayList<String> strarray = new ArrayList<String>(Arrays.asList(Ros.WEBRTC,
+                        webrtccmdarray = new ArrayList<String>(Arrays.asList(Ros.WEBRTC,
                                 "peerid:=--peer-id=" + state.get(values.driverclientid),
                                 "webrtcserver:=--server=wss://"+settings.readSetting(ManualSettings.webrtcserver)+":"
                                         +settings.readSetting(ManualSettings.webrtcport),
@@ -222,8 +238,8 @@ public class Video {
                                 "turnserverlogin:=--turnserver-login="+settings.readSetting(ManualSettings.turnserverlogin)
                         ));
 
-                        webrtcStatusListener(strarray, mode.toString());
-                        webrtcpstring = Ros.launch(strarray);
+                        webrtcStatusListener(webrtccmdarray, mode.toString());
+                        webrtcpstring = Ros.launch(webrtccmdarray);
                     }
 
                     break;
@@ -233,7 +249,7 @@ public class Video {
 
                         ProcessBuilder processBuilder = new ProcessBuilder();
 
-                        String cmd = MICWEBRTC+
+                        webrtcpstring = MICWEBRTC+
                                 " --peer-id=" + state.get(values.driverclientid)+
                                 " --audio-device=" + adevicenum+
                                 " --server=wss://"+settings.readSetting(ManualSettings.webrtcserver)+":"
@@ -242,10 +258,10 @@ public class Video {
                                 " --turnserver-login="+settings.readSetting(ManualSettings.turnserverlogin)
                         ;
 
-                        List<String> args = new ArrayList<>();
-                        String[] array = cmd.split(" ");
-                        for (String t : array) args.add(t);
-                        processBuilder.command(args);
+                        webrtccmdarray = new ArrayList<>();
+                        String[] array = webrtcpstring.split(" ");
+                        for (String t : array) webrtccmdarray.add(t);
+                        processBuilder.command(webrtccmdarray);
                         Process proc = null;
 
                         try{

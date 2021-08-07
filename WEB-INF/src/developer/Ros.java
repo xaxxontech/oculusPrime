@@ -321,6 +321,21 @@ public class Ros {
 		return result;
 	}
 
+	public static String getRosPackageDir() {
+		try {
+
+			String[] cmd = { "bash", "-ic", "roscd "+ROSPACKAGE+" ; pwd" };
+			Process proc = Runtime.getRuntime().exec(cmd);
+			BufferedReader procReader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			String str = procReader.readLine();
+			return str;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	public static String getMapFilePath() {
 		return Ros.rospackagedir + Util.sep + "maps" + Util.sep ;
 	}
