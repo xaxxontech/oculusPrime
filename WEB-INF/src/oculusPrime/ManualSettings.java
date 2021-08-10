@@ -8,7 +8,7 @@ public enum ManualSettings {
 	gyrocomp, alertsenabled, odomturnpwm, odomlinearpwm, checkaddresses,
 	soundthreshold, motionthreshold, redockifweakconnection,
 	arcmovecomp, usearcmoves, arcpwmthreshold,
-	soundthresholdalt, undockdistance,
+	undockdistance,
 
 	// undocumented
 	lowbattery, timedshutdown, camhold, lidar, updatelocation,
@@ -27,7 +27,7 @@ public enum ManualSettings {
 		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , Settings.TRUE);
-		config.setProperty(soundthreshold.name(), "10");
+		config.setProperty(soundthreshold.name(), "-25");
 		config.setProperty(motionthreshold.name(), "0.003");
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "110");
@@ -35,7 +35,6 @@ public enum ManualSettings {
 		config.setProperty(arcmovecomp.name(), "0.8");
 		config.setProperty(usearcmoves.name(), Settings.TRUE);
 		config.setProperty(arcpwmthreshold.name(), "150");
-		config.setProperty(soundthresholdalt.name(), "-8");
 		config.setProperty(undockdistance.name(), "0.75");
 		config.setProperty(lowbattery.name(), "30");
         config.setProperty(timedshutdown.name(), Settings.TRUE);

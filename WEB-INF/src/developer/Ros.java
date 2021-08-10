@@ -45,6 +45,9 @@ public class Ros {
 	public static final String CAMERA = "camera"; // usb cam
 	public static final String WEBRTC = "webrtc"; // gstreamer webrtc
 
+    // node file name constants
+    public static final String IMAGE_TO_SHM = "image_to_shm.py";
+
 	public static final String ROS1CMD = Settings.tomcathome +Util.sep+"ros1.sh";
 	public static final String ROS2CMD = Settings.tomcathome +Util.sep+"ros2.sh";
 

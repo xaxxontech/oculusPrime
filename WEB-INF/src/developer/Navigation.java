@@ -412,7 +412,7 @@ public class Navigation implements Observer {
 		}
 	}
 
-	public void runAnyActiveRoute() {
+	public boolean runAnyActiveRoute() {
 		Document document = Util.loadXMLFromString(routesLoad());
 		NodeList routes = document.getDocumentElement().getChildNodes();
 		for (int i = 0; i< routes.getLength(); i++) {
@@ -421,9 +421,10 @@ public class Navigation implements Observer {
 			if (isactive.equals("true")) {
 				runRoute(rname);
 				Util.log("Auto-starting nav route: "+rname, this);
-				break;
+				return true;
 			}
 		}
+		return false;
 	}
 	
 	/** only used before starting a route, ignored if un-docked */

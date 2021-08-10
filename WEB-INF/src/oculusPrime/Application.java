@@ -123,10 +123,13 @@ public class Application implements ServletContextListener {
 		network = new Network(this);	
 		watchdog = new SystemWatchdog(this);
 
-		if(settings.getBoolean(GUISettings.navigation)) {
-			navigation = new developer.Navigation(this);
-			navigation.runAnyActiveRoute();
-		}
+        navigation = new developer.Navigation(this);
+
+        // run any active route
+        if (!navigation.runAnyActiveRoute() && !settings.getBoolean(ManualSettings.ros2)) {
+            Util.log("starting roscore", this);
+            Ros.roscommand(null); // start ROS1 roscore
+        }
 
 		Util.debug("application initialize done", this);
 	}
@@ -632,18 +635,7 @@ public class Application implements ServletContextListener {
 			} catch (Exception e)  { Util.printError(e); }
 			break;
 
-		case jpgstream:
-			if (str== null) str="";
-			if (str.equals(streamstate.stop.toString())) {
-				state.delete(values.jpgstream);
-				break;
-			}
-			if (str.equals("")) str = AutoDock.HIGHRES;
-			new OpenCVUtils(this).jpgStream(str);
-//			opencvutils.jpgStream(str);
-			break;
-			
-		case deletelogs: // super dangerous, purge all log folders and ros logs, causes restart 
+		case deletelogs: // super dangerous, purge all log folders and ros logs, causes restart
 			if( !state.equals(values.dockstatus, AutoDock.DOCKED)) {
 				Util.log("must be docked, skipping.. ", null);
 				break;

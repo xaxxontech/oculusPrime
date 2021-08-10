@@ -37,7 +37,7 @@ public enum GUISettings {
 		config.setProperty(camreverse.name(), "138");
 		config.setProperty(loginnotify.name() , Settings.FALSE);
 		config.setProperty(redock.name() , Settings.FALSE);
-		config.setProperty(navigation.name() , Settings.FALSE);
+		config.setProperty(navigation.name() , Settings.TRUE);
 		config.setProperty(email_smtp_server.name(), Settings.DISABLED);
 		config.setProperty(email_smtp_port.name(), "25");
 		config.setProperty(email_username.name(), Settings.DISABLED);

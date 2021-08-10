@@ -3,16 +3,11 @@ package developer.image;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.File;
 
 
 import oculusPrime.*;
 
 import org.opencv.core.*;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.objdetect.CascadeClassifier;
 
 
 public class OpenCVUtils {
@@ -76,76 +71,6 @@ public class OpenCVUtils {
 		Mat m = new Mat(img.getHeight(), img.getWidth(), CvType.CV_8UC3);
 		m.put(0, 0, pixels);
 		return m;
-	}
-
-	public Mat getWebCamImg(VideoCapture capture) {
-//    	VideoCapture capture =new VideoCapture(camnum); 
-		capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 320);
-		capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 240);
-		Mat webcam_image = null;
-		if (capture.isOpened()) {
-			webcam_image = new Mat();
-			capture.grab(); // discard 1st
-			Util.delay(1000);
-			capture.read(webcam_image);
-		}
-//    	capture.release();
-		return webcam_image;
-	}
-
-	public void jpgStream(final String res) {
-		if (state.exists(State.values.jpgstream)) return; // already running;
-
-		new Thread(new Runnable() {
-			public void run() {
-
-				if (! state.get(State.values.stream).equals(Application.streamstate.stop.toString())) {
-					app.publish(Application.streamstate.stop);
-					Util.delay(Video.STREAM_CONNECT_DELAY*2);
-				}
-
-				VideoCapture capture = new VideoCapture(0);
-//				capture = new VideoCapture(0);
-
-				if (!capture.isOpened()) {
-					Util.log("unable to open camera", this);
-					return;
-				}
-
-				state.set(State.values.jpgstream, true);
-
-				if (res.equals(AutoDock.HIGHRES)) {
-					capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 640);
-					capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 480);
-				} else {
-					capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 320);
-					capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 240);
-				}
-
-				Mat webcam_image = new Mat();
-				capture.grab(); // discard 1st
-
-				while (state.getBoolean(State.values.jpgstream)) {
-					capture.read(webcam_image);
-					if (webcam_image.width() <=0) {
-						Util.log("img 0 size", this);
-						break;
-					}
-					Application.videoOverlayImage = matToBufferedImage(webcam_image);
-					Util.delay(25); // cpu saver
-				}
-
-				capture.release();
-				VideoCapture temp = new VideoCapture(0);
-				temp.release();
-				System.gc();
-				webcam_image.release();
-				Util.log("jpgstream() thread exit", this);
-
-				state.delete(State.values.jpgstream);
-
-			}
-		}).start();
 	}
 
 }

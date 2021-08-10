@@ -186,7 +186,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 				if(action.equalsIgnoreCase("script"))     Util.systemCall("python telnet_scripts/" + pid);
 				if(action.equalsIgnoreCase("gui"))        state.delete(values.guinotify);
 				if(action.equalsIgnoreCase("state"))      state.delete(member);
-				if(action.equalsIgnoreCase("email"))      sendEmail();
 
 
 				if(action.equalsIgnoreCase("batterylog")){
@@ -518,32 +517,6 @@ public class DashboardServlet extends HttpServlet implements Observer {
 		out.close();
 	}
 
-	public void sendEmail(){
-		new Thread(new Runnable() { public void run() {
-			StringBuffer text = new StringBuffer();
-
-			text.append("\n\r-- " + new Date() + " --\n");
-			Vector<String> std = Util.tail(Settings.stdout, 60);
-			for(int i = 0 ; i < std.size() ; i++) text.append(std.get(i)/*.replaceAll("&nbsp;", " ")*/ + "\n");
-
-			text.append("\n\r-- ros log --\n");
-			std = Util.tail(Settings.logfolder+"/ros.log", 60);
-			for(int i = 0 ; i < std.size() ; i++) text.append(std.get(i)/*.replaceAll("&nbsp;", " ")*/ + "\n");
-
-			text.append("\n\r -- state history --\n");
-			text.append(getHistory() + "\n\r");
-			text.append("\n\r -- state values -- \n");
-			text.append(state.toString().replaceAll("<br>", "\n"));
-//			text.append("\n\r -- battery --\n");
-//			text.append(PowerLogger.tail(45) + "\n");
-			text.append("\n\r -- settings --\n");
-			text.append(Settings.getReference().toString().replaceAll("<br>", "\n"));
-			new SendMail("oculus prime snapshot", text.toString());
-
-			// Util.delay(5000);
-			// new SendMail("oculus prime log files", "see attached", new String[]{ Settings.settingsfile, Navigation.navroutesfile.getAbsolutePath() });
-		}}).start();
-	}
 
 	public String toHTML(){
 		StringBuffer str = new StringBuffer("<table>");
