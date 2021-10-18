@@ -27,7 +27,7 @@ public enum ManualSettings {
 		config.setProperty(wheeldiameter.name(), "106");
 		config.setProperty(gyrocomp.name() , "1.095");
 		config.setProperty(alertsenabled.name() , Settings.TRUE);
-		config.setProperty(soundthreshold.name(), "-25");
+		config.setProperty(soundthreshold.name(), "-15");
 		config.setProperty(motionthreshold.name(), "0.003");
 		config.setProperty(odomlinearpwm.name(), "150");
 		config.setProperty(odomturnpwm.name(), "110");
