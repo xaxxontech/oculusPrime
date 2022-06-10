@@ -1137,7 +1137,8 @@ function autodock(str) {
 		var a =document.getElementById("videooverlay");
 	    a.onclick = autodockcalibrate;
 	    var str = "Auto-Dock Calibration: <table><tr><td style='height: 7px'></td></tr></table>";
-	    str+="Align robot with charging dock, reverse camera, then click within white area of target"
+	    str+="Align robot with charging dock, reverse camera, then click within white area of target";
+	    str+="<br><br>NOTE: video setting must be MEDIUM";
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";
 		str += "<a href='javascript: camera(&quot;reverse&quot;)'>reverse camera</a>";
     	str+="<table><tr><td style='height: 11px'></td></tr></table>";

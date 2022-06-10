@@ -89,7 +89,7 @@ public class Video {
 
     private void setVideoDevice() {
         try {
-            String cmd[] = new String[]{"v4l2-ctl", "--list-devices"};
+            String cmd[] = new String[]{"v4l2-ctl", "--list-devices"}; // v4l2-ctl --list-devices
             Process proc = Runtime.getRuntime().exec(cmd);
             proc.waitFor();
 

@@ -15,7 +15,7 @@ public class ArduinoPower implements SerialPortEventListener  {
 
 	public static final double FIRMWARE_VERSION_REQUIREDV1 = 0.957; // trailing zeros ignored!
 	public static final String FIRMWARE_IDV1 = "oculusPower";
-	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.26; // trailing zeros ignored!
+	public static final double FIRMWARE_VERSION_REQUIREDV2 = 0.28; // trailing zeros ignored!
 	public static final String FIRMWARE_IDV2 = "xaxxonpowerv2";
 	public static final int DEVICEHANDSHAKEDELAY = 2000;
 	public static final int DEAD_TIME_OUT = 15000;

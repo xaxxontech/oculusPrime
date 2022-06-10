@@ -22,7 +22,7 @@ public class Malg implements jssc.SerialPortEventListener {
 
 	public static final double FIRMWARE_VERSION_REQUIRED = 0.129; // trailing zeros ignored!
 	public static final String FIRMWARE_ID = "malg";
-	public static final double MALGDB_FIRMWARE_VERSION_REQUIRED = 1.15; // trailing zeros ignored!
+	public static final double MALGDB_FIRMWARE_VERSION_REQUIRED = 1.18; // trailing zeros ignored!
 	public static final String MALGDB_FIRMWARE_ID = "malgdb";
 	public static String boardid = "unknown";
 	public static final long DEAD_TIME_OUT = 20000;
@@ -58,7 +58,9 @@ public class Malg implements jssc.SerialPortEventListener {
 	public static final byte ODOMETRY_STOP_AND_REPORT = 'j';
 	public static final byte ODOMETRY_REPORT = 'k';
 	public static final byte PING = 'c';
-		
+	public static final byte EEPROM_SET_TICKSPERREV = 'A';
+	public static final byte EEPROM_SET_STOPSTRESHOLD = 'B';
+
 	public static final int CAM_NUDGE = 3; // degrees
 	public static final long CAM_SMOOTH_DELAY = 50;
 	public static final long CAM_RELEASE_DELAY = 500;
@@ -1475,11 +1477,32 @@ public class Malg implements jssc.SerialPortEventListener {
 		if (s.length == 0) return;
 		byte[] cmd = new byte[s.length];
 		cmd[0] = s[0].getBytes()[0];
+
+		if (cmd[0]==EEPROM_SET_TICKSPERREV || cmd[0]==EEPROM_SET_STOPSTRESHOLD) {
+			sendCmdContainingEOL(s);
+			return;
+		}
+
 		for (int i = 1; i<s.length; i++ ) {
 			cmd[i] = (byte) ((int) Integer.valueOf(s[i]));
 		}
 
 		sendCommand(cmd);
+	}
+
+	// bypass sendCommand function, in case dword value contains EOL char (which sendCommand filters)
+	private void sendCmdContainingEOL(String s[]) {
+		if (s.length != 2) return;
+		int val = Integer.parseInt(s[1]);
+
+		while (commandlock)  Util.delay(1);
+
+		commandlock = true;
+		commandList.add(s[0].getBytes()[0]);
+		commandList.add((byte) (val & 0xFF));
+		commandList.add((byte) ((val >> 8) & 0xFF));
+		commandList.add((byte) 13); // EOL (not required by board, but is required by CommandSender thread)
+		commandlock = false;
 	}
 
 	

@@ -210,6 +210,12 @@ public class AutoDock {
 			}
 		}
 		else if (cmd[0].equals(autodockmodes.calibrate.toString())) {
+
+			if (!settings.readSetting(GUISettings.vset).equals(GUISettings.vmed.toString())) {
+				app.message("WARNING: video setting must be MEDIUM to calibrate dock", "", "");
+				return;
+			}
+
 			final int x = Integer.parseInt(cmd[1]) / 2; // assuming 320x240
 			final int y = Integer.parseInt(cmd[2]) / 2; // assuming 320x240
 			lowres = true;
